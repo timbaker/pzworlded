@@ -21,6 +21,7 @@
 #include "cellscene.h"
 #include "cellview.h"
 #include "mapcomposite.h"
+#include "mapmanager.h"
 #include "scenetools.h"
 #include "worldcell.h"
 #include "worlddocument.h"
@@ -447,6 +448,8 @@ ObjectsModel::ObjectsModel(QObject *parent)
     , mSynching(false)
     , mObjectPixmap(QLatin1String(":/images/16x16/layer-object.png"))
 {
+    connect(MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
+            SLOT(mapMagicallyGotMoreLayers(Tiled::Map*)));
 }
 
 ObjectsModel::~ObjectsModel()
@@ -945,4 +948,10 @@ void ObjectsModel::objectLevelChanged(WorldCellObject *obj)
 {
     if (obj->cell() == mCell)
         setCell(mCell); // lazy, just reset the whole list
+}
+
+void ObjectsModel::mapMagicallyGotMoreLayers(Map *map)
+{
+    if (mCellDoc && mCellDoc->scene()->mapComposite()->map() == map)
+        setCell(mCell);
 }

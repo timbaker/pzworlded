@@ -22,6 +22,7 @@
 #include "cellview.h"
 #include "scenetools.h"
 #include "mapcomposite.h"
+#include "mapmanager.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
@@ -393,6 +394,8 @@ LotsModel::LotsModel(QObject *parent)
     , mRootItem(0)
     , mSynching(false)
 {
+    connect(MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
+            SLOT(mapMagicallyGotMoreLayers(Tiled::Map*)));
 }
 
 LotsModel::~LotsModel()
@@ -848,4 +851,10 @@ void LotsModel::lotLevelChanged(WorldCellLot *lot)
 {
     if (lot->cell() == mCell)
         setCell(mCell); // lazy, just reset the whole list
+}
+
+void LotsModel::mapMagicallyGotMoreLayers(Tiled::Map *map)
+{
+    if (mCellDoc && mCellDoc->scene()->mapComposite()->map() == map)
+        setCell(mCell);
 }

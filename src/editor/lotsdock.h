@@ -27,6 +27,10 @@ class WorldCell;
 class WorldCellLot;
 class WorldDocument;
 
+namespace Tiled {
+class Map;
+}
+
 class LotsModel;
 class LotsView;
 
@@ -142,6 +146,7 @@ private slots:
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
     void lotLevelChanged(WorldCellLot *lot);
+    void mapMagicallyGotMoreLayers(Tiled::Map *map);
 
 private:
     void setModelData();

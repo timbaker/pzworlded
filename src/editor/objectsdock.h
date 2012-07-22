@@ -29,6 +29,10 @@ class WorldCell;
 class WorldCellObject;
 class WorldDocument;
 
+namespace Tiled {
+class Map;
+}
+
 class ObjectsModel;
 class ObjectsView;
 
@@ -188,6 +192,8 @@ private slots:
     void cellObjectAboutToBeRemoved(WorldCell *cell, int index);
     void cellObjectXXXXChanged(WorldCellObject *obj);
     void objectLevelChanged(WorldCellObject *obj);
+
+    void mapMagicallyGotMoreLayers(Tiled::Map *map);
 
 private:
     void setModelData();
