@@ -290,11 +290,15 @@ QVariant ResizeHandle::itemChange(GraphicsItemChange change,
             tileCoords.setY(qMax(tileCoords.y(), qreal(MIN_OBJECT_SIZE)));
             tileCoords += objectPos;
 
+#if 1
+            tileCoords = tileCoords.toPoint();
+#else
             bool snapToGrid = Preferences::instance()->snapToGrid();
             if (QApplication::keyboardModifiers() & Qt::ControlModifier)
                 snapToGrid = !snapToGrid;
             if (snapToGrid)
                 tileCoords = tileCoords.toPoint();
+#endif
 
             return mScene->renderer()->tileToPixelCoords(tileCoords, level) - itemPos;
         }

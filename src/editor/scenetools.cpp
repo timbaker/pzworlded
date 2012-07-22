@@ -146,12 +146,15 @@ void CreateObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         mAnchorPos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
-
+#if 1
+         mAnchorPos = mAnchorPos.toPoint();
+#else
         bool snapToGrid = Preferences::instance()->snapToGrid();
         if (event->modifiers() & Qt::ControlModifier)
             snapToGrid = !snapToGrid;
         if (snapToGrid)
             mAnchorPos = mAnchorPos.toPoint();
+#endif
 
         startNewMapObject(mAnchorPos);
         event->accept();
@@ -162,12 +165,15 @@ void CreateObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     if (mItem) {
         QPointF pos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
-
+#if 1
+        pos = pos.toPoint();
+#else
         bool snapToGrid = Preferences::instance()->snapToGrid();
         if (event->modifiers() & Qt::ControlModifier)
             snapToGrid = !snapToGrid;
         if (snapToGrid)
             pos = pos.toPoint();
+#endif
 
         QRectF bounds(mAnchorPos, pos);
         bounds = bounds.normalized();
@@ -402,11 +408,15 @@ void ObjectTool::updateMovingItems(const QPointF &pos,
     QPointF startScenePos = renderer->tileToPixelCoords(startTilePos, level);
     QPointF newTilePos = renderer->pixelToTileCoords(startScenePos + (pos - mStartScenePos), level);
 
+#if 1
+    newTilePos = newTilePos.toPoint();
+#else
     bool snapToGrid = Preferences::instance()->snapToGrid();
     if (modifiers & Qt::ControlModifier)
         snapToGrid = !snapToGrid;
     if (snapToGrid)
         newTilePos = newTilePos.toPoint();
+#endif
 
     foreach (ObjectItem *item, mMovingItems)
         item->setDragOffset(newTilePos - startTilePos);
