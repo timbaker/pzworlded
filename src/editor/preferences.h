@@ -19,6 +19,7 @@
 #define PREFERENCES_H
 
 #include <QObject>
+#include <QStringList>
 
 class QSettings;
 
@@ -37,6 +38,9 @@ public:
 
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
+
+    QStringList searchPaths() const;
+    void setSearchPaths(const QStringList &paths);
 
 signals:
     void snapToGridChanged(bool snapToGrid);
@@ -65,6 +69,7 @@ private:
     bool mShowCellGrid;
     bool mHighlightCurrentLevel;
     QString mMapsDirectory;
+    QStringList mSearchPaths;
 
     static Preferences *mInstance;
 };

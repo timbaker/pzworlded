@@ -85,6 +85,7 @@ public slots:
     void closeFile();
     void closeAllFiles();
 
+    void preferencesDialog();
     void objectTypesDialog();
     void properyDefinitionsDialog();
     void templatesDialog();

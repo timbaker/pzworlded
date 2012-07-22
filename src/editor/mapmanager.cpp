@@ -50,8 +50,33 @@ MapManager::MapManager()
 }
 
 // mapName could be "Lot_Foo", "../Lot_Foo", "C:/maptools/Lot_Foo" with/without ".tmx"
-QString MapManager::pathForMap(const QString &mapName, const QString &_relativeTo)
+QString MapManager::pathForMap(const QString &mapName, const QString &relativeTo)
 {
+#if 1
+    Preferences *prefs = Preferences::instance();
+    QStringList searchPaths = prefs->searchPaths();
+    if (!relativeTo.isEmpty())
+        searchPaths.insert(0, relativeTo);
+
+    foreach (QString searchPath, searchPaths) {
+        QString mapFilePath = mapName;
+
+        if (QDir::isRelativePath(mapName)) {
+            Q_ASSERT(!searchPath.isEmpty());
+            Q_ASSERT(!QDir::isRelativePath(searchPath));
+            mapFilePath = searchPath + QLatin1Char('/') + mapName;
+        }
+
+        if (!mapFilePath.endsWith(QLatin1String(".tmx")))
+            mapFilePath += QLatin1String(".tmx");
+
+        QFileInfo fileInfo(mapFilePath);
+        if (fileInfo.exists())
+            return fileInfo.canonicalFilePath();
+    }
+
+    return QString();
+#else
     QString mapFilePath = mapName;
     QString relativeTo = _relativeTo;
 
@@ -69,12 +94,7 @@ QString MapManager::pathForMap(const QString &mapName, const QString &_relativeT
         mapFilePath += QLatin1String(".tmx");
 
     QFileInfo fileInfo(mapFilePath);
-#if 0
-    if (!fileInfo.isAbsolute()) {
-        QDir mapsDir(Preferences::instance()->mapsDirectory());
-        fileInfo.setFile(mapsDir, mapFilePath);
-    }
-#endif
+
     if (fileInfo.exists())
         return fileInfo.canonicalFilePath();
 
@@ -82,6 +102,7 @@ QString MapManager::pathForMap(const QString &mapName, const QString &_relativeT
         return pathForMap(mapName, mapsDirectory.canonicalPath());
 
     return QString();
+#endif
 }
 
 #include <QApplication>
@@ -93,6 +114,18 @@ protected:
      */
     QString resolveReference(const QString &reference, const QString &mapPath)
     {
+#if 1
+        Preferences *prefs = Preferences::instance();
+        QStringList paths(mapPath);
+        paths += prefs->searchPaths();
+        foreach (QString path, paths) {
+            QString resolved = MapReader::resolveReference(reference, path);
+            QFileInfo info(resolved);
+            if (info.exists())
+                return info.canonicalFilePath();
+        }
+        return MapReader::resolveReference(reference, mapPath);
+#endif
         QString resolved = MapReader::resolveReference(reference, mapPath);
         QString canonical = QFileInfo(resolved).canonicalFilePath();
 

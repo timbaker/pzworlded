@@ -76,6 +76,8 @@ Preferences::Preferences()
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
     mMapsDirectory = mSettings->value(QLatin1String("Current"), QString()).toString();
     mSettings->endGroup();
+
+    mSearchPaths = mSettings->value(QLatin1String("SearchPaths"), QStringList()).toStringList();
 }
 
 Preferences::~Preferences()
@@ -150,4 +152,19 @@ void Preferences::setMapsDirectory(const QString &path)
 //    ZProgressManager::instance()->begin(QLatin1String("Checking lots..."));
 
     emit mapsDirectoryChanged();
+}
+
+QStringList Preferences::searchPaths() const
+{
+    return mSearchPaths;
+}
+
+void Preferences::setSearchPaths(const QStringList &paths)
+{
+    if (mSearchPaths == paths)
+        return;
+    mSearchPaths = paths;
+    mSettings->setValue(QLatin1String("SearchPaths"), paths);
+
+//    emit mapsDirectoryChanged();
 }

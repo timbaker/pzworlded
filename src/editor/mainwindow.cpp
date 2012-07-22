@@ -29,6 +29,7 @@
 #include "objectsdock.h"
 #include "objecttypesdialog.h"
 #include "preferences.h"
+#include "preferencesdialog.h"
 #include "progress.h"
 #include "propertiesdock.h"
 #include "propertydefinitionsdialog.h"
@@ -165,6 +166,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionCopyCells, SIGNAL(triggered()), SLOT(copyCellsToClipboard()));
     connect(ui->actionPasteCells, SIGNAL(triggered()), SLOT(pasteCellsFromClipboard()));
+    connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
+
     connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
@@ -738,6 +741,17 @@ void MainWindow::closeAllFiles()
 {
     if (confirmAllSave())
         docman()->closeAllDocuments();
+}
+
+void MainWindow::preferencesDialog()
+{
+    if (!mCurrentDocument)
+        return;
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    PreferencesDialog dialog(worldDoc, this);
+    dialog.exec();
 }
 
 void MainWindow::objectTypesDialog()

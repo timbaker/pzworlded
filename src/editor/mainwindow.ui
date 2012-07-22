@@ -192,6 +192,8 @@
     <addaction name="separator"/>
     <addaction name="actionCopyCells"/>
     <addaction name="actionPasteCells"/>
+    <addaction name="separator"/>
+    <addaction name="actionPreferences"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -462,6 +464,14 @@
    </property>
    <property name="text">
     <string>Clear</string>
+   </property>
+  </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Preferences...</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::PreferencesRole</enum>
    </property>
   </action>
  </widget>
