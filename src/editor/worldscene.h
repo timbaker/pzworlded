@@ -38,6 +38,9 @@ class WorldScene;
 #define GRID_WIDTH (512)
 #define GRID_HEIGHT (256)
 
+/**
+  * Item that draws the grid-lines in a WorldScene.
+  */
 class WorldGridItem : public QGraphicsItem
 {
 public:
@@ -56,6 +59,9 @@ private:
     QRectF mBoundingRect;
 };
 
+/**
+  * Item that draws all cell coordinates in a WorldScene.
+  */
 class WorldCoordItem : public QGraphicsItem
 {
 public:
@@ -74,6 +80,9 @@ private:
     QRectF mBoundingRect;
 };
 
+/**
+  * Item that draws the selection over all selected cells in a WorldScene.
+  */
 class WorldSelectionItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
@@ -100,6 +109,9 @@ private:
     QPoint mHighlightedCellDuringDnD;
 };
 
+/**
+  * Base item for drawing a single cell's map and Lots.
+  */
 class BaseCellItem : public QGraphicsItem
 {
 public:
