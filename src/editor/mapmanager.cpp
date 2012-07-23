@@ -360,11 +360,13 @@ MapInfo *MapManager::getEmptyMap()
     Map *map = new Map(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
                        mapInfo->tileWidth(), mapInfo->tileHeight());
 
+#if 0
     for (int level = 0; level < 1; level++) {
         TileLayer *tl = new TileLayer(tr("%1_Layer").arg(level), 0, 0, 300, 300);
         tl->setLevel(level);
         map->addLayer(tl);
     }
+#endif
 
     mapInfo->mMap = map;
     mapInfo->setFilePath(mapFilePath);
@@ -404,11 +406,13 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, Map::Orientation 
     Map *map = new Map(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
                        mapInfo->tileWidth(), mapInfo->tileHeight());
 
+#if 0
     for (int level = 0; level < 1; level++) {
         TileLayer *tl = new TileLayer(tr("%1_Layer").arg(level), 0, 0, 300, 300);
         tl->setLevel(level);
         map->addLayer(tl);
     }
+#endif
 
     mapInfo->mMap = map;
     mapInfo->setFilePath(mapFilePath);
