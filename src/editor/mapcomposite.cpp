@@ -350,6 +350,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, MapComposite *parent, const QPoint 
     if (mMinLevel == 10000)
         mMinLevel = 0;
 
+    if (!mMapInfo->isBeingEdited())
+        mMap->setMaxLevel(qMax(mMap->maxLevel(), 10));
+
     for (int level = mMinLevel; level <= mMap->maxLevel(); ++level) {
         if (!mLayerGroups.contains(level))
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
