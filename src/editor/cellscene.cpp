@@ -1167,6 +1167,10 @@ void CellScene::loadMap()
         mMapComposite->ensureMaxLevels(obj->level());
     }
 
+    // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
+    // all the items in the scene (without getting smaller, ever).
+    setSceneRect(0, 0, 1, 1);
+
     mPendingFlags |= AllGroups | Bounds | Synch | ZOrder;
     handlePendingUpdates();
 
