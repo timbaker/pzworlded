@@ -1048,19 +1048,19 @@ void MainWindow::updateActions()
             ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));
         } else
             ui->currentCellLabel->setText(tr("Current cell: <none>"));
-        ui->currentLevelButton->setText(tr("Current level: ? ")); // extra space cuz of down-arrow placement on Windows
+        ui->currentLevelButton->setText(tr("Level: ? ")); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(false);
     } else if (cellDoc) {
         ui->actionClearCell->setEnabled(true);
         WorldCell *cell = cellDoc->cell();
         ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));
         int level = cellDoc->currentLevel();
-        ui->currentLevelButton->setText(tr("Current level: %1 ").arg(level)); // extra space cuz of down-arrow placement on Windows
+        ui->currentLevelButton->setText(tr("Level: %1 ").arg(level)); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(true);
     } else {
         ui->coordinatesLabel->clear();
         ui->currentCellLabel->setText(tr("Current cell: <none>"));
-        ui->currentLevelButton->setText(tr("Current level: ? ")); // extra space cuz of down-arrow placement on Windows
+        ui->currentLevelButton->setText(tr("Level: ? ")); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(false);
     }
 }
