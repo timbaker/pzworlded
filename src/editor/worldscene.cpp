@@ -89,7 +89,6 @@ void WorldScene::setTool(AbstractTool *tool)
     }
 }
 
-
 void WorldScene::setWorldDocument(WorldDocument *worldDoc)
 {
     Q_UNUSED(worldDoc)
@@ -258,6 +257,7 @@ void WorldScene::cellMapFileChanged(WorldCell *cell)
 {
     itemForCell(cell)->updateCellImage();
     itemForCell(cell)->updateBoundingRect();
+    itemForCell(cell)->update();
 }
 
 void WorldScene::cellLotAdded(WorldCell *cell, int index)
