@@ -838,12 +838,15 @@ void LotsModel::cellContentsAboutToChange(WorldCell *cell)
     mRootItem = 0;
 
     reset();
+
+    mSynching = true; // ignore mapMagicallyGotMoreLayers
 }
 
 void LotsModel::cellContentsChanged(WorldCell *cell)
 {
     if (cell != mCell)
         return;
+    mSynching = false; // stop ignoring mapMagicallyGotMoreLayers
     setCell(mCell);
 }
 
@@ -855,6 +858,8 @@ void LotsModel::lotLevelChanged(WorldCellLot *lot)
 
 void LotsModel::mapMagicallyGotMoreLayers(Tiled::Map *map)
 {
+    if (mSynching)
+        return;
     if (mCellDoc && mCellDoc->scene()->mapComposite()->map() == map)
         setCell(mCell);
 }

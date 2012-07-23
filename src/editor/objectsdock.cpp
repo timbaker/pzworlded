@@ -902,12 +902,15 @@ void ObjectsModel::cellContentsAboutToChange(WorldCell *cell)
     mRootItem = 0;
 
     reset();
+
+    mSynching = true; // ignore mapMagicallyGotMoreLayers
 }
 
 void ObjectsModel::cellContentsChanged(WorldCell *cell)
 {
     if (cell != mCell)
         return;
+    mSynching = false; // stop ignoring mapMagicallyGotMoreLayers
     setCell(mCell);
 }
 
@@ -952,6 +955,8 @@ void ObjectsModel::objectLevelChanged(WorldCellObject *obj)
 
 void ObjectsModel::mapMagicallyGotMoreLayers(Map *map)
 {
+    if (mSynching)
+        return;
     if (mCellDoc && mCellDoc->scene()->mapComposite()->map() == map)
         setCell(mCell);
 }
