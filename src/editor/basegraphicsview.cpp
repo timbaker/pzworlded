@@ -18,6 +18,7 @@
 #include "basegraphicsview.h"
 
 #include "basegraphicsscene.h"
+#include "preferences.h"
 #include "zoomable.h"
 
 #include <QApplication>
@@ -31,6 +32,7 @@ BaseGraphicsView::BaseGraphicsView(QWidget *parent)
     , mZoomable(new Zoomable(this))
     , mMousePressed(false)
     , mScrollTimer(this)
+    , mMiniMap(0)
 {
     setTransformationAnchor(QGraphicsView::AnchorViewCenter);
 //    setDragMode(QGraphicsView::ScrollHandDrag);
@@ -51,6 +53,11 @@ BaseGraphicsView::BaseGraphicsView(QWidget *parent)
 //    mScrollTimer.setSingleShot(true);
     mScrollTimer.setInterval(30);
     connect(&mScrollTimer, SIGNAL(timeout()), SLOT(autoScrollTimeout()));
+
+    mMiniMap = new MiniMap(this);
+
+    Preferences *prefs = Preferences::instance();
+    connect(prefs, SIGNAL(showMiniMapChanged(bool)), mMiniMap, SLOT(setVisible(bool)));
 }
 
 void BaseGraphicsView::adjustScale(qreal scale)
@@ -235,8 +242,128 @@ void BaseGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     QGraphicsView::mouseReleaseEvent(event);
 }
 
+void BaseGraphicsView::resizeEvent(QResizeEvent *event)
+{
+    QGraphicsView::resizeEvent(event);
+    mMiniMap->viewRectChanged();
+}
+
 void BaseGraphicsView::setScene(BaseGraphicsScene *scene)
 {
     mScene = scene;
     QGraphicsView::setScene(scene);
+
+    mMiniMap->setScene(scene);
+}
+
+void BaseGraphicsView::scrollContentsBy(int dx, int dy)
+{
+    QGraphicsView::scrollContentsBy(dx, dy);
+    mMiniMap->viewRectChanged();
+}
+
+void BaseGraphicsView::addMiniMapItem(QGraphicsItem *item)
+{
+    mMiniMap->addItem(item);
+}
+
+/////
+
+#include <QGraphicsPolygonItem>
+
+MiniMap::MiniMap(BaseGraphicsView *parent)
+    : QGraphicsView(parent)
+    , mParentView(parent)
+    , mViewportItem(0)
+    , mExtraItem(0)
+{
+    setFrameStyle(NoFrame);
+
+    QGraphicsScene *scene = new QGraphicsScene(this);
+    scene->setBackgroundBrush(Qt::gray);
+    QGraphicsView::setScene(scene);
+
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    mViewportItem = new QGraphicsPolygonItem();
+    mViewportItem->setPen(QPen(Qt::white));
+    mViewportItem->setZValue(100);
+    scene->addItem(mViewportItem);
+
+    setGeometry(20, 20, 220, 220);
+
+    // When visible, the MiniMap obscures part of the scene, slowing down scrolling. :-{
+//    setVisible(false);
+}
+
+void MiniMap::setScene(BaseGraphicsScene *scene)
+{
+    mScene = scene;
+    sceneRectChanged(mScene->sceneRect());
+    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
+}
+
+void MiniMap::viewRectChanged()
+{
+    QRect rect = mParentView->rect();
+
+    int hsbh = mParentView->horizontalScrollBar()->isVisible() ? mParentView->horizontalScrollBar()->height() : 0;
+    int vsbw = mParentView->verticalScrollBar()->isVisible() ? mParentView->verticalScrollBar()->width() : 0;
+    rect.adjust(0, 0, -vsbw, -hsbh);
+
+    QPolygonF polygon = mParentView->mapToScene(rect);
+    mViewportItem->setPolygon(polygon);
+    mViewportItem->setScale(scale());
+}
+
+void MiniMap::addItem(QGraphicsItem *item)
+{
+    mExtraItem = item;
+    mExtraItem->setScale(scale());
+    scene()->addItem(mExtraItem);
+}
+
+void MiniMap::sceneRectChanged(const QRectF &sceneRect)
+{
+    qreal scale = this->scale();
+    QSizeF size = sceneRect.size();
+    // No idea where the extra 3 pixels is coming from...
+    setGeometry(20, 20, std::ceil(size.width() * scale) + 3, std::ceil(size.height() * scale) + 3);
+#if 1
+    // The sceneRect may not start at 0,0.
+    scene()->setSceneRect(QRectF(sceneRect.topLeft() * scale, sceneRect.size() * scale));
+#else
+    scene()->setSceneRect(rect().adjusted(0,0,-3,-3));
+#endif
+    viewRectChanged();
+
+    if (mExtraItem)
+        mExtraItem->setScale(scale);
+}
+
+void MiniMap::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton)
+        mParentView->centerOn(mapToScene(event->pos()) / scale());
+}
+
+void MiniMap::mouseMoveEvent(QMouseEvent *event)
+{
+    if (event->buttons() & Qt::LeftButton)
+        mParentView->centerOn(mapToScene(event->pos()) / scale());
+}
+
+void MiniMap::mouseReleaseEvent(QMouseEvent *event)
+{
+    Q_UNUSED(event);
+}
+
+qreal MiniMap::scale()
+{
+    QRectF sceneRect = mScene->sceneRect();
+    QSizeF size = sceneRect.size();
+    if (size.isEmpty())
+        return 1.0;
+    return (size.width() > size.height()) ? 256.0 / size.width() : 256.0 / size.height();
 }

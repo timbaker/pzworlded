@@ -17,14 +17,15 @@
 
 #include "celldocument.h"
 
+#include "basegraphicsview.h"
 #include "cellscene.h"
 #include "mapcomposite.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
 #include "layer.h"
-#include "tilelayer.h"
 #include "map.h"
+#include "tilelayer.h"
 #include "ztilelayergroup.h"
 
 using namespace Tiled;
@@ -43,7 +44,10 @@ CellDocument::CellDocument(WorldDocument *worldDoc, WorldCell *cell)
     connect(mWorldDocument, SIGNAL(cellContentsChanged(WorldCell*)), SLOT(cellContentsChanged(WorldCell*)));
     connect(mWorldDocument, SIGNAL(cellMapFileAboutToChange(WorldCell*)), SLOT(cellMapFileAboutToChange(WorldCell*)));
     connect(mWorldDocument, SIGNAL(cellMapFileChanged(WorldCell*)), SLOT(cellMapFileChanged(WorldCell*)));
+
+    connect(mWorldDocument, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
     connect(mWorldDocument, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
+    connect(mWorldDocument, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
 }
 
 void CellDocument::setFileName(const QString &fileName)
@@ -64,6 +68,9 @@ bool CellDocument::save(const QString &filePath, QString &error)
 void CellDocument::setScene(CellScene *scene)
 {
     mCellScene = scene;
+
+    mMiniMapItem = new CellMiniMapItem(mCellScene);
+    view()->addMiniMapItem(mMiniMapItem);
 
     if (mCurrentLayerIndex == -1)
         setCurrentLevel(0);
@@ -192,13 +199,17 @@ void CellDocument::cellContentsAboutToChange(WorldCell *cell)
         mCurrentLevel = 0;
         setSelectedLots(QList<WorldCellLot*>());
         emit cellContentsAboutToChange();
+
+        mMiniMapItem->cellContentsAboutToChange();
     }
 }
 
 void CellDocument::cellContentsChanged(WorldCell *cell)
 {
-    if (cell == mCell)
+    if (cell == mCell) {
         emit cellContentsChanged();
+        mMiniMapItem->cellContentsChanged();
+    }
 }
 
 void CellDocument::cellMapFileAboutToChange(WorldCell *cell)
@@ -209,8 +220,16 @@ void CellDocument::cellMapFileAboutToChange(WorldCell *cell)
 
 void CellDocument::cellMapFileChanged(WorldCell *cell)
 {
-    if (cell == mCell)
+    if (cell == mCell) {
         emit cellMapFileChanged();
+        mMiniMapItem->updateCellImage();
+    }
+}
+
+void CellDocument::cellLotAdded(WorldCell *cell, int index)
+{
+    if (cell == mCell)
+        mMiniMapItem->lotAdded(index);
 }
 
 void CellDocument::cellLotAboutToBeRemoved(WorldCell *cell, int index)
@@ -219,5 +238,15 @@ void CellDocument::cellLotAboutToBeRemoved(WorldCell *cell, int index)
         QList<WorldCellLot*> selection = mSelectedLots;
         selection.removeAll(cell->lots().at(index));
         setSelectedLots(selection);
+
+        mMiniMapItem->lotRemoved(index);
+    }
+}
+
+void CellDocument::cellLotMoved(WorldCellLot *lot)
+{
+    if (lot->cell() == mCell) {
+        int index = mCell->lots().indexOf(lot);
+        mMiniMapItem->lotMoved(index);
     }
 }

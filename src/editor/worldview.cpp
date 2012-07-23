@@ -17,6 +17,7 @@
 
 #include "worldview.h"
 
+#include "world.h"
 #include "worldscene.h"
 
 #include <QMouseEvent>
@@ -24,6 +25,15 @@
 WorldView::WorldView(QWidget *parent)
     : BaseGraphicsView(parent)
 {
+}
+
+void WorldView::setScene(WorldScene *scene)
+{
+    BaseGraphicsView::setScene(scene);
+
+    QPolygonF polygon = scene->cellRectToPolygon(scene->world()->bounds());
+    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(polygon);
+    addMiniMapItem(item);
 }
 
 WorldScene *WorldView::scene() const

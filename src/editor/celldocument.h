@@ -22,6 +22,7 @@
 
 #include <QMap>
 
+class CellMiniMapItem;
 class CellScene;
 class CompositeLayerGroup;
 class WorldCell;
@@ -100,7 +101,10 @@ private slots:
     void cellContentsChanged(WorldCell *cell);
     void cellMapFileAboutToChange(WorldCell *cell);
     void cellMapFileChanged(WorldCell *cell);
+
+    void cellLotAdded(WorldCell *cell, int index);
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
+    void cellLotMoved(WorldCellLot *lot);
 
 private:
     WorldCell *mCell;
@@ -112,6 +116,7 @@ private:
     int mCurrentLevel;
     QMap<int,bool> mLotLevelVisible;
     QMap<int,bool> mObjectLevelVisible;
+    CellMiniMapItem *mMiniMapItem;
 };
 
 #endif // CELLDOCUMENT_H

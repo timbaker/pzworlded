@@ -92,6 +92,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionSnapToGrid->setChecked(prefs->snapToGrid());
     ui->actionShowCoordinates->setChecked(prefs->showCoordinates());
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
+    ui->actionShowMiniMap->setChecked(prefs->showMiniMap());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
 
     // Make sure Ctrl+= also works for zooming in
@@ -179,6 +180,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
     connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
+    connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)), prefs, SLOT(setShowMiniMap(bool)));
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));

@@ -28,6 +28,8 @@ class WorldView : public BaseGraphicsView
 public:
     explicit WorldView(QWidget *parent = 0);
 
+    void setScene(WorldScene *scene);
+
     void mouseMoveEvent(QMouseEvent *event);
 
     WorldScene *scene() const;

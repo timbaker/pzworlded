@@ -167,6 +167,64 @@ private:
     int mLevel;
 };
 
+/**
+  * MiniMap item for drawing a single cell's map and Lots.
+  */
+class CellMiniMapItem : public QObject, public QGraphicsItem
+{
+    Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
+public:
+    CellMiniMapItem(CellScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+    void updateCellImage();
+    void updateLotImage(int index);
+    void updateBoundingRect();
+
+    void lotAdded(int index);
+    void lotRemoved(int index);
+    void lotMoved(int index);
+
+    void cellContentsAboutToChange();
+    void cellContentsChanged();
+
+private slots:
+    void sceneRectChanged(const QRectF &sceneRect);
+
+private:
+    struct LotImage {
+        LotImage()
+            : mMapImage(0)
+        {
+        }
+
+        LotImage(const QRectF &bounds, MapImage *mapImage)
+            : mBounds(bounds)
+            , mMapImage(mapImage)
+        {
+        }
+
+        QRectF mBounds;
+        MapImage *mMapImage;
+    };
+
+    CellScene *mScene;
+    WorldCell *mCell;
+    QRectF mBoundingRect;
+    MapImage *mMapImage;
+    QRectF mMapImageBounds;
+    QVector<LotImage> mLotImages;
+};
+
+/**
+  * Item that draws all the TileLayers on a single level.
+  */
 class CompositeLayerGroupItem : public QGraphicsItem
 {
 public:

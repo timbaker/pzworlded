@@ -34,6 +34,7 @@ public:
     bool showCoordinates() const;
     bool showWorldGrid() const;
     bool showCellGrid() const;
+    bool showMiniMap() const;
     bool highlightCurrentLevel() const;
 
     QString mapsDirectory() const;
@@ -47,6 +48,7 @@ signals:
     void showCoordinatesChanged(bool showGrid);
     void showWorldGridChanged(bool showGrid);
     void showCellGridChanged(bool showGrid);
+    void showMiniMapChanged(bool show);
     void highlightCurrentLevelChanged(bool highlight);
     void mapsDirectoryChanged();
 
@@ -55,6 +57,7 @@ public slots:
     void setShowCoordinates(bool showCoords);
     void setShowWorldGrid(bool showGrid);
     void setShowCellGrid(bool showGrid);
+    void setShowMiniMap(bool show);
     void setHighlightCurrentLevel(bool highlight);
 
 private:
@@ -67,6 +70,7 @@ private:
     bool mShowCoordinates;
     bool mShowWorldGrid;
     bool mShowCellGrid;
+    bool mShowMiniMap;
     bool mHighlightCurrentLevel;
     QString mMapsDirectory;
     QStringList mSearchPaths;

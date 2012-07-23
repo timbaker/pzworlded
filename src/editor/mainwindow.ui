@@ -201,6 +201,7 @@
     </property>
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
+    <addaction name="actionShowMiniMap"/>
     <addaction name="actionHighlightCurrentLevel"/>
     <addaction name="separator"/>
     <addaction name="actionZoomIn"/>
@@ -477,6 +478,17 @@
    </property>
    <property name="menuRole">
     <enum>QAction::PreferencesRole</enum>
+   </property>
+  </action>
+  <action name="actionShowMiniMap">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Mini-map</string>
+   </property>
+   <property name="shortcut">
+    <string>M</string>
    </property>
   </action>
  </widget>

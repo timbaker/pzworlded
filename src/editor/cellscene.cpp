@@ -132,6 +132,149 @@ private:
 
 ///// ///// ///// ///// /////
 
+CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
+    : QGraphicsItem(parent)
+    , mScene(scene)
+    , mCell(scene->cell())
+    , mMapImage(0)
+{
+    setAcceptedMouseButtons(0);
+
+    updateCellImage();
+
+    mLotImages.resize(mCell->lots().size());
+    for (int i = 0; i < mCell->lots().size(); i++)
+        updateLotImage(i);
+
+    updateBoundingRect();
+
+    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
+}
+
+QRectF CellMiniMapItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+void CellMiniMapItem::paint(QPainter *painter,
+                         const QStyleOptionGraphicsItem *option,
+                         QWidget *)
+{
+    Q_UNUSED(option)
+
+    if (mMapImage) {
+        QRectF target = mMapImageBounds;
+        QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
+        painter->drawImage(target, mMapImage->image(), source);
+    }
+
+    foreach (const LotImage &lotImage, mLotImages) {
+        if (!lotImage.mMapImage) continue;
+        QRectF target = lotImage.mBounds;
+        QRectF source = QRect(QPoint(0, 0), lotImage.mMapImage->image().size());
+        painter->drawImage(target, lotImage.mMapImage->image(), source);
+    }
+}
+
+void CellMiniMapItem::updateCellImage()
+{
+    mMapImage = 0;
+    mMapImageBounds = QRect();
+
+    if (!mCell->mapFilePath().isEmpty()) {
+        mMapImage = MapImageManager::instance()->getMapImage(mCell->mapFilePath());
+        if (mMapImage) {
+            QPointF offset = mMapImage->tileToImageCoords(0, 0) / mMapImage->scale();
+            mMapImageBounds = QRectF(mScene->renderer()->tileToPixelCoords(0.0, 0.0) - offset,
+                                     mMapImage->image().size() / mMapImage->scale());
+        }
+    }
+}
+
+void CellMiniMapItem::updateLotImage(int index)
+{
+    WorldCellLot *lot = mCell->lots().at(index);
+    MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
+    if (mapImage) {
+        QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale();
+        QRectF bounds = QRectF(mScene->renderer()->tileToPixelCoords(lot->x(), lot->y(), lot->level()) - offset,
+                               mapImage->image().size() / mapImage->scale());
+        mLotImages[index].mBounds = bounds;
+        mLotImages[index].mMapImage = mapImage;
+    } else {
+        mLotImages[index].mBounds = QRectF();
+        mLotImages[index].mMapImage = 0;
+    }
+}
+
+void CellMiniMapItem::updateBoundingRect()
+{
+    QRectF bounds = mScene->renderer()->boundingRect(QRect(0, 0, 300, 300));
+
+    if (!mMapImageBounds.isEmpty())
+        bounds |= mMapImageBounds;
+
+    foreach (LotImage lotImage, mLotImages) {
+        if (!lotImage.mBounds.isEmpty())
+            bounds |= lotImage.mBounds;
+    }
+
+    if (mBoundingRect != bounds) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
+}
+
+void CellMiniMapItem::lotAdded(int index)
+{
+    mLotImages.insert(index, LotImage());
+    updateLotImage(index);
+    updateBoundingRect();
+    update();
+}
+
+void CellMiniMapItem::lotRemoved(int index)
+{
+    mLotImages.remove(index);
+    updateBoundingRect();
+    update();
+}
+
+void CellMiniMapItem::lotMoved(int index)
+{
+    updateLotImage(index);
+    updateBoundingRect();
+    update();
+}
+
+void CellMiniMapItem::cellContentsAboutToChange()
+{
+    mLotImages.clear();
+}
+
+void CellMiniMapItem::cellContentsChanged()
+{
+    updateCellImage();
+
+    mLotImages.resize(mCell->lots().size());
+    for (int i = 0; i < mCell->lots().size(); i++)
+        updateLotImage(i);
+
+    updateBoundingRect();
+    update();
+}
+
+// cellContentsChanged -> CellScene::loadMap -> sceneRectChanged
+void CellMiniMapItem::sceneRectChanged(const QRectF &sceneRect)
+{
+    Q_UNUSED(sceneRect)
+    updateCellImage();
+    for (int i = 0; i < mLotImages.size(); i++)
+        updateLotImage(i);
+}
+
+///// ///// ///// ///// /////
+
 CompositeLayerGroupItem::CompositeLayerGroupItem(CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mLayerGroup(layerGroup)

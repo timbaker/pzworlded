@@ -22,7 +22,34 @@
 #include <QTimer>
 
 class BaseGraphicsScene;
+class BaseGraphicsView;
 class Zoomable;
+
+class MiniMap : public QGraphicsView
+{
+    Q_OBJECT
+public:
+    MiniMap(BaseGraphicsView *parent);
+
+    void setScene(BaseGraphicsScene *scene);
+    void viewRectChanged();
+    qreal scale();
+    void addItem(QGraphicsItem *item);
+
+public slots:
+    void sceneRectChanged(const QRectF &sceneRect);
+
+private:
+    void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+
+private:
+    BaseGraphicsView *mParentView;
+    BaseGraphicsScene *mScene;
+    QGraphicsPolygonItem *mViewportItem;
+    QGraphicsItem *mExtraItem;
+};
 
 class BaseGraphicsView : public QGraphicsView
 {
@@ -39,10 +66,16 @@ public:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
 
+    void resizeEvent(QResizeEvent *event);
+
     Zoomable *zoomable() const { return mZoomable; }
 
     void setScene(BaseGraphicsScene *scene);
     BaseGraphicsScene *scene() const { return mScene; }
+
+    void scrollContentsBy(int dx, int dy);
+
+    void addMiniMapItem(QGraphicsItem *item);
 
 signals:
     void statusBarCoordinatesChanged(int x, int y);
@@ -76,6 +109,7 @@ protected:
     int mScrollDirection;
     int mScrollMagnitude;
     BaseGraphicsScene *mScene;
+    MiniMap *mMiniMap;
 };
 
 #endif // BASEGRAPHICSVIEW_H

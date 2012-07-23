@@ -54,6 +54,11 @@ bool Preferences::showCellGrid() const
     return mShowCellGrid;
 }
 
+bool Preferences::showMiniMap() const
+{
+    return mShowMiniMap;
+}
+
 bool Preferences::highlightCurrentLevel() const
 {
     return mHighlightCurrentLevel;
@@ -69,6 +74,7 @@ Preferences::Preferences()
     mShowCoordinates = mSettings->value(QLatin1String("ShowCoordinates"), true).toBool();
     mShowWorldGrid = mSettings->value(QLatin1String("ShowWorldGrid"), true).toBool();
     mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
+    mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
     mSettings->endGroup();
@@ -128,6 +134,16 @@ void Preferences::setShowCellGrid(bool showGrid)
     mShowCellGrid = showGrid;
     mSettings->setValue(QLatin1String("Interface/ShowCellGrid"), mShowCellGrid);
     emit showCellGridChanged(mShowCellGrid);
+}
+
+void Preferences::setShowMiniMap(bool show)
+{
+    if (show == mShowMiniMap)
+        return;
+
+    mShowMiniMap = show;
+    mSettings->setValue(QLatin1String("Interface/ShowMiniMap"), mShowMiniMap);
+    emit showMiniMapChanged(mShowMiniMap);
 }
 
 void Preferences::setHighlightCurrentLevel(bool highlight)
