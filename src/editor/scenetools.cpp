@@ -160,6 +160,13 @@ void CreateObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         startNewMapObject(mAnchorPos);
         event->accept();
     }
+
+    if (event->button() == Qt::RightButton) {
+        if (mItem) {
+            cancelNewMapObject();
+            event->accept();
+        }
+    }
 }
 
 void CreateObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
