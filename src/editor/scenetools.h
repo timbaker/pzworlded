@@ -133,6 +133,9 @@ public:
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }
 
+    virtual bool affectsLots() const = 0;
+    virtual bool affectsObjects() const = 0;
+
 public slots:
     void updateEnabledState();
 
@@ -160,6 +163,9 @@ public:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+     bool affectsLots() const { return false; }
+     bool affectsObjects() const { return true; }
 
     void languageChanged()
     {
@@ -201,6 +207,9 @@ public:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    bool affectsLots() const { return false; }
+    bool affectsObjects() const { return true; }
 
     void languageChanged()
     {
@@ -257,6 +266,9 @@ public:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    bool affectsLots() const { return true; }
+    bool affectsObjects() const { return false; }
 
     void languageChanged()
     {

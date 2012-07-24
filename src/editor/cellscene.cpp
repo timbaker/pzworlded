@@ -919,6 +919,10 @@ void CellScene::setTool(AbstractTool *tool)
         foreach (ObjectItem *item, mSelectedObjectItems)
             item->setEditable(true);
     }
+
+    // Restack ObjectItems and SubMapItems based on the current tool.
+    // This is to ensure the mouse-over highlight works as expected.
+    setGraphicsSceneZOrder();
 }
 
 void CellScene::setDocument(CellDocument *doc)
@@ -1051,12 +1055,18 @@ void CellScene::setGraphicsSceneZOrder()
         }
     }
 
-    // SubMapItems should be above all TileLayerGroups.
-    // SubMapItems should be arranged from bottom to top by level.
+    // SubMapItems/ObjectItems should be above all TileLayerGroups
+    // and arranged from bottom to top by level.  When the active tool
+    // affects SubMapItems, stack them above ObjectItems and vice versa.
     int z = levelZOrder(mMap->maxLevel());
+    if (mActiveTool && mActiveTool->affectsLots())
+        z += mMap->maxLevel();
     foreach (SubMapItem *item, mSubMapItems)
         item->setZValue(z + item->subMap()->levelOffset());
 
+    z = levelZOrder(mMap->maxLevel());
+    if (mActiveTool && mActiveTool->affectsObjects())
+        z += mMap->maxLevel();
     foreach (ObjectItem *item, mObjectItems)
         item->setZValue(z + item->object()->level());
 
