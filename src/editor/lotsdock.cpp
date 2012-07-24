@@ -297,6 +297,8 @@ LotsView::LotsView(QWidget *parent)
     setUniformRowHeights(true);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    setMouseTracking(true); // Needed on Mac OS X for garbage can
+
     setItemDelegate(new LotsViewDelegate(this));
 
     setModel(mModel);

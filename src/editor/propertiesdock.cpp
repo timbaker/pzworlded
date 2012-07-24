@@ -861,6 +861,8 @@ PropertiesView::PropertiesView(QWidget *parent)
     setAlternatingRowColors(false);
     setItemDelegate(new PropertiesDelegate(this));
     header()->resizeSection(0, 180);
+
+    setMouseTracking(true); // Needed on Mac OS X for garbage can
 }
 
 void PropertiesView::mousePressEvent(QMouseEvent *event)
@@ -1079,4 +1081,3 @@ void PropertiesDock::closeItem(const QModelIndex &index)
         worldDoc->removeProperty(mPropertyHolder, index.row());
     }
 }
-
