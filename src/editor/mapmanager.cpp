@@ -53,6 +53,16 @@ MapManager::MapManager()
 QString MapManager::pathForMap(const QString &mapName, const QString &relativeTo)
 {
 #if 1
+    if (!QDir::isRelativePath(mapName)) {
+        QString mapFilePath = mapName;
+        if (!mapFilePath.endsWith(QLatin1String(".tmx")))
+            mapFilePath += QLatin1String(".tmx");
+        QFileInfo fileInfo(mapFilePath);
+        if (fileInfo.exists())
+            return fileInfo.canonicalFilePath();
+        return QString();
+    }
+
     Preferences *prefs = Preferences::instance();
     QStringList searchPaths = prefs->searchPaths();
     if (!relativeTo.isEmpty())
@@ -61,11 +71,9 @@ QString MapManager::pathForMap(const QString &mapName, const QString &relativeTo
     foreach (QString searchPath, searchPaths) {
         QString mapFilePath = mapName;
 
-        if (QDir::isRelativePath(mapName)) {
-            Q_ASSERT(!searchPath.isEmpty());
-            Q_ASSERT(!QDir::isRelativePath(searchPath));
-            mapFilePath = searchPath + QLatin1Char('/') + mapName;
-        }
+        Q_ASSERT(!searchPath.isEmpty());
+        Q_ASSERT(!QDir::isRelativePath(searchPath));
+        mapFilePath = searchPath + QLatin1Char('/') + mapName;
 
         if (!mapFilePath.endsWith(QLatin1String(".tmx")))
             mapFilePath += QLatin1String(".tmx");
