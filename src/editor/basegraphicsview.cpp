@@ -291,6 +291,7 @@ void BaseGraphicsView::ensureRectVisible(const QRectF &rect, int xmargin, int ym
 /////
 
 #include <QGraphicsPolygonItem>
+#include <cmath>
 
 MiniMap::MiniMap(BaseGraphicsView *parent)
     : QGraphicsView(parent)
