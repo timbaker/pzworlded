@@ -130,7 +130,7 @@ void LotsDock::selectionChanged()
             level = levelPtr->level;
         if (WorldCellLot *lot = mView->model()->toLot(selection.first())) {
 #if 1
-            mCellDoc->view()->ensureVisible(mCellDoc->scene()->itemForLot(lot));
+            mCellDoc->view()->ensureRectVisible(mCellDoc->scene()->renderer()->boundingRect(lot->bounds()));
 #else
             QPointF scenePos = mCellDoc->scene()->renderer()->tileToPixelCoords(lot->x() + lot->width() / 2.0,
                                                                                 lot->y() + lot->height() / 2.0,

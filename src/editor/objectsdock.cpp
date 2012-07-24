@@ -131,7 +131,8 @@ void ObjectsDock::selectionChanged()
         // Center the view on the selected WorldCellObject
         if (WorldCellObject *obj = mView->model()->toObject(selection.first())) {
 #if 1
-            mCellDoc->view()->ensureVisible(mCellDoc->scene()->itemForObject(obj));
+            QRect rect = mCellDoc->scene()->renderer()->boundingRect(obj->bounds().toRect(), obj->level());
+            mCellDoc->view()->ensureRectVisible(rect);
 #else
             QPointF scenePos = mCellDoc->scene()->renderer()->tileToPixelCoords(obj->x() + obj->width() / 2.0,
                                                                                 obj->y() + obj->height() / 2.0,

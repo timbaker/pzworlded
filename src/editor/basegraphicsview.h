@@ -77,6 +77,8 @@ public:
 
     void addMiniMapItem(QGraphicsItem *item);
 
+    void ensureRectVisible(const QRectF &rect, int xmargin = 50, int ymargin = 50);
+
 signals:
     void statusBarCoordinatesChanged(int x, int y);
 

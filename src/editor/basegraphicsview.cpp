@@ -267,6 +267,27 @@ void BaseGraphicsView::addMiniMapItem(QGraphicsItem *item)
     mMiniMap->addItem(item);
 }
 
+// Wrapper around QGraphicsView::ensureVisible.  In ensureVisible, when the rectangle to
+// view is larger than the viewport, the final position is often undesirable with multiple
+// scrolls taking place.  In this implementation, when the rectangle to view (plus margins)
+// does not fit in the current view or is not partially visible already, the view is centered
+// on the rectangle's center.
+void BaseGraphicsView::ensureRectVisible(const QRectF &rect, int xmargin, int ymargin)
+{
+    QRect rectToView = mapFromScene(rect).boundingRect();
+    rectToView.adjust(-xmargin, -ymargin, xmargin, ymargin);
+    QRect viewportRect = viewport()->rect(); // includes scrollbars?
+    if (viewportRect.contains(rectToView, true))
+        return;
+    if (rectToView.width() > viewportRect.width() ||
+            rectToView.height() > viewportRect.height() ||
+            !viewportRect.intersects(rectToView)) {
+        centerOn(rect.center());
+    } else {
+        ensureVisible(rect, xmargin, ymargin);
+    }
+}
+
 /////
 
 #include <QGraphicsPolygonItem>

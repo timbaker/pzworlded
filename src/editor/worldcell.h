@@ -76,6 +76,9 @@ public:
     int width() const { return mWidth; }
     int height() const { return mHeight; }
 
+    QRect bounds() const
+    { return QRect(mX, mY, mWidth, mHeight); }
+
 private:
     QString mName;
     int mX, mY, mZ;
