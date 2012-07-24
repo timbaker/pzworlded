@@ -145,10 +145,11 @@ CreateObjectTool::CreateObjectTool()
 void CreateObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        mAnchorPos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
 #if 1
-         mAnchorPos = mAnchorPos.toPoint();
+        mAnchorPos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(), mScene->document()->currentLevel());
 #else
+        mAnchorPos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
+
         bool snapToGrid = Preferences::instance()->snapToGrid();
         if (event->modifiers() & Qt::ControlModifier)
             snapToGrid = !snapToGrid;
@@ -164,10 +165,11 @@ void CreateObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 void CreateObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     if (mItem) {
-        QPointF pos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
 #if 1
-        pos = pos.toPoint();
+        QPointF pos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(), mScene->document()->currentLevel());
 #else
+        QPointF pos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
+
         bool snapToGrid = Preferences::instance()->snapToGrid();
         if (event->modifiers() & Qt::ControlModifier)
             snapToGrid = !snapToGrid;
@@ -178,8 +180,8 @@ void CreateObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         QRectF bounds(mAnchorPos, pos);
         bounds = bounds.normalized();
         mItem->object()->setPos(bounds.topLeft());
-        mItem->object()->setWidth(bounds.width());
-        mItem->object()->setHeight(bounds.height());
+        mItem->object()->setWidth(qMax(MIN_OBJECT_SIZE, bounds.width() + 1));
+        mItem->object()->setHeight(qMax(MIN_OBJECT_SIZE, bounds.height() + 1));
         mItem->synchWithObject();
         event->accept();
     }
@@ -202,7 +204,7 @@ void CreateObjectTool::startNewMapObject(const QPointF &pos)
                                                QString(), mScene->worldDocument()->world()->nullObjectType(),
                                                pos.x(), pos.y(),
                                                mScene->document()->currentLevel(),
-                                               0, 0);
+                                               MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
     mItem = new ObjectItem(obj, mScene);
     mItem->setZValue(10000);
     mScene->addItem(mItem);

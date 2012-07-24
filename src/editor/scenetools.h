@@ -147,7 +147,7 @@ protected:
 
 /////
 
-#define MIN_OBJECT_SIZE (1.0/6.0)
+#define MIN_OBJECT_SIZE (1.0)
 
 /**
   * This CellScene tool creates new WorldCellObjects.
