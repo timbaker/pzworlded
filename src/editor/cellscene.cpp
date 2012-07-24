@@ -1455,12 +1455,18 @@ void CellScene::setHighlightCurrentLevel(bool highlight)
 void CellScene::doLater(PendingFlags flags)
 {
     mPendingFlags |= flags;
-//handlePendingUpdates(); return;
+#if 1
+    // Got a crash when undoing stuff and the progress dialog popped up
+    // which called handlePendingUpdates during loadMap but before
+    // the mMapComposite was loaded.
+    handlePendingUpdates();
+#else
     if (mPendingActive)
         return;
     QMetaObject::invokeMethod(this, "handlePendingUpdates",
                               Qt::QueuedConnection);
     mPendingActive = true;
+#endif
 }
 
 void CellScene::synchLayerGroupsLater()
