@@ -29,10 +29,12 @@
 #include "progress.h"
 #include "zlevelrenderer.h"
 
+#include <QDataStream>
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QDataStream>
 
 using namespace Tiled;
 
@@ -67,19 +69,19 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     if (mMapImages.contains(mapFilePath))
         return mMapImages[mapFilePath];
 
-    QImage image = generateMapImage(mapFilePath);
-    if (image.isNull())
+    ImageData data = generateMapImage(mapFilePath);
+    if (!data.valid)
         return 0;
 
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
-    MapImage *mapImage = new MapImage(image, mapInfo);
+    MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
     mMapImages.insert(mapFilePath, mapImage);
     return mapImage;
 }
 
-QImage MapImageManager::generateMapImage(const QString &mapFilePath)
+MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapFilePath)
 {
-#if 1
+#if 0
     if (mapFilePath == QLatin1String("<fail>")) {
         QImage image(IMAGE_WIDTH, 256, QImage::Format_ARGB32);
         image.fill(Qt::transparent);
@@ -92,31 +94,39 @@ QImage MapImageManager::generateMapImage(const QString &mapFilePath)
 
     QFileInfo fileInfo(mapFilePath);
     QFileInfo imageInfo = imageFileInfo(mapFilePath);
-    if (imageInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
+    QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
+    if (imageInfo.exists() && imageDataInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
         QImage image(imageInfo.absoluteFilePath());
         if (image.isNull())
             QMessageBox::warning(0, tr("Error Loading Image"),
                                  tr("An error occurred trying to read a map thumbnail image.\n") + imageInfo.absoluteFilePath());
-        if (image.width() == IMAGE_WIDTH)
-            return image;
+        if (image.width() == IMAGE_WIDTH) {
+            ImageData data = readImageData(imageDataInfo);
+            if (data.valid) {
+                data.image = image;
+                return data;
+            }
+        }
     }
 
     PROGRESS progress(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
 
     MapInfo *mapInfo = MapManager::instance()->loadMap(mapFilePath);
     if (!mapInfo)
-        return QImage(); // TODO: Add error handling
+        return ImageData(); // TODO: Add error handling
 
     progress.update(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
 
     MapComposite mapComposite(mapInfo);
-    QImage image = generateMapImage(&mapComposite);
+    ImageData data = generateMapImage(&mapComposite);
 
-    image.save(imageInfo.absoluteFilePath());
-    return image;
+    data.image.save(imageInfo.absoluteFilePath());
+    writeImageData(imageDataInfo, data);
+
+    return data;
 }
 
-QImage MapImageManager::generateMapImage(MapComposite *mapComposite)
+MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapComposite)
 {
     Map *map = mapComposite->map();
 
@@ -136,13 +146,13 @@ QImage MapImageManager::generateMapImage(MapComposite *mapComposite)
         renderer = new StaggeredRenderer(map);
         break;
     default:
-        return QImage();
+        return ImageData();
     }
 
     QRectF sceneRect = mapComposite->boundingRect(renderer);
     QSize mapSize = sceneRect.size().toSize();
     if (mapSize.isEmpty())
-        return QImage();
+        return ImageData();
 
     qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
     mapSize *= scale;
@@ -153,7 +163,7 @@ QImage MapImageManager::generateMapImage(MapComposite *mapComposite)
 
     painter.setRenderHints(QPainter::SmoothPixmapTransform |
                            QPainter::HighQualityAntialiasing);
-    painter.setTransform(QTransform::fromScale(scale, scale).translate(0, -sceneRect.top()));
+    painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
 
     mapComposite->saveVisibility();
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
@@ -166,9 +176,65 @@ QImage MapImageManager::generateMapImage(MapComposite *mapComposite)
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
         layerGroup->synch();
 
+    ImageData data;
+    data.image = image;
+    data.scale = scale;
+    data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
+    data.levelZeroBounds.translate(-sceneRect.topLeft());
+    data.valid = true;
+
     delete renderer;
 
-    return image;
+    return data;
+}
+
+#define IMAGE_DATA_MAGIC 0xB15B00B5
+#define IMAGE_DATA_VERSION 1
+
+MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &imageDataFileInfo)
+{
+    ImageData data;
+    QFile file(imageDataFileInfo.absoluteFilePath());
+    if (!file.open(QIODevice::ReadOnly))
+        return data;
+
+    QDataStream in(&file);
+
+    quint32 magic;
+    in >> magic;
+    if (magic != IMAGE_DATA_MAGIC)
+        return data;
+
+    quint32 version;
+    in >> version;
+    if (version != IMAGE_DATA_VERSION)
+        return data;
+
+    in >> data.scale;
+
+    qreal x, y, w, h;
+    in >> x >> y >> w >> h;
+    data.levelZeroBounds.setCoords(x, y, x + w, y + h);
+
+    // TODO: sanity-check the values
+    data.valid = true;
+
+    return data;
+}
+
+void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const MapImageManager::ImageData &data)
+{
+    QFile file(imageDataFileInfo.absoluteFilePath());
+    if (!file.open(QIODevice::WriteOnly))
+        return;
+
+    QDataStream out(&file);
+    out << quint32(IMAGE_DATA_MAGIC);
+    out << quint32(IMAGE_DATA_VERSION);
+    out.setVersion(QDataStream::Qt_4_0);
+    out << data.scale;
+    QRectF r = data.levelZeroBounds;
+    out << r.x() << r.y() << r.width() << r.height();
 }
 
 QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
@@ -186,11 +252,19 @@ QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
                      mapFileInfo.completeBaseName() + QLatin1String(".png"));
 }
 
+QFileInfo MapImageManager::imageDataFileInfo(const QFileInfo &imageFileInfo)
+{
+    return QFileInfo(imageFileInfo.absolutePath() + QLatin1Char('/') +
+                     imageFileInfo.completeBaseName() + QLatin1String(".dat"));
+}
+
 ///// ///// ///// ///// /////
 
-MapImage::MapImage(QImage image, MapInfo *mapInfo)
+MapImage::MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, MapInfo *mapInfo)
     : mImage(image)
     , mInfo(mapInfo)
+    , mLevelZeroBounds(levelZeroBounds)
+    , mScale(scale)
 {
 }
 
@@ -229,13 +303,21 @@ QRectF MapImage::bounds()
 
 qreal MapImage::scale()
 {
+#if 1
+    return mScale;
+#else
     return (mImage.width() / bounds().width());
+#endif
 }
 
 QPointF MapImage::tileToImageCoords(qreal x, qreal y)
 {
     QPointF pos = tileToPixelCoords(x, y);
+#if 1
+    pos += mLevelZeroBounds.topLeft();
+#else
     // this is the drawMargins of the map (plus LevelIsometric height, if any)
     pos += QPointF(0, mImage.height() / scale() - bounds().height());
+#endif
     return pos * scale();
 }

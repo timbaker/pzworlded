@@ -33,7 +33,7 @@ class Map;
 class MapImage
 {
 public:
-    MapImage(QImage image, MapInfo *mapInfo);
+    MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, MapInfo *mapInfo);
 
     QImage image() const {return mImage; }
     MapInfo *mapInfo() const { return mInfo; }
@@ -54,6 +54,8 @@ public:
 private:
     QImage mImage;
     MapInfo *mInfo;
+    QRectF mLevelZeroBounds;
+    qreal mScale;
 };
 
 class MapImageManager : public QObject
@@ -67,8 +69,23 @@ public:
     MapImage *getMapImage(const QString &mapName, const QString &relativeTo = QString());
 
 protected:
-    QImage generateMapImage(const QString &mapFilePath);
-    QImage generateMapImage(MapComposite *mapComposite);
+    struct ImageData
+    {
+        ImageData()
+            : scale(0)
+            , valid(false)
+        {}
+        qreal scale;
+        QRectF levelZeroBounds;
+        QImage image;
+        bool valid;
+    };
+
+    ImageData generateMapImage(const QString &mapFilePath);
+    ImageData generateMapImage(MapComposite *mapComposite);
+
+    ImageData readImageData(const QFileInfo &imageDataFileInfo);
+    void writeImageData(const QFileInfo &imageDataFileInfo, const ImageData &data);
 
 signals:
     
@@ -77,6 +94,7 @@ public slots:
 private:
     MapImageManager();
     QFileInfo imageFileInfo(const QString &mapFilePath);
+    QFileInfo imageDataFileInfo(const QFileInfo &imageFileInfo);
 
     QMap<QString,MapImage*> mMapImages;
 
