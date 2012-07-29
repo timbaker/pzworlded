@@ -57,6 +57,7 @@ public:
         this->w = &w;
 
         w.writeStartDocument();
+        device->write("function TheWorld()\n");
         w.writeStartReturnTable();
 
         w.writeStartTable("propertydef");
@@ -74,6 +75,7 @@ public:
         w.writeEndTable();
 
         w.writeEndTable();
+        device->write("\nend");
         w.writeEndDocument();
     }
 
@@ -140,8 +142,11 @@ public:
 
     void writePropertyKeyAndValue(const QByteArray &key, const QString &value)
     {
+        bool isDouble;
+        value.toDouble(&isDouble);
         if (value == QLatin1String("true")
-                || value == QLatin1String("false"))
+                || value == QLatin1String("false")
+                || isDouble)
             w->writeKeyAndUnquotedValue(key, value.toAscii());
         else
             w->writeKeyAndValue(key, value);
