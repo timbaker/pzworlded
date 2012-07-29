@@ -38,6 +38,9 @@ public:
 
 public slots:
     void sceneRectChanged(const QRectF &sceneRect);
+    void bigger();
+    void smaller();
+    void widthChanged(int width);
 
 private:
     void mousePressEvent(QMouseEvent *event);
@@ -49,6 +52,8 @@ private:
     BaseGraphicsScene *mScene;
     QGraphicsPolygonItem *mViewportItem;
     QGraphicsItem *mExtraItem;
+    QFrame *mButtons;
+    int mWidth;
 };
 
 class BaseGraphicsView : public QGraphicsView

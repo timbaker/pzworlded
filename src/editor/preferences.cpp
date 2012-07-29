@@ -59,6 +59,11 @@ bool Preferences::showMiniMap() const
     return mShowMiniMap;
 }
 
+int Preferences::miniMapWidth() const
+{
+    return mMiniMapWidth;
+}
+
 bool Preferences::highlightCurrentLevel() const
 {
     return mHighlightCurrentLevel;
@@ -75,6 +80,7 @@ Preferences::Preferences()
     mShowWorldGrid = mSettings->value(QLatin1String("ShowWorldGrid"), true).toBool();
     mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
     mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
+    mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
     mSettings->endGroup();
@@ -144,6 +150,18 @@ void Preferences::setShowMiniMap(bool show)
     mShowMiniMap = show;
     mSettings->setValue(QLatin1String("Interface/ShowMiniMap"), mShowMiniMap);
     emit showMiniMapChanged(mShowMiniMap);
+}
+
+void Preferences::setMiniMapWidth(int width)
+{
+    width = qMin(width, 512);
+    width = qMax(width, 128);
+
+    if (mMiniMapWidth == width)
+        return;
+    mMiniMapWidth = width;
+    mSettings->setValue(QLatin1String("Interface/MiniMapWidth"), width);
+    emit miniMapWidthChanged(mMiniMapWidth);
 }
 
 void Preferences::setHighlightCurrentLevel(bool highlight)

@@ -32,6 +32,7 @@ BaseGraphicsView::BaseGraphicsView(QWidget *parent)
     , mZoomable(new Zoomable(this))
     , mMousePressed(false)
     , mScrollTimer(this)
+    , mScene(0)
     , mMiniMap(0)
 {
     setTransformationAnchor(QGraphicsView::AnchorViewCenter);
@@ -55,9 +56,6 @@ BaseGraphicsView::BaseGraphicsView(QWidget *parent)
     connect(&mScrollTimer, SIGNAL(timeout()), SLOT(autoScrollTimeout()));
 
     mMiniMap = new MiniMap(this);
-
-    Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(showMiniMapChanged(bool)), mMiniMap, SLOT(setVisible(bool)));
 }
 
 void BaseGraphicsView::adjustScale(qreal scale)
@@ -291,6 +289,8 @@ void BaseGraphicsView::ensureRectVisible(const QRectF &rect, int xmargin, int ym
 /////
 
 #include <QGraphicsPolygonItem>
+#include <QHBoxLayout>
+#include <QToolButton>
 #include <cmath>
 
 MiniMap::MiniMap(BaseGraphicsView *parent)
@@ -298,8 +298,18 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     , mParentView(parent)
     , mViewportItem(0)
     , mExtraItem(0)
+    , mButtons(new QFrame(this))
 {
     setFrameStyle(NoFrame);
+
+    // For the smaller/bigger buttons
+    setMouseTracking(true);
+
+    Preferences *prefs = Preferences::instance();
+    setVisible(prefs->showMiniMap());
+    mWidth = prefs->miniMapWidth();
+    connect(prefs, SIGNAL(showMiniMapChanged(bool)), SLOT(setVisible(bool)));
+    connect(prefs, SIGNAL(miniMapWidthChanged(int)), SLOT(widthChanged(int)));
 
     QGraphicsScene *scene = new QGraphicsScene(this);
     scene->setBackgroundBrush(Qt::gray);
@@ -312,6 +322,41 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     mViewportItem->setPen(QPen(Qt::white));
     mViewportItem->setZValue(100);
     scene->addItem(mViewportItem);
+
+    QHBoxLayout *layout = new QHBoxLayout(mButtons);
+    layout->setContentsMargins(2, 2, 0, 0);
+    layout->setSpacing(2);
+    mButtons->setLayout(layout);
+    mButtons->setVisible(false);
+
+    QToolButton *button = new QToolButton(mButtons);
+    button->setAutoRaise(true);
+    button->setAutoRepeat(true);
+    button->setIconSize(QSize(16, 16));
+    button->setIcon(QIcon(QLatin1String(":/images/16x16/zoom-out.png")));
+    button->setToolTip(tr("Make the MiniMap smaller"));
+    connect(button, SIGNAL(clicked()), SLOT(smaller()));
+    layout->addWidget(button);
+
+    button = new QToolButton(mButtons);
+    button->setAutoRaise(true);
+    button->setAutoRepeat(true);
+    button->setIconSize(QSize(16, 16));
+    button->setIcon(QIcon(QLatin1String(":/images/16x16/zoom-in.png")));
+    button->setToolTip(tr("Make the MiniMap larger"));
+    connect(button, SIGNAL(clicked()), SLOT(bigger()));
+    layout->addWidget(button);
+
+#if 0
+    button = new QToolButton(mButtons);
+    button->setAutoRaise(true);
+    button->setAutoRepeat(true);
+    button->setIconSize(QSize(16, 16));
+    button->setIcon(QIcon(QLatin1String(":/images/16x16/edit-redo.png")));
+    button->setToolTip(tr("Refresh the MiniMap image"));
+    connect(button, SIGNAL(clicked()), SLOT(updateImage()));
+    layout->addWidget(button);
+#endif
 
     setGeometry(20, 20, 220, 220);
 
@@ -364,6 +409,22 @@ void MiniMap::sceneRectChanged(const QRectF &sceneRect)
         mExtraItem->setScale(scale);
 }
 
+void MiniMap::bigger()
+{
+    Preferences::instance()->setMiniMapWidth(qMin(mWidth + 32, 512));
+}
+
+void MiniMap::smaller()
+{
+    Preferences::instance()->setMiniMapWidth(qMax(mWidth - 32, 256));
+}
+
+void MiniMap::widthChanged(int width)
+{
+    mWidth = width;
+    sceneRectChanged(mScene->sceneRect());
+}
+
 void MiniMap::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton)
@@ -374,6 +435,10 @@ void MiniMap::mouseMoveEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::LeftButton)
         mParentView->centerOn(mapToScene(event->pos()) / scale());
+    else {
+        QRect hotSpot = mButtons->rect().adjusted(0, 0, 12, 12); //(0, 0, 64, 32);
+        mButtons->setVisible(hotSpot.contains(event->pos()));
+    }
 }
 
 void MiniMap::mouseReleaseEvent(QMouseEvent *event)
@@ -387,5 +452,5 @@ qreal MiniMap::scale()
     QSizeF size = sceneRect.size();
     if (size.isEmpty())
         return 1.0;
-    return (size.width() > size.height()) ? 256.0 / size.width() : 256.0 / size.height();
+    return (size.width() > size.height()) ? mWidth / size.width() : mWidth / size.height();
 }
