@@ -34,6 +34,7 @@ class PropertyDefList : public QList<PropertyDef*>
 {
 public:
     PropertyDef *findPropertyDef(const QString &name) const;
+    PropertyDefList sorted() const;
 };
 
 class Property
@@ -58,6 +59,7 @@ public:
     void removeAll(PropertyDef *pd);
 
     PropertyList clone() const;
+    PropertyList sorted() const;
 };
 
 class PropertyTemplate;
@@ -65,6 +67,7 @@ class PropertyTemplateList : public QList<PropertyTemplate*>
 {
 public:
     PropertyTemplate *find(const QString &name) const;
+    PropertyTemplateList sorted() const;
 };
 
 class PropertyHolder

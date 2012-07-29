@@ -58,7 +58,7 @@ void PropertyDefinitionsDialog::definitionSelected()
     if (selection.size() == 1) {
         mItem = selection.first();
         int row = view->indexOfTopLevelItem(mItem);
-        PropertyDef *pd = mWorldDoc->world()->propertyDefinitions().at(row);
+        PropertyDef *pd = mWorldDoc->world()->propertyDefinitions().sorted().at(row);
         ui->defNameEdit->setText(pd->mName);
         ui->defDefaultEdit->setText(pd->mDefaultValue);
         ui->defDescEdit->clear();
@@ -104,8 +104,11 @@ void PropertyDefinitionsDialog::updateDefinition()
                                         ui->defDefaultEdit->text(),
                                         ui->defDescEdit->toPlainText());
 
-    mItem->setData(0, Qt::DisplayRole, mDef->mName);
-    mItem->setData(1, Qt::DisplayRole, mDef->mDefaultValue);
+    PropertyDef *pd = mDef;
+    setList();
+    int row = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
+    QTreeWidgetItem *item = ui->definitionsList->topLevelItem(row);
+    ui->definitionsList->setCurrentItem(item);
 
     synchButtons();
 }
@@ -165,6 +168,11 @@ void PropertyDefinitionsDialog::synchButtons()
     ui->addDefButton->setEnabled(enableAdd);
     ui->updateDefButton->setEnabled(enableUpdate);
     ui->removeDefButton->setEnabled(enableRemove);
+
+    ui->addDefButton->setDefault(enableAdd && !enableUpdate);
+    ui->updateDefButton->setDefault(enableUpdate);
+    ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd &&
+                                                               !enableUpdate);
 }
 
 void PropertyDefinitionsDialog::setList()
@@ -172,12 +180,10 @@ void PropertyDefinitionsDialog::setList()
     QTreeWidget *view = ui->definitionsList;
     view->clear();
 
-    int row = 0;
-    foreach (PropertyDef *pd, mWorldDoc->world()->propertyDefinitions()) {
+    foreach (PropertyDef *pd, mWorldDoc->world()->propertyDefinitions().sorted()) {
         QTreeWidgetItem *item = new QTreeWidgetItem();
         item->setData(0, Qt::DisplayRole, pd->mName);
         item->setData(1, Qt::DisplayRole, pd->mDefaultValue);
         view->addTopLevelItem(item);
-        ++row;
     }
 }

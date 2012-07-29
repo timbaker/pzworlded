@@ -34,9 +34,10 @@ class TemplatesDialog : public QDialog
 public:
     explicit TemplatesDialog(WorldDocument *worldDoc, QWidget *parent = 0);
     
-signals:
-    
-public slots:
+private:
+    void setList();
+
+private slots:
     void selectionChanged();
     void closeItem(const QModelIndex &index);
     void clearTemplate();

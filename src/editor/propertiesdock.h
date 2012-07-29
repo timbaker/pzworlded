@@ -179,6 +179,11 @@ private:
             qDeleteAll(children);
         }
 
+        int indexOf()
+        {
+            return parent->children.indexOf(this);
+        }
+
         bool usesPropertyDef(PropertyDef *pd)
         {
             return (p && (p->mDefinition == pd));
@@ -203,6 +208,33 @@ private:
             foreach (Item *child, children)
                 items += child->itemsFor(ph);
             return items;
+        }
+
+        Item *findChild(Header h)
+        {
+            foreach (Item *item, children) {
+                if (item->header == h)
+                    return item;
+            }
+            return 0;
+        }
+
+        Item *findChild(PropertyTemplate *pt)
+        {
+            foreach (Item *item, children) {
+                if (item->pt == pt)
+                    return item;
+            }
+            return 0;
+        }
+
+        Item *findChild(Property *p)
+        {
+            foreach (Item *item, children) {
+                if (item->p == p)
+                    return item;
+            }
+            return 0;
         }
 
         Item *parent;

@@ -29,11 +29,9 @@ TemplatesDialog::TemplatesDialog(WorldDocument *worldDoc, QWidget *parent)
 {
     ui->setupUi(this);
 
-    QListWidget *view = ui->templatesView;
-    foreach (PropertyTemplate *pt, mWorldDoc->world()->propertyTemplates()) {
-        view->addItem(pt->mName);
-    }
+    setList();
 
+    QListWidget *view = ui->templatesView;
     connect(view->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             SLOT(selectionChanged()));
 
@@ -57,12 +55,20 @@ TemplatesDialog::TemplatesDialog(WorldDocument *worldDoc, QWidget *parent)
     synchButtons();
 }
 
+void TemplatesDialog::setList()
+{
+    QListWidget *view = ui->templatesView;
+    view->clear();
+    foreach (PropertyTemplate *pt, mWorldDoc->world()->propertyTemplates().sorted())
+        view->addItem(pt->mName);
+}
+
 void TemplatesDialog::selectionChanged()
 {
     QModelIndexList selection = ui->templatesView->selectionModel()->selectedIndexes();
     if (selection.size() == 1) {
-        int index = selection.first().row();
-        mTemplate = mWorldDoc->world()->propertyTemplates().at(index);
+        int row = selection.first().row();
+        mTemplate = mWorldDoc->world()->propertyTemplates().sorted().at(row);
         ui->propertiesView->setPropertyHolder(mWorldDoc, mTemplate);
     } else {
         mTemplate = 0;
@@ -84,10 +90,12 @@ void TemplatesDialog::selectionChanged()
 
 void TemplatesDialog::closeItem(const QModelIndex &index)
 {
-    if (ui->propertiesView->model()->toTemplate(index)) {
-        mWorldDoc->removeTemplate(mTemplate, index.row());
-    }  else if (ui->propertiesView->model()->toProperty(index)) {
-        mWorldDoc->removeProperty(mTemplate, index.row());
+    if (PropertyTemplate *pt = ui->propertiesView->model()->toTemplate(index)) {
+        int i = mTemplate->templates().indexOf(pt);
+        mWorldDoc->removeTemplate(mTemplate, i);
+    }  else if (Property *p = ui->propertiesView->model()->toProperty(index)) {
+        int i = mTemplate->properties().indexOf(p);
+        mWorldDoc->removeProperty(mTemplate, i);
     }
 }
 
@@ -102,23 +110,27 @@ void TemplatesDialog::updateSelectedTemplate()
 {
     mWorldDoc->changeTemplate(mTemplate, ui->templateName->text(),
                               ui->templateDesc->toPlainText());
-    ui->templatesView->currentItem()->setText(mTemplate->mName);
+    PropertyTemplate *pt = mTemplate;
+    setList();
+    int row = mWorldDoc->world()->propertyTemplates().sorted().indexOf(pt);
+    ui->templatesView->setCurrentRow(row, QItemSelectionModel::Select);
     synchButtons();
 }
 
 void TemplatesDialog::removeSelectedTemplate()
 {
-    int index = ui->templatesView->currentRow();
+    int row = ui->templatesView->currentRow();
+    int index = mWorldDoc->world()->propertyTemplates().indexOf(mTemplate);
     mWorldDoc->removeTemplate(index);
     clearTemplate();
-    delete ui->templatesView->takeItem(index);
+    delete ui->templatesView->takeItem(row);
 }
 
 void TemplatesDialog::addTemplate()
 {
     mWorldDoc->addTemplate(ui->templateName->text(),
                            ui->templateDesc->toPlainText());
-    ui->templatesView->addItem(ui->templateName->text());
+    setList();
 //    ui->templatesView->clearSelection();
     clearTemplate();
 }
@@ -166,5 +178,9 @@ void TemplatesDialog::synchButtons()
     ui->addTemplate->setEnabled(enableAdd);
     ui->updateTemplate->setEnabled(enableUpdate);
     ui->removeTemplate->setEnabled(enableRemove);
-}
 
+    ui->addTemplate->setDefault(enableAdd && !enableUpdate);
+    ui->updateTemplate->setDefault(enableUpdate);
+    ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd &&
+                                                               !enableUpdate);
+}

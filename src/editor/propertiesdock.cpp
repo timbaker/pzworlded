@@ -424,17 +424,31 @@ void PropertiesModel::createAddPropertyWidget()
     mAddPropertyWidget->setFocusPolicy(Qt::NoFocus);
 }
 
-void PropertiesModel::redrawProperty(PropertiesModel::Item *item, PropertyDef *pd)
+void PropertiesModel::redrawProperty(Item *item, PropertyDef *pd)
 {
     if (item->usesPropertyDef(pd)) {
         QModelIndex index = this->index(item);
+        int oldRow = index.row();
+        int newRow = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
+        if (oldRow != newRow) {
+            Item *parentItem = item->parent;
+            QModelIndex parent = this->index(parentItem);
+            int destRow = newRow;
+            if (destRow > oldRow)
+                ++destRow;
+            beginMoveRows(parent, oldRow, oldRow, parent, destRow);
+            parentItem->children.takeAt(oldRow);
+            parentItem->children.insert(newRow, item);
+            endMoveRows();
+            index = this->index(item);
+        }
         emit dataChanged(index, index);
     }
     foreach (Item *child, item->children)
         redrawProperty(child, pd);
 }
 
-void PropertiesModel::redrawTemplate(PropertiesModel::Item *item, PropertyTemplate *pt)
+void PropertiesModel::redrawTemplate(Item *item, PropertyTemplate *pt)
 {
     if (item->pt == pt) {
         QModelIndex index = this->index(item);
@@ -606,7 +620,8 @@ void PropertiesModel::setTemplatesMenu()
 
     QMenu *menu = mAddTemplateMenu;
     menu->clear();
-    foreach (PropertyTemplate *pt, mWorldDoc->world()->propertyTemplates()) {
+    PropertyTemplateList templates = mWorldDoc->world()->propertyTemplates().sorted();
+    foreach (PropertyTemplate *pt, templates) {
         if (mPropertyHolder->canAddTemplate(pt))
             menu->addAction(pt->mName);
     }
@@ -624,7 +639,8 @@ void PropertiesModel::setPropertiesMenu()
 
     QMenu *menu = mAddPropertyMenu;
     menu->clear();
-    foreach (PropertyDef *pd, mWorldDoc->world()->propertyDefinitions()) {
+    PropertyDefList defs = mWorldDoc->world()->propertyDefinitions().sorted();
+    foreach (PropertyDef *pd, defs) {
         if (mPropertyHolder->canAddProperty(pd))
             menu->addAction(pd->mName);
     }
@@ -697,10 +713,11 @@ void PropertiesModel::templateAboutToBeRemoved(int index)
     if (pt == mPropertyHolder)
         return;
     foreach (Item *item, itemsFor(pt)) {
-        item = item->parent;
-        QModelIndex parent = this->index(item); // Templates header
-        beginRemoveRows(parent, index, index);
-        Item *remove = item->children.takeAt(index);
+        Item *parentItem = item->parent;
+        QModelIndex parent = this->index(parentItem); // Templates header
+        int row = item->indexOf();
+        beginRemoveRows(parent, row, row);
+        Item *remove = parentItem->children.takeAt(row);
         delete remove;
         endRemoveRows();
 
@@ -711,10 +728,12 @@ void PropertiesModel::templateAboutToBeRemoved(int index)
 void PropertiesModel::templateAdded(PropertyHolder *ph, int index)
 {
     foreach (Item *item, itemsFor(ph)) {
-        item = item->children.first(); // Templates header
-        QModelIndex parent = this->index(item);
-        beginInsertRows(parent, index, index);
-        addTemplate(item, index, ph->templates().at(index));
+        Item *parentItem = item->findChild(Item::HeaderTemplates);
+        QModelIndex parent = this->index(parentItem);
+        PropertyTemplate *pt = ph->templates().at(index);
+        int row = ph->templates().sorted().indexOf(pt);
+        beginInsertRows(parent, row, row);
+        addTemplate(parentItem, row, pt);
         endInsertRows();
 
         updateMenusLater();
@@ -724,11 +743,13 @@ void PropertiesModel::templateAdded(PropertyHolder *ph, int index)
 void PropertiesModel::templateAboutToBeRemoved(PropertyHolder *ph, int index)
 {
     foreach (Item *item, itemsFor(ph)) {
-        item = item->children.first(); // Templates header
-        QModelIndex parent = this->index(item);
-        qDebug() << "removing template at parent" << parent << "row" << index;
-        beginRemoveRows(parent, index, index);
-        Item *remove = item->children.takeAt(index);
+        Item *parentItem = item->findChild(Item::HeaderTemplates);
+        QModelIndex parent = this->index(parentItem);
+        PropertyTemplate *pt = ph->templates().at(index);
+        int row = parentItem->findChild(pt)->indexOf();
+        qDebug() << "removing template at parent" << parent << "row" << row;
+        beginRemoveRows(parent, row, row);
+        Item *remove = parentItem->children.takeAt(row);
         delete remove;
         endRemoveRows();
 
@@ -739,10 +760,12 @@ void PropertiesModel::templateAboutToBeRemoved(PropertyHolder *ph, int index)
 void PropertiesModel::propertyAdded(PropertyHolder *ph, int index)
 {
     foreach (Item *item, itemsFor(ph)) {
-        item = item->children.last(); // Properties header
-        QModelIndex parent = this->index(item);
-        beginInsertRows(parent, index, index);
-        addProperty(item, index, ph->properties().at(index));
+        Item *parentItem = item->findChild(Item::HeaderProperties);
+        QModelIndex parent = this->index(parentItem);
+        Property *p = ph->properties().at(index);
+        int row = ph->properties().sorted().indexOf(p);
+        beginInsertRows(parent, row, row);
+        addProperty(parentItem, row, p);
         endInsertRows();
 
         updateMenusLater();
@@ -752,10 +775,12 @@ void PropertiesModel::propertyAdded(PropertyHolder *ph, int index)
 void PropertiesModel::propertyAboutToBeRemoved(PropertyHolder *ph, int index)
 {
     foreach (Item *item, itemsFor(ph)) {
-        item = item->children.last(); // Properties header
-        QModelIndex parent = this->index(item);
-        beginRemoveRows(parent, index, index);
-        Item *remove = item->children.takeAt(index);
+        Item *parentItem = item->findChild(Item::HeaderProperties);
+        QModelIndex parent = this->index(parentItem);
+        Property *p = ph->properties().at(index);
+        int row = parentItem->findChild(p)->indexOf();
+        beginRemoveRows(parent, row, row);
+        Item *remove = parentItem->children.takeAt(row);
         delete remove;
         endRemoveRows();
 
@@ -766,9 +791,11 @@ void PropertiesModel::propertyAboutToBeRemoved(PropertyHolder *ph, int index)
 void PropertiesModel::propertyValueChanged(PropertyHolder *ph, int index)
 {
     foreach (Item *item, itemsFor(ph)) {
-        item = item->children.last(); // Properties header
-        QModelIndex parent = this->index(item);
-        QModelIndex child = this->index(index, 1, parent);
+        Item *parentItem = item->findChild(Item::HeaderProperties);
+        QModelIndex parent = this->index(parentItem);
+        Property *p = ph->properties().at(index);
+        int row = parentItem->findChild(p)->indexOf();
+        QModelIndex child = this->index(row, 1, parent);
         emit dataChanged(child, child);
     }
 }
@@ -812,17 +839,15 @@ void PropertiesModel::setModelData()
     mRootItem = new Item(mPropertyHolder);
 
     Item *header = new Item(mRootItem, mRootItem->children.size(), Item::HeaderTemplates);
-    foreach (PropertyTemplate *pt, mPropertyHolder->templates()) {
+    foreach (PropertyTemplate *pt, mPropertyHolder->templates().sorted())
         addTemplate(header, header->children.size(), pt);
-    }
 
     createAddTemplateWidget();
     Item *addTemplateItem = new Item(header, header->children.size(), mAddTemplateWidget);
 
     header = new Item(mRootItem, mRootItem->children.size(), Item::HeaderProperties);
-    foreach (Property *p, mPropertyHolder->properties()) {
+    foreach (Property *p, mPropertyHolder->properties().sorted())
         addProperty(header, header->children.size(), p);
-    }
 
     createAddPropertyWidget();
     Item *addPropertyItem = new Item(header, header->children.size(), mAddPropertyWidget);
@@ -1075,9 +1100,11 @@ void PropertiesDock::closeItem(const QModelIndex &index)
     WorldDocument *worldDoc = mWorldDoc;
     if (mCellDoc)
         worldDoc = mCellDoc->worldDocument();
-    if (mView->model()->toTemplate(index)) {
-        worldDoc->removeTemplate(mPropertyHolder, index.row());
-    }  else if (mView->model()->toProperty(index)) {
-        worldDoc->removeProperty(mPropertyHolder, index.row());
+    if (PropertyTemplate *pt = mView->model()->toTemplate(index)) {
+        int i = mPropertyHolder->templates().indexOf(pt);
+        worldDoc->removeTemplate(mPropertyHolder, i);
+    }  else if (Property *p = mView->model()->toProperty(index)) {
+        int i = mPropertyHolder->properties().indexOf(p);
+        worldDoc->removeProperty(mPropertyHolder, i);
     }
 }

@@ -30,6 +30,24 @@ PropertyDef *PropertyDefList::findPropertyDef(const QString &name) const
     return 0;
 }
 
+PropertyDefList PropertyDefList::sorted() const
+{
+    PropertyDefList sorted;
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        PropertyDef *pd = *it;
+        int index = 0;
+        foreach (PropertyDef *pd2, sorted) {
+            if (pd2->mName > pd->mName)
+                break;
+            ++index;
+        }
+        sorted.insert(index, pd);
+        ++it;
+    }
+    return sorted;
+}
+
 /////
 
 bool PropertyList::contains(PropertyDef *pd) const
@@ -62,6 +80,24 @@ PropertyList PropertyList::clone() const
     return copy;
 }
 
+PropertyList PropertyList::sorted() const
+{
+    PropertyList sorted;
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        Property *p = *it;
+        int index = 0;
+        foreach (Property *p2, sorted) {
+            if (p2->mDefinition->mName > p->mDefinition->mName)
+                break;
+            ++index;
+        }
+        sorted.insert(index, p);
+        ++it;
+    }
+    return sorted;
+}
+
 /////
 
 PropertyTemplate *PropertyTemplateList::find(const QString &name) const
@@ -73,6 +109,24 @@ PropertyTemplate *PropertyTemplateList::find(const QString &name) const
         it++;
     }
     return 0;
+}
+
+PropertyTemplateList PropertyTemplateList::sorted() const
+{
+    PropertyTemplateList sorted;
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        PropertyTemplate *pt = *it;
+        int index = 0;
+        foreach (PropertyTemplate *pt2, sorted) {
+            if (pt2->mName > pt->mName)
+                break;
+            ++index;
+        }
+        sorted.insert(index, pt);
+        it++;
+    }
+    return sorted;
 }
 
 /////
