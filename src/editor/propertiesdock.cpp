@@ -65,9 +65,11 @@ public:
         // draw the close button
         if (model->isDeletable(index) && index.column() == 0 && opt.state & QStyle::State_MouseOver) {
             QRect closeRect = closeButtonRect(opt.rect); //opt.rect.x()-40+2, opt.rect.y(), mTrashPixmap.width(), opt.rect.height());
+            p->save();
             p->setClipRect(closeRect);
             p->drawPixmap(closeRect.x(), closeRect.y(), mTrashPixmap);
-            p->setClipRect(opt.rect);
+//            p->setClipRect(opt.rect);
+            p->restore();
         }
     }
 #else
@@ -374,15 +376,17 @@ bool PropertiesModel::setData(const QModelIndex &index, const QVariant &value,
                               int role)
 {
     Item *item = toItem(index);
-    if (isEditable(index)) {
-        switch (role) {
-        case Qt::EditRole:
+    switch (role) {
+    case Qt::EditRole:
+        if (isEditable(index)) {
             if (value.toString() != item->p->mValue)
-                mWorldDoc->setPropertyValue(mPropertyHolder, item->p, value.toString());
+                mWorldDoc->setPropertyValue(mPropertyHolder, item->p,
+                                            value.toString());
             return true;
         }
-
+        break;
     }
+
     return QAbstractItemModel::setData(index, value, role);
 }
 
