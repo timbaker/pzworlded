@@ -66,6 +66,17 @@ static void unionSceneRects(const QRectF &a,
         out = a | b;
 }
 
+static QString layerNameWithoutPrefix(const QString &name)
+{
+    int pos = name.indexOf(QLatin1Char('_')) + 1; // Could be "-1 + 1 == 0"
+    return name.mid(pos);
+}
+
+static QString layerNameWithoutPrefix(Layer *layer)
+{
+    return layerNameWithoutPrefix(layer->name());
+}
+
 ///// ///// ///// ///// /////
 
 ///// ///// ///// ///// /////
@@ -74,6 +85,7 @@ CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
     : ZTileLayerGroup(owner->map(), level)
     , mOwner(owner)
     , mAnyVisibleLayers(false)
+    , mNeedsSynch(true)
 {
 
 }
@@ -82,27 +94,33 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 {
     ZTileLayerGroup::addTileLayer(layer, index);
 
-    // FIXME: name shouldn't include "N_" prefix
-    mLayersByName[layer->name()].append(layer);
+    // Remember the names of layers (without the N_ prefix)
+    const QString name = layerNameWithoutPrefix(layer);
+    mLayersByName[name].append(layer);
+
+    index = mLayers.indexOf(layer);
+    mVisibleLayers.insert(index, layer->isVisible());
 
     // To optimize drawing of submaps, remember which layers are totally empty.
     // But don't do this for the top-level map (the one being edited).
     // TileLayer::isEmpty() is SLOW, it's why I'm caching it.
-    mEmptyLayers.resize(layerCount());
-    mEmptyLayers[mLayers.indexOf(layer)] = mOwner->mapInfo()->isBeingEdited()
+    bool empty = mOwner->mapInfo()->isBeingEdited()
             ? false
             : layer->isEmpty() || layer->name().contains(QLatin1String("NoRender"));
+    mEmptyLayers.insert(index, empty);
 }
 
 void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
 {
     int index = mLayers.indexOf(layer);
+    mVisibleLayers.remove(index);
     mEmptyLayers.remove(index);
 
     ZTileLayerGroup::removeTileLayer(layer);
 
-    index = mLayersByName[layer->name()].indexOf(layer);
-    mLayersByName[layer->name()].remove(index);
+    const QString name = layerNameWithoutPrefix(layer);
+    index = mLayersByName[name].indexOf(layer);
+    mLayersByName[name].remove(index);
 }
 
 void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect)
@@ -130,9 +148,9 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos, QVector<const Cell *
         ++index;
 #if SPARSE_TILELAYER
         // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps
-        if (!tl->isVisible() || mEmptyLayers[index] || tl->isEmpty())
+        if (!mVisibleLayers[index] || mEmptyLayers[index] || tl->isEmpty())
 #else
-        if (!tl->isVisible() || mEmptyLayers[index])
+        if (!mVisibleLayers[index] || mEmptyLayers[index])
 #endif
             continue;
         QPoint subPos = pos - tl->position();
@@ -167,9 +185,9 @@ void CompositeLayerGroup::synch()
     foreach (TileLayer *tl, mLayers) {
 #if SPARSE_TILELAYER
         // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps
-        if (tl->isVisible() && !mEmptyLayers[index] && !tl->isEmpty()) {
+        if (mVisibleLayers[index] && !mEmptyLayers[index] && !tl->isEmpty()) {
 #else
-        if (tl->isVisible() && !mEmptyLayers[index]) {
+        if (mVisibleLayers[index] && !mEmptyLayers[index]) {
 #endif
             unionTileRects(r, tl->bounds(), r);
             maxMargins(m, tl->drawMargins(), m);
@@ -192,12 +210,13 @@ void CompositeLayerGroup::synch()
 
             // Set the visibility of sub-map layers to match this layer-group's layers.
             // Layers in the sub-map without a matching name in the base map are always shown.
-            foreach (Layer *layer, layerGroup->mLayers)
-                layer->setVisible(true);
-            foreach (Layer *layer, mLayers)
-                layerGroup->setLayerVisibility(layer->name(), layer->isVisible());
+            foreach (TileLayer *layer, layerGroup->mLayers)
+                layerGroup->setLayerVisibility(layer, true);
+            int index = 0;
+            foreach (TileLayer *layer, mLayers)
+                layerGroup->setLayerVisibility(layer->name(), mVisibleLayers[index++]);
 
-#if 0 // Re-enable this if submaps ever change
+#if 1 // Re-enable this if submaps ever change
             layerGroup->synch();
 #endif
             if (layerGroup->mAnyVisibleLayers) {
@@ -211,6 +230,18 @@ void CompositeLayerGroup::synch()
 
     mSubMapTileBounds = r;
     mDrawMargins = m;
+
+    mNeedsSynch = false;
+}
+
+void CompositeLayerGroup::saveVisibility()
+{
+    mSavedVisibleLayers = mVisibleLayers;
+}
+
+void CompositeLayerGroup::restoreVisibility()
+{
+    mVisibleLayers = mSavedVisibleLayers;
 }
 
 QRect CompositeLayerGroup::bounds() const
@@ -225,13 +256,34 @@ QMargins CompositeLayerGroup::drawMargins() const
     return mDrawMargins;
 }
 
-void CompositeLayerGroup::setLayerVisibility(const QString &name, bool visible) const
+void CompositeLayerGroup::setLayerVisibility(const QString &layerName, bool visible)
 {
+    const QString name = layerNameWithoutPrefix(layerName);
     if (!mLayersByName.contains(name))
         return;
-    foreach (Layer *layer, mLayersByName[name])
-        layer->setVisible(visible);
+    foreach (Layer *layer, mLayersByName[name]) {
+        mVisibleLayers[mLayers.indexOf(layer->asTileLayer())] = visible;
+        mNeedsSynch = true;
+    }
 }
+
+void CompositeLayerGroup::setLayerVisibility(TileLayer *tl, bool visible)
+{
+    int index = mLayers.indexOf(tl);
+    Q_ASSERT(index != -1);
+    if (visible != mVisibleLayers[index]) {
+        mVisibleLayers[index] = visible;
+        mNeedsSynch = true;
+    }
+}
+
+bool CompositeLayerGroup::isLayerVisible(TileLayer *tl)
+{
+    int index = mLayers.indexOf(tl);
+    Q_ASSERT(index != -1);
+    return mVisibleLayers[index];
+}
+
 #if 0
 void CompositeLayerGroup::layerRenamed(TileLayer *layer)
 {
@@ -246,11 +298,16 @@ void CompositeLayerGroup::layerRenamed(TileLayer *layer)
         }
     }
 
-    mLayersByName[layer->name()].append(layer);
+    const QString name = layerNameWithoutPrefix(layer->name());
+    mLayersByName[name].append(layer);
 }
 #endif
-QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer) const
+
+QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer)
 {
+    if (mNeedsSynch)
+        synch();
+
     QRectF boundingRect = renderer->boundingRect(mTileBounds.translated(mOwner->originRecursive()),
                                                  mLevel + mOwner->levelRecursive());
 
@@ -287,8 +344,6 @@ MapComposite::MapComposite(MapInfo *mapInfo, MapComposite *parent, const QPoint 
 {
     int index = 0;
     foreach (Layer *layer, mMap->layers()) {
-        if (!mapInfo->isBeingEdited())
-            layer->setVisible(!layer->name().contains(QLatin1String("NoRender")));
         int level;
         if (levelForLayer(layer, &level)) {
             // FIXME: no changing of mMap should happen after it is loaded!
@@ -298,6 +353,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, MapComposite *parent, const QPoint 
                 if (!mLayerGroups.contains(level))
                     mLayerGroups[level] = new CompositeLayerGroup(this, level);
                 mLayerGroups[level]->addTileLayer(tl, index);
+                if (!mapInfo->isBeingEdited())
+                    mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
             }
         }
         ++index;
@@ -339,7 +396,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, MapComposite *parent, const QPoint 
     mMinLevel = 10000;
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
-        layerGroup->synch();
+        if (!mMapInfo->isBeingEdited())
+            layerGroup->synch();
         if (layerGroup->level() < mMinLevel)
             mMinLevel = layerGroup->level();
         // FIXME: no changing of mMap should happen after it is loaded!
@@ -390,7 +448,7 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos, int leve
     ensureMaxLevels(levelOffset + mapInfo->map()->maxLevel());
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
-        layerGroup->synch();
+        layerGroup->setNeedsSynch(true);
 
     return subMap;
 }
@@ -402,7 +460,7 @@ void MapComposite::removeMap(MapComposite *subMap)
     delete subMap;
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
-        layerGroup->synch();
+        layerGroup->setNeedsSynch(true);
 }
 
 void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
@@ -472,10 +530,11 @@ void MapComposite::saveVisibility()
     mSavedGroupVisible = mGroupVisible;
     mGroupVisible = true; // hack
 
-    int index = 0;
-    mSavedLayerVisible.resize(mMap->layerCount());
-    foreach (Layer *layer, mMap->layers())
-        mSavedLayerVisible[index++] = layer->isVisible();
+    mSavedVisible = mVisible;
+    mVisible = true; // hack
+
+    foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+        layerGroup->saveVisibility();
 
     // FIXME: there can easily be multiple instances of the same map,
     // in which case this does unnecessary work.
@@ -486,10 +545,10 @@ void MapComposite::saveVisibility()
 void MapComposite::restoreVisibility()
 {
     mGroupVisible = mSavedGroupVisible;
+    mVisible = mSavedVisible;
 
-    int index = 0;
-    foreach (Layer *layer, mMap->layers())
-        layer->setVisible(mSavedLayerVisible[index++]);
+    foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+        layerGroup->restoreVisibility();
 
     foreach (MapComposite *subMap, mSubMaps)
         subMap->restoreVisibility();

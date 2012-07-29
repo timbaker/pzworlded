@@ -48,22 +48,32 @@ public:
     QRect bounds() const;
     QMargins drawMargins() const;
 
-    void setLayerVisibility(const QString &name, bool visible) const;
+    QRectF boundingRect(const Tiled::MapRenderer *renderer);
 
-    QRectF boundingRect(const Tiled::MapRenderer *renderer) const;
+    void setLayerVisibility(const QString &layerName, bool visible);
+    void setLayerVisibility(Tiled::TileLayer *tl, bool visible);
+    bool isLayerVisible(Tiled::TileLayer *tl);
 
     MapComposite *owner() const { return mOwner; }
 
+    void setNeedsSynch(bool synch) { mNeedsSynch = synch; }
+    bool needsSynch() const { return mNeedsSynch; }
     void synch();
+
+    void saveVisibility();
+    void restoreVisibility();
 
 private:
     MapComposite *mOwner;
     bool mAnyVisibleLayers;
+    bool mNeedsSynch;
     QRect mTileBounds;
     QRect mSubMapTileBounds;
     QMargins mDrawMargins;
+    QVector<bool> mVisibleLayers;
     QVector<bool> mEmptyLayers;
     QMap<QString,QVector<Tiled::Layer*> > mLayersByName;
+    QVector<bool> mSavedVisibleLayers;
 
     struct SubMapLayers
     {
@@ -162,7 +172,7 @@ private:
     bool mVisible;
     bool mGroupVisible;
     bool mSavedGroupVisible;
-    QVector<bool> mSavedLayerVisible;
+    bool mSavedVisible;
     bool mHiddenDuringDrag;
 };
 

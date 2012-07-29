@@ -102,8 +102,10 @@ QVariant LayersModel::data(const QModelIndex &index, int role) const
             return tl->name();
         case Qt::DecorationRole:
             return QVariant();
-        case Qt::CheckStateRole:
-            return tl->isVisible() ? Qt::Checked : Qt::Unchecked;
+        case Qt::CheckStateRole: {
+            CompositeLayerGroup *g = mMapComposite->layerGroupForLayer(tl);
+            return g->isLayerVisible(tl) ? Qt::Checked : Qt::Unchecked;
+        }
         case OpacityRole:
             return qreal(1);
         default:

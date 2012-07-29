@@ -102,8 +102,11 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
 
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
 {
-    layer->setVisible(visible);
-    emit layerVisibilityChanged(layer);
+    if (TileLayer *tl = layer->asTileLayer()) {
+        CompositeLayerGroup *layerGroup = mCellScene->mapComposite()->layerGroupForLayer(tl);
+        layerGroup->setLayerVisibility(tl, visible);
+        emit layerVisibilityChanged(layer);
+    }
 }
 
 void CellDocument::setLayerGroupVisibility(ZTileLayerGroup *layerGroup, bool visible)

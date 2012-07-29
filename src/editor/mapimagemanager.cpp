@@ -156,9 +156,9 @@ QImage MapImageManager::generateMapImage(MapComposite *mapComposite)
     painter.setTransform(QTransform::fromScale(scale, scale).translate(0, -sceneRect.top()));
 
     mapComposite->saveVisibility();
-    foreach (Layer *layer, map->layers())
-        layer->setVisible(!layer->name().contains(QLatin1String("NoRender")));
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
+        foreach (TileLayer *layer, layerGroup->layers())
+            layerGroup->setLayerVisibility(layer, !layer->name().contains(QLatin1String("NoRender")));
         layerGroup->synch();
         renderer->drawTileLayerGroup(&painter, layerGroup);
     }
