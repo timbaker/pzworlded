@@ -44,11 +44,17 @@ public:
     QStringList searchPaths() const;
     void setSearchPaths(const QStringList &paths);
 
+    bool useOpenGL() const { return mUseOpenGL; }
+    void setUseOpenGL(bool useOpenGL);
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
     void showWorldGridChanged(bool showGrid);
     void showCellGridChanged(bool showGrid);
+
+    void useOpenGLChanged(bool useOpenGL);
+
     void showMiniMapChanged(bool show);
     void miniMapWidthChanged(int width);
     void highlightCurrentLevelChanged(bool highlight);
@@ -73,6 +79,7 @@ private:
     bool mShowCoordinates;
     bool mShowWorldGrid;
     bool mShowCellGrid;
+    bool mUseOpenGL;
     bool mShowMiniMap;
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;

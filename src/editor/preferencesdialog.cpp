@@ -42,6 +42,7 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
     mSearchPaths = prefs->searchPaths();
 
     setPathsList();
+    ui->openGL->setChecked(prefs->useOpenGL());
 }
 
 void PreferencesDialog::setPathsList()
@@ -120,4 +121,5 @@ void PreferencesDialog::dialogAccepted()
 {
     Preferences *prefs = Preferences::instance();
     prefs->setSearchPaths(mSearchPaths);
+    prefs->setUseOpenGL(ui->openGL->isChecked());
 }

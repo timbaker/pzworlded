@@ -18,15 +18,23 @@
 #include "cellview.h"
 
 #include "cellscene.h"
+#include "preferences.h"
 #include "zoomable.h"
 
 #include "maprenderer.h"
 
+#include <QGLWidget>
 #include <QMouseEvent>
 
 CellView::CellView(QWidget *parent) :
     BaseGraphicsView(parent)
 {
+#ifndef QT_NO_OPENGL
+    Preferences *prefs = Preferences::instance();
+    setUseOpenGL(prefs->useOpenGL());
+    connect(prefs, SIGNAL(useOpenGLChanged(bool)), SLOT(setUseOpenGL(bool)));
+#endif
+
     zoomable()->setScale(0.25);
 }
 
@@ -41,4 +49,41 @@ void CellView::mouseMoveEvent(QMouseEvent *event)
     emit statusBarCoordinatesChanged(tilePos.x(), tilePos.y());
 
     BaseGraphicsView::mouseMoveEvent(event);
+}
+
+void CellView::setUseOpenGL(bool useOpenGL)
+{
+#ifndef QT_NO_OPENGL
+    QWidget *oldViewport = viewport();
+    QWidget *newViewport = viewport();
+    if (useOpenGL && QGLFormat::hasOpenGL()) {
+        if (!qobject_cast<QGLWidget*>(viewport())) {
+            QGLFormat format = QGLFormat::defaultFormat();
+            format.setDepth(false); // No need for a depth buffer
+            format.setSampleBuffers(true); // Enable anti-aliasing
+            newViewport = new QGLWidget(format);
+        }
+    } else {
+        if (qobject_cast<QGLWidget*>(viewport()))
+            newViewport = 0;
+    }
+
+    if (newViewport != oldViewport) {
+        if (mMiniMap) {
+            mMiniMap->setVisible(false);
+            mMiniMap->setParent(static_cast<QWidget*>(parent()));
+        }
+        setViewport(newViewport);
+        if (mMiniMap) {
+            mMiniMap->setParent(this);
+            mMiniMap->setVisible(Preferences::instance()->showMiniMap());
+            if (scene())
+                mMiniMap->sceneRectChanged(scene()->sceneRect());
+        }
+    }
+
+    QWidget *v = viewport();
+    v->setAttribute(Qt::WA_StaticContents);
+    v->setMouseTracking(true);
+#endif
 }

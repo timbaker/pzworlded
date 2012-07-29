@@ -83,6 +83,7 @@ Preferences::Preferences()
     mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
+    mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
     mSettings->endGroup();
 
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
@@ -140,6 +141,17 @@ void Preferences::setShowCellGrid(bool showGrid)
     mShowCellGrid = showGrid;
     mSettings->setValue(QLatin1String("Interface/ShowCellGrid"), mShowCellGrid);
     emit showCellGridChanged(mShowCellGrid);
+}
+
+void Preferences::setUseOpenGL(bool useOpenGL)
+{
+    if (mUseOpenGL == useOpenGL)
+        return;
+
+    mUseOpenGL = useOpenGL;
+    mSettings->setValue(QLatin1String("Interface/OpenGL"), mUseOpenGL);
+
+    emit useOpenGLChanged(mUseOpenGL);
 }
 
 void Preferences::setShowMiniMap(bool show)

@@ -31,6 +31,9 @@ public:
     CellScene *scene() const;
 
     void mouseMoveEvent(QMouseEvent *event);
+
+private slots:
+    void setUseOpenGL(bool useOpenGL);
 };
 
 #endif // CELLVIEW_H
