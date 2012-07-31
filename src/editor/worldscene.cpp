@@ -362,6 +362,9 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!mapInfo)
             continue;
 
+        if (mapInfo->size() != QSize(300, 300))
+            continue;
+
         mDragMapImageItem = new DragMapImageItem(mapInfo, this);
         mDragMapImageItem->setZValue(1000);
         mDragMapImageItem->setScenePos(event->scenePos());
