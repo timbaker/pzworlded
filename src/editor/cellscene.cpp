@@ -857,7 +857,6 @@ public:
 CellScene::CellScene(QObject *parent)
     : BaseGraphicsScene(CellSceneType, parent)
     , mMap(0)
-    , mOrient(Map::LevelIsometric)
     , mMapComposite(0)
     , mDocument(0)
     , mRenderer(0)
@@ -1129,10 +1128,10 @@ void CellScene::loadMap()
     if (cell()->mapFilePath().isEmpty())
         mMapInfo = MapManager::instance()->getEmptyMap();
     else {
-        mMapInfo = MapManager::instance()->loadMap(cell()->mapFilePath(), mOrient);
+        mMapInfo = MapManager::instance()->loadMap(cell()->mapFilePath());
         if (!mMapInfo) {
             qDebug() << "failed to load cell map" << cell()->mapFilePath();
-            mMapInfo = MapManager::instance()->getPlaceholderMap(cell()->mapFilePath(), mOrient, 300, 300);
+            mMapInfo = MapManager::instance()->getPlaceholderMap(cell()->mapFilePath(), 300, 300);
         }
     }
     if (!mMapInfo) {
@@ -1146,8 +1145,6 @@ void CellScene::loadMap()
 
     switch (mMap->orientation()) {
     case Map::Isometric:
-        mRenderer = new IsometricRenderer(mMap);
-        break;
     case Map::LevelIsometric:
         mRenderer = new ZLevelRenderer(mMap);
         break;
@@ -1155,17 +1152,10 @@ void CellScene::loadMap()
         return; // TODO: Add error handling
     }
 
-    mMapComposite = new MapComposite(mMapInfo);
+    mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
 
     connect(mMapComposite, SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
             MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)));
-
-    // The first time a map is loaded for this cell, the orientation is unspecified.
-    // When adding submaps, those submaps are converted to the cell's map's orientation.
-    // If the user changes the cell's map to one with a different orientation, we must
-    // make sure the cell's new map has the same orientation as any the existing submaps.
-    // i.e., once the cell's map's orientation is set the first time, it never changes.
-    mOrient = mMap->orientation();
 
     for (int i = 0; i < cell()->lots().size(); i++)
         cellLotAdded(cell(), i);
@@ -1204,10 +1194,10 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
 {
     if (_cell == cell()) {
         WorldCellLot *lot = cell()->lots().at(index);
-        MapInfo *subMapInfo = MapManager::instance()->loadMap(lot->mapName(), mMap->orientation());
+        MapInfo *subMapInfo = MapManager::instance()->loadMap(lot->mapName());
         if (!subMapInfo) {
             qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
-            subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), mMap->orientation(), lot->width(), lot->height());
+            subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
             MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());

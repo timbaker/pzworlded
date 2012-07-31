@@ -89,13 +89,11 @@ public:
     QString pathForMap(const QString &mapName, const QString &relativeTo);
 
     MapInfo *loadMap(const QString &mapName,
-                     Tiled::Map::Orientation orient = Tiled::Map::Unknown,
                      const QString &relativeTo = QString());
 
     MapInfo *newFromMap(Tiled::Map *map, const QString &mapFilePath = QString());
 
-    MapInfo *mapInfo(const QString &mapFilePath,
-                     Tiled::Map::Orientation orient = Tiled::Map::Unknown);
+    MapInfo *mapInfo(const QString &mapFilePath);
 
     /**
      * The "empty map" is used when a WorldCell has no map.
@@ -109,7 +107,7 @@ public:
       * A placeholder map may be updated to a real map when the
       * user changes the maptools directory.
       */
-    MapInfo *getPlaceholderMap(const QString &mapName, Tiled::Map::Orientation orient, int width, int height);
+    MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
 
 signals:
     void mapMagicallyGotMoreLayers(Tiled::Map *map);
@@ -123,7 +121,10 @@ private:
     Tiled::Map *convertOrientation(Tiled::Map *map, Tiled::Map::Orientation orient);
 
     MapManager();
+    ~MapManager();
+
     QMap<QString,MapInfo*> mMapInfo;
+    QString mError;
     static MapManager *mInstance;
 };
 

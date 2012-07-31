@@ -18,6 +18,7 @@
 #ifndef MAPCOMPOSITE_H
 #define MAPCOMPOSITE_H
 
+#include "map.h"
 #include "ztilelayergroup.h"
 
 #include <QObject>
@@ -29,7 +30,6 @@ class MapInfo;
 
 namespace Tiled {
 class Layer;
-class Map;
 }
 
 class MapComposite;
@@ -99,7 +99,9 @@ class MapComposite : public QObject
 {
     Q_OBJECT
 public:
-    MapComposite(MapInfo *mapInfo, MapComposite *parent = 0, const QPoint &positionInParent = QPoint(), int levelOffset = 0);
+    MapComposite(MapInfo *mapInfo, Tiled::Map::Orientation orientRender = Tiled::Map::Unknown,
+                 MapComposite *parent = 0, const QPoint &positionInParent = QPoint(),
+                 int levelOffset = 0);
     ~MapComposite();
 
     static bool levelForLayer(Tiled::Layer *layer, int *levelPtr = 0);
@@ -136,6 +138,10 @@ public:
     void setGroupVisible(bool visible) { mGroupVisible = visible; }
     bool isGroupVisible() const { return mGroupVisible; }
 
+
+    QPoint orientAdjustPos() const { return mOrientAdjustPos; }
+    QPoint orientAdjustTiles() const { return mOrientAdjustTiles; }
+
     /**
       * Hack: when dragging a MapObjectItem representing a Lot, the map is hidden
       * at the start of the drag and shown when dragging is finished.  But I don't
@@ -168,6 +174,9 @@ private:
     MapComposite *mParent;
     QPoint mPos;
     int mLevelOffset;
+    Tiled::Map::Orientation mOrientRender;
+    QPoint mOrientAdjustPos;
+    QPoint mOrientAdjustTiles;
     int mMinLevel;
     bool mVisible;
     bool mGroupVisible;

@@ -153,7 +153,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos, QVector<const Cell *
         if (!mVisibleLayers[index] || mEmptyLayers[index])
 #endif
             continue;
-        QPoint subPos = pos - tl->position();
+        QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
             const Cell *cell = &tl->cellAt(subPos);
             if (!cell->isEmpty()) {
@@ -189,7 +189,7 @@ void CompositeLayerGroup::synch()
 #else
         if (mVisibleLayers[index] && !mEmptyLayers[index]) {
 #endif
-            unionTileRects(r, tl->bounds(), r);
+            unionTileRects(r, tl->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
             maxMargins(m, tl->drawMargins(), m);
             mAnyVisibleLayers = true;
         }
@@ -331,17 +331,30 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer)
 ///// ///// ///// ///// /////
 
 // FIXME: If the MapDocument is saved to a new name, this MapInfo should be replaced with a new one
-MapComposite::MapComposite(MapInfo *mapInfo, MapComposite *parent, const QPoint &positionInParent, int levelOffset)
+MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
+                           MapComposite *parent, const QPoint &positionInParent,
+                           int levelOffset)
     : mMapInfo(mapInfo)
     , mMap(mapInfo->map())
     , mParent(parent)
     , mPos(positionInParent)
     , mLevelOffset(levelOffset)
+    , mOrientRender(orientRender)
     , mMinLevel(0)
     , mVisible(true)
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
 {
+    if (mOrientRender == Map::Unknown)
+        mOrientRender = mMap->orientation();
+    if (mMap->orientation() != mOrientRender) {
+        Map::Orientation orientSelf = mMap->orientation();
+        if (orientSelf == Map::Isometric && mOrientRender == Map::LevelIsometric)
+            mOrientAdjustPos = mOrientAdjustTiles = QPoint(3, 3);
+        if (orientSelf == Map::LevelIsometric && mOrientRender == Map::Isometric)
+            mOrientAdjustPos = mOrientAdjustTiles = QPoint(-3, -3);
+    }
+
     int index = 0;
     foreach (Layer *layer, mMap->layers()) {
         int level;
@@ -366,28 +379,33 @@ MapComposite::MapComposite(MapInfo *mapInfo, MapComposite *parent, const QPoint 
         mMap->addTileLayerGroup(layerGroup);
 #endif
 
-    foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
-        foreach (MapObject *object, objectGroup->objects()) {
-            if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
-                // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
-                // then any sub-maps of its own will lose their level offsets.
-                // FIXME: look in the same directory as the parent map, then the maptools directory.
-                MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(), mMap->orientation(),
-                                                                      QFileInfo(mMapInfo->path()).absolutePath());
-                if (!subMapInfo) {
-                    qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
-                    subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(), mMap->orientation(),
-                                                                           32, 32); // FIXME: calculate map size
-                }
-                if (subMapInfo) {
-                    int levelOffset;
-                    (void) levelForLayer(objectGroup, &levelOffset);
+    if (!mapInfo->isBeingEdited()) {
+        foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
+            foreach (MapObject *object, objectGroup->objects()) {
+                if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
+                    // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
+                    // then any sub-maps of its own will lose their level offsets.
+                    // FIXME: look in the same directory as the parent map, then the maptools directory.
+                    MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
+                                                                          QFileInfo(mMapInfo->path()).absolutePath());
+                    if (!subMapInfo) {
+                        qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
+                        subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(),
+                                                                               32, 32); // FIXME: calculate map size
+                    }
+                    if (subMapInfo) {
+                        int levelOffset;
+                        (void) levelForLayer(objectGroup, &levelOffset);
 #if 1
-                    MapComposite *_subMap = new MapComposite(subMapInfo, this, object->position().toPoint(), levelOffset);
-                    mSubMaps.append(_subMap);
+                        MapComposite *_subMap = new MapComposite(subMapInfo, mOrientRender,
+                                                                 this, object->position().toPoint()
+                                                                 + mOrientAdjustPos * levelOffset,
+                                                                 levelOffset);
+                        mSubMaps.append(_subMap);
 #else
-                    addMap(subMap, object->position().toPoint(), levelOffset);
+                        addMap(subMap, object->position().toPoint(), levelOffset);
 #endif
+                    }
                 }
             }
         }
@@ -442,7 +460,7 @@ bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
 
 MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset)
 {
-    MapComposite *subMap = new MapComposite(mapInfo, this, pos, levelOffset);
+    MapComposite *subMap = new MapComposite(mapInfo, mOrientRender, this, pos, levelOffset);
     mSubMaps.append(subMap);
 
     ensureMaxLevels(levelOffset + mapInfo->map()->maxLevel());

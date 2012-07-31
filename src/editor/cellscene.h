@@ -343,7 +343,6 @@ public:
 
 private:
     Tiled::Map *mMap;
-    Tiled::Map::Orientation mOrient;
     MapInfo *mMapInfo;
     MapComposite *mMapComposite;
     QVector<QGraphicsItem*> mLayerItems;
