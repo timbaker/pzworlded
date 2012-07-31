@@ -357,9 +357,10 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
         Tileset *cached = p->tilesetImageCache()->findMatch(tileset, source);
         if (!cached || !tileset->loadFromCache(cached)) {
             const QImage tilesetImage = p->readExternalImage(source);
-            if (!tileset->loadFromImage(tilesetImage, source))
+            if (tileset->loadFromImage(tilesetImage, source))
+                p->tilesetImageCache()->addTileset(tileset);
+            else
                 xml.raiseError(tr("Error loading tileset image:\n'%1'").arg(source));
-            p->tilesetImageCache()->addTileset(tileset);
         }
         xml.skipCurrentElement();
         return;
