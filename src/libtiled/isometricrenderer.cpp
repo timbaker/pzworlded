@@ -153,8 +153,8 @@ void IsometricRenderer::drawGrid(QPainter *painter, const QRectF &rect,
     gridColor.setAlpha(128);
 
 #if 1
-    QPen pen(gridColor);
-    QBrush brush(Qt::Dense4Pattern);
+    QPen pen;
+    QBrush brush(gridColor, Qt::Dense4Pattern);
     brush.setTransform(QTransform::fromScale(1/painter->transform().m11(),
                                              1/painter->transform().m22()));
     pen.setBrush(brush);
