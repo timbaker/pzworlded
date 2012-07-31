@@ -416,7 +416,7 @@ void MiniMap::bigger()
 
 void MiniMap::smaller()
 {
-    Preferences::instance()->setMiniMapWidth(qMax(mWidth - 32, 256));
+    Preferences::instance()->setMiniMapWidth(qMax(mWidth - 32, 128));
 }
 
 void MiniMap::widthChanged(int width)
