@@ -149,6 +149,21 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
         return ImageData();
     }
 
+    mapComposite->saveVisibility();
+    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
+        foreach (TileLayer *layer, layerGroup->layers())
+            layerGroup->setLayerVisibility(layer, !layer->name().contains(QLatin1String("NoRender")));
+        layerGroup->synch();
+    }
+
+    // Don't draw empty levels
+    int maxLevel = 0;
+    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
+        if (!layerGroup->bounds().isEmpty())
+            maxLevel = layerGroup->level();
+    }
+    renderer->setMaxLevel(maxLevel);
+
     QRectF sceneRect = mapComposite->boundingRect(renderer);
     QSize mapSize = sceneRect.size().toSize();
     if (mapSize.isEmpty())
@@ -165,13 +180,8 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
                            QPainter::HighQualityAntialiasing);
     painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
 
-    mapComposite->saveVisibility();
-    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
-        foreach (TileLayer *layer, layerGroup->layers())
-            layerGroup->setLayerVisibility(layer, !layer->name().contains(QLatin1String("NoRender")));
-        layerGroup->synch();
+    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
         renderer->drawTileLayerGroup(&painter, layerGroup);
-    }
     mapComposite->restoreVisibility();
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
         layerGroup->synch();
