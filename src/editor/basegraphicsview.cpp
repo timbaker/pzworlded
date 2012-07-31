@@ -425,6 +425,21 @@ void MiniMap::widthChanged(int width)
     sceneRectChanged(mScene->sceneRect());
 }
 
+bool MiniMap::event(QEvent *event)
+{
+    switch (event->type()) {
+    case QEvent::Enter:
+        break;
+    case QEvent::Leave:
+        mButtons->setVisible(false);
+        break;
+    default:
+        break;
+    }
+
+    return QGraphicsView::event(event);
+}
+
 void MiniMap::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton)

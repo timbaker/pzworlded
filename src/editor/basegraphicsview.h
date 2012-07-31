@@ -43,6 +43,7 @@ public slots:
     void widthChanged(int width);
 
 private:
+    bool event(QEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
