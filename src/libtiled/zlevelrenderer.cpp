@@ -42,8 +42,8 @@ QSize ZLevelRenderer::mapSize() const
 {
 #if 1
     const int side = map()->height() + map()->width();
-    return QSize(side * map()->tileWidth() / 2 + map()->maxLevel() * map()->cellsPerLevel().x() * map()->tileWidth(),
-                 side * map()->tileHeight() / 2 + map()->maxLevel() * map()->cellsPerLevel().y() * map()->tileHeight());
+    return QSize(side * map()->tileWidth() / 2 + maxLevel() * map()->cellsPerLevel().x() * map()->tileWidth(),
+                 side * map()->tileHeight() / 2 + maxLevel() * map()->cellsPerLevel().y() * map()->tileHeight());
 #else
     // Map width and height contribute equally in both directions
     const int side = map()->height() + map()->width();
@@ -61,7 +61,7 @@ QRect ZLevelRenderer::boundingRect(const QRect &rect, int level) const
     const QPoint pos((rect.x() - (rect.y() + rect.height()))
                      * tileWidth / 2 + originX,
 #ifdef ZOMBOID
-                     (rect.x() + rect.y()) * tileHeight / 2 + (map()->maxLevel() - level) * map()->cellsPerLevel().y() * tileHeight);
+                     (rect.x() + rect.y()) * tileHeight / 2 + (maxLevel() - level) * map()->cellsPerLevel().y() * tileHeight);
 #else
                      (rect.x() + rect.y()) * tileHeight / 2);
 #endif
@@ -617,7 +617,7 @@ QPointF ZLevelRenderer::pixelToTileCoords(qreal x, qreal y, int level) const
 
     x -= map()->height() * tileWidth / 2;
 #ifdef ZOMBOID
-    y -= map()->cellsPerLevel().y() * (map()->maxLevel() - level) * tileHeight;
+    y -= map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
 #endif
     const qreal mx = y + (x / ratio);
     const qreal my = y - (x / ratio);
@@ -632,7 +632,7 @@ QPointF ZLevelRenderer::tileToPixelCoords(qreal x, qreal y, int level) const
     const int tileHeight = map()->tileHeight();
 #ifdef ZOMBOID
     const int originX = map()->height() * tileWidth / 2; // top-left corner
-    const int originY = map()->cellsPerLevel().y() * (map()->maxLevel() - level) * tileHeight;
+    const int originY = map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
     return QPointF((x - y) * tileWidth / 2 + originX,
                    (x + y) * tileHeight / 2 + originY);
 #else

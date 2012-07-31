@@ -137,9 +137,6 @@ public:
 #ifdef ZOMBOID
     void setCellsPerLevel(const QPoint &cellsPerLevel) { mCellsPerLevel = cellsPerLevel; }
     QPoint cellsPerLevel() const { return mCellsPerLevel; }
-
-    void setMaxLevel(int level) { mMaxLevel = level; }
-    int maxLevel() const { return mMaxLevel; }
 #endif
 
     /**
@@ -298,7 +295,6 @@ private:
     QList<Tileset*> mTilesets;
 #ifdef ZOMBOID
     QPoint mCellsPerLevel;
-    int mMaxLevel;
     QList<ZTileLayerGroup*> mTileLayerGroups;
 #endif
 };

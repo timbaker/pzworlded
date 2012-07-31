@@ -341,6 +341,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mLevelOffset(levelOffset)
     , mOrientRender(orientRender)
     , mMinLevel(0)
+    , mMaxLevel(0)
     , mVisible(true)
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
@@ -412,24 +413,24 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     }
 
     mMinLevel = 10000;
+    mMaxLevel = 0;
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
         if (!mMapInfo->isBeingEdited())
             layerGroup->synch();
         if (layerGroup->level() < mMinLevel)
             mMinLevel = layerGroup->level();
-        // FIXME: no changing of mMap should happen after it is loaded!
-        if (layerGroup->level() > mMap->maxLevel())
-            mMap->setMaxLevel(layerGroup->level());
+        if (layerGroup->level() > mMaxLevel)
+            mMaxLevel = layerGroup->level();
     }
 
     if (mMinLevel == 10000)
         mMinLevel = 0;
 
-    if (!mMapInfo->isBeingEdited())
-        mMap->setMaxLevel(qMax(mMap->maxLevel(), 10));
+    if (!mParent && !mMapInfo->isBeingEdited())
+        mMaxLevel = qMax(mMaxLevel, 10);
 
-    for (int level = mMinLevel; level <= mMap->maxLevel(); ++level) {
+    for (int level = mMinLevel; level <= mMaxLevel; ++level) {
         if (!mLayerGroups.contains(level))
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
         mSortedLayerGroups.append(mLayerGroups[level]);
@@ -463,7 +464,7 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos, int leve
     MapComposite *subMap = new MapComposite(mapInfo, mOrientRender, this, pos, levelOffset);
     mSubMaps.append(subMap);
 
-    ensureMaxLevels(levelOffset + mapInfo->map()->maxLevel());
+    ensureMaxLevels(levelOffset + subMap->maxLevel());
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->setNeedsSynch(true);
@@ -519,8 +520,13 @@ int MapComposite::levelRecursive() const
 
 QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) const
 {
+    // The reason I'm checking renderer->maxLevel() here is because when drawing
+    // map images, I don't want empty levels at the top.
+
     QRectF bounds;
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
+        if (mLevelOffset + layerGroup->level() > renderer->maxLevel())
+            continue;
         unionSceneRects(bounds,
                         layerGroup->boundingRect(renderer),
                         bounds);
@@ -531,13 +537,19 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
         // Always include level 0, even if there are no layers or only empty/hidden
         // layers on level 0, otherwise a SubMapItem's bounds won't include the
         // fancy rectangle.
+        int minLevel = mLevelOffset;
+        if (minLevel > renderer->maxLevel())
+            minLevel = renderer->maxLevel();
         unionSceneRects(bounds,
-                        renderer->boundingRect(mapTileBounds),
+                        renderer->boundingRect(mapTileBounds, minLevel),
                         bounds);
         // When setting the bounds of the scene, make sure the highest level is included
         // in the sceneRect() so the grid won't be cut off.
+        int maxLevel = mLevelOffset + mMaxLevel;
+        if (maxLevel > renderer->maxLevel())
+            maxLevel = renderer->maxLevel();
         unionSceneRects(bounds,
-                        renderer->boundingRect(mapTileBounds, mLevelOffset + mMap->maxLevel()),
+                        renderer->boundingRect(mapTileBounds, maxLevel),
                         bounds);
     }
     return bounds;
@@ -574,7 +586,7 @@ void MapComposite::restoreVisibility()
 
 void MapComposite::ensureMaxLevels(int maxLevel)
 {
-    maxLevel = qMax(maxLevel, mMap->maxLevel());
+    maxLevel = qMax(maxLevel, mMaxLevel);
     if (mMinLevel == 0 && maxLevel < mLayerGroups.size()/*mMap->maxLevel()*/)
         return;
 
@@ -606,11 +618,11 @@ void MapComposite::ensureMaxLevels(int maxLevel)
     }
     if (mMinLevel > 0)
         mMinLevel = 0;
-    if (maxLevel > mMap->maxLevel())
-        mMap->setMaxLevel(maxLevel);
+    if (maxLevel > mMaxLevel)
+        mMaxLevel = maxLevel;
 
     mSortedLayerGroups.clear();
-    for (int level = mMinLevel; level <= mMap->maxLevel(); ++level)
+    for (int level = mMinLevel; level <= mMaxLevel; ++level)
         mSortedLayerGroups.append(mLayerGroups[level]);
 
     // Ugliness to inform other code that new layers/levels were added.

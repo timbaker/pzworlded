@@ -52,7 +52,14 @@ class ImageLayer;
 class TILEDSHARED_EXPORT MapRenderer
 {
 public:
+#ifdef ZOMBOID
+    MapRenderer(const Map *map)
+        : mMap(map)
+        , mMaxLevel(0)
+    {}
+#else
     MapRenderer(const Map *map) : mMap(map) {}
+#endif
     virtual ~MapRenderer() {}
 
     /**
@@ -177,6 +184,9 @@ public:
             screenPolygon[i] = tileToPixelCoords(polygon[i], level);
         return screenPolygon;
     }
+
+    void setMaxLevel(int level) { mMaxLevel = level; }
+    int maxLevel() const { return mMaxLevel; }
 #else
     /**
      * Returns the tile coordinates matching the given pixel position.
@@ -213,6 +223,9 @@ protected:
 
 private:
     const Map *mMap;
+#ifdef ZOMBOID
+    int mMaxLevel;
+#endif
 };
 
 } // namespace Tiled

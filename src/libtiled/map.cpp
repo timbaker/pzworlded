@@ -47,8 +47,7 @@ Map::Map(Orientation orientation,
     mTileHeight(tileHeight)
 #ifdef ZOMBOID
     ,
-    mCellsPerLevel(0,3),
-    mMaxLevel(0)
+    mCellsPerLevel(0,3)
 #endif
 {
 }

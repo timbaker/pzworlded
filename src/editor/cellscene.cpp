@@ -1057,15 +1057,15 @@ void CellScene::setGraphicsSceneZOrder()
     // SubMapItems/ObjectItems should be above all TileLayerGroups
     // and arranged from bottom to top by level.  When the active tool
     // affects SubMapItems, stack them above ObjectItems and vice versa.
-    int z = levelZOrder(mMap->maxLevel());
+    int z = levelZOrder(mMapComposite->maxLevel());
     if (mActiveTool && mActiveTool->affectsLots())
-        z += mMap->maxLevel();
+        z += mMapComposite->maxLevel();
     foreach (SubMapItem *item, mSubMapItems)
         item->setZValue(z + item->subMap()->levelOffset());
 
-    z = levelZOrder(mMap->maxLevel());
+    z = levelZOrder(mMapComposite->maxLevel());
     if (mActiveTool && mActiveTool->affectsObjects())
-        z += mMap->maxLevel();
+        z += mMapComposite->maxLevel();
     foreach (ObjectItem *item, mObjectItems)
         item->setZValue(z + item->object()->level());
 
@@ -1154,6 +1154,7 @@ void CellScene::loadMap()
 
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
 
+    mRenderer->setMaxLevel(mMapComposite->maxLevel());
     connect(mMapComposite, SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
             MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)));
 
@@ -1259,8 +1260,8 @@ void CellScene::lotLevelChanged(WorldCellLot *lot)
 //        item->subMapMoved(); // also called in synchLayerGroups()
 
         // Make sure there are enough layer-groups to display the submap
-        int maxLevel = lot->level() + item->subMap()->map()->maxLevel();
-        if (maxLevel > mMap->maxLevel()) {
+        int maxLevel = lot->level() + item->subMap()->maxLevel();
+        if (maxLevel > mMapComposite->maxLevel()) {
             mMapComposite->ensureMaxLevels(maxLevel);
 //            foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups())
 //                layerGroup->synch();
@@ -1475,6 +1476,8 @@ void CellScene::handlePendingUpdates()
             CompositeLayerGroupItem *item = new CompositeLayerGroupItem(layerGroup, mRenderer);
             addItem(item);
             mTileLayerGroupItems[layerGroup->level()] = item;
+
+            mRenderer->setMaxLevel(mMapComposite->maxLevel());
 
             mPendingFlags |= AllGroups | Bounds | Synch;
         }
