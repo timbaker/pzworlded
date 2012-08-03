@@ -525,7 +525,7 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
 
     QRectF bounds;
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
-        if (mLevelOffset + layerGroup->level() > renderer->maxLevel())
+        if (levelRecursive() + layerGroup->level() > renderer->maxLevel())
             continue;
         unionSceneRects(bounds,
                         layerGroup->boundingRect(renderer),
@@ -537,7 +537,7 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
         // Always include level 0, even if there are no layers or only empty/hidden
         // layers on level 0, otherwise a SubMapItem's bounds won't include the
         // fancy rectangle.
-        int minLevel = mLevelOffset;
+        int minLevel = levelRecursive();
         if (minLevel > renderer->maxLevel())
             minLevel = renderer->maxLevel();
         unionSceneRects(bounds,
@@ -545,7 +545,7 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
                         bounds);
         // When setting the bounds of the scene, make sure the highest level is included
         // in the sceneRect() so the grid won't be cut off.
-        int maxLevel = mLevelOffset + mMaxLevel;
+        int maxLevel = levelRecursive() + mMaxLevel;
         if (maxLevel > renderer->maxLevel())
             maxLevel = renderer->maxLevel();
         unionSceneRects(bounds,
