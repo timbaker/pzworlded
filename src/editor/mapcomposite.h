@@ -105,6 +105,8 @@ public:
     ~MapComposite();
 
     static bool levelForLayer(Tiled::Layer *layer, int *levelPtr = 0);
+    static QString layerNameWithoutPrefix(const QString &name);
+    static QString layerNameWithoutPrefix(Tiled::Layer *layer);
 
     MapComposite *addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset);
     void removeMap(MapComposite *subMap);
