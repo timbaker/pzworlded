@@ -73,6 +73,11 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)),
             SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)));
 
+    connect(&mUndoRedo, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
+            SIGNAL(cellMapFileAboutToChange(WorldCell*)));
+    connect(&mUndoRedo, SIGNAL(cellMapFileChanged(WorldCell*)),
+            SIGNAL(cellMapFileChanged(WorldCell*)));
+
     connect(&mUndoRedo, SIGNAL(cellContentsAboutToChange(WorldCell*)),
             SIGNAL(cellContentsAboutToChange(WorldCell*)));
     connect(&mUndoRedo, SIGNAL(cellContentsChanged(WorldCell*)),
@@ -212,9 +217,7 @@ void WorldDocument::editCell(int x, int y)
 void WorldDocument::setCellMapName(WorldCell *cell, const QString &mapName)
 {
     Q_ASSERT(cell && cell->world() == world());
-    emit cellMapFileAboutToChange(cell);
-    cell->setMapFilePath(mapName);
-    emit cellMapFileChanged(cell);
+    undoStack()->push(new SetCellMainMap(this, cell, mapName));
 }
 
 void WorldDocument::addCellLot(WorldCell *cell, int index, WorldCellLot *lot)
@@ -585,9 +588,13 @@ QString WorldDocumentUndoRedo::changeObjectTypeName(ObjectType *objType, const Q
     return oldName;
 }
 
-void WorldDocumentUndoRedo::setCellMapName(WorldCell *cell, const QString &mapName)
+QString WorldDocumentUndoRedo::setCellMapName(WorldCell *cell, const QString &mapName)
 {
-    mWorldDoc->setCellMapName(cell, mapName);
+    QString oldName = cell->mapFilePath();
+    emit cellMapFileAboutToChange(cell);
+    cell->setMapFilePath(mapName);
+    emit cellMapFileChanged(cell);
+    return oldName;
 }
 
 WorldCellContents *WorldDocumentUndoRedo::setCellContents(WorldCell *cell, WorldCellContents *contents)

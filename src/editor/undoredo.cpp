@@ -32,11 +32,7 @@ SetCellMainMap::SetCellMainMap(WorldDocument *doc, WorldCell *cell, const QStrin
 
 void SetCellMainMap::swap()
 {
-    QString mapName = mCell->mapFilePath();
-
-    mDocument->undoRedo().setCellMapName(mCell, mMapName);
-
-    mMapName = mapName;
+    mMapName = mDocument->undoRedo().setCellMapName(mCell, mMapName);
 }
 
 /////

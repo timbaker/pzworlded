@@ -24,7 +24,7 @@
     <item row="0" column="0">
      <widget class="QTabWidget" name="documentTabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tabWorld">
        <attribute name="title">
@@ -228,6 +228,7 @@
     <addaction name="actionRemoveObject"/>
     <addaction name="separator"/>
     <addaction name="actionClearCell"/>
+    <addaction name="actionClearMapOnly"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -489,6 +490,11 @@
    </property>
    <property name="shortcut">
     <string>M</string>
+   </property>
+  </action>
+  <action name="actionClearMapOnly">
+   <property name="text">
+    <string>Clear Map Only</string>
    </property>
   </action>
  </widget>

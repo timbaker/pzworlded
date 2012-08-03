@@ -96,6 +96,7 @@ public slots:
     void removeLot();
     void removeObject();
     void clearCells();
+    void clearMapOnly();
 
     void setStatusBarCoords(int x, int y);
 

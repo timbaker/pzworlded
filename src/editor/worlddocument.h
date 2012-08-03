@@ -70,7 +70,7 @@ public:
     ObjectType *removeObjectType(int index);
     QString changeObjectTypeName(ObjectType *objType, const QString &name);
 
-    void setCellMapName(WorldCell *cell, const QString &mapName);
+    QString setCellMapName(WorldCell *cell, const QString &mapName);
     WorldCellContents *setCellContents(WorldCell *cell, WorldCellContents *contents);
 
     void addCellLot(WorldCell *cell, int index, WorldCellLot *lot);
@@ -108,6 +108,9 @@ signals:
     void templateAboutToBeRemoved(PropertyHolder *ph, int index);
 
     void propertyValueChanged(PropertyHolder *ph, int index);
+
+    void cellMapFileAboutToChange(WorldCell *cell);
+    void cellMapFileChanged(WorldCell *cell);
 
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);

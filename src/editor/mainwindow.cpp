@@ -176,6 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
+    connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
     connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
@@ -885,6 +886,29 @@ void MainWindow::clearCells()
     undoStack->endMacro();
 }
 
+void MainWindow::clearMapOnly()
+{
+    Q_ASSERT(mCurrentDocument);
+    WorldDocument *worldDoc = 0;
+    QList<WorldCell*> cells;
+    if ((worldDoc = mCurrentDocument->asWorldDocument())) {
+        Q_ASSERT(worldDoc->selectedCellCount());
+        cells = worldDoc->selectedCells();
+    }
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
+        cells += cellDoc->cell();
+        worldDoc = cellDoc->worldDocument();
+    }
+    int count = cells.size();
+    if (!worldDoc || !count) // none of these should ever be true
+        return;
+    QUndoStack *undoStack = worldDoc->undoStack();
+    undoStack->beginMacro(tr("Clear %1 Cell%2 Map").arg(count).arg((count > 1) ? QLatin1String("s") : QLatin1String("")));
+    foreach (WorldCell *cell, cells)
+        worldDoc->setCellMapName(cell, QString());
+    undoStack->endMacro();
+}
+
 bool MainWindow::confirmSave()
 {
     if (!mCurrentDocument || !mCurrentDocument->isModified())
@@ -1028,6 +1052,7 @@ void MainWindow::updateActions()
     ui->actionRemoveObject->setEnabled(removeObject);
 
     ui->actionClearCell->setEnabled(false);
+    ui->actionClearMapOnly->setEnabled(false);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);
@@ -1045,6 +1070,7 @@ void MainWindow::updateActions()
         if (cell) {
             ui->actionEditCell->setEnabled(true);
             ui->actionClearCell->setEnabled(true);
+            ui->actionClearMapOnly->setEnabled(true);
             ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));
         } else
             ui->currentCellLabel->setText(tr("Current cell: <none>"));
@@ -1052,6 +1078,7 @@ void MainWindow::updateActions()
         ui->currentLevelButton->setEnabled(false);
     } else if (cellDoc) {
         ui->actionClearCell->setEnabled(true);
+        ui->actionClearMapOnly->setEnabled(true);
         WorldCell *cell = cellDoc->cell();
         ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));
         int level = cellDoc->currentLevel();
