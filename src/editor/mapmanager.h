@@ -109,9 +109,6 @@ public:
       */
     MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
 
-signals:
-    void mapMagicallyGotMoreLayers(Tiled::Map *map);
-
 private:
 
     /**

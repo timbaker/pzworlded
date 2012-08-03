@@ -163,7 +163,7 @@ public:
     void ensureMaxLevels(int maxLevel);
 
 signals:
-    void mapMagicallyGotMoreLayers(Tiled::Map *map);
+    void layerGroupAdded(int level);
 
 private:
     MapInfo *mMapInfo;

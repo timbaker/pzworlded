@@ -84,6 +84,7 @@ public:
 
 signals:
     void layerVisibilityChanged(Tiled::Layer *layer);
+    void layerGroupAdded(int level);
     void layerGroupVisibilityChanged(Tiled::ZTileLayerGroup *layerGroup);
     void lotLevelVisibilityChanged(int level);
     void objectLevelVisibilityChanged(int level);

@@ -69,9 +69,6 @@ signals:
     void documentAdded(Document *doc);
     void documentAboutToClose(int index, Document *doc);
 
-public slots:
-    void mapMagicallyGotMoreLayers(Tiled::Map *map);
-
 private:
     ~DocumentManager();
 

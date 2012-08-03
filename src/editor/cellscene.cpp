@@ -1155,8 +1155,10 @@ void CellScene::loadMap()
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
 
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
-    connect(mMapComposite, SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
-            MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)));
+    connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
+            SLOT(layerGroupAdded(int)));
+    connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
+            mDocument, SIGNAL(layerGroupAdded(int)));
 
     for (int i = 0; i < cell()->lots().size(); i++)
         cellLotAdded(cell(), i);
@@ -1372,6 +1374,12 @@ void CellScene::layerVisibilityChanged(Layer *layer)
             doLater(Bounds | Synch | Paint); //mTileLayerGroupItems[level]->synchWithTileLayers();
         }
     }
+}
+
+void CellScene::layerGroupAdded(int level)
+{
+    Q_UNUSED(level);
+    synchLayerGroupsLater();
 }
 
 void CellScene::layerGroupVisibilityChanged(ZTileLayerGroup *layerGroup)

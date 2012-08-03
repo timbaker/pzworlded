@@ -587,44 +587,23 @@ void MapComposite::restoreVisibility()
 void MapComposite::ensureMaxLevels(int maxLevel)
 {
     maxLevel = qMax(maxLevel, mMaxLevel);
-    if (mMinLevel == 0 && maxLevel < mLayerGroups.size()/*mMap->maxLevel()*/)
+    if (mMinLevel == 0 && maxLevel < mLayerGroups.size())
         return;
 
     for (int level = 0; level <= maxLevel; level++) {
-        if (mLayerGroups.contains(level) == false) {
+        if (!mLayerGroups.contains(level)) {
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
 
-#if 0
-            // Add a single new TileLayer for this level.
-            // FIXME: I don't really want to add layers to the map, only levels.
-            //        Issues are:
-            //            - CellDocument has mCurrentLayerIndex but not mCurrentLevel
-            //            - CellScene::updateCurrentLevelHighlight expects non-empty layer-groups
-            TileLayer *layer = new TileLayer(QString(QLatin1String("%1_Layer")).arg(level),
-                                             0, 0, mMap->width(), mMap->height());
-            layer->setLevel(level);
+            if (mMinLevel > level)
+                mMinLevel = level;
+            if (level > mMaxLevel)
+                mMaxLevel = level;
 
-            int index = 0;
-            foreach (Layer *layer2, mMap->layers()) {
-                if (layer2->level() > level)
-                    break;
-                ++index;
-            }
+            mSortedLayerGroups.clear();
+            for (int i = mMinLevel; i <= mMaxLevel; ++i)
+                mSortedLayerGroups.append(mLayerGroups[i]);
 
-            mMap->insertLayer(index, layer);
-            mLayerGroups[level]->addTileLayer(layer, index);
-#endif
+            emit layerGroupAdded(level);
         }
     }
-    if (mMinLevel > 0)
-        mMinLevel = 0;
-    if (maxLevel > mMaxLevel)
-        mMaxLevel = maxLevel;
-
-    mSortedLayerGroups.clear();
-    for (int level = mMinLevel; level <= mMaxLevel; ++level)
-        mSortedLayerGroups.append(mLayerGroups[level]);
-
-    // Ugliness to inform other code that new layers/levels were added.
-    emit mapMagicallyGotMoreLayers(mMap);
 }

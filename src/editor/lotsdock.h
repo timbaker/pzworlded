@@ -146,7 +146,7 @@ private slots:
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
     void lotLevelChanged(WorldCellLot *lot);
-    void mapMagicallyGotMoreLayers(Tiled::Map *map);
+    void layerGroupAdded(int level);
 
 private:
     void setModelData();

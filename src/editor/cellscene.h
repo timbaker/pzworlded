@@ -294,9 +294,6 @@ public:
 
     Tiled::MapRenderer *renderer() const { return mRenderer; }
 
-    // Ugh: public for mapMagicallyGotMoreLayers handling
-    void synchLayerGroupsLater();
-
 protected:
     void loadMap();
     void updateCurrentLevelHighlight();
@@ -320,6 +317,7 @@ public slots:
     void selectedObjectsChanged();
 
     void layerVisibilityChanged(Tiled::Layer *layer);
+    void layerGroupAdded(int level);
     void layerGroupVisibilityChanged(Tiled::ZTileLayerGroup *layerGroup);
     void lotLevelVisibilityChanged(int level);
     void objectLevelVisibilityChanged(int level);
@@ -342,6 +340,8 @@ public:
     Q_DECLARE_FLAGS(PendingFlags, Pending)
 
 private:
+    void synchLayerGroupsLater();
+
     Tiled::Map *mMap;
     MapInfo *mMapInfo;
     MapComposite *mMapComposite;

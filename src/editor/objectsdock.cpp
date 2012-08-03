@@ -451,8 +451,6 @@ ObjectsModel::ObjectsModel(QObject *parent)
     , mSynching(false)
     , mObjectPixmap(QLatin1String(":/images/16x16/layer-object.png"))
 {
-    connect(MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
-            SLOT(mapMagicallyGotMoreLayers(Tiled::Map*)));
 }
 
 ObjectsModel::~ObjectsModel()
@@ -845,6 +843,9 @@ void ObjectsModel::setDocument(Document *doc)
     if (mCellDoc) {
         cell = mCellDoc->cell();
         worldDoc = mCellDoc->worldDocument();
+
+        connect(mCellDoc, SIGNAL(layerGroupAdded(int)),
+                SLOT(layerGroupAdded(int)));
     }
 
     if (worldDoc) {
@@ -906,14 +907,14 @@ void ObjectsModel::cellContentsAboutToChange(WorldCell *cell)
 
     reset();
 
-    mSynching = true; // ignore mapMagicallyGotMoreLayers
+    mSynching = true; // ignore layerGroupAdded
 }
 
 void ObjectsModel::cellContentsChanged(WorldCell *cell)
 {
     if (cell != mCell)
         return;
-    mSynching = false; // stop ignoring mapMagicallyGotMoreLayers
+    mSynching = false; // stop ignoring layerGroupAdded
     setCell(mCell);
 }
 
@@ -956,10 +957,11 @@ void ObjectsModel::objectLevelChanged(WorldCellObject *obj)
         setCell(mCell); // lazy, just reset the whole list
 }
 
-void ObjectsModel::mapMagicallyGotMoreLayers(Map *map)
+void ObjectsModel::layerGroupAdded(int level)
 {
+    Q_UNUSED(level)
     if (mSynching)
         return;
-    if (mCellDoc && mCellDoc->scene()->mapComposite()->map() == map)
+    if (mCellDoc)
         setCell(mCell);
 }

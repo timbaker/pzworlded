@@ -69,10 +69,10 @@ public:
 
 private slots:
     void layerVisibilityChanged(Tiled::Layer *layer);
+    void layerGroupAdded(int level);
     void layerGroupVisibilityChanged(Tiled::ZTileLayerGroup *layerGroup);
     void cellMapFileAboutToChange();
     void cellMapFileChanged();
-    void mapMagicallyGotMoreLayers(Tiled::Map *map);
 
 private:
     void setModelData();

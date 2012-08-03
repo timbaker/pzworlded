@@ -35,8 +35,6 @@ LayersModel::LayersModel(QObject *parent)
     , mMap(0)
     , mRootItem(0)
 {
-    connect(MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
-            SLOT(mapMagicallyGotMoreLayers(Tiled::Map*)));
 }
 
 LayersModel::~LayersModel()
@@ -263,6 +261,8 @@ void LayersModel::setCellDocument(CellDocument *doc)
 
         connect(mCellDocument, SIGNAL(layerVisibilityChanged(Tiled::Layer*)),
                 SLOT(layerVisibilityChanged(Tiled::Layer*)));
+        connect(mCellDocument, SIGNAL(layerGroupAdded(int)),
+                SLOT(layerGroupAdded(int)));
         connect(mCellDocument, SIGNAL(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)),
                 SLOT(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)));
 
@@ -304,6 +304,16 @@ void LayersModel::layerVisibilityChanged(Layer *layer)
     }
 }
 
+// This is a bit of a hack.  When a lot is added to a cell, new layers
+// and layergroups may be created to enable the new submap to be displayed.
+// In that case, the model must be updated; really only need to add the new
+// layergroups;
+void LayersModel::layerGroupAdded(int level)
+{
+    Q_UNUSED(level);
+    cellMapFileChanged();
+}
+
 void LayersModel::layerGroupVisibilityChanged(ZTileLayerGroup *layerGroup)
 {
     QModelIndex index = this->index(dynamic_cast<CompositeLayerGroup*>(layerGroup));
@@ -325,14 +335,4 @@ void LayersModel::cellMapFileChanged()
     mMap = mMapComposite->map();
     setModelData();
     reset();
-}
-
-// This is a bit of a hack.  When a lot is added to a cell, new layers
-// and layergroups may be created to enable the new submap to be displayed.
-// In that case, the model must be updated; really only need to add the new
-// layergroups;
-void LayersModel::mapMagicallyGotMoreLayers(Tiled::Map *map)
-{
-    if (mCellDocument && mCellDocument->scene()->map() == map)
-        cellMapFileChanged();
 }

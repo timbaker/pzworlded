@@ -47,8 +47,6 @@ DocumentManager::DocumentManager(QObject *parent)
     , mCurrent(0)
     , mFailedToAdd(false)
 {
-    connect(MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
-            SLOT(mapMagicallyGotMoreLayers(Tiled::Map*)));
 }
 
 DocumentManager::~DocumentManager()
@@ -176,15 +174,4 @@ void DocumentManager::setFailedToAdd()
 bool DocumentManager::failedToAdd()
 {
     return mFailedToAdd;
-}
-
-// Ugly bad nasty
-void DocumentManager::mapMagicallyGotMoreLayers(Tiled::Map *map)
-{
-    foreach (Document *doc, mDocuments) {
-        if (CellDocument *cellDoc = doc->asCellDocument()) {
-            if (cellDoc->scene() && cellDoc->scene()->map() == map)
-                cellDoc->scene()->synchLayerGroupsLater();
-        }
-    }
 }

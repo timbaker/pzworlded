@@ -398,8 +398,6 @@ LotsModel::LotsModel(QObject *parent)
     , mRootItem(0)
     , mSynching(false)
 {
-    connect(MapManager::instance(), SIGNAL(mapMagicallyGotMoreLayers(Tiled::Map*)),
-            SLOT(mapMagicallyGotMoreLayers(Tiled::Map*)));
 }
 
 LotsModel::~LotsModel()
@@ -772,6 +770,9 @@ void LotsModel::setDocument(Document *doc)
     if (mCellDoc) {
         worldDoc = mCellDoc->worldDocument();
         cell = mCellDoc->cell();
+
+        connect(mCellDoc, SIGNAL(layerGroupAdded(int)),
+                SLOT(layerGroupAdded(int)));
     }
 
     if (worldDoc) {
@@ -843,14 +844,14 @@ void LotsModel::cellContentsAboutToChange(WorldCell *cell)
 
     reset();
 
-    mSynching = true; // ignore mapMagicallyGotMoreLayers
+    mSynching = true; // ignore layerGroupAdded
 }
 
 void LotsModel::cellContentsChanged(WorldCell *cell)
 {
     if (cell != mCell)
         return;
-    mSynching = false; // stop ignoring mapMagicallyGotMoreLayers
+    mSynching = false; // stop ignoring layerGroupAdded
     setCell(mCell);
 }
 
@@ -860,10 +861,11 @@ void LotsModel::lotLevelChanged(WorldCellLot *lot)
         setCell(mCell); // lazy, just reset the whole list
 }
 
-void LotsModel::mapMagicallyGotMoreLayers(Tiled::Map *map)
+void LotsModel::layerGroupAdded(int level)
 {
+    Q_UNUSED(level)
     if (mSynching)
         return;
-    if (mCellDoc && mCellDoc->scene()->mapComposite()->map() == map)
+    if (mCellDoc)
         setCell(mCell);
 }

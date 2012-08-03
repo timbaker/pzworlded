@@ -193,7 +193,7 @@ private slots:
     void cellObjectXXXXChanged(WorldCellObject *obj);
     void objectLevelChanged(WorldCellObject *obj);
 
-    void mapMagicallyGotMoreLayers(Tiled::Map *map);
+    void layerGroupAdded(int level);
 
 private:
     void setModelData();
