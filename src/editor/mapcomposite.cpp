@@ -607,3 +607,45 @@ void MapComposite::ensureMaxLevels(int maxLevel)
         }
     }
 }
+
+MapComposite::ZOrderList MapComposite::zOrder()
+{
+    ZOrderList result;
+
+    QVector<int> seenLevels;
+    typedef QPair<int,Layer*> LayerPair;
+    QMap<CompositeLayerGroup*,QVector<LayerPair> > layersAboveLevel;
+    CompositeLayerGroup *previousGroup = 0;
+    int layerIndex = -1;
+    foreach (Layer *layer, mMap->layers()) {
+        ++layerIndex;
+        int level;
+        bool hasGroup = levelForLayer(layer, &level);
+        if (TileLayer *tl = layer->asTileLayer()) {
+            // The layer may not be in a group yet during renaming.
+            if (hasGroup && mLayerGroups.contains(level)) {
+                if (!seenLevels.contains(level)) {
+                    seenLevels += level;
+                    previousGroup = mLayerGroups[level];
+                }
+                continue;
+            }
+        }
+        // Handle any layers not in a TileLayerGroup.
+        // Layers between the first and last in a TileLayerGroup will be displayed above that TileLayerGroup.
+        // Layers before the first TileLayerGroup will be displayed below the first TileLayerGroup.
+        if (previousGroup)
+            layersAboveLevel[previousGroup].append(qMakePair(layerIndex, layer));
+        else
+            result += ZOrderItem(layer, layerIndex);
+    }
+
+    foreach (CompositeLayerGroup *layerGroup, mSortedLayerGroups) {
+        result += ZOrderItem(layerGroup);
+        QVector<LayerPair> layers = layersAboveLevel[layerGroup];
+        foreach (LayerPair pair, layers)
+            result += ZOrderItem(pair.second, pair.first);
+    }
+
+    return result;
+}

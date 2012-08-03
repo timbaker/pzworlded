@@ -164,6 +164,19 @@ public:
 
     void ensureMaxLevels(int maxLevel);
 
+    struct ZOrderItem
+    {
+        ZOrderItem(CompositeLayerGroup *group)
+            : layer(0), layerIndex(-1), group(group) {}
+        ZOrderItem(Tiled::Layer *layer, int layerIndex)
+            : layer(layer), layerIndex(layerIndex), group(0) {}
+        Tiled::Layer *layer;
+        int layerIndex;
+        CompositeLayerGroup *group;
+    };
+    typedef QList<ZOrderItem> ZOrderList;
+    ZOrderList zOrder();
+
 signals:
     void layerGroupAdded(int level);
 

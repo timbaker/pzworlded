@@ -180,8 +180,38 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
                            QPainter::HighQualityAntialiasing);
     painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
 
-    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
-        renderer->drawTileLayerGroup(&painter, layerGroup);
+#if 1
+    foreach (MapComposite::ZOrderItem zo, mapComposite->zOrder()) {
+        if (zo.group) {
+            renderer->drawTileLayerGroup(&painter, zo.group);
+        } else if (TileLayer *tl = zo.layer->asTileLayer()) {
+            if (tl->name().contains(QLatin1String("NoRender")))
+                continue;
+            renderer->drawTileLayer(&painter, tl);
+        }
+    }
+#else
+    QVector<int> drawnLevels;
+    foreach (Layer *layer, mapComposite->map()->layers()) {
+        if (TileLayer *tileLayer = layer->asTileLayer()) {
+            int level;
+            if (MapComposite::levelForLayer(tileLayer, &level)) {
+                if (drawnLevels.contains(level))
+                    continue;
+                drawnLevels += level;
+                // FIXME: LayerGroups should be drawn with the same Z-order the
+                // scene uses.  They will usually be in the same order anyways.
+                CompositeLayerGroup *layerGroup = mapComposite->tileLayersForLevel(level);
+                renderer->drawTileLayerGroup(&painter, layerGroup);
+            } else {
+                if (layer->name().contains(QLatin1String("NoRender")))
+                    continue;
+                renderer->drawTileLayer(&painter, tileLayer);
+            }
+        }
+    }
+#endif
+
     mapComposite->restoreVisibility();
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
         layerGroup->synch();

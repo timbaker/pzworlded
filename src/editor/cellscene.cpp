@@ -1017,6 +1017,37 @@ int CellScene::levelZOrder(int level)
 // Determine sane Z-order for layers in and out of TileLayerGroups
 void CellScene::setGraphicsSceneZOrder()
 {
+#if 1
+    int z = 0;
+    foreach (MapComposite::ZOrderItem zo, mMapComposite->zOrder()) {
+        if (zo.group) {
+            int level = zo.group->level();
+            if (mTileLayerGroupItems.contains(level))
+                mTileLayerGroupItems[level]->setZValue(z);
+        } else {
+            if (zo.layerIndex < mLayerItems.size()) {
+                if (QGraphicsItem *item = mLayerItems[zo.layerIndex])
+                    item->setZValue(z);
+            }
+        }
+        ++z;
+    }
+
+    // SubMapItems/ObjectItems should be above all TileLayerGroups
+    // and arranged from bottom to top by level.  When the active tool
+    // affects SubMapItems, stack them above ObjectItems and vice versa.
+    int z2 = z;
+    if (mActiveTool && mActiveTool->affectsLots())
+        z2 += mMapComposite->maxLevel();
+    foreach (SubMapItem *item, mSubMapItems)
+        item->setZValue(z2 + item->subMap()->levelOffset());
+
+    z2 = z;
+    if (mActiveTool && mActiveTool->affectsObjects())
+        z2 += mMapComposite->maxLevel();
+    foreach (ObjectItem *item, mObjectItems)
+        item->setZValue(z2 + item->object()->level());
+#else
     foreach (CompositeLayerGroupItem *item, mTileLayerGroupItems)
         item->setZValue(levelZOrder(item->layerGroup()->level()));
 
@@ -1068,6 +1099,7 @@ void CellScene::setGraphicsSceneZOrder()
         z += mMapComposite->maxLevel();
     foreach (ObjectItem *item, mObjectItems)
         item->setZValue(z + item->object()->level());
+#endif
 
     mGridItem->setZValue(10000);
 }
