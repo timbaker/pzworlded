@@ -752,8 +752,10 @@ void LotsModel::setDocument(Document *doc)
 {
     if (mWorldDoc)
         mWorldDoc->disconnect(this);
-    if (mCellDoc)
+    if (mCellDoc) {
+        mCellDoc->worldDocument()->disconnect(this);
         mCellDoc->disconnect(this);
+    }
 
     mWorldDoc = doc ? doc->asWorldDocument() : 0;
     mCellDoc = doc ? doc->asCellDocument() : 0;
