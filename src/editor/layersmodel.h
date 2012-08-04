@@ -88,6 +88,11 @@ private:
 
         }
 
+        ~Item()
+        {
+            qDeleteAll(children);
+        }
+
         Item(Item *parent, int indexInParent, CompositeLayerGroup *g)
             : parent(parent)
             , group(g)

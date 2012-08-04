@@ -162,6 +162,11 @@ private:
 
         }
 
+        ~Item()
+        {
+            qDeleteAll(children);
+        }
+
         Item(Item *parent, int indexInParent, Level *level)
             : parent(parent)
             , level(level)
