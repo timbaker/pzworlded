@@ -95,6 +95,8 @@ public slots:
 
     void removeLot();
     void removeObject();
+    void extractLots();
+    void extractObjects();
     void clearCells();
     void clearMapOnly();
 

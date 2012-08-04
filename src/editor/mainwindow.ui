@@ -227,6 +227,9 @@
     <addaction name="actionRemoveLot"/>
     <addaction name="actionRemoveObject"/>
     <addaction name="separator"/>
+    <addaction name="actionExtractLots"/>
+    <addaction name="actionExtractObjects"/>
+    <addaction name="separator"/>
     <addaction name="actionClearCell"/>
     <addaction name="actionClearMapOnly"/>
    </widget>
@@ -495,6 +498,16 @@
   <action name="actionClearMapOnly">
    <property name="text">
     <string>Clear Map Only</string>
+   </property>
+  </action>
+  <action name="actionExtractLots">
+   <property name="text">
+    <string>Extract Lots...</string>
+   </property>
+  </action>
+  <action name="actionExtractObjects">
+   <property name="text">
+    <string>Extract Objects...</string>
    </property>
   </action>
  </widget>

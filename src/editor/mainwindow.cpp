@@ -25,6 +25,7 @@
 #include "layersdock.h"
 #include "lotsdock.h"
 #include "mapcomposite.h"
+#include "mapmanager.h"
 #include "mapsdock.h"
 #include "objectsdock.h"
 #include "objecttypesdialog.h"
@@ -45,8 +46,11 @@
 #include "zoomable.h"
 
 #include "layer.h"
+#include "mapobject.h"
+#include "objectgroup.h"
 #include "tileset.h"
 
+#include <QtCore/qmath.h>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QFileDialog>
@@ -175,6 +179,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
+    connect(ui->actionExtractLots, SIGNAL(triggered()), SLOT(extractLots()));
+    connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
@@ -863,6 +869,90 @@ void MainWindow::removeObject()
     undoStack->endMacro();
 }
 
+void MainWindow::extractLots()
+{
+    Q_ASSERT(mCurrentDocument);
+    Q_ASSERT(mCurrentDocument->isCellDocument());
+    CellDocument *cellDoc = mCurrentDocument->asCellDocument();
+    QFileInfo info(cellDoc->scene()->mapComposite()->mapInfo()->path());
+    QString message = tr("This command will create a new Lot for each object " \
+                         "that is in the cell's map \"%1\".  You should then " \
+                         "remove those objects from the map in the TileZed " \
+                         "editor, otherwise they will be loaded twice by the game.")
+            .arg(info.completeBaseName());
+    QMessageBox::StandardButton b =
+            QMessageBox::information(this, tr("Extract Lots"), message,
+                                     QMessageBox::Ok, QMessageBox::Cancel);
+    if (b == QMessageBox::Cancel)
+        return;
+
+    WorldDocument *worldDoc = cellDoc->worldDocument();
+    worldDoc->undoStack()->beginMacro(tr("Extract Lots"));
+
+    WorldCell *cell = cellDoc->cell();
+    Map *map = cellDoc->scene()->map();
+    foreach (ObjectGroup *og, map->objectGroups()) {
+        foreach (MapObject *o, og->objects()) {
+            if (o->name() == QLatin1String("lot") && !o->type().isEmpty()) {
+                WorldCellLot *lot = new WorldCellLot(cell,
+                                                     o->type(), o->x(), o->y(),
+                                                     og->level(),
+                                                     o->width(), o->height());
+               worldDoc->addCellLot(cell, cell->lots().size(), lot);
+            }
+        }
+    }
+
+    worldDoc->undoStack()->endMacro();
+}
+
+void MainWindow::extractObjects()
+{
+    Q_ASSERT(mCurrentDocument);
+    Q_ASSERT(mCurrentDocument->isCellDocument());
+    CellDocument *cellDoc = mCurrentDocument->asCellDocument();
+    QFileInfo info(cellDoc->scene()->mapComposite()->mapInfo()->path());
+    QString message = tr("This command will create a new Object for each object " \
+                         "that is in the cell's map \"%1\" (except 'lot' objects).  "
+                         "You should then remove those objects from the map in "
+                         "the TileZed editor, otherwise they will be loaded "
+                         "twice by the game.")
+            .arg(info.completeBaseName());
+    QMessageBox::StandardButton b =
+            QMessageBox::information(this, tr("Extract Objects"), message,
+                                     QMessageBox::Ok, QMessageBox::Cancel);
+    if (b == QMessageBox::Cancel)
+        return;
+
+    WorldDocument *worldDoc = cellDoc->worldDocument();
+    worldDoc->undoStack()->beginMacro(tr("Extract Objects"));
+
+    WorldCell *cell = cellDoc->cell();
+    Map *map = cellDoc->scene()->map();
+    foreach (ObjectGroup *og, map->objectGroups()) {
+        foreach (MapObject *o, og->objects()) {
+            if (o->name() != QLatin1String("lot") && !o->name().isEmpty()) {
+                ObjectType *type = worldDoc->world()->objectTypes().find(o->name());
+                if (!type) {
+                    type = new ObjectType(o->name());
+                    worldDoc->addObjectType(type);
+                }
+                int x = qFloor(o->x()), y = qFloor(o->y());
+                int x2 = qCeil(o->bounds().right()), y2 = qCeil(o->bounds().bottom());
+
+                WorldCellObject *obj = new WorldCellObject(cell, o->type(),
+                                                           type, x, y,
+                                                           og->level(),
+                                                           qMax(MIN_OBJECT_SIZE, qreal(x2 - x)),
+                                                           qMax(MIN_OBJECT_SIZE, qreal(y2 - y)));
+                worldDoc->addCellObject(cell, cell->objects().size(), obj);
+            }
+        }
+    }
+
+    worldDoc->undoStack()->endMacro();
+}
+
 void MainWindow::clearCells()
 {
     Q_ASSERT(mCurrentDocument);
@@ -1051,6 +1141,8 @@ void MainWindow::updateActions()
             || (worldDoc && worldDoc->selectedObjectCount());
     ui->actionRemoveObject->setEnabled(removeObject);
 
+    ui->actionExtractLots->setEnabled(cellDoc != 0);
+    ui->actionExtractObjects->setEnabled(cellDoc != 0);
     ui->actionClearCell->setEnabled(false);
     ui->actionClearMapOnly->setEnabled(false);
 
