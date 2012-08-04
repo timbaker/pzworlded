@@ -24,8 +24,18 @@
 #include <QSize>
 #include <QVector>
 
+class WorldObjectGroup;
 class ObjectType;
 class WorldCell;
+
+class ObjectGroupList : public QList<WorldObjectGroup*>
+{
+public:
+    bool contains(const QString &name) const;
+    WorldObjectGroup *find(const QString &name) const;
+
+    QStringList names() const;
+};
 
 class ObjectTypeList : public QList<ObjectType*>
 {
@@ -69,9 +79,14 @@ public:
     { mPropertyDefs.insert(index, pd); }
     PropertyDef *removePropertyDefinition(int index);
 
+    void insertObjectGroup(int index, WorldObjectGroup *og);
+    WorldObjectGroup *removeObjectGroup(int index);
+
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
 
+    const ObjectGroupList &objectGroups() const
+    { return mObjectGroups; }
     const ObjectTypeList &objectTypes() const
     { return mObjectTypes; }
     const PropertyDefList &propertyDefinitions() const
@@ -79,12 +94,15 @@ public:
     const PropertyTemplateList &propertyTemplates() const
     { return mPropertyTemplates; }
 
+    WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
 private:
     int mWidth;
     int mHeight;
     QVector<WorldCell*> mCells;
+    ObjectGroupList mObjectGroups;
+    WorldObjectGroup *mNullObjectGroup;
     ObjectTypeList mObjectTypes;
     ObjectType *mNullObjectType;
     PropertyDefList mPropertyDefs;

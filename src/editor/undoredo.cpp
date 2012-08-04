@@ -197,6 +197,21 @@ void SetObjectName::swap()
 
 /////
 
+SetObjectGroup::SetObjectGroup(WorldDocument *doc, WorldCellObject *obj, WorldObjectGroup *og)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Set Object's Group"))
+    , mDocument(doc)
+    , mObject(obj)
+    , mGroup(og)
+{
+}
+
+void SetObjectGroup::swap()
+{
+    mGroup = mDocument->undoRedo().setCellObjectGroup(mObject, mGroup);
+}
+
+/////
+
 SetObjectType::SetObjectType(WorldDocument *doc, WorldCellObject *obj, ObjectType *type)
     : QUndoCommand(QCoreApplication::translate("Undo Commands", "Set Object's Type"))
     , mDocument(doc)
@@ -384,6 +399,32 @@ void ChangeCellSelection::swap()
 
 /////
 
+AddRemoveObjectGroup::AddRemoveObjectGroup(WorldDocument *doc, int index, WorldObjectGroup *og)
+    : QUndoCommand()
+    , mDocument(doc)
+    , mGroup(og)
+    , mIndex(index)
+{
+}
+
+AddRemoveObjectGroup::~AddRemoveObjectGroup()
+{
+    delete mGroup;
+}
+
+void AddRemoveObjectGroup::add()
+{
+    mDocument->undoRedo().insertObjectGroup(mIndex, mGroup);
+    mGroup = 0;
+}
+
+void AddRemoveObjectGroup::remove()
+{
+    mGroup = mDocument->undoRedo().removeObjectGroup(mIndex);
+}
+
+/////
+
 AddRemoveObjectType::AddRemoveObjectType(WorldDocument *doc, int index, ObjectType *ot)
     : QUndoCommand()
     , mDocument(doc)
@@ -406,6 +447,21 @@ void AddRemoveObjectType::add()
 void AddRemoveObjectType::remove()
 {
     mType = mDocument->undoRedo().removeObjectType(mIndex);
+}
+
+/////
+
+SetObjectGroupName::SetObjectGroupName(WorldDocument *doc, WorldObjectGroup *og, const QString &name)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Rename Object Group"))
+    , mDocument(doc)
+    , mGroup(og)
+    , mName(name)
+{
+}
+
+void SetObjectGroupName::swap()
+{
+    mName = mDocument->undoRedo().changeObjectGroupName(mGroup, mName);
 }
 
 /////

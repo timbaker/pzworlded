@@ -28,6 +28,7 @@ class ObjectType;
 class WorldCell;
 class WorldCellObject;
 class WorldDocument;
+class WorldObjectGroup;
 
 namespace Tiled {
 class Map;
@@ -79,6 +80,7 @@ signals:
     void trashItem(const QModelIndex &index);
 
 private slots:
+    void rowsInserted(const QModelIndex &parent, int start, int end);
     void selectedCellsChanged();
     void selectedObjectsChanged();
     void modelSynched();
@@ -162,13 +164,13 @@ public:
         }
 
         int level;
-        QList<WorldCellObject*> objects;
     };
 
     QModelIndex index(Level *level) const;
     QModelIndex index(WorldCellObject *obj, int column = 0) const;
 
     Level *toLevel(const QModelIndex &index) const;
+    WorldObjectGroup *toGroup(const QModelIndex &index) const;
     WorldCellObject *toObject(const QModelIndex &index) const;
 
     void setDocument(Document *doc);
@@ -180,17 +182,26 @@ public:
     int nameColumn() const { return 0; }
     int typeColumn() const { return 1; }
 
+    bool isEditable(const QModelIndex &index) const;
+    bool isDeletable(const QModelIndex &index) const;
 signals:
     void synched();
 
 private slots:
     void objectTypeNameChanged(ObjectType *objType);
 
+    void objectGroupAdded(int index);
+    void objectGroupAboutToBeRemoved(int index);
+    void objectGroupNameChanged(WorldObjectGroup *og);
+
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
     void cellObjectAdded(WorldCell *cell, int index);
     void cellObjectAboutToBeRemoved(WorldCell *cell, int index);
     void cellObjectXXXXChanged(WorldCellObject *obj);
+    void cellObjectGroupAboutToChange(WorldCellObject *obj);
+    void cellObjectGroupChanged(WorldCellObject *obj);
+    void objectLevelAboutToChange(WorldCellObject *obj);
     void objectLevelChanged(WorldCellObject *obj);
 
     void layerGroupAdded(int level);
@@ -204,37 +215,72 @@ private:
         Item()
             : parent(0)
             , level(0)
+            , group(0)
             , object(0)
         {
 
         }
 
+        ~Item()
+        {
+            qDeleteAll(children);
+        }
+
         Item(Item *parent, int indexInParent, Level *level)
             : parent(parent)
             , level(level)
+            , group(0)
             , object(0)
         {
+            Q_ASSERT(!parent->children.contains(this));
+            parent->children.insert(indexInParent, this);
+        }
+
+        Item(Item *parent, int indexInParent, WorldObjectGroup *og)
+            : parent(parent)
+            , level(0)
+            , group(og)
+            , object(0)
+        {
+            Q_ASSERT(!parent->children.contains(this));
             parent->children.insert(indexInParent, this);
         }
 
         Item(Item *parent, int indexInParent, WorldCellObject *obj)
             : parent(parent)
             , level(0)
+            , group(0)
             , object(obj)
         {
+            Q_ASSERT(!parent->children.contains(this));
             parent->children.insert(indexInParent, this);
+        }
+
+        Item *findChild(WorldCellObject *obj)
+        {
+            foreach (Item *item, children)
+                if (item->object == obj)
+                    return item;
+            return 0;
         }
 
         Item *parent;
         QList<Item*> children;
         Level *level;
+        WorldObjectGroup *group;
         WorldCellObject *object;
     };
 
     Item *toItem(const QModelIndex &index) const;
     Item *toItem(Level *level) const;
     Item *toItem(int level) const;
+    Item *toItem(int level, WorldObjectGroup *og) const;
     Item *toItem(WorldCellObject *obj) const;
+
+    QModelIndex index(Item *item) const;
+
+    void addItemToModel(Item *parentItem, int indexInParent, Item *item);
+    void removeItemFromModel(Item *item);
 
     WorldCell *mCell;
     CellDocument *mCellDoc;

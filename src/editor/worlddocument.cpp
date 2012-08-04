@@ -61,6 +61,13 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(objectTypeNameChanged(ObjectType*)),
             SIGNAL(objectTypeNameChanged(ObjectType*)));
 
+    connect(&mUndoRedo, SIGNAL(objectGroupAdded(int)),
+            SIGNAL(objectGroupAdded(int)));
+    connect(&mUndoRedo, SIGNAL(objectGroupAboutToBeRemoved(int)),
+            SIGNAL(objectGroupAboutToBeRemoved(int)));
+    connect(&mUndoRedo, SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
+            SIGNAL(objectGroupNameChanged(WorldObjectGroup*)));
+
     connect(&mUndoRedo, SIGNAL(templateAdded(int)),
             SIGNAL(templateAdded(int)));
     connect(&mUndoRedo, SIGNAL(templateAboutToBeRemoved(int)),
@@ -102,8 +109,14 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(cellObjectResized(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(cellObjectNameChanged(WorldCellObject*)),
             SIGNAL(cellObjectNameChanged(WorldCellObject*)));
+    connect(&mUndoRedo, SIGNAL(cellObjectGroupAboutToChange(WorldCellObject*)),
+            SIGNAL(cellObjectGroupAboutToChange(WorldCellObject*)));
+    connect(&mUndoRedo, SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
+            SIGNAL(cellObjectGroupChanged(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(cellObjectTypeChanged(WorldCellObject*)),
             SIGNAL(cellObjectTypeChanged(WorldCellObject*)));
+    connect(&mUndoRedo, SIGNAL(objectLevelAboutToChange(WorldCellObject*)),
+            SIGNAL(objectLevelAboutToChange(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(objectLevelChanged(WorldCellObject*)),
             SIGNAL(objectLevelChanged(WorldCellObject*)));
 
@@ -278,6 +291,14 @@ void WorldDocument::setCellObjectName(WorldCellObject *obj, const QString &name)
     undoStack()->push(new SetObjectName(this, obj, name));
 }
 
+void WorldDocument::setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og)
+{
+    Q_ASSERT(og);
+    if (og == obj->group())
+        return;
+    undoStack()->push(new SetObjectGroup(this, obj, og));
+}
+
 void WorldDocument::setCellObjectType(WorldCellObject *obj, const QString &type)
 {
     ObjectType *objType = 0;
@@ -368,6 +389,39 @@ void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &nam
 void WorldDocument::changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc)
 {
     undoStack()->push(new ChangeTemplate(this, pt, name, desc));
+}
+
+void WorldDocument::addObjectGroup(WorldObjectGroup *newGroup)
+{
+    int index = mWorld->objectGroups().size();
+    undoStack()->push(new AddObjectGroup(this, index, newGroup));
+}
+
+bool WorldDocument::removeObjectGroup(WorldObjectGroup *og)
+{
+    int index = mWorld->objectGroups().indexOf(og);
+
+    undoStack()->beginMacro(tr("Remove Object Group (%1)").arg(og->name()));
+
+    // Reset the object group on any objects using this group
+    foreach (WorldCell *cell, mWorld->cells()) {
+        foreach (WorldCellObject *obj, cell->objects()) {
+            if (obj->group() == og)
+                undoStack()->push(new SetObjectGroup(this, obj, mWorld->nullObjectGroup()));
+        }
+    }
+
+    undoStack()->push(new RemoveObjectGroup(this, index));
+    undoStack()->endMacro();
+
+    return true;
+}
+
+void WorldDocument::changeObjectGroupName(WorldObjectGroup *objGroup, const QString &name)
+{
+    Q_ASSERT(!name.isEmpty());
+    Q_ASSERT(!mWorld->objectGroups().contains(name));
+    undoStack()->push(new SetObjectGroupName(this, objGroup, name));
 }
 
 void WorldDocument::addObjectType(ObjectType *newType)
@@ -566,6 +620,28 @@ QString WorldDocumentUndoRedo::setPropertyValue(PropertyHolder *ph, Property *p,
     return oldValue;
 }
 
+void WorldDocumentUndoRedo::insertObjectGroup(int index, WorldObjectGroup *og)
+{
+    mWorld->insertObjectGroup(index, og);
+    emit objectGroupAdded(index);
+}
+
+WorldObjectGroup *WorldDocumentUndoRedo::removeObjectGroup(int index)
+{
+    emit objectGroupAboutToBeRemoved(index);
+    return mWorld->removeObjectGroup(index);
+}
+
+QString WorldDocumentUndoRedo::changeObjectGroupName(WorldObjectGroup *og, const QString &name)
+{
+    Q_ASSERT(!name.isEmpty());
+    Q_ASSERT(!mWorld->objectGroups().contains(name));
+    QString oldName = og->name();
+    emit objectGroupNameChanged(og);
+    og->setName(name);
+    return oldName;
+}
+
 void WorldDocumentUndoRedo::insertObjectType(int index, ObjectType *ot)
 {
     mWorld->insertObjectType(index, ot);
@@ -679,6 +755,7 @@ QSizeF WorldDocumentUndoRedo::resizeCellObject(WorldCellObject *obj, const QSize
 int WorldDocumentUndoRedo::setObjectLevel(WorldCellObject *obj, int level)
 {
     int oldLevel = obj->level();
+    emit objectLevelAboutToChange(obj);
     obj->setLevel(level);
 
     // Update the object's position so it stays in the same visual location
@@ -696,6 +773,15 @@ QString WorldDocumentUndoRedo::setCellObjectName(WorldCellObject *obj, const QSt
     obj->setName(name);
     emit cellObjectNameChanged(obj);
     return oldName;
+}
+
+WorldObjectGroup *WorldDocumentUndoRedo::setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og)
+{
+    WorldObjectGroup *oldGroup = obj->group();
+    emit cellObjectGroupAboutToChange(obj);
+    obj->setGroup(og);
+    emit cellObjectGroupChanged(obj);
+    return oldGroup;
 }
 
 ObjectType *WorldDocumentUndoRedo::setCellObjectType(WorldCellObject *obj, ObjectType *type)

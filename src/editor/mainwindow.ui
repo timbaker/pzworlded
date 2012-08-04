@@ -215,6 +215,7 @@
     </property>
     <addaction name="actionEditCell"/>
     <addaction name="separator"/>
+    <addaction name="actionObjectGroups"/>
     <addaction name="actionObjectTypes"/>
     <addaction name="separator"/>
     <addaction name="actionProperties"/>
@@ -508,6 +509,11 @@
   <action name="actionExtractObjects">
    <property name="text">
     <string>Extract Objects...</string>
+   </property>
+  </action>
+  <action name="actionObjectGroups">
+   <property name="text">
+    <string>Object Groups...</string>
    </property>
   </action>
  </widget>

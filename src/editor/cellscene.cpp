@@ -953,6 +953,8 @@ void CellScene::setDocument(CellDocument *doc)
             SLOT(lotLevelVisibilityChanged(int)));
     connect(mDocument, SIGNAL(objectLevelVisibilityChanged(int)),
             SLOT(objectLevelVisibilityChanged(int)));
+    connect(mDocument, SIGNAL(objectGroupVisibilityChanged(WorldObjectGroup*,int)),
+            SLOT(objectGroupVisibilityChanged(WorldObjectGroup*,int)));
     connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
 
     loadMap();
@@ -1117,7 +1119,10 @@ void CellScene::setObjectVisible(WorldCellObject *obj, bool visible)
 {
     if (ObjectItem *item = itemForObject(obj)) {
         item->object()->setVisible(visible);
-        item->setVisible(visible && mDocument->isObjectLevelVisible(obj->level()));
+        item->setVisible(visible &&
+                         mDocument->isObjectGroupVisible(obj->group(),
+                                                         obj->level()) &&
+                         mDocument->isObjectLevelVisible(obj->level()));
     }
 }
 
@@ -1435,11 +1440,25 @@ void CellScene::lotLevelVisibilityChanged(int level)
 
 void CellScene::objectLevelVisibilityChanged(int level)
 {
-    bool visible = mDocument->isObjectLevelVisible(level);
+    bool visibleLevel = mDocument->isObjectLevelVisible(level);
     foreach (WorldCellObject *obj, cell()->objects()) {
         if (obj->level() == level) {
             ObjectItem *item = itemForObject(obj);
-            item->setVisible(visible && item->object()->isVisible());
+            bool visibleGroup = mDocument->isObjectGroupVisible(obj->group(), level);
+            item->setVisible(visibleLevel && visibleGroup && item->object()->isVisible());
+        }
+    }
+}
+
+void CellScene::objectGroupVisibilityChanged(WorldObjectGroup *og, int level)
+{
+    bool visibleLevel = mDocument->isObjectLevelVisible(level);
+    bool visibleGroup = mDocument->isObjectGroupVisible(og, level);
+    foreach (WorldCellObject *obj, cell()->objects()) {
+        if (obj->group() == og && obj->level() == level) {
+            ObjectItem *item = itemForObject(obj);
+            item->setVisible(visibleLevel && visibleGroup &&
+                             item->object()->isVisible());
         }
     }
 }
@@ -1619,6 +1638,8 @@ void CellScene::updateCurrentLevelHighlight()
 
         foreach (ObjectItem *item, mObjectItems)
             item->setVisible(item->object()->isVisible() &&
+                             mDocument->isObjectGroupVisible(item->object()->group(),
+                                                             item->object()->level()) &&
                              mDocument->isObjectLevelVisible(item->object()->level()));
 
         return;
@@ -1652,7 +1673,9 @@ void CellScene::updateCurrentLevelHighlight()
     foreach (ObjectItem *item, mObjectItems) {
         bool visible = item->object()->isVisible()
                 && (item->object()->level() == currentLevel)
-                && (mDocument->isObjectLevelVisible(currentLevel));
+                && mDocument->isObjectGroupVisible(item->object()->group(),
+                                                   item->object()->level())
+                && mDocument->isObjectLevelVisible(currentLevel);
         item->setVisible(visible);
     }
 #else

@@ -34,6 +34,7 @@ class WorldCellContents;
 class WorldCellLot;
 class WorldCellObject;
 class WorldDocument;
+class WorldObjectGroup;
 
 class SetCellMainMap : public QUndoCommand
 {
@@ -265,6 +266,24 @@ private:
     WorldDocument *mDocument;
     WorldCellObject *mObject;
     QString mName;
+};
+
+/////
+
+class SetObjectGroup : public QUndoCommand
+{
+public:
+    SetObjectGroup(WorldDocument *doc, WorldCellObject *obj, WorldObjectGroup *og);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCellObject *mObject;
+    WorldObjectGroup *mGroup;
 };
 
 /////
@@ -540,6 +559,50 @@ private:
 
 /////
 
+// Base class for AddObjectGroup/RemoveObjectGroup
+class AddRemoveObjectGroup : public QUndoCommand
+{
+public:
+    AddRemoveObjectGroup(WorldDocument *doc, int index, WorldObjectGroup *og);
+    ~AddRemoveObjectGroup();
+
+protected:
+    void add();
+    void remove();
+
+    WorldDocument *mDocument;
+    WorldObjectGroup *mGroup;
+    int mIndex;
+};
+
+class AddObjectGroup : public AddRemoveObjectGroup
+{
+public:
+    AddObjectGroup(WorldDocument *doc, int index, WorldObjectGroup *og)
+        : AddRemoveObjectGroup(doc, index, og)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Add Object Group"));
+    }
+
+    void undo() { remove(); }
+    void redo() { add(); }
+};
+
+class RemoveObjectGroup : public AddRemoveObjectGroup
+{
+public:
+    RemoveObjectGroup(WorldDocument *doc, int index)
+        : AddRemoveObjectGroup(doc, index, 0)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Remove Object Group"));
+    }
+
+    void undo() { add(); }
+    void redo() { remove(); }
+};
+
+/////
+
 // Base class for AddObjectType/RemoveObjectType
 class AddRemoveObjectType : public QUndoCommand
 {
@@ -580,6 +643,24 @@ public:
 
     void undo() { add(); }
     void redo() { remove(); }
+};
+
+/////
+
+class SetObjectGroupName : public QUndoCommand
+{
+public:
+    SetObjectGroupName(WorldDocument *doc, WorldObjectGroup *og, const QString &name);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldObjectGroup *mGroup;
+    QString mName;
 };
 
 /////

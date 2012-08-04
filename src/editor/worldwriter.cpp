@@ -84,6 +84,12 @@ public:
         foreach (PropertyTemplate *pt, world->propertyTemplates())
             writeTemplate(w, pt);
 
+        // Skip the null object group
+        foreach (WorldObjectGroup *og, world->objectGroups()) {
+            if (og == mWorld->nullObjectGroup()) continue;
+            writeObjectGroup(w, og);
+        }
+
         // Skip the null object type
         foreach (ObjectType *ot, world->objectTypes()) {
             if (ot == mWorld->nullObjectType()) continue;
@@ -119,6 +125,13 @@ public:
     {
         w.writeStartElement(QLatin1String("template"));
         w.writeAttribute(QLatin1String("name"), pt->mName);
+        w.writeEndElement();
+    }
+
+    void writeObjectGroup(QXmlStreamWriter &w, WorldObjectGroup *og)
+    {
+        w.writeStartElement(QLatin1String("objectgroup"));
+        w.writeAttribute(QLatin1String("name"), og->name());
         w.writeEndElement();
     }
 
@@ -206,6 +219,8 @@ public:
 
         if (!obj->name().isEmpty())
             w.writeAttribute(QLatin1String("name"), obj->name());
+        if (!obj->group()->name().isEmpty())
+            w.writeAttribute(QLatin1String("group"), obj->group()->name());
         if (!obj->type()->name().isEmpty())
             w.writeAttribute(QLatin1String("type"), obj->type()->name());
         w.writeAttribute(QLatin1String("x"), QString::number(obj->x()));

@@ -29,6 +29,7 @@ class WorldCell;
 class WorldCellLot;
 class WorldCellObject;
 class WorldDocument;
+class WorldObjectGroup;
 
 namespace Tiled {
 class Layer;
@@ -73,6 +74,9 @@ public:
     void setObjectLevelVisible(int level, bool visible);
     bool isObjectLevelVisible(int level);
 
+    void setObjectGroupVisible(WorldObjectGroup *og, int level, bool visible);
+    bool isObjectGroupVisible(WorldObjectGroup *og, int level);
+
     void setCurrentLayerIndex(int index);
     int currentLayerIndex() const { return mCurrentLayerIndex; }
     Tiled::Layer *currentLayer() const;
@@ -88,6 +92,7 @@ signals:
     void layerGroupVisibilityChanged(Tiled::ZTileLayerGroup *layerGroup);
     void lotLevelVisibilityChanged(int level);
     void objectLevelVisibilityChanged(int level);
+    void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
     void selectedLotsChanged();
     void selectedObjectsChanged();
     void cellContentsAboutToChange();
@@ -117,6 +122,7 @@ private:
     int mCurrentLevel;
     QMap<int,bool> mLotLevelVisible;
     QMap<int,bool> mObjectLevelVisible;
+    QMap<WorldObjectGroup*,QMap<int,bool> > mObjectGroupVisible;
     CellMiniMapItem *mMiniMapItem;
 };
 

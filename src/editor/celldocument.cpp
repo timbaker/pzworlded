@@ -145,6 +145,24 @@ bool CellDocument::isObjectLevelVisible(int level)
     return mObjectLevelVisible[level];
 }
 
+void CellDocument::setObjectGroupVisible(WorldObjectGroup *og, int level, bool visible)
+{
+    if (mObjectGroupVisible.contains(og)
+            && mObjectGroupVisible[og].contains(level)
+            && mObjectGroupVisible[og][level] == visible)
+        return;
+    mObjectGroupVisible[og][level] = visible;
+    emit objectGroupVisibilityChanged(og, level);
+}
+
+bool CellDocument::isObjectGroupVisible(WorldObjectGroup *og, int level)
+{
+    if (!mObjectGroupVisible.contains(og) ||
+            !mObjectGroupVisible[og].contains(level)) // need a good place to init this
+        mObjectGroupVisible[og][level] = true;
+    return mObjectGroupVisible[og][level];
+}
+
 void CellDocument::setCurrentLayerIndex(int index)
 {
     Q_ASSERT(index >= -1 && index < scene()->map()->layerCount());

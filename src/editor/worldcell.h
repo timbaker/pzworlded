@@ -115,6 +115,25 @@ public:
 };
 
 /**
+  * This class represents a group WorldCellObjects belong to.
+  * New groups are added via the ObjectGroupsDialog.
+  * Each World has its own list of these.
+  */
+class WorldObjectGroup
+{
+public:
+    WorldObjectGroup();
+    WorldObjectGroup(const QString &name);
+
+    void setName(const QString &name) { mName = name; }
+    const QString &name() const { return mName; }
+
+private:
+    QString mName;
+    // TODO: add color
+};
+
+/**
   * This class represents the type of a WorldCellObject.
   * New types are added via the ObjectTypesDialog.
   * Each World has its own list of these.
@@ -147,6 +166,9 @@ public:
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
 
+    void setGroup(WorldObjectGroup *group) { mGroup = group; }
+    WorldObjectGroup *group() const { return mGroup; }
+
     void setType(ObjectType *type) { mType = type; }
     ObjectType *type() const { return mType; }
 
@@ -176,6 +198,7 @@ public:
 
 private:
     QString mName;
+    WorldObjectGroup *mGroup;
     ObjectType *mType;
     qreal mX, mY;
     int mZ;

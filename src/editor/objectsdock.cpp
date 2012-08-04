@@ -203,7 +203,7 @@ void ObjectsViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
 {
     QStyledItemDelegate::paint(painter, option, index);
 
-    if ((index.column() == 0) && index.parent().isValid() && (option.state & QStyle::State_MouseOver)) {
+    if ((index.column() == 0) && mModel->isDeletable(index) && (option.state & QStyle::State_MouseOver)) {
         painter->save();
         QRect closeRect = closeButtonRect(option.rect); //option.rect.x()-40+2, option.rect.y(), mTrashPixmap.width(), option.rect.height());
         painter->setClipRect(closeRect);
@@ -303,7 +303,7 @@ QSize ObjectsViewDelegate::sizeHint(const QStyleOptionViewItem &option, const QM
 
 QRect ObjectsViewDelegate::closeButtonRect(const QRect &itemViewRect) const
 {
-    QRect closeRect(itemViewRect.x()-40+2, itemViewRect.y(), mTrashPixmap.width(), itemViewRect.height());
+    QRect closeRect(itemViewRect.x()-20*3+2, itemViewRect.y(), mTrashPixmap.width(), itemViewRect.height());
     return closeRect;
 }
 
@@ -336,6 +336,8 @@ ObjectsView::ObjectsView(QWidget *parent)
     header()->resizeSection(0, 180);
     header()->setResizeMode(1, QHeaderView::ResizeToContents);
 
+    connect(mModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
+            SLOT(rowsInserted(QModelIndex,int,int)));
     connect(mModel, SIGNAL(synched()), SLOT(modelSynched()));
 }
 
@@ -395,6 +397,15 @@ void ObjectsView::setDocument(Document *doc)
 bool ObjectsView::synchingSelection() const
 {
     return mSynchingSelection || mModel->synching();
+}
+
+void ObjectsView::rowsInserted(const QModelIndex &parent, int start, int end)
+{
+    QTreeView::rowsInserted(parent, start, end);
+
+    // When adding new ObjectGroups, they aren't expanded
+    while (start <= end)
+        expand(mModel->index(start++, 0, parent));
 }
 
 void ObjectsView::selectedCellsChanged()
@@ -486,6 +497,13 @@ ObjectsModel::Level *ObjectsModel::toLevel(const QModelIndex &index) const
     return 0;
 }
 
+WorldObjectGroup *ObjectsModel::toGroup(const QModelIndex &index) const
+{
+    if (index.isValid())
+        return toItem(index)->group;
+    return 0;
+}
+
 WorldCellObject *ObjectsModel::toObject(const QModelIndex &index) const
 {
     if (index.isValid())
@@ -555,6 +573,24 @@ QVariant ObjectsModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     }
+    if (WorldObjectGroup *og = toGroup(index)) {
+        if (index.column())
+            return QVariant();
+        switch (role) {
+        case Qt::CheckStateRole: {
+            if (mCellDoc) {
+                int level = toItem(index)->parent->level->level;
+                bool visible = mCellDoc->isObjectGroupVisible(og, level);
+                return visible ? Qt::Checked : Qt::Unchecked;
+            }
+            return QVariant();
+        }
+        case Qt::DisplayRole:
+            return og->name().isEmpty() ? QLatin1String("<no group>") : og->name();
+        default:
+            return QVariant();
+        }
+    }
     if (WorldCellObject *obj = toObject(index)) {
         switch (role) {
         case Qt::CheckStateRole: {
@@ -611,6 +647,19 @@ bool ObjectsModel::setData(const QModelIndex &index, const QVariant &value, int 
         }
         }
     }
+    if (WorldObjectGroup *og = toGroup(index)) {
+        switch (role) {
+        case Qt::CheckStateRole: {
+            if (mCellDoc) {
+                int level = toItem(index)->parent->level->level;
+                Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
+                mCellDoc->setObjectGroupVisible(og, level, c == Qt::Checked);
+                emit dataChanged(index, index);
+                return true;
+            }
+        }
+        }
+    }
     if (WorldCellObject *obj = toObject(index)) {
         switch (role) {
         case Qt::CheckStateRole: {
@@ -641,7 +690,7 @@ Qt::ItemFlags ObjectsModel::flags(const QModelIndex &index) const
     if (index.column() == 0) {
         if (mCellDoc)
             rc |= Qt::ItemIsUserCheckable;
-        if (toLevel(index))
+        if (toGroup(index))
             rc |= Qt::ItemIsDropEnabled;
         if (toObject(index))
             rc |= Qt::ItemIsEditable | Qt::ItemIsDragEnabled;
@@ -698,7 +747,7 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
 
 #if 1
      Item *parentItem = toItem(parent);
-     if (!parentItem || !parentItem->level)
+     if (!parentItem || !parentItem->group)
          return false;
 
      WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
@@ -725,14 +774,17 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
      }
 
      // Note: parentItem may be destroyed by setCell()
-     int level = parentItem->level->level;
+     int level = parentItem->parent->level->level; // ouch
      int count = objects.size();
-     if (count > 1)
-         worldDoc->undoStack()->beginMacro(tr("Change %1 Objects' Level").arg(count));
-     foreach (WorldCellObject *obj, objects)
-         worldDoc->setObjectLevel(obj, level);
-     if (count > 1)
-         worldDoc->undoStack()->endMacro();
+     worldDoc->undoStack()->beginMacro(tr("Reorder %1 Object%2").arg(count)
+                                       .arg((count > 1) ? QLatin1String("s") : QLatin1String("")));
+     foreach (WorldCellObject *obj, objects) {
+         if (parentItem->group != obj->group())
+             worldDoc->setCellObjectGroup(obj, parentItem->group);
+         if (level != obj->level())
+            worldDoc->setObjectLevel(obj, level);
+     }
+     worldDoc->undoStack()->endMacro();
 
      return true;
 }
@@ -744,9 +796,9 @@ QModelIndex ObjectsModel::index(ObjectsModel::Level *level) const
     return createIndex(row, 0, item);
 }
 
-QModelIndex ObjectsModel::index(WorldCellObject *lot, int column) const
+QModelIndex ObjectsModel::index(WorldCellObject *obj, int column) const
 {
-    Item *item = toItem(lot);
+    Item *item = toItem(obj);
     int row = item->parent->children.indexOf(item);
     return createIndex(row, column, item);
 }
@@ -773,14 +825,57 @@ ObjectsModel::Item *ObjectsModel::toItem(int level) const
     return 0;
 }
 
+ObjectsModel::Item *ObjectsModel::toItem(int level, WorldObjectGroup *og) const
+{
+    if (Item *levelItem = toItem(level)) {
+        foreach (Item *item, levelItem->children)
+            if (item->group == og)
+                return item;
+    }
+    return 0;
+}
+
 ObjectsModel::Item *ObjectsModel::toItem(WorldCellObject *obj) const
 {
-    Level *level = mLevels[obj->level()];
-    Item *parent = toItem(level);
+    Item *parent = toItem(obj->level(), obj->group());
     foreach (Item *item, parent->children)
         if (item->object == obj)
             return item;
     return 0;
+}
+
+QModelIndex ObjectsModel::index(Item *item) const
+{
+    int row = item->parent->children.indexOf(item);
+    return createIndex(row, 0, item);
+}
+
+void ObjectsModel::addItemToModel(ObjectsModel::Item *parentItem,
+                                  int indexInParent,
+                                  ObjectsModel::Item *item)
+{
+    QModelIndex parent = this->index(parentItem);
+    beginInsertRows(parent, indexInParent, indexInParent);
+    parentItem->children.insert(indexInParent, item);
+    endInsertRows();
+}
+
+void ObjectsModel::removeItemFromModel(ObjectsModel::Item *item)
+{
+    if (item->children.size()) {
+        QModelIndex index = this->index(item);
+        beginRemoveRows(index, 0, item->children.size() - 1);
+        qDeleteAll(item->children);
+        item->children.clear();
+        endRemoveRows();
+    }
+
+    Item *parentItem = item->parent;
+    QModelIndex parent = this->index(parentItem);
+    int row = parentItem->children.indexOf(item);
+    beginRemoveRows(parent, row, row);
+    delete parentItem->children.takeAt(row);
+    endRemoveRows();
 }
 
 void ObjectsModel::setModelData()
@@ -810,12 +905,14 @@ void ObjectsModel::setModelData()
     for (int level = 0; level <= maxLevel; level++)
         mLevels += new Level(level);
 
-    foreach (Level *level, mLevels)
-        new Item(mRootItem, 0, level);
+    foreach (Level *level, mLevels) {
+        Item *levelItem = new Item(mRootItem, 0, level);
+        foreach (WorldObjectGroup *og, mCell->world()->objectGroups())
+            new Item(levelItem, 0, og);
+    }
 
     foreach (WorldCellObject *obj, mCell->objects()) {
-        Item *parent = toItem(obj->level());
-        parent->level->objects.insert(0, obj);
+        Item *parent = toItem(obj->level(), obj->group());
         new Item(parent, 0, obj);
     }
 
@@ -826,8 +923,10 @@ void ObjectsModel::setDocument(Document *doc)
 {
     if (mWorldDoc)
         mWorldDoc->disconnect(this);
-    if (mCellDoc)
+    if (mCellDoc) {
+        mCellDoc->worldDocument()->disconnect(this);
         mCellDoc->disconnect(this);
+    }
 
     mWorldDoc = doc ? doc->asWorldDocument() : 0;
     mCellDoc = doc ? doc->asCellDocument() : 0;
@@ -852,6 +951,13 @@ void ObjectsModel::setDocument(Document *doc)
         connect(worldDoc, SIGNAL(objectTypeNameChanged(ObjectType*)),
                 SLOT(objectTypeNameChanged(ObjectType*)));
 
+        connect(worldDoc, SIGNAL(objectGroupAdded(int)),
+                SLOT(objectGroupAdded(int)));
+        connect(worldDoc, SIGNAL(objectGroupAboutToBeRemoved(int)),
+                SLOT(objectGroupAboutToBeRemoved(int)));
+        connect(worldDoc, SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
+                SLOT(objectGroupNameChanged(WorldObjectGroup*)));
+
         connect(worldDoc, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
                 SLOT(cellContentsAboutToChange(WorldCell*)));
         connect(worldDoc, SIGNAL(cellMapFileChanged(WorldCell*)),
@@ -869,6 +975,12 @@ void ObjectsModel::setDocument(Document *doc)
                 SLOT(cellObjectXXXXChanged(WorldCellObject*)));
         connect(worldDoc, SIGNAL(cellObjectTypeChanged(WorldCellObject*)),
                 SLOT(cellObjectXXXXChanged(WorldCellObject*)));
+        connect(worldDoc, SIGNAL(cellObjectGroupAboutToChange(WorldCellObject*)),
+                SLOT(cellObjectGroupAboutToChange(WorldCellObject*)));
+        connect(worldDoc, SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
+                SLOT(cellObjectGroupChanged(WorldCellObject*)));
+        connect(worldDoc, SIGNAL(objectLevelAboutToChange(WorldCellObject*)),
+                SLOT(objectLevelAboutToChange(WorldCellObject*)));
         connect(worldDoc, SIGNAL(objectLevelChanged(WorldCellObject*)),
                 SLOT(objectLevelChanged(WorldCellObject*)));
     }
@@ -891,6 +1003,34 @@ void ObjectsModel::objectTypeNameChanged(ObjectType *objType)
     foreach (WorldCellObject *obj, mCell->objects()) {
         if (obj->type() == objType)
             cellObjectXXXXChanged(obj);
+    }
+}
+
+void ObjectsModel::objectGroupAdded(int index)
+{
+    WorldObjectGroup *og = mCell->world()->objectGroups().at(index);
+    index = mCell->world()->objectGroups().size() - index - 1;
+    foreach (Item *parent, mRootItem->children) {
+        Item *item = new Item(parent, index, og);
+        parent->children.removeAt(index);
+        addItemToModel(parent, index, item);
+    }
+}
+
+void ObjectsModel::objectGroupAboutToBeRemoved(int index)
+{
+    index = mCell->world()->objectGroups().size() - index - 1;
+    foreach (Item *parentItem, mRootItem->children)
+        removeItemFromModel(parentItem->children.at(index));
+}
+
+void ObjectsModel::objectGroupNameChanged(WorldObjectGroup *og)
+{
+    int index = mCell->world()->objectGroups().indexOf(og);
+    index = mCell->world()->objectGroups().size() - index - 1;
+    foreach (Item *parentItem, mRootItem->children) {
+        Item *item = parentItem->children.at(index);
+        emit dataChanged(this->index(item), this->index(item));
     }
 }
 
@@ -920,9 +1060,29 @@ void ObjectsModel::cellContentsChanged(WorldCell *cell)
 
 void ObjectsModel::cellObjectAdded(WorldCell *cell, int index)
 {
-    Q_UNUSED(index)
-    if (cell == mCell)
-        setCell(mCell); // lazy, just reset the whole list
+    if (cell != mCell)
+        return;
+
+    WorldCellObject *obj = cell->objects().at(index);
+    Item *parent = toItem(obj->level(), obj->group());
+    WorldCellObject *prevObj = 0;
+    --index;
+    while (index >= 0) {
+        prevObj = obj->cell()->objects().at(index);
+        if (obj->level() == prevObj->level() &&
+                obj->group() == prevObj->group())
+            break;
+        --index;
+    }
+    if (index >= 0) {
+        Item *prevItem = parent->findChild(prevObj);
+        index = parent->children.indexOf(prevItem);
+    } else {
+        index = parent->children.size();
+    }
+    Item *item = new Item(parent, index, obj);
+    parent->children.removeAt(index);
+    addItemToModel(parent, index, item);
 }
 
 void ObjectsModel::cellObjectAboutToBeRemoved(WorldCell *cell, int index)
@@ -930,14 +1090,8 @@ void ObjectsModel::cellObjectAboutToBeRemoved(WorldCell *cell, int index)
     if (cell != mCell)
         return;
     WorldCellObject *obj = cell->objects().at(index);
-    if (Item *item = toItem(obj)) {
-        Item *parentItem = item->parent;
-        QModelIndex parent = this->index(parentItem->level);
-        int row = parentItem->children.indexOf(item);
-        beginRemoveRows(parent, row, row);
-        delete parentItem->children.takeAt(row);
-        endRemoveRows();
-    }
+    if (Item *item = toItem(obj))
+        removeItemFromModel(item);
 }
 
 void ObjectsModel::cellObjectXXXXChanged(WorldCellObject *obj)
@@ -951,10 +1105,36 @@ void ObjectsModel::cellObjectXXXXChanged(WorldCellObject *obj)
     }
 }
 
+void ObjectsModel::cellObjectGroupAboutToChange(WorldCellObject *obj)
+{
+    if (obj->cell() != mCell)
+        return;
+    if (Item *item = toItem(obj))
+        removeItemFromModel(item);
+}
+
+void ObjectsModel::cellObjectGroupChanged(WorldCellObject *obj)
+{
+    if (obj->cell() != mCell)
+        return;
+    int index = obj->cell()->objects().indexOf(obj);
+    cellObjectAdded(obj->cell(), index);
+}
+
+void ObjectsModel::objectLevelAboutToChange(WorldCellObject *obj)
+{
+    if (obj->cell() != mCell)
+        return;
+    if (Item *item = toItem(obj))
+        removeItemFromModel(item);
+}
+
 void ObjectsModel::objectLevelChanged(WorldCellObject *obj)
 {
-    if (obj->cell() == mCell)
-        setCell(mCell); // lazy, just reset the whole list
+    if (obj->cell() != mCell)
+        return;
+    int index = obj->cell()->objects().indexOf(obj);
+    cellObjectAdded(obj->cell(), index);
 }
 
 void ObjectsModel::layerGroupAdded(int level)
@@ -964,4 +1144,14 @@ void ObjectsModel::layerGroupAdded(int level)
         return;
     if (mCellDoc)
         setCell(mCell);
+}
+
+bool ObjectsModel::isEditable(const QModelIndex &index) const
+{
+    return toObject(index) != 0;
+}
+
+bool ObjectsModel::isDeletable(const QModelIndex &index) const
+{
+    return toObject(index) != 0;
 }

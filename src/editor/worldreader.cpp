@@ -98,6 +98,8 @@ private:
                 readPropertyDef();
             else if (xml.name() == "template")
                 readTemplate();
+            else if (xml.name() == "objectgroup")
+                readObjectGroup();
             else if (xml.name() == "objecttype")
                 readObjectType();
             else if (xml.name() == "cell")
@@ -174,6 +176,29 @@ private:
             } else
                 readUnknownElement();
         }
+    }
+
+    void readObjectGroup()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "objectgroup");
+
+        const QXmlStreamAttributes atts = xml.attributes();
+        const QString name = atts.value(QLatin1String("name")).toString();
+        if (name.isEmpty()) {
+            xml.raiseError(tr("empty objectgroup name"));
+            return;
+        }
+
+        WorldObjectGroup *og = mWorld->objectGroups().find(name);
+        if (og) {
+            xml.raiseError(tr("duplicate objectgroup \"%1\"").arg(name));
+            return;
+        }
+
+        og = new WorldObjectGroup(name);
+        mWorld->insertObjectGroup(mWorld->objectGroups().size(), og);
+
+        xml.skipCurrentElement();
     }
 
     void readObjectType()
@@ -299,12 +324,21 @@ private:
 
         const QXmlStreamAttributes atts = xml.attributes();
         const QString name = atts.value(QLatin1String("name")).toString();
+
+        const QString group = atts.value(QLatin1String("group")).toString();
+        WorldObjectGroup *objGroup = mWorld->objectGroups().find(group);
+        if (!objGroup) {
+            xml.raiseError(tr("unknown object group \"%1\"").arg(group));
+            return;
+        }
+
         const QString type = atts.value(QLatin1String("type")).toString();
         ObjectType *objType = mWorld->objectTypes().find(type);
         if (!objType) {
             xml.raiseError(tr("unknown object type \"%1\"").arg(type));
             return;
         }
+
         const qreal x =
                 atts.value(QLatin1String("x")).toString().toDouble();
         const qreal y =
@@ -319,7 +353,9 @@ private:
                 atts.value(QLatin1String("height")).toString().toDouble();
 
         // No check wanted/needed on Object coordinates
-        WorldCellObject *obj = new WorldCellObject(cell, name, objType, x, y, level, width, height);
+        WorldCellObject *obj = new WorldCellObject(cell, name, objType, x, y,
+                                                   level, width, height);
+        obj->setGroup(objGroup);
         cell->insertObject(cell->objects().size(), obj);
 
         while (xml.readNextStartElement()) {

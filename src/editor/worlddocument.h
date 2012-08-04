@@ -35,6 +35,7 @@ class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
 class WorldCellObject;
+class WorldObjectGroup;
 
 class QUndoStack;
 
@@ -66,6 +67,10 @@ public:
 
     QString setPropertyValue(PropertyHolder *ph, Property *p, const QString &value);
 
+    void insertObjectGroup(int index, WorldObjectGroup *og);
+    WorldObjectGroup *removeObjectGroup(int index);
+    QString changeObjectGroupName(WorldObjectGroup *og, const QString &name);
+
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
     QString changeObjectTypeName(ObjectType *objType, const QString &name);
@@ -84,6 +89,7 @@ public:
     QSizeF resizeCellObject(WorldCellObject *obj, const QSizeF &size);
     int setObjectLevel(WorldCellObject *obj, int level);
     QString setCellObjectName(WorldCellObject *obj, const QString &name);
+    WorldObjectGroup *setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *group);
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
 
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
@@ -92,6 +98,10 @@ signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
     void propertyDefinitionAboutToBeRemoved(int index);
     void propertyDefinitionChanged(PropertyDef *pd);
+
+    void objectGroupAdded(int index);
+    void objectGroupAboutToBeRemoved(int index);
+    void objectGroupNameChanged(WorldObjectGroup *og);
 
     void objectTypeAdded(int index);
     void objectTypeAboutToBeRemoved(int index);
@@ -125,7 +135,10 @@ signals:
     void cellObjectMoved(WorldCellObject *object);
     void cellObjectResized(WorldCellObject *object);
     void cellObjectNameChanged(WorldCellObject *object);
+    void cellObjectGroupAboutToChange(WorldCellObject *object);
+    void cellObjectGroupChanged(WorldCellObject *object);
     void cellObjectTypeChanged(WorldCellObject *object);
+    void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
 
     void selectedCellsChanged();
@@ -177,6 +190,7 @@ public:
     void resizeCellObject(WorldCellObject *obj, const QSizeF &size);
     void setObjectLevel(WorldCellObject *obj, int level);
     void setCellObjectName(WorldCellObject *obj, const QString &name);
+    void setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og);
     void setCellObjectType(WorldCellObject *obj, const QString &type);
 
     /**
@@ -229,6 +243,10 @@ public:
       */
     void changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc);
 
+    void addObjectGroup(WorldObjectGroup *newGroup);
+    bool removeObjectGroup(WorldObjectGroup *objGroup);
+    void changeObjectGroupName(WorldObjectGroup *objGroup, const QString &name);
+
     void addObjectType(ObjectType *newType);
     bool removeObjectType(ObjectType *objType);
     void changeObjectTypeName(ObjectType *objType, const QString &name);
@@ -275,6 +293,10 @@ signals:
     void propertyDefinitionAboutToBeRemoved(int index);
     void propertyDefinitionChanged(PropertyDef *pd);
 
+    void objectGroupAdded(int index);
+    void objectGroupAboutToBeRemoved(int index);
+    void objectGroupNameChanged(WorldObjectGroup *og);
+
     void objectTypeAdded(int index);
     void objectTypeAboutToBeRemoved(int index);
     void objectTypeNameChanged(ObjectType *type);
@@ -301,7 +323,10 @@ signals:
     void cellObjectMoved(WorldCellObject *object);
     void cellObjectResized(WorldCellObject *object);
     void cellObjectNameChanged(WorldCellObject *object);
+    void cellObjectGroupAboutToChange(WorldCellObject *object);
+    void cellObjectGroupChanged(WorldCellObject *object);
     void cellObjectTypeChanged(WorldCellObject *object);
+    void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
 
     void templateAdded(int index);

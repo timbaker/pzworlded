@@ -79,7 +79,8 @@ SOURCES += main.cpp\
     luawriter.cpp \
     layersmodel.cpp \
     layersdock.cpp \
-    preferencesdialog.cpp
+    preferencesdialog.cpp \
+    objectgroupsdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -118,14 +119,16 @@ HEADERS  += mainwindow.h \
     luawriter.h \
     layersmodel.h \
     layersdock.h \
-    preferencesdialog.h
+    preferencesdialog.h \
+    objectgroupsdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \
     objecttypesdialog.ui \
-    preferencesdialog.ui
+    preferencesdialog.ui \
+    objectgroupsdialog.ui
 
 OTHER_FILES +=
 

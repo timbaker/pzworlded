@@ -41,6 +41,7 @@ class WorldCell;
 class WorldCellLot;
 class WorldCellObject;
 class WorldDocument;
+class WorldObjectGroup;
 
 namespace Tiled {
 class MapRenderer;
@@ -321,6 +322,7 @@ public slots:
     void layerGroupVisibilityChanged(Tiled::ZTileLayerGroup *layerGroup);
     void lotLevelVisibilityChanged(int level);
     void objectLevelVisibilityChanged(int level);
+    void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
     void currentLevelChanged(int index);
     void setGridVisible(bool visible);
     void setHighlightCurrentLevel(bool highlight);

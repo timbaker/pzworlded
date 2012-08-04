@@ -28,6 +28,7 @@
 #include "mapmanager.h"
 #include "mapsdock.h"
 #include "objectsdock.h"
+#include "objectgroupsdialog.h"
 #include "objecttypesdialog.h"
 #include "preferences.h"
 #include "preferencesdialog.h"
@@ -173,6 +174,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionPasteCells, SIGNAL(triggered()), SLOT(pasteCellsFromClipboard()));
     connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
 
+    connect(ui->actionObjectGroups, SIGNAL(triggered()), SLOT(objectGroupsDialog()));
     connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
@@ -763,6 +765,17 @@ void MainWindow::preferencesDialog()
     dialog.exec();
 }
 
+void MainWindow::objectGroupsDialog()
+{
+    if (!mCurrentDocument)
+        return;
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    ObjectGroupsDialog dialog(worldDoc, this);
+    dialog.exec();
+}
+
 void MainWindow::objectTypesDialog()
 {
     if (!mCurrentDocument)
@@ -875,10 +888,10 @@ void MainWindow::extractLots()
     Q_ASSERT(mCurrentDocument->isCellDocument());
     CellDocument *cellDoc = mCurrentDocument->asCellDocument();
     QFileInfo info(cellDoc->scene()->mapComposite()->mapInfo()->path());
-    QString message = tr("This command will create a new Lot for each object " \
+    QString message = tr("This command will create a new Lot for each 'lot' object " \
                          "that is in the cell's map \"%1\".  You should then " \
-                         "remove those objects from the map in the TileZed " \
-                         "editor, otherwise they will be loaded twice by the game.")
+                         "remove those objects from the map using the TileZed " \
+                         "editor, otherwise the Lots will be loaded twice by the game.")
             .arg(info.completeBaseName());
     QMessageBox::StandardButton b =
             QMessageBox::information(this, tr("Extract Lots"), message,
@@ -894,8 +907,12 @@ void MainWindow::extractLots()
     foreach (ObjectGroup *og, map->objectGroups()) {
         foreach (MapObject *o, og->objects()) {
             if (o->name() == QLatin1String("lot") && !o->type().isEmpty()) {
+                int x = qFloor(o->x()), y = qFloor(o->y());
+                // Adjust for map orientation
+                if (map->orientation() == Map::Isometric)
+                    x += 3 * og->level(), y += 3 * og->level();
                 WorldCellLot *lot = new WorldCellLot(cell,
-                                                     o->type(), o->x(), o->y(),
+                                                     o->type(), x, y,
                                                      og->level(),
                                                      o->width(), o->height());
                worldDoc->addCellLot(cell, cell->lots().size(), lot);
@@ -914,8 +931,8 @@ void MainWindow::extractObjects()
     QFileInfo info(cellDoc->scene()->mapComposite()->mapInfo()->path());
     QString message = tr("This command will create a new Object for each object " \
                          "that is in the cell's map \"%1\" (except 'lot' objects).  "
-                         "You should then remove those objects from the map in "
-                         "the TileZed editor, otherwise they will be loaded "
+                         "You should then remove those objects from the map using "
+                         "the TileZed editor, otherwise the Objects will be loaded "
                          "twice by the game.")
             .arg(info.completeBaseName());
     QMessageBox::StandardButton b =
@@ -927,24 +944,45 @@ void MainWindow::extractObjects()
     WorldDocument *worldDoc = cellDoc->worldDocument();
     worldDoc->undoStack()->beginMacro(tr("Extract Objects"));
 
+    World *world = worldDoc->world();
     WorldCell *cell = cellDoc->cell();
     Map *map = cellDoc->scene()->map();
     foreach (ObjectGroup *og, map->objectGroups()) {
         foreach (MapObject *o, og->objects()) {
+            // Note: object name/type reversed in TileZed
             if (o->name() != QLatin1String("lot") && !o->name().isEmpty()) {
-                ObjectType *type = worldDoc->world()->objectTypes().find(o->name());
+                // Create a new ObjectGroup if needed
+                WorldObjectGroup *group = world->nullObjectGroup();
+                QString name = MapComposite::layerNameWithoutPrefix(og->name());
+                if (!name.isEmpty()) {
+                    group = world->objectGroups().find(name);
+                    if (!group) {
+                        group = new WorldObjectGroup(name);
+                        worldDoc->addObjectGroup(group);
+                    }
+                }
+                // Create a new ObjectType if needed
+                ObjectType *type = world->objectTypes().find(o->name());
                 if (!type) {
                     type = new ObjectType(o->name());
                     worldDoc->addObjectType(type);
                 }
+                // Adjust coordinates to whole numbers
+                // I'm trying to match what PZ's Lot Creator does.
                 int x = qFloor(o->x()), y = qFloor(o->y());
-                int x2 = qCeil(o->bounds().right()), y2 = qCeil(o->bounds().bottom());
+                int width = qFloor(o->width()), height = qFloor(o->height());
+                width = qMax(MIN_OBJECT_SIZE, qreal(width));
+                height = qMax(MIN_OBJECT_SIZE, qreal(height));
+
+                // Adjust for map orientation
+                if (map->orientation() == Map::Isometric)
+                    x += 3 * og->level(), y += 3 * og->level();
 
                 WorldCellObject *obj = new WorldCellObject(cell, o->type(),
                                                            type, x, y,
                                                            og->level(),
-                                                           qMax(MIN_OBJECT_SIZE, qreal(x2 - x)),
-                                                           qMax(MIN_OBJECT_SIZE, qreal(y2 - y)));
+                                                           width, height);
+                obj->setGroup(group);
                 worldDoc->addCellObject(cell, cell->objects().size(), obj);
             }
         }

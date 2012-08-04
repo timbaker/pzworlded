@@ -67,6 +67,17 @@ bool WorldCell::isEmpty() const
 
 /////
 
+WorldObjectGroup::WorldObjectGroup()
+{
+}
+
+WorldObjectGroup::WorldObjectGroup(const QString &name)
+    : mName(name)
+{
+}
+
+/////
+
 ObjectType::ObjectType()
 {
 }

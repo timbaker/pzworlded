@@ -15,21 +15,43 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "worldcell.h"
+#ifndef OBJECTGROUPSDIALOG_H
+#define OBJECTGROUPSDIALOG_H
 
-#include "world.h"
+#include <QDialog>
 
-WorldCellObject::WorldCellObject(WorldCell *cell, const QString &name, ObjectType *type,
-                                 qreal x, qreal y, int level, qreal width, qreal height)
-    : mName(name)
-    , mGroup(cell->world()->nullObjectGroup())
-    , mType(type)
-    , mX(x)
-    , mY(y)
-    , mZ(level)
-    , mWidth(width)
-    , mHeight(height)
-    , mCell(cell)
-    , mVisible(true)
-{
+class WorldDocument;
+class WorldObjectGroup;
+
+class QListWidgetItem;
+
+namespace Ui {
+class ObjectGroupsDialog;
 }
+
+class ObjectGroupsDialog : public QDialog
+{
+    Q_OBJECT
+public:
+    explicit ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent = 0);
+
+private slots:
+    void selectionChanged();
+    void add();
+    void update();
+    void remove();
+    void synchButtons();
+
+private:
+    void setList();
+    void clearUI();
+
+private:
+    Ui::ObjectGroupsDialog *ui;
+    WorldDocument *mWorldDoc;
+    WorldObjectGroup *mObjGroup;
+    QListWidgetItem *mItem;
+    bool mSynching;
+};
+
+#endif // OBJECTGROUPSDIALOG_H

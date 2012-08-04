@@ -19,9 +19,12 @@
 
 #include "worldcell.h"
 
+#include <QStringList>
+
 World::World(int width, int height)
     : mWidth(width)
     , mHeight(height)
+    , mNullObjectGroup(new WorldObjectGroup())
     , mNullObjectType(new ObjectType())
 {
     mCells.resize(mWidth * mHeight);
@@ -31,6 +34,9 @@ World::World(int width, int height)
             mCells[y * mWidth + x] = new WorldCell(this, x, y);
         }
     }
+
+    // The nameless default group for WorldCellObjects
+    mObjectGroups.append(mNullObjectGroup);
 
     // The nameless default type for WorldCellObjects
     mObjectTypes.append(mNullObjectType);
@@ -87,6 +93,16 @@ PropertyDef *World::removePropertyDefinition(int index)
     return mPropertyDefs.takeAt(index);
 }
 
+void World::insertObjectGroup(int index, WorldObjectGroup *og)
+{
+    mObjectGroups.insert(index, og);
+}
+
+WorldObjectGroup *World::removeObjectGroup(int index)
+{
+    return mObjectGroups.takeAt(index);
+}
+
 void World::insertObjectType(int index, ObjectType *ot)
 {
     mObjectTypes.insert(index, ot);
@@ -99,7 +115,35 @@ ObjectType *World::removeObjectType(int index)
 
 /////
 
-#include <QStringList>
+bool ObjectGroupList::contains(const QString &name) const
+{
+    return find(name) != 0;
+}
+
+WorldObjectGroup *ObjectGroupList::find(const QString &name) const
+{
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        if ((*it)->name() == name)
+            return *it;
+        it++;
+    }
+    return 0;
+}
+
+QStringList ObjectGroupList::names() const
+{
+    QStringList result;
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        result += (*it)->name();
+        ++it;
+    }
+    return result;
+}
+
+/////
+
 bool ObjectTypeList::contains(const QString &name) const
 {
     return find(name) != 0;
