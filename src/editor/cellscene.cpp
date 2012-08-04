@@ -386,7 +386,12 @@ void ResizeHandle::paint(QPainter *painter,
                    const QStyleOptionGraphicsItem *,
                    QWidget *)
 {
-//    painter->setBrush(mItem->color());
+#if 1
+    // TODO: WorldObjectGroup color
+    painter->setBrush(Qt::gray);
+#else
+    painter->setBrush(mItem->color());
+#endif
     painter->setPen(Qt::black);
     painter->drawRect(QRectF(-5, -5, 10, 10));
 }
