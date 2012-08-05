@@ -1008,6 +1008,8 @@ void ObjectsModel::objectTypeNameChanged(ObjectType *objType)
 
 void ObjectsModel::objectGroupAdded(int index)
 {
+    if (!mCell)
+        return;
     WorldObjectGroup *og = mCell->world()->objectGroups().at(index);
     index = mCell->world()->objectGroups().size() - index - 1;
     foreach (Item *parent, mRootItem->children) {
@@ -1019,6 +1021,8 @@ void ObjectsModel::objectGroupAdded(int index)
 
 void ObjectsModel::objectGroupAboutToBeRemoved(int index)
 {
+    if (!mCell)
+        return;
     index = mCell->world()->objectGroups().size() - index - 1;
     foreach (Item *parentItem, mRootItem->children)
         removeItemFromModel(parentItem->children.at(index));
@@ -1026,6 +1030,8 @@ void ObjectsModel::objectGroupAboutToBeRemoved(int index)
 
 void ObjectsModel::objectGroupNameChanged(WorldObjectGroup *og)
 {
+    if (!mCell)
+        return;
     int index = mCell->world()->objectGroups().indexOf(og);
     index = mCell->world()->objectGroups().size() - index - 1;
     foreach (Item *parentItem, mRootItem->children) {
