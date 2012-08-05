@@ -364,8 +364,9 @@ void MainWindow::documentAdded(Document *doc)
         doc->setView(view);
         cellDoc->setScene(scene);
 
-        ui->documentTabWidget->addTab(view,
+        int pos = ui->documentTabWidget->addTab(view,
             tr("Cell %1,%2").arg(cellDoc->cell()->x()).arg(cellDoc->cell()->y()));
+        ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
 
         if (mViewHint.valid) {
             view->zoomable()->setScale(mViewHint.scale);
@@ -385,7 +386,8 @@ void MainWindow::documentAdded(Document *doc)
         view->setScene(scene);
         doc->setView(view);
 
-        ui->documentTabWidget->addTab(view, tr("The World"));
+        int pos = ui->documentTabWidget->addTab(view, tr("The World"));
+        ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
 
         if (mViewHint.valid) {
             view->zoomable()->setScale(mViewHint.scale);
@@ -621,7 +623,7 @@ void MainWindow::openLastFiles()
         qreal scale = mSettings.value(QLatin1String("scale")).toDouble();
         const int hor = mSettings.value(QLatin1String("scrollX")).toInt();
         const int ver = mSettings.value(QLatin1String("scrollY")).toInt();
-        setDocumentViewHint(qMax(scale, 0.0625), hor, ver);
+        setDocumentViewHint(qMax(scale, 0.06), hor, ver);
 
         // This "recent file" could be a world or just a cell.
         // We require that the world be already open when editing a cell.
@@ -1145,6 +1147,20 @@ bool MainWindow::saveFile(const QString &fileName)
     if (!mCurrentDocument->save(fileName, error)) {
         QMessageBox::critical(this, tr("Error Saving Map"), error);
         return false;
+    }
+
+    // Update tab tooltips
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
+    int pos = 0;
+    foreach (Document *doc, docman()->documents()) {
+        CellDocument *cellDoc = doc->asCellDocument();
+        if ((doc == worldDoc) ||
+                (cellDoc && cellDoc->worldDocument() == worldDoc)) {
+            ui->documentTabWidget->setTabToolTip(pos, fileName);
+        }
+        ++pos;
     }
 
 //    setRecentFile(fileName);
