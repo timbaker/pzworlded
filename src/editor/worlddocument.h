@@ -20,6 +20,7 @@
 
 #include "document.h"
 
+#include <QColor>
 #include <QObject>
 #include <QList>
 #include <QPoint>
@@ -70,6 +71,7 @@ public:
     void insertObjectGroup(int index, WorldObjectGroup *og);
     WorldObjectGroup *removeObjectGroup(int index);
     QString changeObjectGroupName(WorldObjectGroup *og, const QString &name);
+    QColor changeObjectGroupColor(WorldObjectGroup *og, const QColor &color);
 
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
@@ -102,6 +104,7 @@ signals:
     void objectGroupAdded(int index);
     void objectGroupAboutToBeRemoved(int index);
     void objectGroupNameChanged(WorldObjectGroup *og);
+    void objectGroupColorChanged(WorldObjectGroup *og);
 
     void objectTypeAdded(int index);
     void objectTypeAboutToBeRemoved(int index);
@@ -246,6 +249,7 @@ public:
     void addObjectGroup(WorldObjectGroup *newGroup);
     bool removeObjectGroup(WorldObjectGroup *objGroup);
     void changeObjectGroupName(WorldObjectGroup *objGroup, const QString &name);
+    void changeObjectGroupColor(WorldObjectGroup *objGroup, const QColor &color);
 
     void addObjectType(ObjectType *newType);
     bool removeObjectType(ObjectType *objType);
@@ -296,6 +300,7 @@ signals:
     void objectGroupAdded(int index);
     void objectGroupAboutToBeRemoved(int index);
     void objectGroupNameChanged(WorldObjectGroup *og);
+    void objectGroupColorChanged(WorldObjectGroup *og);
 
     void objectTypeAdded(int index);
     void objectTypeAboutToBeRemoved(int index);

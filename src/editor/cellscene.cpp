@@ -386,12 +386,7 @@ void ResizeHandle::paint(QPainter *painter,
                    const QStyleOptionGraphicsItem *,
                    QWidget *)
 {
-#if 1
-    // TODO: WorldObjectGroup color
-    painter->setBrush(Qt::gray);
-#else
-    painter->setBrush(mItem->color());
-#endif
+    painter->setBrush(mItem->object()->group()->color());
     painter->setPen(Qt::black);
     painter->drawRect(QRectF(-5, -5, 10, 10));
 }
@@ -511,7 +506,7 @@ QRectF ObjectItem::boundingRect() const
 
 void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
-    QColor color = Qt::darkGray;
+    QColor color = mObject->group()->color();
     if (mIsSelected)
         color = QColor(0x33,0x99,0xff/*,255/8*/);
     if (mIsMouseOver)
@@ -947,6 +942,9 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
     connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
     connect(mDocument, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+
+    connect(worldDocument(), SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
+            SLOT(objectGroupColorChanged(WorldObjectGroup*)));
 
     connect(mDocument, SIGNAL(cellMapFileChanged()), SLOT(cellMapFileChanged()));
     connect(mDocument, SIGNAL(cellContentsChanged()), SLOT(cellContentsChanged()));
@@ -1465,6 +1463,14 @@ void CellScene::objectGroupVisibilityChanged(WorldObjectGroup *og, int level)
             item->setVisible(visibleLevel && visibleGroup &&
                              item->object()->isVisible());
         }
+    }
+}
+
+void CellScene::objectGroupColorChanged(WorldObjectGroup *og)
+{
+    foreach (WorldCellObject *obj, cell()->objects()) {
+        if (obj->group() == og)
+            itemForObject(obj)->update();
     }
 }
 

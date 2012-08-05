@@ -195,7 +195,12 @@ private:
             return;
         }
 
-        og = new WorldObjectGroup(name);
+        QString colorName = atts.value(QLatin1String("color")).toString();
+        QColor color;
+        if (!colorName.isEmpty())
+            color = QColor(colorName);
+
+        og = new WorldObjectGroup(name, color);
         mWorld->insertObjectGroup(mWorld->objectGroups().size(), og);
 
         xml.skipCurrentElement();

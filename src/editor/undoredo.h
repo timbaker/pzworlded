@@ -18,6 +18,7 @@
 #ifndef UNDOREDO_H
 #define UNDOREDO_H
 
+#include <QColor>
 #include <QCoreApplication>
 #include <QPoint>
 #include <QSize>
@@ -603,6 +604,42 @@ public:
 
 /////
 
+class SetObjectGroupName : public QUndoCommand
+{
+public:
+    SetObjectGroupName(WorldDocument *doc, WorldObjectGroup *og, const QString &name);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldObjectGroup *mGroup;
+    QString mName;
+};
+
+/////
+
+class SetObjectGroupColor : public QUndoCommand
+{
+public:
+    SetObjectGroupColor(WorldDocument *doc, WorldObjectGroup *og, const QColor &color);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldObjectGroup *mGroup;
+    QColor mColor;
+};
+
+/////
+
 // Base class for AddObjectType/RemoveObjectType
 class AddRemoveObjectType : public QUndoCommand
 {
@@ -643,24 +680,6 @@ public:
 
     void undo() { add(); }
     void redo() { remove(); }
-};
-
-/////
-
-class SetObjectGroupName : public QUndoCommand
-{
-public:
-    SetObjectGroupName(WorldDocument *doc, WorldObjectGroup *og, const QString &name);
-
-    void undo() { swap(); }
-    void redo() { swap(); }
-
-private:
-    void swap();
-
-    WorldDocument *mDocument;
-    WorldObjectGroup *mGroup;
-    QString mName;
 };
 
 /////

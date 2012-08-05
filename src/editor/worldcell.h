@@ -20,6 +20,7 @@
 
 #include "properties.h"
 
+#include <QColor>
 #include <QPoint>
 #include <QList>
 #include <QRect>
@@ -115,7 +116,7 @@ public:
 };
 
 /**
-  * This class represents a group WorldCellObjects belong to.
+  * This class represents the group a WorldCellObject belongs to.
   * New groups are added via the ObjectGroupsDialog.
   * Each World has its own list of these.
   */
@@ -124,13 +125,20 @@ class WorldObjectGroup
 public:
     WorldObjectGroup();
     WorldObjectGroup(const QString &name);
+    WorldObjectGroup(const QString &name, const QColor &color);
 
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
 
+    void setColor(const QColor &color) { mColor = color; }
+    QColor color() const
+    { return mColor.isValid() ? mColor : defaultColor(); }
+
+    static QColor defaultColor() { return Qt::darkGray; }
+
 private:
     QString mName;
-    // TODO: add color
+    QColor mColor;
 };
 
 /**

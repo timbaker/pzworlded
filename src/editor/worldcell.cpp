@@ -76,6 +76,12 @@ WorldObjectGroup::WorldObjectGroup(const QString &name)
 {
 }
 
+WorldObjectGroup::WorldObjectGroup(const QString &name, const QColor &color)
+    : mName(name)
+    , mColor(color)
+{
+}
+
 /////
 
 ObjectType::ObjectType()

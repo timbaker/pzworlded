@@ -323,6 +323,7 @@ public slots:
     void lotLevelVisibilityChanged(int level);
     void objectLevelVisibilityChanged(int level);
     void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
+    void objectGroupColorChanged(WorldObjectGroup *og);
     void currentLevelChanged(int index);
     void setGridVisible(bool visible);
     void setHighlightCurrentLevel(bool highlight);

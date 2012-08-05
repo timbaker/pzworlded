@@ -80,7 +80,8 @@ SOURCES += main.cpp\
     layersmodel.cpp \
     layersdock.cpp \
     preferencesdialog.cpp \
-    objectgroupsdialog.cpp
+    objectgroupsdialog.cpp \
+    colorbutton.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -120,7 +121,8 @@ HEADERS  += mainwindow.h \
     layersmodel.h \
     layersdock.h \
     preferencesdialog.h \
-    objectgroupsdialog.h
+    objectgroupsdialog.h \
+    colorbutton.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

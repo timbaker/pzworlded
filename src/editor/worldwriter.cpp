@@ -132,6 +132,9 @@ public:
     {
         w.writeStartElement(QLatin1String("objectgroup"));
         w.writeAttribute(QLatin1String("name"), og->name());
+        if (og->color().isValid() &&
+                og->color() != WorldObjectGroup::defaultColor())
+            w.writeAttribute(QLatin1String("color"), og->color().name());
         w.writeEndElement();
     }
 

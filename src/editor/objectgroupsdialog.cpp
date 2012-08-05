@@ -27,6 +27,7 @@ ObjectGroupsDialog::ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent)
     , ui(new Ui::ObjectGroupsDialog)
     , mWorldDoc(worldDoc)
     , mObjGroup(0)
+    , mSelectedRow(-1)
     , mSynching(false)
 {
     ui->setupUi(this);
@@ -37,6 +38,9 @@ ObjectGroupsDialog::ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(ui->removeButton, SIGNAL(clicked()), SLOT(remove()));
 
     connect(ui->nameEdit, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
+
+    connect(ui->colorButton, SIGNAL(colorChanged(QColor)),
+            SLOT(colorChanged(QColor)));
 
     setList();
 
@@ -54,14 +58,15 @@ void ObjectGroupsDialog::selectionChanged()
     QList<QListWidgetItem*> selection = view->selectedItems();
     if (selection.size() == 1) {
         mItem = selection.first();
-        int row = view->row(mItem);
-        WorldObjectGroup *og = mWorldDoc->world()->objectGroups().at(row + 1);
+        mSelectedRow = view->row(mItem);
+        WorldObjectGroup *og = mItemToGroup[mItem];
         ui->nameEdit->setText(og->name());
         mObjGroup = og;
     } else {
         ui->nameEdit->clear();
         mObjGroup = 0;
         mItem = 0;
+        mSelectedRow = -1;
     }
 
     synchButtons();
@@ -114,6 +119,7 @@ void ObjectGroupsDialog::clearUI()
     ui->nameEdit->clear();
     mObjGroup = 0;
     mItem = 0;
+    mSelectedRow = -1;
 
     synchButtons();
 }
@@ -140,14 +146,41 @@ void ObjectGroupsDialog::synchButtons()
     ui->updateButton->setEnabled(enableUpdate);
     ui->removeButton->setEnabled(enableRemove);
 
+    ui->moveUp->setEnabled(mObjGroup && (mSelectedRow > 0));
+    ui->moveDown->setEnabled(mObjGroup &&
+                             (mSelectedRow + 1 < ui->view->count()));
+
+    ui->colorButton->setEnabled(mObjGroup != 0);
+    ui->colorButton->setColor(mObjGroup
+                              ? mObjGroup->color()
+                              : WorldObjectGroup::defaultColor());
+
     ui->addButton->setDefault(enableAdd);
     ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd);
+}
+
+void ObjectGroupsDialog::colorChanged(const QColor &color)
+{
+    if (mObjGroup && mObjGroup->color() != color) {
+        mWorldDoc->changeObjectGroupColor(mObjGroup, color);
+        mItem->setData(Qt::DecorationRole, color);
+    }
 }
 
 void ObjectGroupsDialog::setList()
 {
     QListWidget *view = ui->view;
     view->clear();
-    // Skip the null object type at the start of the list
-    view->insertItems(0, mWorldDoc->world()->objectGroups().names().mid(1));
+    foreach (WorldObjectGroup *og, mWorldDoc->world()->objectGroups()) {
+        // Skip the null object group at the start of the list
+        if (og->name().isEmpty())
+            continue;
+
+        QListWidgetItem *item = new QListWidgetItem(og->name());
+        item->setData(Qt::DecorationRole, og->color());
+//        item->setData(Qt::UserRole, QVariant::fromValue<WorldObjectGroup*>(og));
+        mItemToGroup[item] = og;
+
+        view->insertItem(0, item);
+    }
 }

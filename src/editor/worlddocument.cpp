@@ -67,6 +67,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(objectGroupAboutToBeRemoved(int)));
     connect(&mUndoRedo, SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
             SIGNAL(objectGroupNameChanged(WorldObjectGroup*)));
+    connect(&mUndoRedo, SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
+            SIGNAL(objectGroupColorChanged(WorldObjectGroup*)));
 
     connect(&mUndoRedo, SIGNAL(templateAdded(int)),
             SIGNAL(templateAdded(int)));
@@ -424,6 +426,11 @@ void WorldDocument::changeObjectGroupName(WorldObjectGroup *objGroup, const QStr
     undoStack()->push(new SetObjectGroupName(this, objGroup, name));
 }
 
+void WorldDocument::changeObjectGroupColor(WorldObjectGroup *objGroup, const QColor &color)
+{
+    undoStack()->push(new SetObjectGroupColor(this, objGroup, color));
+}
+
 void WorldDocument::addObjectType(ObjectType *newType)
 {
     int index = mWorld->objectTypes().size();
@@ -640,6 +647,14 @@ QString WorldDocumentUndoRedo::changeObjectGroupName(WorldObjectGroup *og, const
     emit objectGroupNameChanged(og);
     og->setName(name);
     return oldName;
+}
+
+QColor WorldDocumentUndoRedo::changeObjectGroupColor(WorldObjectGroup *og, const QColor &color)
+{
+    QColor oldColor = og->color();
+    og->setColor(color);
+    emit objectGroupColorChanged(og);
+    return oldColor;
 }
 
 void WorldDocumentUndoRedo::insertObjectType(int index, ObjectType *ot)

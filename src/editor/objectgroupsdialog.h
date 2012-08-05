@@ -19,12 +19,12 @@
 #define OBJECTGROUPSDIALOG_H
 
 #include <QDialog>
+#include <QMap>
 
 class WorldDocument;
 class WorldObjectGroup;
 
 class QListWidgetItem;
-
 namespace Ui {
 class ObjectGroupsDialog;
 }
@@ -42,6 +42,8 @@ private slots:
     void remove();
     void synchButtons();
 
+    void colorChanged(const QColor &color);
+
 private:
     void setList();
     void clearUI();
@@ -51,7 +53,9 @@ private:
     WorldDocument *mWorldDoc;
     WorldObjectGroup *mObjGroup;
     QListWidgetItem *mItem;
+    int mSelectedRow;
     bool mSynching;
+    QMap<QListWidgetItem*,WorldObjectGroup*> mItemToGroup;
 };
 
 #endif // OBJECTGROUPSDIALOG_H
