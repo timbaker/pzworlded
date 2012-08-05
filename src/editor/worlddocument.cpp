@@ -644,8 +644,8 @@ QString WorldDocumentUndoRedo::changeObjectGroupName(WorldObjectGroup *og, const
     Q_ASSERT(!name.isEmpty());
     Q_ASSERT(!mWorld->objectGroups().contains(name));
     QString oldName = og->name();
-    emit objectGroupNameChanged(og);
     og->setName(name);
+    emit objectGroupNameChanged(og);
     return oldName;
 }
 
@@ -674,8 +674,8 @@ QString WorldDocumentUndoRedo::changeObjectTypeName(ObjectType *objType, const Q
     Q_ASSERT(!name.isEmpty());
     Q_ASSERT(!mWorld->objectTypes().contains(name));
     QString oldName = objType->name();
-    emit objectTypeNameChanged(objType);
     objType->setName(name);
+    emit objectTypeNameChanged(objType);
     return oldName;
 }
 
