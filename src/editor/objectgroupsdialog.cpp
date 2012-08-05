@@ -39,6 +39,9 @@ ObjectGroupsDialog::ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent)
 
     connect(ui->nameEdit, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
 
+    connect(ui->moveDown, SIGNAL(clicked()), SLOT(moveGroupDown()));
+    connect(ui->moveUp, SIGNAL(clicked()), SLOT(moveGroupUp()));
+
     connect(ui->colorButton, SIGNAL(colorChanged(QColor)),
             SLOT(colorChanged(QColor)));
 
@@ -157,6 +160,28 @@ void ObjectGroupsDialog::synchButtons()
 
     ui->addButton->setDefault(enableAdd);
     ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd);
+}
+
+void ObjectGroupsDialog::moveGroupUp()
+{
+    int index = mWorldDoc->world()->objectGroups().indexOf(mObjGroup);
+    mWorldDoc->reorderObjectGroup(mObjGroup, index + 1);
+
+    int row = mSelectedRow;
+    setList();
+    ui->view->setCurrentRow(row - 1, QItemSelectionModel::Select);
+    synchButtons();
+}
+
+void ObjectGroupsDialog::moveGroupDown()
+{
+    int index = mWorldDoc->world()->objectGroups().indexOf(mObjGroup);
+    mWorldDoc->reorderObjectGroup(mObjGroup, index - 1);
+
+    int row = mSelectedRow;
+    setList();
+    ui->view->setCurrentRow(row + 1, QItemSelectionModel::Select);
+    synchButtons();
 }
 
 void ObjectGroupsDialog::colorChanged(const QColor &color)

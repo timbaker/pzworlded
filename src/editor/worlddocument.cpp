@@ -69,6 +69,10 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(objectGroupNameChanged(WorldObjectGroup*)));
     connect(&mUndoRedo, SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
             SIGNAL(objectGroupColorChanged(WorldObjectGroup*)));
+    connect(&mUndoRedo, SIGNAL(objectGroupAboutToBeReordered(int)),
+            SIGNAL(objectGroupAboutToBeReordered(int)));
+    connect(&mUndoRedo, SIGNAL(objectGroupReordered(int)),
+            SIGNAL(objectGroupReordered(int)));
 
     connect(&mUndoRedo, SIGNAL(templateAdded(int)),
             SIGNAL(templateAdded(int)));
@@ -431,6 +435,16 @@ void WorldDocument::changeObjectGroupColor(WorldObjectGroup *objGroup, const QCo
     undoStack()->push(new SetObjectGroupColor(this, objGroup, color));
 }
 
+void WorldDocument::reorderObjectGroup(WorldObjectGroup *og, int index)
+{
+    int oldIndex = mWorld->objectGroups().indexOf(og);
+    Q_ASSERT(index != oldIndex);
+    Q_ASSERT(index >= 0 && index < mWorld->objectGroups().size());
+    undoStack()->beginMacro(tr("Reorder Object Groups"));
+    undoStack()->push(new ReorderObjectGroup(this, og, index));
+    undoStack()->endMacro();
+}
+
 void WorldDocument::addObjectType(ObjectType *newType)
 {
     int index = mWorld->objectTypes().size();
@@ -655,6 +669,17 @@ QColor WorldDocumentUndoRedo::changeObjectGroupColor(WorldObjectGroup *og, const
     og->setColor(color);
     emit objectGroupColorChanged(og);
     return oldColor;
+}
+
+int WorldDocumentUndoRedo::reorderObjectGroup(WorldObjectGroup *og, int index)
+{
+    int oldIndex = mWorld->objectGroups().indexOf(og);
+    emit objectGroupAboutToBeReordered(oldIndex);
+    mWorld->removeObjectGroup(oldIndex);
+    mWorld->insertObjectGroup(index, og);
+    Q_ASSERT(mWorld->objectGroups().indexOf(og) == index);
+    emit objectGroupReordered(index);
+    return oldIndex;
 }
 
 void WorldDocumentUndoRedo::insertObjectType(int index, ObjectType *ot)

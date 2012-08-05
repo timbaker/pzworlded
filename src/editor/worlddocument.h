@@ -72,6 +72,7 @@ public:
     WorldObjectGroup *removeObjectGroup(int index);
     QString changeObjectGroupName(WorldObjectGroup *og, const QString &name);
     QColor changeObjectGroupColor(WorldObjectGroup *og, const QColor &color);
+    int reorderObjectGroup(WorldObjectGroup *og, int index);
 
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
@@ -105,6 +106,8 @@ signals:
     void objectGroupAboutToBeRemoved(int index);
     void objectGroupNameChanged(WorldObjectGroup *og);
     void objectGroupColorChanged(WorldObjectGroup *og);
+    void objectGroupAboutToBeReordered(int index);
+    void objectGroupReordered(int index);
 
     void objectTypeAdded(int index);
     void objectTypeAboutToBeRemoved(int index);
@@ -250,6 +253,7 @@ public:
     bool removeObjectGroup(WorldObjectGroup *objGroup);
     void changeObjectGroupName(WorldObjectGroup *objGroup, const QString &name);
     void changeObjectGroupColor(WorldObjectGroup *objGroup, const QColor &color);
+    void reorderObjectGroup(WorldObjectGroup *og, int index);
 
     void addObjectType(ObjectType *newType);
     bool removeObjectType(ObjectType *objType);
@@ -301,6 +305,8 @@ signals:
     void objectGroupAboutToBeRemoved(int index);
     void objectGroupNameChanged(WorldObjectGroup *og);
     void objectGroupColorChanged(WorldObjectGroup *og);
+    void objectGroupAboutToBeReordered(int index);
+    void objectGroupReordered(int index);
 
     void objectTypeAdded(int index);
     void objectTypeAboutToBeRemoved(int index);

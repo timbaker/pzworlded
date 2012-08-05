@@ -604,6 +604,24 @@ public:
 
 /////
 
+class ReorderObjectGroup : public QUndoCommand
+{
+public:
+    ReorderObjectGroup(WorldDocument *doc, WorldObjectGroup *og, int newIndex);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldObjectGroup *mGroup;
+    int mIndex;
+};
+
+/////
+
 class SetObjectGroupName : public QUndoCommand
 {
 public:

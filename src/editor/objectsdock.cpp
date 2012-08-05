@@ -957,6 +957,8 @@ void ObjectsModel::setDocument(Document *doc)
                 SLOT(objectGroupAboutToBeRemoved(int)));
         connect(worldDoc, SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
                 SLOT(objectGroupNameChanged(WorldObjectGroup*)));
+        connect(worldDoc, SIGNAL(objectGroupReordered(int)),
+                SLOT(objectGroupReordered(int)));
 
         connect(worldDoc, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
                 SLOT(cellContentsAboutToChange(WorldCell*)));
@@ -1037,6 +1039,25 @@ void ObjectsModel::objectGroupNameChanged(WorldObjectGroup *og)
     foreach (Item *parentItem, mRootItem->children) {
         Item *item = parentItem->children.at(index);
         emit dataChanged(this->index(item), this->index(item));
+    }
+}
+
+void ObjectsModel::objectGroupReordered(int index)
+{
+    if (!mCell)
+        return;
+    WorldObjectGroup *og = mCell->world()->objectGroups().at(index);
+    foreach (Item *parentItem, mRootItem->children) {
+        int oldRow = parentItem->rowOf(og);
+        int newRow = mCell->world()->objectGroups().size() - index - 1;
+        QModelIndex parent = this->index(parentItem);
+        int destRow = newRow;
+        if (destRow > oldRow)
+            ++destRow;
+        beginMoveRows(parent, oldRow, oldRow, parent, destRow);
+        Item *item = parentItem->children.takeAt(oldRow);
+        parentItem->children.insert(newRow, item);
+        endMoveRows();
     }
 }
 

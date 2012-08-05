@@ -193,6 +193,7 @@ private slots:
     void objectGroupAdded(int index);
     void objectGroupAboutToBeRemoved(int index);
     void objectGroupNameChanged(WorldObjectGroup *og);
+    void objectGroupReordered(int index);
 
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
@@ -262,6 +263,17 @@ private:
                 if (item->object == obj)
                     return item;
             return 0;
+        }
+
+        int rowOf(WorldObjectGroup *og)
+        {
+            int row = 0;
+            foreach (Item *item, children) {
+                if (item->group == og)
+                    return row;
+                ++row;
+            }
+            return -1;
         }
 
         Item *parent;

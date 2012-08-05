@@ -451,6 +451,21 @@ void AddRemoveObjectType::remove()
 
 /////
 
+ReorderObjectGroup::ReorderObjectGroup(WorldDocument *doc, WorldObjectGroup *og, int newIndex)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Reorder Object Groups"))
+    , mDocument(doc)
+    , mGroup(og)
+    , mIndex(newIndex)
+{
+}
+
+void ReorderObjectGroup::swap()
+{
+    mIndex = mDocument->undoRedo().reorderObjectGroup(mGroup, mIndex);
+}
+
+/////
+
 SetObjectGroupName::SetObjectGroupName(WorldDocument *doc, WorldObjectGroup *og, const QString &name)
     : QUndoCommand(QCoreApplication::translate("Undo Commands", "Rename Object Group"))
     , mDocument(doc)

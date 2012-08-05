@@ -42,6 +42,9 @@ private slots:
     void remove();
     void synchButtons();
 
+    void moveGroupUp();
+    void moveGroupDown();
+
     void colorChanged(const QColor &color);
 
 private:
