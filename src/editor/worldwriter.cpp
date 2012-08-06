@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QTemporaryFile>
 #include <QXmlStreamWriter>
 
 class WorldWriterPrivate
@@ -253,16 +254,56 @@ WorldWriter::~WorldWriter()
 
 bool WorldWriter::writeWorld(World *world, const QString &filePath)
 {
-    QFile file(filePath);
-    if (!d->openFile(&file))
+    QTemporaryFile tempFile;
+    if (!d->openFile(&tempFile))
         return false;
 
-    writeWorld(world, &file, QFileInfo(filePath).absolutePath());
+    writeWorld(world, &tempFile, QFileInfo(filePath).absolutePath());
 
-    if (file.error() != QFile::NoError) {
-        d->mError = file.errorString();
+    if (tempFile.error() != QFile::NoError) {
+        d->mError = tempFile.errorString();
         return false;
     }
+
+    // foo.pzw -> foo.pzw.bak
+    QFileInfo destInfo(filePath);
+    QString backupPath = filePath + QLatin1String(".bak");
+    QFile backupFile(backupPath);
+    if (destInfo.exists()) {
+        if (backupFile.exists()) {
+            if (!backupFile.remove()) {
+                d->mError = QString(QLatin1String("Error deleting file!\n%1\n\n%2"))
+                        .arg(backupPath)
+                        .arg(backupFile.errorString());
+                return false;
+            }
+        }
+        QFile destFile(filePath);
+        if (!destFile.rename(backupPath)) {
+            d->mError = QString(QLatin1String("Error renaming file!\nFrom: %1\nTo: %2\n\n%3"))
+                    .arg(filePath)
+                    .arg(backupPath)
+                    .arg(destFile.errorString());
+            return false;
+        }
+    }
+
+    // /tmp/tempXYZ -> foo.pzw
+    tempFile.close();
+    if (!tempFile.rename(filePath)) {
+        d->mError = QString(QLatin1String("Error renaming file!\nFrom: %1\nTo: %2\n\n%3"))
+                .arg(tempFile.fileName())
+                .arg(filePath)
+                .arg(tempFile.errorString());
+        // Try to un-rename the backup file
+        if (backupFile.exists())
+            backupFile.rename(filePath); // might fail
+        return false;
+    }
+
+    // If anything above failed, the temp file should auto-remove, but not after
+    // a successful save.
+    tempFile.setAutoRemove(false);
 
     return true;
 }

@@ -153,6 +153,7 @@ bool WorldDocument::save(const QString &filePath, QString &error)
     WorldWriter writer;
     if (!writer.writeWorld(mWorld, filePath)) {
         error = writer.errorString();
+        return false;
     }
 
     {
