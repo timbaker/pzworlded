@@ -106,6 +106,9 @@ public slots:
     void aboutToShowCurrentLevelMenu();
     void currentLevelMenuTriggered(QAction *action);
 
+    void aboutToShowObjGrpMenu();
+    void objGrpMenuTriggered(QAction *action);
+
 private:
     bool confirmSave();
     bool confirmAllSave();
@@ -139,6 +142,7 @@ private:
     Document *mCurrentDocument;
     QComboBox *mZoomComboBox;
     QMenu *mCurrentLevelMenu;
+    QMenu *mObjectGroupMenu;
     Zoomable *mZoomable;
     QSettings mSettings;
 };

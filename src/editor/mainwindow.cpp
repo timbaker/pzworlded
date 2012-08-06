@@ -76,6 +76,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mPropertiesDock(new PropertiesDock(this))
     , mCurrentDocument(0)
     , mCurrentLevelMenu(new QMenu(this))
+    , mObjectGroupMenu(new QMenu(this))
     , mZoomable(0)
 {
     ui->setupUi(this);
@@ -211,9 +212,14 @@ MainWindow::MainWindow(QWidget *parent)
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
-//    ui->currentLevelButton->setPopupMode(QToolButton::InstantPopup);
     connect(mCurrentLevelMenu, SIGNAL(aboutToShow()), SLOT(aboutToShowCurrentLevelMenu()));
     connect(mCurrentLevelMenu, SIGNAL(triggered(QAction*)), SLOT(currentLevelMenuTriggered(QAction*)));
+
+    ui->objectGroupButton->setMenu(mObjectGroupMenu);
+    connect(mObjectGroupMenu, SIGNAL(aboutToShow()),
+            SLOT(aboutToShowObjGrpMenu()));
+    connect(mObjectGroupMenu, SIGNAL(triggered(QAction*)),
+            SLOT(objGrpMenuTriggered(QAction*)));
 
     ui->documentTabWidget->clear(); // TODO: remove tabs from .ui
     ui->documentTabWidget->setDocumentMode(true);
@@ -385,8 +391,13 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc, SIGNAL(currentLevelChanged(int)), SLOT(updateActions()));
             connect(cellDoc, SIGNAL(selectedLotsChanged()), SLOT(updateActions()));
             connect(cellDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
+            connect(cellDoc, SIGNAL(currentObjectGroupChanged(WorldObjectGroup*)),
+                    SLOT(updateActions()));
             connect(cellDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
+            connect(cellDoc->worldDocument(),
+                    SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
+                    SLOT(updateActions()));
         }
 
         if (WorldDocument *worldDoc = doc->asWorldDocument()) {
@@ -592,6 +603,42 @@ void MainWindow::currentLevelMenuTriggered(QAction *action)
         return;
     int level = action->text().toInt();
     cellDoc->setCurrentLevel(level);
+}
+
+void MainWindow::aboutToShowObjGrpMenu()
+{
+    mObjectGroupMenu->clear();
+    CellDocument *cellDoc = mCurrentDocument->asCellDocument();
+    if (!cellDoc)
+        return;
+    const ObjectGroupList &groups = cellDoc->world()->objectGroups();
+    QAction *before = 0;
+    foreach (WorldObjectGroup *og, groups) {
+        QString name = og->name();
+        if (name.isEmpty())
+            name = tr("<none>");
+        // This extra space is so the down arrow doesn't overlap the text
+        name += QLatin1Char(' ');
+        QAction *action = new QAction(name, mObjectGroupMenu);
+        if (og == cellDoc->currentObjectGroup()) {
+            action->setCheckable(true);
+            action->setChecked(true);
+            action->setEnabled(false);
+        }
+        mObjectGroupMenu->insertAction(before, action);
+        before = action;
+    }
+}
+
+void MainWindow::objGrpMenuTriggered(QAction *action)
+{
+    CellDocument *cellDoc = mCurrentDocument->asCellDocument();
+    if (!cellDoc)
+        return;
+    int index = mObjectGroupMenu->actions().indexOf(action);
+    const ObjectGroupList &groups = cellDoc->world()->objectGroups();
+    index = groups.size() - index - 1;
+    cellDoc->setCurrentObjectGroup(groups.at(index));
 }
 
 bool MainWindow::saveFile()
@@ -1100,6 +1147,8 @@ void MainWindow::updateActions()
             ui->currentCellLabel->setText(tr("Current cell: <none>"));
         ui->currentLevelButton->setText(tr("Level: ? ")); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(false);
+        ui->objectGroupButton->setText(tr("Obj Grp: <none> "));
+        ui->objectGroupButton->setEnabled(false);
     } else if (cellDoc) {
         ui->actionClearCell->setEnabled(true);
         ui->actionClearMapOnly->setEnabled(true);
@@ -1108,11 +1157,18 @@ void MainWindow::updateActions()
         int level = cellDoc->currentLevel();
         ui->currentLevelButton->setText(tr("Level: %1 ").arg(level)); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(true);
+        WorldObjectGroup *og = cellDoc->currentObjectGroup();
+        ui->objectGroupButton->setText(tr("Obj Grp: %1 ")
+                                       .arg((og && !og->name().isEmpty())
+                                       ? og->name() : tr("<none>")));
+        ui->objectGroupButton->setEnabled(true);
     } else {
         ui->coordinatesLabel->clear();
-        ui->currentCellLabel->setText(tr("Current cell: <none>"));
+        ui->currentCellLabel->setText(tr("Current cell: <none> "));
         ui->currentLevelButton->setText(tr("Level: ? ")); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(false);
+        ui->objectGroupButton->setText(tr("Obj Grp: <none> "));
+        ui->objectGroupButton->setEnabled(false);
     }
 }
 

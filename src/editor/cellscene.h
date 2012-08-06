@@ -37,6 +37,7 @@ class MapImage;
 class MapInfo;
 class ResizeHandle;
 class SubMap;
+class World;
 class WorldCell;
 class WorldCellLot;
 class WorldCellObject;
@@ -260,6 +261,7 @@ public:
     void setDocument(CellDocument *doc);
     CellDocument *document() const { return mDocument; }
     WorldDocument *worldDocument() const;
+    World *world() const;
 
     WorldCell *cell() const;
 

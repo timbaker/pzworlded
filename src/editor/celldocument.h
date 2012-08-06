@@ -25,6 +25,7 @@
 class CellMiniMapItem;
 class CellScene;
 class CompositeLayerGroup;
+class World;
 class WorldCell;
 class WorldCellLot;
 class WorldCellObject;
@@ -53,6 +54,7 @@ public:
     WorldCell *cell() const { return mCell; }
 
     WorldDocument *worldDocument() const { return mWorldDocument; }
+    World *world() const;
 
     void setScene(CellScene *scene);
     CellScene *scene() const { return mCellScene; }
@@ -86,6 +88,9 @@ public:
     int currentLevel() const { return mCurrentLevel; }
     CompositeLayerGroup *currentLayerGroup() const;
 
+    void setCurrentObjectGroup(WorldObjectGroup *og);
+    WorldObjectGroup *currentObjectGroup() const;
+
 signals:
     void layerVisibilityChanged(Tiled::Layer *layer);
     void layerGroupAdded(int level);
@@ -101,6 +106,7 @@ signals:
     void cellMapFileChanged();
     void currentLayerIndexChanged(int);
     void currentLevelChanged(int);
+    void currentObjectGroupChanged(WorldObjectGroup *og);
 
 private slots:
     void cellContentsAboutToChange(WorldCell *cell);
@@ -112,6 +118,8 @@ private slots:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
 
+    void objectGroupAboutToBeRemoved(int index);
+
 private:
     WorldCell *mCell;
     WorldDocument *mWorldDocument;
@@ -120,6 +128,7 @@ private:
     QList<WorldCellObject*> mSelectedObjects;
     int mCurrentLayerIndex;
     int mCurrentLevel;
+    WorldObjectGroup *mCurrentObjectGroup;
     QMap<int,bool> mLotLevelVisible;
     QMap<int,bool> mObjectLevelVisible;
     QMap<WorldObjectGroup*,QMap<int,bool> > mObjectGroupVisible;

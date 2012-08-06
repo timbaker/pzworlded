@@ -23,6 +23,7 @@
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "scenetools.h"
+#include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
@@ -30,12 +31,14 @@
 #include "tilelayer.h"
 
 #include <QApplication>
+#include <QComboBox>
 #include <QDebug>
 #include <QEvent>
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QPixmap>
 #include <QUndoStack>
 #include <QVBoxLayout>
 
@@ -122,23 +125,37 @@ void ObjectsDock::selectionChanged()
     if (!mCellDoc)
         return;
 
+    WorldObjectGroup *objectGroup = mCellDoc->world()->nullObjectGroup();
+
     QModelIndexList selection = mView->selectionModel()->selectedIndexes();
     if (selection.size() == mView->model()->columnCount()) {
+        QModelIndex index = selection.first();
         int level = -1;
-        if (ObjectsModel::Level *levelPtr = mView->model()->toLevel(selection.first()))
+
+        if (ObjectsModel::Level *levelPtr = mView->model()->toLevel(index))
             level = levelPtr->level;
 
-        // Center the view on the selected WorldCellObject
-        if (WorldCellObject *obj = mView->model()->toObject(selection.first())) {
-            QRect rect = mCellDoc->scene()->renderer()->boundingRect(obj->bounds().toRect(), obj->level());
-            mCellDoc->view()->ensureRectVisible(rect);
-            level = obj->level();
+        if (WorldObjectGroup *og = mView->model()->toGroup(index)) {
+            objectGroup = og;
+            QModelIndex parent = mView->model()->parent(index);
+            if (ObjectsModel::Level *levelPtr = mView->model()->toLevel(parent))
+                level = levelPtr->level;
         }
 
-        // Set the CellDocument's current layer
+        // Center the view on the selected WorldCellObject
+        if (WorldCellObject *obj = mView->model()->toObject(index)) {
+            QRect rect = mCellDoc->scene()->renderer()->boundingRect(obj->bounds().toRect(),
+                                                                     obj->level());
+            mCellDoc->view()->ensureRectVisible(rect);
+            level = obj->level();
+            objectGroup = obj->group();
+        }
+
         if (level >= 0)
             mCellDoc->setCurrentLevel(level);
     }
+
+    mCellDoc->setCurrentObjectGroup(objectGroup);
 
     QList<WorldCellObject*> objects;
     foreach (QModelIndex index, selection) {
@@ -177,11 +194,6 @@ void ObjectsDock::trashItem(const QModelIndex &index)
 }
 
 /////
-
-#include "world.h"
-
-#include <QComboBox>
-#include <QPixmap>
 
 ObjectsViewDelegate::ObjectsViewDelegate(ObjectsView *view, QObject *parent)
     : QStyledItemDelegate(parent)

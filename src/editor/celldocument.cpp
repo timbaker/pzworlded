@@ -20,6 +20,7 @@
 #include "basegraphicsview.h"
 #include "cellscene.h"
 #include "mapcomposite.h"
+#include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
@@ -37,6 +38,7 @@ CellDocument::CellDocument(WorldDocument *worldDoc, WorldCell *cell)
     , mCellScene(0)
     , mCurrentLayerIndex(-1)
     , mCurrentLevel(0)
+    , mCurrentObjectGroup(world()->nullObjectGroup())
 {
     mUndoStack = worldDoc->undoStack();
 
@@ -48,6 +50,9 @@ CellDocument::CellDocument(WorldDocument *worldDoc, WorldCell *cell)
     connect(mWorldDocument, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
     connect(mWorldDocument, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
     connect(mWorldDocument, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
+
+    connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
+            SLOT(objectGroupAboutToBeRemoved(int)));
 }
 
 void CellDocument::setFileName(const QString &fileName)
@@ -63,6 +68,11 @@ const QString &CellDocument::fileName() const
 bool CellDocument::save(const QString &filePath, QString &error)
 {
     return mWorldDocument->save(filePath, error);
+}
+
+World *CellDocument::world() const
+{
+    return mWorldDocument->world();
 }
 
 void CellDocument::setScene(CellScene *scene)
@@ -98,6 +108,12 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
             qWarning("duplicate lots passed to setSelectedObjects");
     }
     emit selectedObjectsChanged();
+    if (mSelectedObjects.size() == 1) {
+        WorldCellObject *obj = mSelectedObjects.first();
+        if (obj->level() != mCurrentLevel)
+            setCurrentLevel(obj->level());
+        setCurrentObjectGroup(obj->group());
+    }
 }
 
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
@@ -213,6 +229,22 @@ CompositeLayerGroup *CellDocument::currentLayerGroup() const
     return scene()->mapComposite()->tileLayersForLevel(mCurrentLevel);
 }
 
+void CellDocument::setCurrentObjectGroup(WorldObjectGroup *og)
+{
+    Q_ASSERT(og);
+    if (!og || og == mCurrentObjectGroup)
+        return;
+    mCurrentObjectGroup = og;
+    emit currentObjectGroupChanged(mCurrentObjectGroup);
+}
+
+WorldObjectGroup *CellDocument::currentObjectGroup() const
+{
+    Q_ASSERT(mCurrentObjectGroup);
+    Q_ASSERT(world()->objectGroups().indexOf(mCurrentObjectGroup) != -1);
+    return mCurrentObjectGroup;
+}
+
 void CellDocument::cellContentsAboutToChange(WorldCell *cell)
 {
     if (cell == mCell) {
@@ -270,4 +302,11 @@ void CellDocument::cellLotMoved(WorldCellLot *lot)
         int index = mCell->lots().indexOf(lot);
         mMiniMapItem->lotMoved(index);
     }
+}
+
+void CellDocument::objectGroupAboutToBeRemoved(int index)
+{
+    WorldObjectGroup *og = world()->objectGroups().at(index);
+    if (og == mCurrentObjectGroup)
+        setCurrentObjectGroup(world()->nullObjectGroup());
 }

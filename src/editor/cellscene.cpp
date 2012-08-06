@@ -920,6 +920,11 @@ WorldDocument *CellScene::worldDocument() const
     return mDocument->worldDocument();
 }
 
+World *CellScene::world() const
+{
+    return mDocument->worldDocument()->world();
+}
+
 WorldCell *CellScene::cell() const
 {
     return document()->cell();
@@ -990,7 +995,7 @@ void CellScene::setGraphicsSceneZOrder()
     // ObjectItems and vice versa.
     int numLevels = mMapComposite->maxLevel() + 1;
     int lotSpaces = mSubMapItems.size() * numLevels;
-    const ObjectGroupList &groups = mDocument->worldDocument()->world()->objectGroups();
+    const ObjectGroupList &groups = world()->objectGroups();
     int objSpaces = mObjectItems.size() * groups.size() * numLevels;
     int z2 = z;
     if (mActiveTool && mActiveTool->affectsLots())

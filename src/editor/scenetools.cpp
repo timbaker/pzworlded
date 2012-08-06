@@ -208,10 +208,11 @@ void CreateObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 void CreateObjectTool::startNewMapObject(const QPointF &pos)
 {
     WorldCellObject *obj = new WorldCellObject(mScene->cell(),
-                                               QString(), mScene->worldDocument()->world()->nullObjectType(),
+                                               QString(), mScene->world()->nullObjectType(),
                                                pos.x(), pos.y(),
                                                mScene->document()->currentLevel(),
                                                MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
+    obj->setGroup(mScene->document()->currentObjectGroup());
     mItem = new ObjectItem(obj, mScene);
     mItem->setZValue(10000);
     mScene->addItem(mItem);
@@ -235,7 +236,9 @@ void CreateObjectTool::cancelNewMapObject()
 void CreateObjectTool::finishNewMapObject()
 {
     WorldCellObject *obj = clearNewMapObjectItem();
-    mScene->document()->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), obj);
+    mScene->worldDocument()->addCellObject(mScene->cell(),
+                                           mScene->cell()->objects().size(),
+                                           obj);
 #if 0 // only select objects when the ObjectTool is current
     mScene->document()->setSelectedObjects(QList<WorldCellObject*>() << obj);
 #endif
