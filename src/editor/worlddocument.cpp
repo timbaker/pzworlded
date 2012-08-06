@@ -456,6 +456,13 @@ void WorldDocument::reorderObjectGroup(WorldObjectGroup *og, int index)
     undoStack()->endMacro();
 }
 
+void WorldDocument::changeObjectGroupDefType(WorldObjectGroup *og, ObjectType *ot)
+{
+    if (og->type() == ot)
+        return;
+    undoStack()->push(new SetObjectGroupDefType(this, og, ot));
+}
+
 void WorldDocument::addObjectType(ObjectType *newType)
 {
     int index = mWorld->objectTypes().size();
@@ -472,8 +479,16 @@ bool WorldDocument::removeObjectType(ObjectType *ot)
     foreach (WorldCell *cell, mWorld->cells()) {
         foreach (WorldCellObject *obj, cell->objects()) {
             if (obj->type() == ot)
-                undoStack()->push(new SetObjectType(this, obj, mWorld->nullObjectType()));
+                undoStack()->push(new SetObjectType(this, obj,
+                                                    mWorld->nullObjectType()));
         }
+    }
+
+    // Reset the default type for object groups using this type
+    foreach (WorldObjectGroup *og, mWorld->objectGroups()) {
+        if (og->type() == ot)
+            undoStack()->push(new SetObjectGroupDefType(this, og,
+                                                        mWorld->nullObjectType()));
     }
 
     undoStack()->push(new RemoveObjectType(this, index));
@@ -691,6 +706,15 @@ int WorldDocumentUndoRedo::reorderObjectGroup(WorldObjectGroup *og, int index)
     Q_ASSERT(mWorld->objectGroups().indexOf(og) == index);
     emit objectGroupReordered(index);
     return oldIndex;
+}
+
+ObjectType *WorldDocumentUndoRedo::changeObjectGroupDefType(WorldObjectGroup *og, ObjectType *ot)
+{
+    Q_ASSERT(ot);
+    ObjectType *oldType = og->type();
+    og->setType(ot);
+    //emit objectGroupDefTypeChanged(og);
+    return oldType;
 }
 
 void WorldDocumentUndoRedo::insertObjectType(int index, ObjectType *ot)

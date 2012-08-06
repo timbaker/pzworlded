@@ -200,7 +200,15 @@ private:
         if (!colorName.isEmpty())
             color = QColor(colorName);
 
-        og = new WorldObjectGroup(name, color);
+        ObjectType *type = mWorld->nullObjectType();
+        const QString typeName = atts.value(QLatin1String("defaulttype")).toString();
+        if (!(type = mWorld->objectTypes().find(typeName))) {
+            xml.raiseError(tr("unknown objecttype \"%1\"").arg(typeName));
+            return;
+        }
+
+        og = new WorldObjectGroup(mWorld, name, color);
+        og->setType(type);
         mWorld->insertObjectGroup(mWorld->objectGroups().size(), og);
 
         xml.skipCurrentElement();

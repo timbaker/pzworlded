@@ -116,32 +116,6 @@ public:
 };
 
 /**
-  * This class represents the group a WorldCellObject belongs to.
-  * New groups are added via the ObjectGroupsDialog.
-  * Each World has its own list of these.
-  */
-class WorldObjectGroup
-{
-public:
-    WorldObjectGroup();
-    WorldObjectGroup(const QString &name);
-    WorldObjectGroup(const QString &name, const QColor &color);
-
-    void setName(const QString &name) { mName = name; }
-    const QString &name() const { return mName; }
-
-    void setColor(const QColor &color) { mColor = color; }
-    QColor color() const
-    { return mColor.isValid() ? mColor : defaultColor(); }
-
-    static QColor defaultColor() { return Qt::darkGray; }
-
-private:
-    QString mName;
-    QColor mColor;
-};
-
-/**
   * This class represents the type of a WorldCellObject.
   * New types are added via the ObjectTypesDialog.
   * Each World has its own list of these.
@@ -157,6 +131,40 @@ public:
 
 private:
     QString mName;
+};
+
+/**
+  * This class represents the group a WorldCellObject belongs to.
+  * An object belongs to exactly one group.
+  * New groups are added via the ObjectGroupsDialog.
+  * Each World has its own list of these.
+  */
+class WorldObjectGroup
+{
+public:
+    WorldObjectGroup(World *world);
+    WorldObjectGroup(World *world, const QString &name);
+    WorldObjectGroup(World *world, const QString &name, const QColor &color);
+
+    void setName(const QString &name) { mName = name; }
+    const QString &name() const { return mName; }
+
+    void setColor(const QColor &color) { mColor = color; }
+    QColor color() const
+    { return mColor.isValid() ? mColor : defaultColor(); }
+
+    static QColor defaultColor() { return Qt::darkGray; }
+
+    /**
+      * This is the default type for objects created in this group.
+      */
+    void setType(ObjectType *type) { mType = type; }
+    ObjectType *type() { return mType; }
+
+private:
+    QString mName;
+    QColor mColor;
+    ObjectType *mType;
 };
 
 /**

@@ -84,16 +84,15 @@ public:
         foreach (PropertyTemplate *pt, world->propertyTemplates())
             writeTemplate(w, pt);
 
-        // Skip the null object group
-        foreach (WorldObjectGroup *og, world->objectGroups()) {
-            if (og == mWorld->nullObjectGroup()) continue;
-            writeObjectGroup(w, og);
-        }
-
-        // Skip the null object type
+        // *** Types must come before groups
         foreach (ObjectType *ot, world->objectTypes()) {
             if (ot == mWorld->nullObjectType()) continue;
             writeObjectType(w, ot);
+        }
+
+        foreach (WorldObjectGroup *og, world->objectGroups()) {
+            if (og == mWorld->nullObjectGroup()) continue;
+            writeObjectGroup(w, og);
         }
 
         for (int y = 0; y < world->height(); y++) {
@@ -135,6 +134,8 @@ public:
         if (og->color().isValid() &&
                 og->color() != WorldObjectGroup::defaultColor())
             w.writeAttribute(QLatin1String("color"), og->color().name());
+        if (og->type() != mWorld->nullObjectType())
+            w.writeAttribute(QLatin1String("defaulttype"), og->type()->name());
         w.writeEndElement();
     }
 

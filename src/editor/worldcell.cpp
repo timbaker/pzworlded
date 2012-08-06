@@ -17,6 +17,8 @@
 
 #include "worldcell.h"
 
+#include "world.h"
+
 WorldCell::WorldCell(World *world, int x, int y)
     : mX(x)
     , mY(y)
@@ -67,19 +69,25 @@ bool WorldCell::isEmpty() const
 
 /////
 
-WorldObjectGroup::WorldObjectGroup()
+WorldObjectGroup::WorldObjectGroup(World *world)
+    : mType(world->nullObjectType())
 {
+    Q_ASSERT(mType);
 }
 
-WorldObjectGroup::WorldObjectGroup(const QString &name)
+WorldObjectGroup::WorldObjectGroup(World *world, const QString &name)
     : mName(name)
+    , mType(world->nullObjectType())
 {
+    Q_ASSERT(!name.isEmpty());
 }
 
-WorldObjectGroup::WorldObjectGroup(const QString &name, const QColor &color)
+WorldObjectGroup::WorldObjectGroup(World *world, const QString &name, const QColor &color)
     : mName(name)
     , mColor(color)
+    , mType(world->nullObjectType())
 {
+    Q_ASSERT(!name.isEmpty());
 }
 
 /////
@@ -91,4 +99,5 @@ ObjectType::ObjectType()
 ObjectType::ObjectType(const QString &name)
     : mName(name)
 {
+    Q_ASSERT(!name.isEmpty());
 }

@@ -101,10 +101,10 @@ private:
     int mWidth;
     int mHeight;
     QVector<WorldCell*> mCells;
-    ObjectGroupList mObjectGroups;
-    WorldObjectGroup *mNullObjectGroup;
     ObjectTypeList mObjectTypes;
     ObjectType *mNullObjectType;
+    ObjectGroupList mObjectGroups;
+    WorldObjectGroup *mNullObjectGroup;
     PropertyDefList mPropertyDefs;
     PropertyTemplateList mPropertyTemplates;
 };

@@ -676,6 +676,24 @@ private:
 
 /////
 
+class SetObjectGroupDefType : public QUndoCommand
+{
+public:
+    SetObjectGroupDefType(WorldDocument *doc, WorldObjectGroup *og, ObjectType *ot);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldObjectGroup *mGroup;
+    ObjectType *mType;
+};
+
+/////
+
 // Base class for AddObjectType/RemoveObjectType
 class AddRemoveObjectType : public QUndoCommand
 {

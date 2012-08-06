@@ -45,6 +45,18 @@ ObjectGroupsDialog::ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(ui->colorButton, SIGNAL(colorChanged(QColor)),
             SLOT(colorChanged(QColor)));
 
+    ui->objectTypeCombo->clear();
+    QStringList items;
+    foreach (ObjectType *ot, mWorldDoc->world()->objectTypes()) {
+        QString name = ot->name();
+        if (name.isEmpty())
+            name = tr("<none>");
+        items.insert(0, name);
+    }
+    ui->objectTypeCombo->insertItems(0, items);
+    connect(ui->objectTypeCombo, SIGNAL(activated(int)),
+            SLOT(typeChanged(int)));
+
     setList();
 
     synchButtons();
@@ -78,7 +90,7 @@ void ObjectGroupsDialog::selectionChanged()
 void ObjectGroupsDialog::add()
 {
     QString name = ui->nameEdit->text();
-    WorldObjectGroup *og = new WorldObjectGroup(name);
+    WorldObjectGroup *og = new WorldObjectGroup(mWorldDoc->world(), name);
 
     mWorldDoc->addObjectGroup(og);
 
@@ -158,6 +170,13 @@ void ObjectGroupsDialog::synchButtons()
                               ? mObjGroup->color()
                               : WorldObjectGroup::defaultColor());
 
+    ui->objectTypeCombo->setEnabled(mObjGroup != 0);
+    const ObjectTypeList &types = mWorldDoc->world()->objectTypes();
+    ObjectType *type = mObjGroup ? mObjGroup->type()
+                                 : mWorldDoc->world()->nullObjectType();
+    int index = types.size() - types.indexOf(type) - 1;
+    ui->objectTypeCombo->setCurrentIndex(index);
+
     ui->addButton->setDefault(enableAdd);
     ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd);
 }
@@ -190,6 +209,16 @@ void ObjectGroupsDialog::colorChanged(const QColor &color)
         mWorldDoc->changeObjectGroupColor(mObjGroup, color);
         mItem->setData(Qt::DecorationRole, color);
     }
+}
+
+void ObjectGroupsDialog::typeChanged(int index)
+{
+    if (!mObjGroup)
+        return;
+    const ObjectTypeList &types = mWorldDoc->world()->objectTypes();
+    index = types.size() - index - 1;
+    ObjectType *type = types.at(index);
+    mWorldDoc->changeObjectGroupDefType(mObjGroup, type);
 }
 
 void ObjectGroupsDialog::setList()

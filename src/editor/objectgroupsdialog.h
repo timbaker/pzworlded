@@ -47,6 +47,8 @@ private slots:
 
     void colorChanged(const QColor &color);
 
+    void typeChanged(int index);
+
 private:
     void setList();
     void clearUI();

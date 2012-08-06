@@ -513,6 +513,21 @@ void SetObjectGroupColor::swap()
 
 /////
 
+SetObjectGroupDefType::SetObjectGroupDefType(WorldDocument *doc, WorldObjectGroup *og, ObjectType *ot)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Object Group's Default Type"))
+    , mDocument(doc)
+    , mGroup(og)
+    , mType(ot)
+{
+}
+
+void SetObjectGroupDefType::swap()
+{
+    mType = mDocument->undoRedo().changeObjectGroupDefType(mGroup, mType);
+}
+
+/////
+
 SetObjectTypeName::SetObjectTypeName(WorldDocument *doc, ObjectType *ot, const QString &name)
     : QUndoCommand(QCoreApplication::translate("Undo Commands", "Rename Object Type"))
     , mDocument(doc)

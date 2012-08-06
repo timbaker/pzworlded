@@ -207,12 +207,13 @@ void CreateObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void CreateObjectTool::startNewMapObject(const QPointF &pos)
 {
+    WorldObjectGroup *og = mScene->document()->currentObjectGroup();
     WorldCellObject *obj = new WorldCellObject(mScene->cell(),
-                                               QString(), mScene->world()->nullObjectType(),
+                                               QString(), og->type(),
                                                pos.x(), pos.y(),
                                                mScene->document()->currentLevel(),
                                                MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
-    obj->setGroup(mScene->document()->currentObjectGroup());
+    obj->setGroup(og);
     mItem = new ObjectItem(obj, mScene);
     mItem->setZValue(10000);
     mScene->addItem(mItem);

@@ -892,7 +892,7 @@ void MainWindow::extractObjects()
                 if (!name.isEmpty()) {
                     group = world->objectGroups().find(name);
                     if (!group) {
-                        group = new WorldObjectGroup(name);
+                        group = new WorldObjectGroup(world, name);
                         worldDoc->addObjectGroup(group);
                     }
                 }

@@ -24,8 +24,8 @@
 World::World(int width, int height)
     : mWidth(width)
     , mHeight(height)
-    , mNullObjectGroup(new WorldObjectGroup())
     , mNullObjectType(new ObjectType())
+    , mNullObjectGroup(new WorldObjectGroup(this))
 {
     mCells.resize(mWidth * mHeight);
 

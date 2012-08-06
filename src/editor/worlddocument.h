@@ -73,6 +73,7 @@ public:
     QString changeObjectGroupName(WorldObjectGroup *og, const QString &name);
     QColor changeObjectGroupColor(WorldObjectGroup *og, const QColor &color);
     int reorderObjectGroup(WorldObjectGroup *og, int index);
+    ObjectType *changeObjectGroupDefType(WorldObjectGroup *og, ObjectType *ot);
 
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
@@ -257,6 +258,7 @@ public:
     void changeObjectGroupName(WorldObjectGroup *objGroup, const QString &name);
     void changeObjectGroupColor(WorldObjectGroup *objGroup, const QColor &color);
     void reorderObjectGroup(WorldObjectGroup *og, int index);
+    void changeObjectGroupDefType(WorldObjectGroup *og, ObjectType *ot);
 
     void addObjectType(ObjectType *newType);
     bool removeObjectType(ObjectType *objType);
