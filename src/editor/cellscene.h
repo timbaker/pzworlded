@@ -315,6 +315,8 @@ public slots:
     void cellObjectResized(WorldCellObject *obj);
     void objectLevelChanged(WorldCellObject *obj);
     void objectXXXXChanged(WorldCellObject *obj);
+    void cellObjectGroupChanged(WorldCellObject *obj);
+    void cellObjectReordered(WorldCellObject *obj);
     void selectedObjectsChanged();
 
     void layerVisibilityChanged(Tiled::Layer *layer);
@@ -322,8 +324,11 @@ public slots:
     void layerGroupVisibilityChanged(Tiled::ZTileLayerGroup *layerGroup);
     void lotLevelVisibilityChanged(int level);
     void objectLevelVisibilityChanged(int level);
+
     void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
     void objectGroupColorChanged(WorldObjectGroup *og);
+    void objectGroupReordered(int index);
+
     void currentLevelChanged(int index);
     void setGridVisible(bool visible);
     void setHighlightCurrentLevel(bool highlight);

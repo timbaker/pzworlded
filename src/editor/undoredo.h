@@ -307,6 +307,24 @@ private:
 
 /////
 
+class ReorderCellObject : public QUndoCommand
+{
+public:
+    ReorderCellObject(WorldDocument *doc, WorldCellObject *obj, int newIndex);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCellObject *mObject;
+    int mIndex;
+};
+
+/////
+
 // Base class for AddCellProperty/RemoveCellProperty
 class AddRemoveProperty : public QUndoCommand
 {

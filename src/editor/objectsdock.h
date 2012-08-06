@@ -204,6 +204,7 @@ private slots:
     void cellObjectGroupChanged(WorldCellObject *obj);
     void objectLevelAboutToChange(WorldCellObject *obj);
     void objectLevelChanged(WorldCellObject *obj);
+    void cellObjectReordered(WorldCellObject *obj);
 
     void layerGroupAdded(int level);
 
@@ -274,6 +275,34 @@ private:
                 ++row;
             }
             return -1;
+        }
+
+        int numDescendants() const
+        {
+            int count = 0;
+            foreach (Item *child, children)
+                count += 1 + child->numDescendants();
+            return count;
+        }
+        int flattenedRowInParent() const
+        {
+            if (!parent)
+                return -1; // root item isn't displayed
+            int row = 0;
+            foreach (Item *sibling, parent->children) {
+                if (sibling == this)
+                    break;
+                row += 1 + sibling->numDescendants();
+            }
+
+            return row;
+        }
+        int flattenedRowInList() const
+        {
+            int row = flattenedRowInParent();
+            if (parent)
+                row += 1 + parent->flattenedRowInList();
+            return row;
         }
 
         Item *parent;

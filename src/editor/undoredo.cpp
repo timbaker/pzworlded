@@ -227,6 +227,23 @@ void SetObjectType::swap()
 
 /////
 
+
+ReorderCellObject::ReorderCellObject(WorldDocument *doc, WorldCellObject *obj, int newIndex)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Reorder Object"))
+    , mDocument(doc)
+    , mObject(obj)
+    , mIndex(newIndex)
+{
+}
+
+void ReorderCellObject::swap()
+{
+    mIndex = mDocument->undoRedo().reorderCellObject(mObject, mIndex);
+}
+
+
+/////
+
 AddRemoveProperty::AddRemoveProperty(WorldDocument *doc, PropertyHolder *ph, int index, Property *p)
     : mDocument(doc)
     , mPH(ph)

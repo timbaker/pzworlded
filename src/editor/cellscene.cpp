@@ -25,6 +25,7 @@
 #include "progress.h"
 #include "scenetools.h"
 #include "undoredo.h"
+#include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
@@ -941,8 +942,14 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
     connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
     connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
+            SLOT(cellObjectGroupChanged(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
+            SLOT(cellObjectReordered(WorldCellObject*)));
     connect(mDocument, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
 
+    connect(worldDocument(), SIGNAL(objectGroupReordered(int)),
+            SLOT(objectGroupReordered(int)));
     connect(worldDocument(), SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
             SLOT(objectGroupColorChanged(WorldObjectGroup*)));
 
@@ -1039,19 +1046,32 @@ void CellScene::setGraphicsSceneZOrder()
     }
 
     // SubMapItems/ObjectItems should be above all TileLayerGroups
-    // and arranged from bottom to top by level.  When the active tool
-    // affects SubMapItems, stack them above ObjectItems and vice versa.
+    // and arranged from bottom to top by level (and object-group).
+    // When the active tool affects SubMapItems, stack them above
+    // ObjectItems and vice versa.
+    int numLevels = mMapComposite->maxLevel() + 1;
+    int lotSpaces = mSubMapItems.size() * numLevels;
+    const ObjectGroupList &groups = mDocument->worldDocument()->world()->objectGroups();
+    int objSpaces = mObjectItems.size() * groups.size() * numLevels;
     int z2 = z;
     if (mActiveTool && mActiveTool->affectsLots())
-        z2 += mMapComposite->maxLevel();
+        z2 += objSpaces;
     foreach (SubMapItem *item, mSubMapItems)
         item->setZValue(z2 + item->subMap()->levelOffset());
 
     z2 = z;
     if (mActiveTool && mActiveTool->affectsObjects())
-        z2 += mMapComposite->maxLevel();
-    foreach (ObjectItem *item, mObjectItems)
-        item->setZValue(z2 + item->object()->level());
+        z2 += lotSpaces;
+    const WorldCellObjectList &objects = cell()->objects();
+    foreach (ObjectItem *item, mObjectItems) {
+        WorldCellObject *obj = item->object();
+        int groupIndex = groups.indexOf(obj->group());
+        int objectIndex = objects.indexOf(obj);
+        item->setZValue(z2
+                        + groups.size() * mObjectItems.size() * obj->level()
+                        + groupIndex * mObjectItems.size()
+                        + objectIndex);
+    }
 #else
     foreach (CompositeLayerGroupItem *item, mTileLayerGroupItems)
         item->setZValue(levelZOrder(item->layerGroup()->level()));
@@ -1382,6 +1402,23 @@ void CellScene::objectXXXXChanged(WorldCellObject *obj)
     }
 }
 
+void CellScene::cellObjectGroupChanged(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+    doLater(ZOrder);
+    // Redraw for change in group color
+    if (ObjectItem *item = itemForObject(obj))
+        item->update();
+}
+
+void CellScene::cellObjectReordered(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+    doLater(ZOrder);
+}
+
 void CellScene::selectedObjectsChanged()
 {
     const QList<WorldCellObject*> &selection = document()->selectedObjects();
@@ -1464,6 +1501,11 @@ void CellScene::objectGroupVisibilityChanged(WorldObjectGroup *og, int level)
                              item->object()->isVisible());
         }
     }
+}
+
+void CellScene::objectGroupReordered(int index)
+{
+    doLater(ZOrder);
 }
 
 void CellScene::objectGroupColorChanged(WorldObjectGroup *og)

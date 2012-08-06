@@ -94,6 +94,7 @@ public:
     QString setCellObjectName(WorldCellObject *obj, const QString &name);
     WorldObjectGroup *setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *group);
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
+    int reorderCellObject(WorldCellObject *obj, int index);
 
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
@@ -146,6 +147,7 @@ signals:
     void cellObjectTypeChanged(WorldCellObject *object);
     void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
+    void cellObjectReordered(WorldCellObject *object);
 
     void selectedCellsChanged();
 
@@ -198,6 +200,7 @@ public:
     void setCellObjectName(WorldCellObject *obj, const QString &name);
     void setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og);
     void setCellObjectType(WorldCellObject *obj, const QString &type);
+    void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
 
     /**
       * Transfers the contents of \a cell to a different cell at
@@ -339,6 +342,7 @@ signals:
     void cellObjectTypeChanged(WorldCellObject *object);
     void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
+    void cellObjectReordered(WorldCellObject *object);
 
     void templateAdded(int index);
     void templateAboutToBeRemoved(int index);

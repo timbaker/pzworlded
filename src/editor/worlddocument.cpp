@@ -125,6 +125,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(objectLevelAboutToChange(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(objectLevelChanged(WorldCellObject*)),
             SIGNAL(objectLevelChanged(WorldCellObject*)));
+    connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
+            SIGNAL(cellObjectReordered(WorldCellObject*)));
 
     connect(&mUndoRedo, SIGNAL(selectedCellsChanged()),
             SIGNAL(selectedCellsChanged()));
@@ -318,6 +320,15 @@ void WorldDocument::setCellObjectType(WorldCellObject *obj, const QString &type)
     if (objType == obj->type())
         return;
     undoStack()->push(new SetObjectType(this, obj, objType));
+}
+
+void WorldDocument::reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore)
+{
+    if (obj == insertBefore)
+        return;
+    const WorldCellObjectList &objects = obj->cell()->objects();
+    int index = insertBefore ? objects.indexOf(insertBefore) : objects.size();
+    undoStack()->push(new ReorderCellObject(this, obj, index));
 }
 
 void WorldDocument::moveCell(WorldCell *cell, const QPoint &newPos)
@@ -830,6 +841,20 @@ ObjectType *WorldDocumentUndoRedo::setCellObjectType(WorldCellObject *obj, Objec
     obj->setType(type);
     emit cellObjectTypeChanged(obj);
     return oldType;
+}
+
+int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
+{
+    WorldCell *cell = obj->cell();
+    int oldIndex = cell->objects().indexOf(obj);
+//    emit cellObjectAboutToBeReordered(oldIndex);
+    cell->removeObject(oldIndex);
+    if (index > oldIndex)
+        index--;
+    cell->insertObject(index, obj);
+    Q_ASSERT(cell->objects().indexOf(obj) == index);
+    emit cellObjectReordered(obj);
+    return oldIndex;
 }
 
 QList<WorldCell *> WorldDocumentUndoRedo::setSelectedCells(const QList<WorldCell *> &selection)

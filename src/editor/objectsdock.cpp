@@ -721,11 +721,22 @@ QMimeData *ObjectsModel::mimeData(const QModelIndexList &indexes) const
 
     QDataStream stream(&encodedData, QIODevice::WriteOnly);
 
+    // Keep the objects in display order.  The given list of indexes
+    // appears to be in the order the user selected the items.
+    QMap<int,int> sorted;
     foreach (const QModelIndex &index, indexes) {
         if (WorldCellObject *obj = toObject(index)) {
-            QString text = QString::number(obj->cell()->objects().indexOf(obj));
-            stream << text;
+            int displayOrder = toItem(index)->flattenedRowInList();
+            Q_ASSERT(!sorted.contains(displayOrder));
+            int objectIndex = obj->cell()->objects().indexOf(obj);
+            sorted[displayOrder] = objectIndex;
         }
+    }
+
+    // QMap::values is in ascending key order
+    foreach (int objectIndex, sorted.values()) {
+        QString text = QString::number(objectIndex);
+        stream << text;
     }
 
     mimeData->setData(ObjectsModelMimeType, encodedData);
@@ -749,6 +760,19 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
      Item *parentItem = toItem(parent);
      if (!parentItem || !parentItem->group)
          return false;
+
+     WorldCellObject *insertBefore = 0;
+     if (row == -1 || !parentItem->children.size()) {
+        // Drop on parent
+     } else if (row >= parentItem->children.size()) {
+         // Drop after last row
+         insertBefore = parentItem->children.last()->object;
+     } else {
+         WorldCellObject *prevObj = parentItem->children.at(row)->object;
+         int index = mCell->objects().indexOf(prevObj) + 1;
+         if (index < mCell->objects().size())
+             insertBefore = mCell->objects().at(index);
+     }
 
      WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
 #else
@@ -779,13 +803,14 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
      worldDoc->undoStack()->beginMacro(tr("Reorder %1 Object%2").arg(count)
                                        .arg((count > 1) ? QLatin1String("s") : QLatin1String("")));
      foreach (WorldCellObject *obj, objects) {
+         worldDoc->reorderCellObject(obj, insertBefore);
+         insertBefore = obj;
          if (parentItem->group != obj->group())
              worldDoc->setCellObjectGroup(obj, parentItem->group);
          if (level != obj->level())
             worldDoc->setObjectLevel(obj, level);
      }
      worldDoc->undoStack()->endMacro();
-
      return true;
 }
 
@@ -985,6 +1010,8 @@ void ObjectsModel::setDocument(Document *doc)
                 SLOT(objectLevelAboutToChange(WorldCellObject*)));
         connect(worldDoc, SIGNAL(objectLevelChanged(WorldCellObject*)),
                 SLOT(objectLevelChanged(WorldCellObject*)));
+        connect(worldDoc, SIGNAL(cellObjectReordered(WorldCellObject*)),
+                SLOT(cellObjectReordered(WorldCellObject*)));
     }
 
     setCell(cell);
@@ -1162,6 +1189,15 @@ void ObjectsModel::objectLevelChanged(WorldCellObject *obj)
         return;
     int index = obj->cell()->objects().indexOf(obj);
     cellObjectAdded(obj->cell(), index);
+}
+
+void ObjectsModel::cellObjectReordered(WorldCellObject *obj)
+{
+    if (obj->cell() != mCell)
+        return;
+    if (Item *item = toItem(obj))
+        removeItemFromModel(item);
+    cellObjectAdded(obj->cell(), mCell->objects().indexOf(obj));
 }
 
 void ObjectsModel::layerGroupAdded(int level)
