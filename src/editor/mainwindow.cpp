@@ -364,7 +364,8 @@ void MainWindow::documentAdded(Document *doc)
         doc->setView(view);
         cellDoc->setScene(scene);
 
-        int pos = ui->documentTabWidget->addTab(view,
+        int pos = docman()->documents().indexOf(doc);
+        ui->documentTabWidget->insertTab(pos, view,
             tr("Cell %1,%2").arg(cellDoc->cell()->x()).arg(cellDoc->cell()->y()));
         ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
 
@@ -386,7 +387,8 @@ void MainWindow::documentAdded(Document *doc)
         view->setScene(scene);
         doc->setView(view);
 
-        int pos = ui->documentTabWidget->addTab(view, tr("The World"));
+        int pos = docman()->documents().indexOf(doc);
+        ui->documentTabWidget->insertTab(pos, view, tr("The World"));
         ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
 
         if (mViewHint.valid) {

@@ -55,12 +55,31 @@ DocumentManager::~DocumentManager()
 
 void DocumentManager::addDocument(Document *doc)
 {
-    mDocuments.append(doc);
+    // Group CellDocuments with their associated WorldDocument.
+    // This is desirable when there are multiple WorldDocuments open.
+    int insertAt = mDocuments.size();
+    if (CellDocument *cellDoc = doc->asCellDocument()) {
+        WorldDocument *worldDoc = cellDoc->worldDocument();
+        insertAt = -1;
+        int n = 0;
+        foreach (Document *walk, mDocuments) {
+            if (walk == worldDoc)
+                insertAt = n + 1;
+            else if (CellDocument *cd2 = walk->asCellDocument()) {
+                if (cd2->worldDocument() == worldDoc)
+                    insertAt = n + 1;
+            }
+            ++n;
+        }
+        Q_ASSERT(insertAt > 0);
+    }
+    mDocuments.insert(insertAt, doc);
+
     mUndoGroup->addStack(doc->undoStack());
     mFailedToAdd = false;
     emit documentAdded(doc);
     if (mFailedToAdd) {
-        closeDocument(mDocuments.size() - 1);
+        closeDocument(insertAt);
         return;
     }
     setCurrentDocument(doc);
