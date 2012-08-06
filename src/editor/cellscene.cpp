@@ -101,38 +101,6 @@ private:
 
 ///// ///// ///// ///// /////
 
-/**
- * Item that represents a map object.
- */
-class MapObjectItem : public QGraphicsItem
-{
-public:
-    MapObjectItem(MapObject *mapObject, MapRenderer *renderer,
-                  QGraphicsItem *parent = 0)
-        : QGraphicsItem(parent)
-        , mMapObject(mapObject)
-        , mRenderer(renderer)
-    {}
-
-    QRectF boundingRect() const
-    {
-        return mRenderer->boundingRect(mMapObject);
-    }
-
-    void paint(QPainter *p, const QStyleOptionGraphicsItem *, QWidget *)
-    {
-        const QColor &color = mMapObject->objectGroup()->color();
-        mRenderer->drawMapObject(p, mMapObject,
-                                 color.isValid() ? color : Qt::darkGray);
-    }
-
-private:
-    MapObject *mMapObject;
-    MapRenderer *mRenderer;
-};
-
-///// ///// ///// ///// /////
-
 CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mScene(scene)
@@ -309,29 +277,6 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
     p->drawRect(mBoundingRect);
 #endif
 }
-
-///// ///// ///// ///// /////
-
-/**
- * Item that represents an object group.
- */
-class ObjectGroupItem : public QGraphicsItem
-{
-public:
-    ObjectGroupItem(ObjectGroup *objectGroup, MapRenderer *renderer,
-                    QGraphicsItem *parent = 0)
-        : QGraphicsItem(parent)
-    {
-        setFlag(QGraphicsItem::ItemHasNoContents);
-
-        // Create a child item for each object
-        foreach (MapObject *object, objectGroup->objects())
-            new MapObjectItem(object, renderer, this);
-    }
-
-    QRectF boundingRect() const { return QRectF(); }
-    void paint(QPainter *, const QStyleOptionGraphicsItem *, QWidget *) {}
-};
 
 /////
 
@@ -1021,15 +966,9 @@ void CellScene::setSelectedObjectItems(const QSet<ObjectItem *> &selected)
     document()->setSelectedObjects(selection);
 }
 
-int CellScene::levelZOrder(int level)
-{
-    return (level + 1) * 100;
-}
-
 // Determine sane Z-order for layers in and out of TileLayerGroups
 void CellScene::setGraphicsSceneZOrder()
 {
-#if 1
     int z = 0;
     foreach (MapComposite::ZOrderItem zo, mMapComposite->zOrder()) {
         if (zo.group) {
@@ -1072,59 +1011,6 @@ void CellScene::setGraphicsSceneZOrder()
                         + groupIndex * mObjectItems.size()
                         + objectIndex);
     }
-#else
-    foreach (CompositeLayerGroupItem *item, mTileLayerGroupItems)
-        item->setZValue(levelZOrder(item->layerGroup()->level()));
-
-    CompositeLayerGroupItem *previousLevelItem = 0;
-    QMap<CompositeLayerGroupItem*,QVector<QGraphicsItem*> > layersAboveLevel;
-    int layerIndex = 0;
-    foreach (Layer *layer, mMap->layers()) {
-        if (TileLayer *tl = layer->asTileLayer()) {
-            int level = tl->level();
-            if (/*tl->group() && */mTileLayerGroupItems.contains(level)) {
-                previousLevelItem = mTileLayerGroupItems[level];
-                ++layerIndex;
-                continue;
-            }
-        }
-
-        // Handle any layers not in a TileLayerGroup.
-        // Layers between the first and last in a TileLayerGroup will be displayed above that TileLayerGroup.
-        // Layers before the first TileLayerGroup will be displayed below the first TileLayerGroup.
-        if (previousLevelItem)
-            layersAboveLevel[previousLevelItem].append(mLayerItems[layerIndex]);
-        else
-            mLayerItems[layerIndex]->setZValue(layerIndex);
-        ++layerIndex;
-    }
-
-    QMap<CompositeLayerGroupItem*,QVector<QGraphicsItem*> >::const_iterator it,
-        it_start = layersAboveLevel.begin(),
-        it_end = layersAboveLevel.end();
-    for (it = it_start; it != it_end; it++) {
-        int index = 1;
-        foreach (QGraphicsItem *item, *it) {
-            item->setZValue(levelZOrder(it.key()->layerGroup()->level()) + index);
-            ++index;
-        }
-    }
-
-    // SubMapItems/ObjectItems should be above all TileLayerGroups
-    // and arranged from bottom to top by level.  When the active tool
-    // affects SubMapItems, stack them above ObjectItems and vice versa.
-    int z = levelZOrder(mMapComposite->maxLevel());
-    if (mActiveTool && mActiveTool->affectsLots())
-        z += mMapComposite->maxLevel();
-    foreach (SubMapItem *item, mSubMapItems)
-        item->setZValue(z + item->subMap()->levelOffset());
-
-    z = levelZOrder(mMapComposite->maxLevel());
-    if (mActiveTool && mActiveTool->affectsObjects())
-        z += mMapComposite->maxLevel();
-    foreach (ObjectItem *item, mObjectItems)
-        item->setZValue(z + item->object()->level());
-#endif
 
     mGridItem->setZValue(10000);
 }
@@ -1505,6 +1391,7 @@ void CellScene::objectGroupVisibilityChanged(WorldObjectGroup *og, int level)
 
 void CellScene::objectGroupReordered(int index)
 {
+    Q_UNUSED(index)
     doLater(ZOrder);
 }
 
@@ -1579,7 +1466,7 @@ void CellScene::synchLayerGroupsLater()
 
 void CellScene::handlePendingUpdates()
 {
-    qDebug() << "CellScene::handlePendingUpdates";
+//    qDebug() << "CellScene::handlePendingUpdates";
 
     // Adding a submap may create new TileLayerGroups to ensure
     // all the submap layers can be viewed.
@@ -1667,14 +1554,8 @@ void CellScene::handlePendingUpdates()
 
 void CellScene::updateCurrentLevelHighlight()
 {
-#if 1
     int currentLevel = mDocument->currentLevel();
     if (!mHighlightCurrentLevel) {
-#else
-    Layer *currentLayer = mDocument->currentLayer();
-
-    if (!mHighlightCurrentLevel || !currentLayer) {
-#endif
         mDarkRectangle->setVisible(false);
 
         for (int i = 0; i < mLayerItems.size(); ++i) {
@@ -1698,7 +1579,6 @@ void CellScene::updateCurrentLevelHighlight()
         return;
     }
 
-#if 1
     Q_ASSERT(mTileLayerGroupItems.contains(currentLevel));
     QGraphicsItem *currentItem = mTileLayerGroupItems[currentLevel];
 
@@ -1731,42 +1611,6 @@ void CellScene::updateCurrentLevelHighlight()
                 && mDocument->isObjectLevelVisible(currentLevel);
         item->setVisible(visible);
     }
-#else
-    QGraphicsItem *currentItem = mLayerItems[mDocument->currentLayerIndex()];
-    if (currentLayer->asTileLayer() /*&& currentLayer->asTileLayer()->group()*/) {
-        Q_ASSERT(mTileLayerGroupItems.contains(currentLayer->level()));
-        if (mTileLayerGroupItems.contains(currentLayer->level()))
-            currentItem = mTileLayerGroupItems[currentLayer->level()];
-    }
-
-    // Hide items above the current item
-    int index = 0;
-    foreach (QGraphicsItem *item, mLayerItems) {
-        Layer *layer = mMap->layerAt(index);
-        if (!layer->isTileLayer()) continue; // leave ObjectGroups alone
-        bool visible = layer->isVisible() && (item->zValue() <= currentItem->zValue());
-        item->setVisible(visible);
-        ++index;
-    }
-    foreach (CompositeLayerGroupItem *item, mTileLayerGroupItems) {
-        bool visible = item->layerGroup()->isVisible() && (item->zValue() <= currentItem->zValue());
-        item->setVisible(visible);
-    }
-
-    // Hide object-like things not on the current level
-    foreach (SubMapItem *item, mSubMapItems) {
-        bool visible = item->subMap()->isVisible()
-                && (item->subMap()->levelOffset() == currentLayer->level())
-                && mDocument->isLotLevelVisible(item->subMap()->levelOffset());
-        item->setVisible(visible);
-    }
-    foreach (ObjectItem *item, mObjectItems) {
-        bool visible = item->object()->isVisible()
-                && (item->object()->level() == currentLayer->level())
-                && (mDocument->isObjectLevelVisible(item->object()->level()));
-        item->setVisible(visible);
-    }
-#endif
 
     // Darken layers below the current item
     mDarkRectangle->setZValue(currentItem->zValue() - 0.5);

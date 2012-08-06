@@ -60,7 +60,33 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     mCoordItem->setZValue(4);
     addItem(mCoordItem);
 
-    setWorldDocument(worldDoc);
+    connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
+            SLOT(selectedCellsChanged()));
+    connect(mWorldDoc, SIGNAL(cellMapFileChanged(WorldCell*)),
+            SLOT(cellMapFileChanged(WorldCell*)));
+    connect(mWorldDoc, SIGNAL(cellLotAdded(WorldCell*,int)),
+            SLOT(cellLotAdded(WorldCell*,int)));
+    connect(mWorldDoc, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
+            SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
+    connect(mWorldDoc, SIGNAL(cellLotMoved(WorldCellLot*)),
+            SLOT(cellLotMoved(WorldCellLot*)));
+    connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
+            SLOT(cellContentsChanged(WorldCell*)));
+
+    mGridItem->updateBoundingRect();
+    setSceneRect(mGridItem->boundingRect());
+    mCoordItem->updateBoundingRect();
+
+    mCellItems.resize(world()->width() * world()->height());
+    for (int y = 0; y < world()->height(); y++) {
+        for (int x = 0; x < world()->width(); x++) {
+            WorldCell *cell = world()->cellAt(x, y);
+            WorldCellItem *item = new WorldCellItem(cell, this);
+            addItem(item);
+            item->setZValue(1); // below mGridItem
+            mCellItems[y * world()->width() + x] = item;
+        }
+    }
 
     Preferences *prefs = Preferences::instance();
     mGridItem->setVisible(prefs->showWorldGrid());
@@ -86,42 +112,6 @@ void WorldScene::setTool(AbstractTool *tool)
 
     if (mActiveTool) {
         mActiveTool->activate();
-    }
-}
-
-void WorldScene::setWorldDocument(WorldDocument *worldDoc)
-{
-    Q_UNUSED(worldDoc)
-#if 0
-    if (mWorldDoc) {
-        mWorldDoc->disconnect(this);
-        clear();
-    }
-
-    mWorldDoc = worldDoc;
-#endif
-    if (mWorldDoc) {
-        connect(mWorldDoc, SIGNAL(selectedCellsChanged()), SLOT(selectedCellsChanged()));
-        connect(mWorldDoc, SIGNAL(cellMapFileChanged(WorldCell*)), SLOT(cellMapFileChanged(WorldCell*)));
-        connect(mWorldDoc, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
-        connect(mWorldDoc, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-        connect(mWorldDoc, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
-        connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)), SLOT(cellContentsChanged(WorldCell*)));
-
-        mGridItem->updateBoundingRect();
-        setSceneRect(mGridItem->boundingRect());
-        mCoordItem->updateBoundingRect();
-
-        mCellItems.resize(world()->width() * world()->height());
-        for (int y = 0; y < world()->height(); y++) {
-            for (int x = 0; x < world()->width(); x++) {
-                WorldCell *cell = world()->cellAt(x, y);
-                WorldCellItem *item = new WorldCellItem(cell, this);
-                addItem(item);
-                item->setZValue(1); // below mGridItem
-                mCellItems[y * world()->width() + x] = item;
-            }
-        }
     }
 }
 
@@ -209,7 +199,6 @@ QRectF WorldScene::boundingRect(int x, int y) const
 
 QPolygonF WorldScene::cellRectToPolygon(const QRectF &rect) const
 {
-#if 1
     const QPointF topLeft = cellToPixelCoords(rect.topLeft());
     const QPointF topRight = cellToPixelCoords(rect.topRight());
     const QPointF bottomRight = cellToPixelCoords(rect.bottomRight());
@@ -217,23 +206,6 @@ QPolygonF WorldScene::cellRectToPolygon(const QRectF &rect) const
     QPolygonF polygon;
     polygon << topLeft << topRight << bottomRight << bottomLeft;
     return polygon;
-#else
-    const int tileWidth = GRID_WIDTH;
-    const int tileHeight = GRID_HEIGHT;
-
-    const QPointF topRight = cellToPixelCoords(rect.topRight());
-    const QPointF bottomRight = cellToPixelCoords(rect.bottomRight());
-    const QPointF bottomLeft = cellToPixelCoords(rect.bottomLeft());
-
-    QPolygonF polygon;
-    polygon << QPointF(cellToPixelCoords(rect.topLeft()));
-    polygon << QPointF(topRight.x() + tileWidth / 2,
-                       topRight.y() + tileHeight / 2);
-    polygon << QPointF(bottomRight.x(), bottomRight.y() + tileHeight);
-    polygon << QPointF(bottomLeft.x() - tileWidth / 2,
-                       bottomLeft.y() + tileHeight / 2);
-    return polygon;
-#endif
 }
 
 QPolygonF WorldScene::cellRectToPolygon(WorldCell *cell) const
@@ -369,10 +341,6 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         mDragMapImageItem->setZValue(1000);
         mDragMapImageItem->setScenePos(event->scenePos());
         addItem(mDragMapImageItem);
-#if 0
-        if (WorldCell *cell = pointToCell(event->scenePos()))
-            mSelectionItem->highlightCellDuringDnD(cell->pos());
-#endif
         event->accept();
         return;
     }
@@ -385,13 +353,6 @@ void WorldScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
     if (mDragMapImageItem) {
         mDragMapImageItem->setScenePos(event->scenePos());
     }
-#if 0
-    if (WorldCell *cell = pointToCell(event->scenePos())) {
-        mSelectionItem->highlightCellDuringDnD(cell->pos());
-    } else {
-        mSelectionItem->highlightCellDuringDnD(QPoint(-1, -1));
-    }
-#endif
 }
 
 void WorldScene::dragLeaveEvent(QGraphicsSceneDragDropEvent *event)
@@ -401,14 +362,10 @@ void WorldScene::dragLeaveEvent(QGraphicsSceneDragDropEvent *event)
         delete mDragMapImageItem;
         mDragMapImageItem = 0;
     }
-#if 0
-    mSelectionItem->highlightCellDuringDnD(QPoint(-1, -1));
-#endif
 }
 
 void WorldScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
-#if 1
     if (mDragMapImageItem) {
         if (WorldCell *cell = world()->cellAt(mDragMapImageItem->dropPos()))
             mWorldDoc->undoStack()->push(new SetCellMainMap(mWorldDoc, cell, mDragMapImageItem->mapFilePath()));
@@ -416,22 +373,6 @@ void WorldScene::dropEvent(QGraphicsSceneDragDropEvent *event)
         mDragMapImageItem = 0;
         event->accept();
     }
-#else
-    mSelectionItem->highlightCellDuringDnD(QPoint(-1, -1));
-
-    foreach (const QUrl &url, event->mimeData()->urls()) {
-        QFileInfo info(url.toLocalFile());
-        if (!info.exists()) continue;
-        if (!info.isFile()) continue;
-        if (info.suffix() != QLatin1String("tmx")) continue;
-
-        if (WorldCell *cell = pointToCell(event->scenePos())) {
-            mWorldDoc->undoStack()->push(new SetCellMainMap(mWorldDoc, cell, info.absoluteFilePath()));
-        }
-        event->accept();
-        return;
-    }
-#endif
 }
 
 ///// ///// ///// ///// /////
@@ -488,32 +429,6 @@ void BaseCellItem::paint(QPainter *painter,
 
 #if _DEBUG
     painter->drawRect(mBoundingRect);
-#endif
-
-#if 0
-    QPen pen(Qt::black);
-    if (isSelected()) {
-        pen.setWidth(2);
-        painter->setPen(pen);
-        QPolygonF poly = mScene->cellRectToPolygon(QRect(mCell->x(), mCell->y(), 1, 1));
-        painter->drawPolygon(poly);
-    }
-#endif
-#if 0
-    pen.setWidth(1);
-    painter->setPen(pen);
-
-    QString text = QString(QLatin1String("%1,%2")).arg(mCell->x()).arg(mCell->y());
-
-    const QFontMetrics fm = painter->fontMetrics();
-    int lineHeight = fm.lineSpacing();
-    int textWidth = fm.width(text);
-    QRectF r(mBoundingRect.center().x() - textWidth/2.0, mBoundingRect.center().y() - lineHeight/2.0, textWidth, lineHeight);
-    r.adjust(-5, -5, 5, 5);
-    painter->setBrush(Qt::lightGray);
-    painter->drawRect(r);
-
-    painter->drawText(mBoundingRect, Qt::AlignHCenter | Qt::AlignVCenter, text);
 #endif
 }
 
@@ -584,12 +499,9 @@ QPointF BaseCellItem::calcLotImagePosition(WorldCellLot *lot, int scaledImageWid
 void BaseCellItem::updateBoundingRect()
 {
     QRectF bounds = mScene->boundingRect(cellPos());
-#if 1
+
     if (!mMapImageBounds.isEmpty())
         bounds |= mMapImageBounds;
-#else
-    bounds.setTop(bounds.bottom() - qMax(qreal(GRID_HEIGHT), mMapImage.height()));
-#endif
 
     foreach (LotImage lotImage, mLotImages) {
         if (!lotImage.mBounds.isEmpty())
@@ -603,6 +515,7 @@ void BaseCellItem::updateBoundingRect()
         mBoundingRect = bounds;
     }
 }
+
 /////
 
 WorldCellItem::WorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *parent)

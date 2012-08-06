@@ -210,11 +210,6 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CreateObjectTool::instance());
     addToolBar(toolManager->toolBar());
 
-#if 0
-    QFont font = mCurrentLevelMenu->font();
-    font.setPointSize(font.pointSize() - 1);
-    mCurrentLevelMenu->setFont(font);
-#endif
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
 //    ui->currentLevelButton->setPopupMode(QToolButton::InstantPopup);
     connect(mCurrentLevelMenu, SIGNAL(aboutToShow()), SLOT(aboutToShowCurrentLevelMenu()));
@@ -275,13 +270,6 @@ void MainWindow::changeEvent(QEvent *event)
 void MainWindow::retranslateUi()
 {
     setWindowTitle(tr("PZWorldEd"));
-#if 0
-    updateWindowTitle();
-
-    mRandomButton->setToolTip(tr("Random Mode"));
-    mLayerMenu->setTitle(tr("&Layer"));
-    mActionHandler->retranslateUi();
-#endif
 }
 
 void MainWindow::newWorld()
@@ -291,39 +279,6 @@ void MainWindow::newWorld()
     World *newWorld = new World(100, 100);
     WorldDocument *newDoc = new WorldDocument(newWorld);
     docman()->addDocument(newDoc);
-#if 0
-    WorldDocument *doc = new WorldDocument(this);
-
-    doc->world()->cellAt(50, 50)->setMapFilePath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/maptools/suburbs1.tmx"));
-    doc->world()->cellAt(49, 48)->setMapFilePath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/maptools/Lot_Farmland.tmx"));
-    doc->world()->cellAt(50, 47)->setMapFilePath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/maptools/roadNS_02.tmx"));
-    doc->world()->cellAt(50, 48)->setMapFilePath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/maptools/roadNS_03.tmx"));
-    doc->world()->cellAt(50, 49)->setMapFilePath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/maptools/roadNS.tmx"));
-
-    {
-        WorldCell *cell = doc->world()->cellAt(50, 49);
-        cell->addLot(QLatin1String("Lot_Rural_Copse_00"), 50, 100, 0);
-        cell->addLot(QLatin1String("Lot_Rural_TreeCluster_00"), 70, 120, 0);
-        cell->addLot(QLatin1String("Lot_Rural_TreeCluster_00"), 80, 200, 0);
-        cell->addLot(QLatin1String("Lot_Rural_Farmhouse_00"), 80, 70, 0);
-        cell->addLot(QLatin1String("Lot_Rural_FieldCrop_00"), 77, 44, 0);
-    }
-    {
-        WorldCell *cell = doc->world()->cellAt(50, 48);
-        cell->addLot(QLatin1String("Lot_Rural_Copse_00"), 70, 200, 0);
-        cell->addLot(QLatin1String("Lot_Rural_TreeCluster_00"), 70, 150, 0);
-        cell->addLot(QLatin1String("Lot_Rural_TreeCluster_00"), 220, 100, 0);
-        cell->addLot(QLatin1String("Lot_Rural_Farmhouse_00"), 230, 160, 0);
-    }
-
-    docman()->addDocument(doc);
-
-#if 0
-    CellDocument *doc2 = new CellDocument(doc, doc->world()->cellAt(50, 50));
-    docman()->addDocument(doc2);
-#endif
-
-#endif
 }
 
 void MainWindow::editCell()
@@ -371,12 +326,7 @@ void MainWindow::documentAdded(Document *doc)
 
         if (mViewHint.valid) {
             view->zoomable()->setScale(mViewHint.scale);
-#if 1
             view->centerOn(mViewHint.scrollX, mViewHint.scrollY);
-#else
-            view->horizontalScrollBar()->setSliderPosition(mViewHint.scrollX);
-            view->verticalScrollBar()->setSliderPosition(mViewHint.scrollY);
-#endif
         }
         else
             view->centerOn(scene->sceneRect().center());
@@ -393,12 +343,7 @@ void MainWindow::documentAdded(Document *doc)
 
         if (mViewHint.valid) {
             view->zoomable()->setScale(mViewHint.scale);
-#if 1
             view->centerOn(mViewHint.scrollX, mViewHint.scrollY);
-#else
-            view->horizontalScrollBar()->setSliderPosition(mViewHint.scrollX);
-            view->verticalScrollBar()->setSliderPosition(mViewHint.scrollY);
-#endif
         } else
             view->centerOn(scene->cellToPixelCoords(worldDoc->world()->width() / 2.0,
                                                     worldDoc->world()->height() / 2.0));
@@ -518,38 +463,11 @@ void MainWindow::openFile()
     QString selectedFilter = tr("PZWorldEd world files (*.pzw)");
     filter += selectedFilter;
 
-#if 0
-    selectedFilter = mSettings.value(QLatin1String("lastUsedOpenFilter"),
-                                     selectedFilter).toString();
-
-    const PluginManager *pm = PluginManager::instance();
-    QList<MapReaderInterface*> readers = pm->interfaces<MapReaderInterface>();
-    foreach (const MapReaderInterface *reader, readers) {
-        foreach (const QString &str, reader->nameFilters()) {
-            if (!str.isEmpty()) {
-                filter += QLatin1String(";;");
-                filter += str;
-            }
-        }
-    }
-#endif
-
     QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Open World"),
                                                     QDir::currentPath()/*fileDialogStartLocation()*/,
                                                     filter, &selectedFilter);
     if (fileNames.isEmpty())
         return;
-
-#if 0
-    // When a particular filter was selected, use the associated reader
-    MapReaderInterface *mapReader = 0;
-    foreach (MapReaderInterface *reader, readers) {
-        if (reader->nameFilters().contains(selectedFilter))
-            mapReader = reader;
-    }
-
-    mSettings.setValue(QLatin1String("lastUsedOpenFilter"), selectedFilter);
-#endif
 
     foreach (const QString &fileName, fileNames)
         openFile(fileName/*, mapReader*/);
@@ -566,27 +484,6 @@ bool MainWindow::openFile(const QString &fileName)
         ui->documentTabWidget->setCurrentIndex(documentIndex);
         return true;
     }
-
-#if 0
-    TmxMapReader tmxMapReader;
-
-    if (!mapReader && !tmxMapReader.supportsFile(fileName)) {
-        // Try to find a plugin that implements support for this format
-        const PluginManager *pm = PluginManager::instance();
-        QList<MapReaderInterface*> readers =
-                pm->interfaces<MapReaderInterface>();
-
-        foreach (MapReaderInterface *reader, readers) {
-            if (reader->supportsFile(fileName)) {
-                mapReader = reader;
-                break;
-            }
-        }
-    }
-
-    if (!mapReader)
-        mapReader = &tmxMapReader;
-#endif
 
     QFileInfo fileInfo(fileName);
     PROGRESS progress(tr("Reading %1").arg(fileInfo.fileName()));
@@ -651,19 +548,6 @@ void MainWindow::openLastFiles()
                     continue;
                 }
             }
-#if 0
-            BaseGraphicsView *view = mCurrentDocument->view();
-
-            // Restore camera to the previous position
-            qreal scale = mSettings.value(QLatin1String("scale")).toDouble();
-            if (scale > 0)
-                view->zoomable()->setScale(scale);
-
-            const int hor = mSettings.value(QLatin1String("scrollX")).toInt();
-            const int ver = mSettings.value(QLatin1String("scrollY")).toInt();
-            view->horizontalScrollBar()->setSliderPosition(hor);
-            view->verticalScrollBar()->setSliderPosition(ver);
-#endif
         }
         mSettings.endGroup();
     }
@@ -1091,27 +975,19 @@ void MainWindow::writeSettings()
     int i = 0;
     foreach (Document *doc, docman()->documents()) {
         mSettings.beginGroup(QString::number(i)); // openFiles/N/...
-#if 0
-        ui->documentTabWidget->setCurrentWidget(doc->view());
-//        mDocumentManager->switchToDocument(i);
-#endif
+
         mSettings.setValue(QLatin1String("file"), doc->fileName());
         BaseGraphicsView *view = doc->view();
 
         mSettings.setValue(QLatin1String("scale"),
                            QString::number(view->zoomable()->scale()));
-#if 1
+
         QPointF centerScenePos = view->mapToScene(view->width() / 2, view->height() / 2);
         mSettings.setValue(QLatin1String("scrollX"),
                            QString::number(int(centerScenePos.x())));
         mSettings.setValue(QLatin1String("scrollY"),
                            QString::number(int(centerScenePos.y())));
-#else
-        mSettings.setValue(QLatin1String("scrollX"), QString::number(
-                       view->horizontalScrollBar()->sliderPosition()));
-        mSettings.setValue(QLatin1String("scrollY"), QString::number(
-                       view->verticalScrollBar()->sliderPosition()));
-#endif
+
         if (CellDocument *cellDoc = doc->asCellDocument()) {
             mSettings.setValue(QLatin1String("cellX"), QString::number(cellDoc->cell()->x()));
             mSettings.setValue(QLatin1String("cellY"), QString::number(cellDoc->cell()->y()));

@@ -152,7 +152,7 @@ void IsometricRenderer::drawGrid(QPainter *painter, const QRectF &rect,
 
     gridColor.setAlpha(128);
 
-#if 1
+#ifdef ZOMBOID
     QPen pen;
     QBrush brush(gridColor, Qt::Dense4Pattern);
     brush.setTransform(QTransform::fromScale(1/painter->transform().m11(),

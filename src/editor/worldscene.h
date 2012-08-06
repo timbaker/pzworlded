@@ -282,7 +282,6 @@ public:
     QPolygonF cellRectToPolygon(const QRectF &rect) const;
     QPolygonF cellRectToPolygon(WorldCell *cell) const;
 
-    void setWorldDocument(WorldDocument *worldDoc);
     WorldDocument *worldDocument() const { return mWorldDoc; }
 
     World *world() const;

@@ -130,15 +130,8 @@ void ObjectsDock::selectionChanged()
 
         // Center the view on the selected WorldCellObject
         if (WorldCellObject *obj = mView->model()->toObject(selection.first())) {
-#if 1
             QRect rect = mCellDoc->scene()->renderer()->boundingRect(obj->bounds().toRect(), obj->level());
             mCellDoc->view()->ensureRectVisible(rect);
-#else
-            QPointF scenePos = mCellDoc->scene()->renderer()->tileToPixelCoords(obj->x() + obj->width() / 2.0,
-                                                                                obj->y() + obj->height() / 2.0,
-                                                                                obj->level());
-            mCellDoc->view()->centerOn(scenePos);
-#endif
             level = obj->level();
         }
 
@@ -221,14 +214,7 @@ QWidget *ObjectsViewDelegate::createEditor(QWidget *parent, const QStyleOptionVi
                 mView, SLOT(closeComboBoxEditor()));
         return editor;
     }
-    QWidget *widget = QStyledItemDelegate::createEditor(parent, option, index);
-#if 0
-    if (QLineEdit *editor = qobject_cast<QLineEdit*>(widget)) {
-        if (index.column() == 2)
-            editor->setValidator(new QIntValidator(0, 30, editor));
-    }
-#endif
-    return widget;
+    return QStyledItemDelegate::createEditor(parent, option, index);
 }
 
 void ObjectsViewDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
@@ -294,10 +280,6 @@ bool ObjectsViewDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, 
 QSize ObjectsViewDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     QSize size = QStyledItemDelegate::sizeHint(option, index);
-#if 0
-    if (size.height() < 22)
-        size.setHeight(22);
-#endif
     return size;
 }
 
@@ -349,14 +331,6 @@ void ObjectsView::mousePressEvent(QMouseEvent *event)
         setDragEnabled(selectionModel()->isSelected(index));
 
         if (mModel->toObject(index)) {
-#if 0
-            if (index.column() == mModel->typeColumn()) {
-                event->accept();
-                setCurrentIndex(index);
-                edit(index);
-                return;
-            }
-#endif
             if (index.column() == 0) {
                 QRect itemRect = visualRect(index);
                 QRect rect = ((ObjectsViewDelegate*)itemDelegate())->closeButtonRect(itemRect);
@@ -439,11 +413,6 @@ void ObjectsView::modelSynched()
 // http://qt-project.org/forums/viewthread/4531
 void ObjectsView::closeComboBoxEditor()
 {
-#if 0
-    QComboBox *editor = static_cast<QComboBox*>(sender());
-    editor->disconnect(this);
-    qDebug() << "closeComboBoxEditor";
-#endif
     QModelIndex index = currentIndex();
     currentChanged( index, index );
 }
@@ -595,13 +564,8 @@ QVariant ObjectsModel::data(const QModelIndex &index, int role) const
         switch (role) {
         case Qt::CheckStateRole: {
             if (index.column() == 0 && mCellDoc) {
-#if 1
                 // Don't check ObjectItem::isVisible because it changes during CellScene::updateCurrentLevelHighlight()
                 bool visible = obj->isVisible();
-#else
-                ObjectItem *sceneItem = mCellDoc->scene()->itemForObject(obj);
-                bool visible = sceneItem ? sceneItem->isVisible() : false;
-#endif
                 return visible ? Qt::Checked : Qt::Unchecked;
             }
             break;
@@ -615,10 +579,6 @@ QVariant ObjectsModel::data(const QModelIndex &index, int role) const
         case Qt::EditRole:
             return (index.column() == typeColumn()) ? obj->type()->name() : obj->name();
         case Qt::DecorationRole:
-#if 0
-            if (index.column() == nameColumn())
-                return mObjectPixmap;
-#endif
             return QVariant();
         case Qt::ForegroundRole: {
             QString value = (index.column() == typeColumn()) ? obj->type()->name() : obj->name();
@@ -756,7 +716,6 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
      if (column > 0)
          return false;
 
-#if 1
      Item *parentItem = toItem(parent);
      if (!parentItem || !parentItem->group)
          return false;
@@ -775,15 +734,6 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
      }
 
      WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-#else
-     int beginRow;
-     if (row != -1)
-         beginRow = row;
-     else if (parent.isValid())
-         beginRow = parent.row();
-     else
-         beginRow = rowCount(QModelIndex());
-#endif
 
      QByteArray encodedData = data->data(ObjectsModelMimeType);
      QDataStream stream(&encodedData, QIODevice::ReadOnly);

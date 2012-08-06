@@ -186,12 +186,6 @@ MapsView::MapsView(QWidget *parent)
     header()->setResizeMode(0, QHeaderView::Stretch);
     header()->setResizeMode(1, QHeaderView::ResizeToContents);
 
-#if 0
-    // This mixes folders with files
-    setSortingEnabled(true);
-    sortByColumn(0, Qt::AscendingOrder);
-#endif
-
     connect(this, SIGNAL(activated(QModelIndex)), SLOT(onActivated(QModelIndex)));
 }
 

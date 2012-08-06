@@ -165,13 +165,8 @@ public:
         QString mapName = cell->mapFilePath();
         if (!mapName.isEmpty()) {
             QFileInfo fi(mapName);
-#if 1
             if (fi.isAbsolute())
                 mapName = mMapDir.relativeFilePath(mapName);
-#else
-            if (fi.isAbsolute())
-                mapName = fi.completeBaseName();
-#endif
         }
         w.writeAttribute(QLatin1String("map"), mapName);
 
@@ -203,13 +198,8 @@ public:
         QString mapName = lot->mapName();
         if (!mapName.isEmpty()) {
             QFileInfo fi(mapName);
-#if 1
             if (fi.isAbsolute())
                 mapName = mMapDir.relativeFilePath(mapName);
-#else
-            if (fi.isAbsolute())
-                mapName = fi.completeBaseName();
-#endif
         }
         w.writeAttribute(QLatin1String("map"), mapName);
 

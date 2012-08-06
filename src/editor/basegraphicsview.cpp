@@ -188,7 +188,6 @@ void BaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
         stopAutoScroll();
     }
 
-#if 1
     if (mMousePressed) {
         QPoint pos = event->pos();
         int distance = 0;
@@ -218,7 +217,6 @@ void BaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
         } else
             stopAutoScroll();
     }
-#endif
 
     mScene->setEventView(this);
     QGraphicsView::mouseMoveEvent(event);
@@ -397,12 +395,10 @@ void MiniMap::sceneRectChanged(const QRectF &sceneRect)
     QSizeF size = sceneRect.size();
     // No idea where the extra 3 pixels is coming from...
     setGeometry(20, 20, std::ceil(size.width() * scale) + 3, std::ceil(size.height() * scale) + 3);
-#if 1
+
     // The sceneRect may not start at 0,0.
     scene()->setSceneRect(QRectF(sceneRect.topLeft() * scale, sceneRect.size() * scale));
-#else
-    scene()->setSceneRect(rect().adjusted(0,0,-3,-3));
-#endif
+
     viewRectChanged();
 
     if (mExtraItem)

@@ -34,13 +34,6 @@ int main(int argc, char *argv[])
     a.setAttribute(Qt::AA_DontShowIconsInMenus);
 #endif
 
-#if 0
-    // Disabling this for the ObjectsView editor combobox.
-    // If you click in the popup while it is still animating if won't go away
-    // when the combobox is hidden.
-    a.setEffectEnabled(Qt::UI_AnimateCombo, false);
-#endif
-
     MainWindow w;
     w.show();
 

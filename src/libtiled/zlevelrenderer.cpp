@@ -40,16 +40,12 @@ using namespace Tiled;
 
 QSize ZLevelRenderer::mapSize() const
 {
-#if 1
-    const int side = map()->height() + map()->width();
-    return QSize(side * map()->tileWidth() / 2 + maxLevel() * map()->cellsPerLevel().x() * map()->tileWidth(),
-                 side * map()->tileHeight() / 2 + maxLevel() * map()->cellsPerLevel().y() * map()->tileHeight());
-#else
     // Map width and height contribute equally in both directions
     const int side = map()->height() + map()->width();
-    return QSize(side * map()->tileWidth() / 2,
-                 side * map()->tileHeight() / 2);
-#endif
+    return QSize(side * map()->tileWidth() / 2
+                 + maxLevel() * map()->cellsPerLevel().x() * map()->tileWidth(),
+                 side * map()->tileHeight() / 2
+                 + maxLevel() * map()->cellsPerLevel().y() * map()->tileHeight());
 }
 
 QRect ZLevelRenderer::boundingRect(const QRect &rect, int level) const
@@ -60,11 +56,8 @@ QRect ZLevelRenderer::boundingRect(const QRect &rect, int level) const
     const int originX = map()->height() * tileWidth / 2;
     const QPoint pos((rect.x() - (rect.y() + rect.height()))
                      * tileWidth / 2 + originX,
-#ifdef ZOMBOID
-                     (rect.x() + rect.y()) * tileHeight / 2 + (maxLevel() - level) * map()->cellsPerLevel().y() * tileHeight);
-#else
-                     (rect.x() + rect.y()) * tileHeight / 2);
-#endif
+                     (rect.x() + rect.y()) * tileHeight / 2
+                     + (maxLevel() - level) * map()->cellsPerLevel().y() * tileHeight);
 
     const int side = rect.height() + rect.width();
     const QSize size(side * tileWidth / 2,
@@ -167,18 +160,12 @@ void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor grid
 
     gridColor.setAlpha(128);
 
-#if 1
     QPen pen;
     QBrush brush(gridColor, Qt::Dense4Pattern);
     brush.setTransform(QTransform::fromScale(1/painter->transform().m11(),
                                              1/painter->transform().m22()));
     pen.setBrush(brush);
     painter->setPen(pen);
-#else
-    QPen gridPen(gridColor);
-    gridPen.setDashPattern(QVector<qreal>() << 2 << 2);
-    painter->setPen(gridPen);
-#endif
 
     for (int y = startY; y <= endY; ++y) {
         const QPointF start = tileToPixelCoords(startX, (qreal)y, level);
@@ -206,11 +193,7 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
 
     QRect rect = exposed.toAlignedRect();
     if (rect.isNull())
-#ifdef ZOMBOID
         rect = boundingRect(layer->bounds(), level);
-#else
-        rect = boundingRect(layer->bounds());
-#endif
 
     QMargins drawMargins = layer->drawMargins();
     drawMargins.setTop(drawMargins.top() - tileHeight);
@@ -222,17 +205,11 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                 drawMargins.top());
 
     // Determine the tile and pixel coordinates to start at
-#ifdef ZOMBOID
     QPointF tilePos = pixelToTileCoords(rect.x(), rect.y(), level);
     QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
                            (int) std::floor(tilePos.y()));
     QPointF startPos = tileToPixelCoords(rowItr, level);
-#else
-    QPointF tilePos = pixelToTileCoords(rect.x(), rect.y());
-    QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
-                           (int) std::floor(tilePos.y()));
-    QPointF startPos = tileToPixelCoords(rowItr);
-#endif
+
     startPos.rx() -= tileWidth / 2;
     startPos.ry() += tileHeight;
 

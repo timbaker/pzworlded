@@ -45,7 +45,6 @@ public:
 
     }
 
-#if 1
     void paint(QPainter *p, const QStyleOptionViewItem &option, const QModelIndex &index) const
     {
         const PropertiesModel *model = dynamic_cast<const PropertiesModel*>(index.model());
@@ -72,135 +71,6 @@ public:
             p->restore();
         }
     }
-#else
-    void paint(QPainter *p, const QStyleOptionViewItem &option, const QModelIndex &index) const
-    {
-        const PropertiesModel *model = dynamic_cast<const PropertiesModel*>(index.model());
-
-        QStyleOptionViewItemV4 opt = option;
-        initStyleOption(&opt, index);
-
-        const QWidget *widget = opt.widget; //QStyledItemDelegatePrivate::widget(option);
-        QStyle *style = widget ? widget->style() : QApplication::style();
-
-        p->save();
-        p->setClipRect(opt.rect);
-
-#if 0
-        QRect checkRect = style->subElementRect(QStyle::SE_ItemViewItemCheckIndicator, &opt, widget);
-        QRect iconRect = style->subElementRect(QStyle::SE_ItemViewItemDecoration, &opt, widget);
-#endif
-        QRect textRect = style->subElementRect(QStyle::SE_ItemViewItemText, &opt, widget);
-
-        // draw the background
-        // Don't draw selection beneath "add" buttons
-        {
-            QStyleOptionViewItemV4 option(opt);
-            if ((opt.state & QStyle::State_Selected) && model->toWidget(index))
-                option.state &= ~QStyle::State_Selected;
-#if 0
-            option.features &= ~QStyleOptionViewItemV2::HasCheckIndicator;
-            option.text.clear();
-            option.state &= ~QStyle::State_HasFocus;
-            style->drawControl(QStyle::CE_ItemViewItem, &option, p, widget);
-#else
-            style->drawPrimitive(QStyle::PE_PanelItemViewItem, &option, p, widget);
-#endif
-        }
-
-#if 0
-        // draw the check mark
-        if (opt.features & QStyleOptionViewItemV2::HasCheckIndicator) {
-            QStyleOptionViewItemV4 option(opt);
-            option.rect = checkRect;
-            option.state = option.state & ~QStyle::State_HasFocus;
-
-            switch (opt.checkState) {
-            case Qt::Unchecked:
-                option.state |= QStyle::State_Off;
-                break;
-            case Qt::PartiallyChecked:
-                option.state |= QStyle::State_NoChange;
-                break;
-            case Qt::Checked:
-                option.state |= QStyle::State_On;
-                break;
-            }
-            style->drawPrimitive(QStyle::PE_IndicatorViewItemCheck, &option, p, widget);
-        }
-
-        // draw the icon
-        QIcon::Mode mode = QIcon::Normal;
-        if (!(opt.state & QStyle::State_Enabled))
-            mode = QIcon::Disabled;
-        else if (opt.state & QStyle::State_Selected)
-            mode = QIcon::Selected;
-        QIcon::State state = opt.state & QStyle::State_Open ? QIcon::On : QIcon::Off;
-        opt.icon.paint(p, iconRect, opt.decorationAlignment, mode, state);
-#endif
-
-        // draw the text
-        if (!opt.text.isEmpty()) {
-            QPalette::ColorGroup cg = opt.state & QStyle::State_Enabled
-                                  ? QPalette::Normal : QPalette::Disabled;
-            if (cg == QPalette::Normal && !(opt.state & QStyle::State_Active))
-                cg = QPalette::Inactive;
-
-            if (opt.state & QStyle::State_Selected) {
-                p->setPen(opt.palette.color(cg, QPalette::HighlightedText));
-            } else {
-                p->setPen(opt.palette.color(cg, QPalette::Text));
-            }
-            if (opt.state & QStyle::State_Editing) {
-                p->setPen(opt.palette.color(cg, QPalette::Text));
-                p->drawRect(textRect.adjusted(0, 0, -1, -1));
-            }
-
-#if 1
-            const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, 0, widget) + 1;
-            QRect textRect2 = textRect.adjusted(textMargin, 0, -textMargin, 0); // remove width padding
-            QFontMetrics fm = opt.fontMetrics;
-            p->drawText(textRect2.topLeft() + QPointF(0, fm.ascent()), fm.elidedText(opt.text, Qt::ElideRight, textRect2.width()));
-#else
-            d->viewItemDrawText(p, vopt, textRect);
-#endif
-        }
-
-        // draw the close button
-        if (model->isDeletable(index) && index.column() == 0 && opt.state & QStyle::State_MouseOver) {
-#if 1
-            QRect closeRect = closeButtonRect(opt.rect); //opt.rect.x()-40+2, opt.rect.y(), mTrashPixmap.width(), opt.rect.height());
-            p->setClipRect(closeRect);
-            p->drawPixmap(closeRect.x(), closeRect.y(), mTrashPixmap);
-            p->setClipRect(opt.rect);
-#else
-            QRect closeRect = opt.rect;
-            closeRect.setLeft(closeRect.right() - 20);
-            QStyleOptionViewItemV4 option(opt);
-            option.rect = closeRect;
-            option.state |= QStyle::State_Selected;
-            style->drawPrimitive(QStyle::PE_IndicatorTabClose, &option, p, widget);
-#endif
-        }
-
-#if 1
-        // draw the focus rect
-         if (opt.state & QStyle::State_HasFocus) {
-            QStyleOptionFocusRect o;
-            o.QStyleOption::operator=(opt);
-            o.rect = style->subElementRect(QStyle::SE_ItemViewItemFocusRect, &opt, widget);
-            o.state |= QStyle::State_KeyboardFocusChange;
-            o.state |= QStyle::State_Item;
-            QPalette::ColorGroup cg = (opt.state & QStyle::State_Enabled)
-                          ? QPalette::Normal : QPalette::Disabled;
-            o.backgroundColor = opt.palette.color(cg, (opt.state & QStyle::State_Selected)
-                                         ? QPalette::Highlight : QPalette::Window);
-            style->drawPrimitive(QStyle::PE_FrameFocusRect, &o, p, widget);
-        }
-#endif
-         p->restore();
-    }
-#endif
 
     QRect closeButtonRect(const QRect &itemViewRect) const
     {
@@ -223,10 +93,7 @@ PropertiesModel::PropertiesModel(QObject *parent)
     , mAddTemplateMenu(new QMenu)
     , mAddPropertyMenu(new QMenu)
 {
-//    connect(mAddTemplateMenu, SIGNAL(aboutToShow()), SLOT(setTemplatesMenu()));
     connect(mAddTemplateMenu, SIGNAL(triggered(QAction*)), SLOT(addTemplate(QAction*)));
-
-//    connect(mAddPropertyMenu, SIGNAL(aboutToShow()), SLOT(setPropertiesMenu()));
     connect(mAddPropertyMenu, SIGNAL(triggered(QAction*)), SLOT(addProperty(QAction*)));
 
     mTimer.setInterval(1);
@@ -558,29 +425,6 @@ void PropertiesModel::setDocument(WorldDocument *worldDoc)
                 SLOT(cellContentsAboutToChange(WorldCell*)));
         connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
                 SLOT(cellContentsChanged(WorldCell*)));
-
-#if 1
-#else
-    Item *header = new Item(mRootItem, mRootItem->children.size(), Item::HeaderTemplates);
-    foreach (PropertyTemplate *pt, cell->templates()) {
-        addTemplate(header, header->children.size(), pt);
-    }
-
-    createAddTemplateWidget();
-//    setTemplatesMenu();
-    Item *addTemplateItem = new Item(header, header->children.size(), mAddTemplateWidget);
-
-    header = new Item(mRootItem, mRootItem->children.size(), Item::HeaderProperties);
-    foreach (Property *p, cell->properties()) {
-        addProperty(header, header->children.size(), p);
-    }
-
-    createAddPropertyWidget();
-//    setPropertiesMenuLater();
-    Item *addPropertyItem = new Item(header, header->children.size(), mAddPropertyWidget);
-
-    reset();
-#endif
     }
 }
 
@@ -933,12 +777,6 @@ PropertiesDock::PropertiesDock(QWidget *parent)
 {
     setObjectName(QLatin1String("PropertiesDock"));
 
-#if 0
-    mView->header()->setStretchLastSection(false);
-    mView->header()->setResizeMode(0, QHeaderView::Interactive);
-    mView->header()->setResizeMode(1, QHeaderView::Interactive);
-#endif
-
     QFrame *frame = new QFrame();
     frame->setFrameShape(QFrame::NoFrame);
 
@@ -951,9 +789,6 @@ PropertiesDock::PropertiesDock(QWidget *parent)
 
     mDescEdit->setMaximumHeight(64);
     mDescEdit->setReadOnly(true);
-//    mDescEdit->setFrameShape(QFrame::StyledPanel);
-//    mDescEdit->setFrameStyle(mView->frameStyle());
-//    mDescEdit->setFrameShadow(QFrame::Plain);
     vlayout->addWidget(mDescEdit);
 
     frame->setLayout(vlayout);

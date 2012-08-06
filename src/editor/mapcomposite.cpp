@@ -19,8 +19,6 @@
 
 #include "preferences.h"
 #include "mapmanager.h"
-
-#include "map.h"
 #include "mapobject.h"
 #include "maprenderer.h"
 #include "objectgroup.h"
@@ -216,9 +214,7 @@ void CompositeLayerGroup::synch()
             foreach (TileLayer *layer, mLayers)
                 layerGroup->setLayerVisibility(layer->name(), mVisibleLayers[index++]);
 
-#if 1 // Re-enable this if submaps ever change
             layerGroup->synch();
-#endif
             if (layerGroup->mAnyVisibleLayers) {
                 mVisibleSubMapLayers.append(SubMapLayers(subMap, layerGroup));
                 unionTileRects(r, layerGroup->bounds().translated(subMap->origin()), r);

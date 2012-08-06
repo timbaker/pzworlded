@@ -170,10 +170,6 @@ Qt::ItemFlags LayersModel::flags(const QModelIndex &index) const
 {
     Qt::ItemFlags rc = QAbstractItemModel::flags(index);
     rc |= Qt::ItemIsUserCheckable;
-#if 0
-    if (index.parent().isValid())
-        rc |= Qt::ItemIsEditable; // TileLayer name
-#endif
     return rc;
 }
 

@@ -129,16 +129,9 @@ void LotsDock::selectionChanged()
         if (LotsModel::Level *levelPtr = mView->model()->toLevel(selection.first()))
             level = levelPtr->level;
         if (WorldCellLot *lot = mView->model()->toLot(selection.first())) {
-#if 1
             MapRenderer *renderer = mCellDoc->scene()->renderer();
             mCellDoc->view()->ensureRectVisible(renderer->boundingRect(lot->bounds(),
                                                                        lot->level()));
-#else
-            QPointF scenePos = mCellDoc->scene()->renderer()->tileToPixelCoords(lot->x() + lot->width() / 2.0,
-                                                                                lot->y() + lot->height() / 2.0,
-                                                                                lot->level());
-            mCellDoc->view()->centerOn(scenePos);
-#endif
             level = lot->level();
         }
         if (level >= 0)
@@ -215,62 +208,6 @@ class LotsViewDelegate : public QStyledItemDelegate
              painter->restore();
          }
      }
-
-#if 0
-     QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
-                           const QModelIndex &index) const
-     {
-         if (index.column() == 2) {
-             QSpinBox *editor = new QSpinBox(parent);
-             editor->setMinimum(0);
-             editor->setMaximum(30);
-             return editor;
-         }
-         QWidget *widget = QStyledItemDelegate::createEditor(parent, option, index);
-#if 0
-         if (QLineEdit *editor = qobject_cast<QLineEdit*>(widget)) {
-             if (index.column() == 2)
-                 editor->setValidator(new QIntValidator(0, 30, editor));
-         }
-#endif
-         return widget;
-     }
-
-     void setEditorData(QWidget *editor, const QModelIndex &index) const
-     {
-         if (index.column() == 2) {
-             int value = index.model()->data(index, Qt::EditRole).toInt();
-             QSpinBox *spinBox = static_cast<QSpinBox*>(editor);
-             spinBox->setValue(value);
-             return;
-         }
-        QStyledItemDelegate::setEditorData(editor, index);
-     }
-
-     void setModelData(QWidget *editor, QAbstractItemModel *model,
-                       const QModelIndex &index) const
-     {
-         if (index.column() == 2) {
-             QSpinBox *spinBox = static_cast<QSpinBox*>(editor);
-             spinBox->interpretText();
-             int value = spinBox->value();
-             model->setData(index, value, Qt::EditRole);
-             return;
-         }
-         QStyledItemDelegate::setModelData(editor, model, index);
-
-     }
-
-     void updateEditorGeometry(QWidget *editor,
-         const QStyleOptionViewItem &option, const QModelIndex &index) const
-     {
-         // Don't place the editor over the checkbox
-         if (index.column() == 1)
-             editor->setGeometry(option.rect.adjusted(20, 0, 0, 0));
-         else
-             editor->setGeometry(option.rect);
-     }
-#endif
 
      QRect closeButtonRect(const QRect &itemViewRect)
      {
@@ -508,14 +445,9 @@ QVariant LotsModel::data(const QModelIndex &index, int role) const
         switch (role) {
         case Qt::CheckStateRole: {
             if (mCellDoc) {
-#if 1
                 // Don't check SubMapItem::isVisible because it changes during CellScene::updateCurrentLevelHighlight()
                 SubMapItem *sceneItem = mCellDoc->scene()->itemForLot(lot);
                 bool visible = sceneItem ? sceneItem->subMap()->isVisible() : false;
-#else
-                SubMapItem *sceneItem = mCellDoc->scene()->itemForLot(lot);
-                bool visible = sceneItem ? sceneItem->isVisible() : false;
-#endif
                 return visible ? Qt::Checked : Qt::Unchecked;
             }
             break;
@@ -622,21 +554,11 @@ bool LotsModel::dropMimeData(const QMimeData *data,
      if (column > 0)
          return false;
 
-#if 1
      Item *parentItem = toItem(parent);
      if (!parentItem || !parentItem->level)
          return false;
 
      WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-#else
-     int beginRow;
-     if (row != -1)
-         beginRow = row;
-     else if (parent.isValid())
-         beginRow = parent.row();
-     else
-         beginRow = rowCount(QModelIndex());
-#endif
 
      QByteArray encodedData = data->data(LotsModelMimeType);
      QDataStream stream(&encodedData, QIODevice::ReadOnly);

@@ -276,7 +276,6 @@ public:
     const QSet<ObjectItem*> &selectedObjectItems() const
     { return mSelectedObjectItems; }
 
-    int levelZOrder(int level);
     void setGraphicsSceneZOrder();
 
     void setSubMapVisible(WorldCellLot *lot, bool visible);

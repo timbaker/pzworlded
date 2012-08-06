@@ -40,44 +40,6 @@ World::World(int width, int height)
 
     // The nameless default type for WorldCellObjects
     mObjectTypes.append(mNullObjectType);
-
-#if 0
-    mObjectTypes.append(new ObjectType(QLatin1String("zone")));
-    mObjectTypes.append(new ObjectType(QLatin1String("roomDef")));
-    mObjectTypes.append(new ObjectType(QLatin1String("ZombieSpawn")));
-#endif
-
-#if 0
-    PropertyDef *pd = new PropertyDef;
-    pd->mName = QLatin1String("zombie-attraction");
-    pd->mDefaultValue = QLatin1String("0.1");
-    pd->mDescription = QLatin1String("Range 0.0 to 1.0.");
-    mPropertyDefs += pd;
-
-    pd = new PropertyDef;
-    pd->mName = QLatin1String("start-zombies-indoor");
-    pd->mDefaultValue = QLatin1String("2");
-    pd->mDescription = QLatin1String("Range 1 to 100.");
-    mPropertyDefs += pd;
-
-    PropertyTemplate *pt = new PropertyTemplate;
-    pt->mName = QLatin1String("LargeUrbanCenter");
-    pt->addProperty( 0, new Property(pd, QLatin1String("1.0")) );
-    pt->mDescription = QLatin1String("Typical zombie/survivor spawn rates in a major urban center.");
-    mPropertyTemplates += pt;
-
-    cellAt(50, 50)->addTemplate(0, pt);
-
-    pd = mPropertyDefs.findPropertyDef(QLatin1String("zombie-attraction"));
-    cellAt(50, 50)->addProperty(0, new Property(pd, QLatin1String("1000000")));
-
-    pd = mPropertyDefs.findPropertyDef(QLatin1String("start-zombies-indoor"));
-    cellAt(50, 50)->addProperty(1, new Property(pd, QLatin1String("80")));
-#endif
-
-#if 0
-    cellAt(52, 50)->insertObject(0, new WorldCellObject(cellAt(52,50), QLatin1String("Name"), QLatin1String("Type"), 10.5, 10.5, 0, 1, 1));
-#endif
 }
 
 World::~World()
