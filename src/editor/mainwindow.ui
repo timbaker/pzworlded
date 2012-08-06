@@ -253,9 +253,9 @@
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
+   <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
-   <addaction name="menuView"/>
    <addaction name="helpMenu"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
