@@ -91,6 +91,8 @@ public slots:
     void properyDefinitionsDialog();
     void templatesDialog();
 
+    void copy();
+    void paste();
     void copyCellsToClipboard();
     void pasteCellsFromClipboard();
 

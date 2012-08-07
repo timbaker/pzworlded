@@ -21,6 +21,7 @@
 #include "celldocument.h"
 #include "cellscene.h"
 #include "cellview.h"
+#include "copypastedialog.h"
 #include "documentmanager.h"
 #include "layersdock.h"
 #include "lotsdock.h"
@@ -171,6 +172,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionCloseAll, SIGNAL(triggered()), SLOT(closeAllFiles()));
     connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
 
+    connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
+    connect(ui->actionPaste, SIGNAL(triggered()), SLOT(paste()));
     connect(ui->actionCopyCells, SIGNAL(triggered()), SLOT(copyCellsToClipboard()));
     connect(ui->actionPasteCells, SIGNAL(triggered()), SLOT(pasteCellsFromClipboard()));
     connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
@@ -742,6 +745,25 @@ void MainWindow::templatesDialog()
         worldDoc = cellDoc->worldDocument();
     TemplatesDialog dialog(worldDoc, this);
     dialog.exec();
+}
+
+void MainWindow::copy()
+{
+    if (!mCurrentDocument)
+        return;
+    if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument()) {
+        CopyPasteDialog dialog(worldDoc, this);
+        dialog.exec();
+
+    }
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
+        CopyPasteDialog dialog(cellDoc, this);
+        dialog.exec();
+    }
+}
+
+void MainWindow::paste()
+{
 }
 
 void MainWindow::copyCellsToClipboard()

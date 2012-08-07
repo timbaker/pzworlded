@@ -81,7 +81,8 @@ SOURCES += main.cpp\
     layersdock.cpp \
     preferencesdialog.cpp \
     objectgroupsdialog.cpp \
-    colorbutton.cpp
+    colorbutton.cpp \
+    copypastedialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -122,7 +123,8 @@ HEADERS  += mainwindow.h \
     layersdock.h \
     preferencesdialog.h \
     objectgroupsdialog.h \
-    colorbutton.h
+    colorbutton.h \
+    copypastedialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -130,7 +132,8 @@ FORMS    += mainwindow.ui \
     templatesdialog.ui \
     objecttypesdialog.ui \
     preferencesdialog.ui \
-    objectgroupsdialog.ui
+    objectgroupsdialog.ui \
+    copypastedialog.ui
 
 OTHER_FILES +=
 
