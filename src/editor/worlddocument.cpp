@@ -450,6 +450,7 @@ void WorldDocument::changeObjectGroupColor(WorldObjectGroup *objGroup, const QCo
 void WorldDocument::reorderObjectGroup(WorldObjectGroup *og, int index)
 {
     int oldIndex = mWorld->objectGroups().indexOf(og);
+    Q_UNUSED(oldIndex)
     Q_ASSERT(index != oldIndex);
     Q_ASSERT(index >= 0 && index < mWorld->objectGroups().size());
     undoStack()->beginMacro(tr("Reorder Object Groups"));
