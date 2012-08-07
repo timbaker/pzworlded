@@ -129,6 +129,8 @@ public:
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
 
+    bool isNull() { return mName.isEmpty(); }
+
 private:
     QString mName;
 };
@@ -148,6 +150,8 @@ public:
 
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
+
+    bool isNull() { return mName.isEmpty(); }
 
     void setColor(const QColor &color) { mColor = color; }
     QColor color() const
