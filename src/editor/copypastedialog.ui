@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>486</width>
+    <width>555</width>
     <height>362</height>
    </rect>
   </property>
@@ -36,6 +36,9 @@
           <property name="text">
            <string>Property Definitions</string>
           </property>
+          <property name="checkState">
+           <enum>Checked</enum>
+          </property>
           <property name="flags">
            <set>ItemIsSelectable|ItemIsEnabled</set>
           </property>
@@ -43,6 +46,9 @@
          <item>
           <property name="text">
            <string>Templates</string>
+          </property>
+          <property name="checkState">
+           <enum>Checked</enum>
           </property>
           <property name="flags">
            <set>ItemIsSelectable|ItemIsEnabled</set>
@@ -52,6 +58,9 @@
           <property name="text">
            <string>Object Types</string>
           </property>
+          <property name="checkState">
+           <enum>Checked</enum>
+          </property>
           <property name="flags">
            <set>ItemIsSelectable|ItemIsEnabled</set>
           </property>
@@ -59,6 +68,9 @@
          <item>
           <property name="text">
            <string>Object Groups</string>
+          </property>
+          <property name="checkState">
+           <enum>Checked</enum>
           </property>
           <property name="flags">
            <set>ItemIsSelectable|ItemIsEnabled</set>
@@ -150,25 +162,40 @@
           <property name="text">
            <string>Properties</string>
           </property>
+          <property name="checkState">
+           <enum>Checked</enum>
+          </property>
          </item>
          <item>
           <property name="text">
            <string>Templates</string>
+          </property>
+          <property name="checkState">
+           <enum>Checked</enum>
           </property>
          </item>
          <item>
           <property name="text">
            <string>Lots</string>
           </property>
+          <property name="checkState">
+           <enum>Checked</enum>
+          </property>
          </item>
          <item>
           <property name="text">
            <string>Objects</string>
           </property>
+          <property name="checkState">
+           <enum>Checked</enum>
+          </property>
          </item>
          <item>
           <property name="text">
            <string>Map</string>
+          </property>
+          <property name="checkState">
+           <enum>Checked</enum>
           </property>
          </item>
         </widget>
@@ -185,9 +212,17 @@
              <property name="headerHidden">
               <bool>true</bool>
              </property>
+             <property name="columnCount">
+              <number>2</number>
+             </property>
              <column>
               <property name="text">
                <string notr="true">1</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string notr="true">2</string>
               </property>
              </column>
             </widget>

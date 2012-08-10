@@ -39,6 +39,7 @@ class CopyPasteDialog : public QDialog
 public:
     explicit CopyPasteDialog(WorldDocument *worldDoc, QWidget *parent = 0);
     explicit CopyPasteDialog(CellDocument *cellDoc, QWidget *parent = 0);
+    ~CopyPasteDialog();
 
 private:
     void setup();
@@ -63,21 +64,24 @@ private slots:
 
 private:
     enum CellCat {
-        Properties = 0,
+        FirstCellCat = 0,
+        Properties = FirstCellCat,
         CellTemplates,
         Lots,
         Objects,
-        Map
+        Map,
+        MaxCellCat
     };
 
     void showCellProperties();
+    void showCellTemplates();
     void showCellLots();
     void showCellObjects();
     void showCellMap();
 
 private slots:
     void cellCategoryChanged(int index);
-    void cellItemChanged(QTreeWidgetItem *item, int column);
+    void cellItemChanged(QTreeWidgetItem *viewItem, int column);
     void cellCheckAll();
     void cellCheckNone();
 
@@ -93,6 +97,22 @@ private:
 
     CellCat mCellCat;
     QList<WorldCell*> mCells;
+
+public: // public for Q_DECLARE_METATYPE
+    class Item;
+    class CellItem;
+    class LevelItem;
+    class LotItem;
+    class MapTypeItem;
+    class ObjectGroupItem;
+    class ObjectItem;
+    class PropertyItem;
+    class TemplateItem;
+
+    Item *mRootItem[MaxCellCat];
+
+    void addToTree(Item *parent, int index, Item *item, const QString &text,
+                   const QString &text2 = QString());
 };
 
 #endif // COPYPASTEDIALOG_H
