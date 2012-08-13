@@ -459,23 +459,35 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
         color = color.lighter();
     mRenderer->drawFancyRectangle(painter, tileBounds(), color, mObject->level());
 
+    /**
+      * There is something badly broken with the OpenGL line stroking when the
+      * painter's transform's dx/dy is a large-ish negative number. The lines
+      * sometimes aren't drawn on different edges (clipping issue?), sometimes
+      * the lines get double-width, and the dash pattern is messed up unless
+      * the view is scrolled to just the right position . It seems likely to be
+      * the result of some rounding issue. The cure is to translate the painter
+      * back to an origin of 0,0.
+      */
+    QRectF bounds = mBoundingRect.translated(-mBoundingRect.topLeft());
+    painter->translate(mBoundingRect.topLeft());
+
 #ifdef _DEBUG
     if (!mIsEditable)
-        painter->drawRect(mBoundingRect);
+        painter->drawRect(bounds);
 #endif
 
     if (mIsEditable) {
-        QLineF top(mBoundingRect.topLeft(), mBoundingRect.topRight());
-        QLineF left(mBoundingRect.topLeft(), mBoundingRect.bottomLeft());
-        QLineF right(mBoundingRect.topRight(), mBoundingRect.bottomRight());
-        QLineF bottom(mBoundingRect.bottomLeft(), mBoundingRect.bottomRight());
+        QLineF top(bounds.topLeft(), bounds.topRight());
+        QLineF left(bounds.topLeft(), bounds.bottomLeft());
+        QLineF right(bounds.topRight(), bounds.bottomRight());
+        QLineF bottom(bounds.bottomLeft(), bounds.bottomRight());
 
         QPen dashPen(Qt::DashLine);
-        dashPen.setDashOffset(qMax(qreal(0), x()));
+        dashPen.setDashOffset(qMax(qreal(0), mBoundingRect.x()));
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << top << bottom);
 
-        dashPen.setDashOffset(qMax(qreal(0), y()));
+        dashPen.setDashOffset(qMax(qreal(0), mBoundingRect.y()));
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << left << right);
     }
@@ -615,25 +627,27 @@ void SubMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
                                   color,
                                   mMap->levelOffset());
 
+    /* See note in ObjectItem::paint about OpenGL rendering bug. */
+    QRectF bounds = mBoundingRect.translated(-mBoundingRect.topLeft());
+    painter->translate(mBoundingRect.topLeft());
+
 #ifdef _DEBUG
     if (!mIsEditable)
-        painter->drawRect(mBoundingRect);
+        painter->drawRect(bounds);
 #endif
 
     if (mIsEditable) {
-//            painter->translate(pos());
-
-        QLineF top(mBoundingRect.topLeft(), mBoundingRect.topRight());
-        QLineF left(mBoundingRect.topLeft(), mBoundingRect.bottomLeft());
-        QLineF right(mBoundingRect.topRight(), mBoundingRect.bottomRight());
-        QLineF bottom(mBoundingRect.bottomLeft(), mBoundingRect.bottomRight());
+        QLineF top(bounds.topLeft(), bounds.topRight());
+        QLineF left(bounds.topLeft(), bounds.bottomLeft());
+        QLineF right(bounds.topRight(), bounds.bottomRight());
+        QLineF bottom(bounds.bottomLeft(), bounds.bottomRight());
 
         QPen dashPen(Qt::DashLine);
-        dashPen.setDashOffset(qMax(qreal(0), x()));
+        dashPen.setDashOffset(qMax(qreal(0), mBoundingRect.x()));
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << top << bottom);
 
-        dashPen.setDashOffset(qMax(qreal(0), y()));
+        dashPen.setDashOffset(qMax(qreal(0), mBoundingRect.y()));
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << left << right);
     }
