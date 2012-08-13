@@ -327,11 +327,6 @@ CopyPasteDialog::CopyPasteDialog(WorldDocument *worldDoc, QWidget *parent)
 {
     ui->setupUi(this);
 
-    QHeaderView *header = ui->cellTree->header();
-    header->setStretchLastSection(false);
-    header->setResizeMode(0, QHeaderView::ResizeToContents);
-    header->setResizeMode(1, QHeaderView::ResizeToContents);
-
     setup();
 }
 
@@ -355,6 +350,11 @@ CopyPasteDialog::~CopyPasteDialog()
 
 void CopyPasteDialog::setup()
 {
+    QHeaderView *header = ui->cellTree->header();
+    header->setStretchLastSection(false);
+    header->setResizeMode(0, QHeaderView::ResizeToContents);
+    header->setResizeMode(1, QHeaderView::ResizeToContents);
+
     ///// WORLD /////
 
     connect(ui->worldCat, SIGNAL(currentRowChanged(int)),
@@ -374,11 +374,15 @@ void CopyPasteDialog::setup()
     connect(ui->cellTree, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
             SLOT(cellItemChanged(QTreeWidgetItem*,int)));
 
-    mCells = mWorldDoc->selectedCells();
-    if (mCells.isEmpty()) {
-        foreach (WorldCell *cell, mWorld->cells()) {
-            if (!cell->isEmpty())
-                mCells += cell;
+    if (mCellDoc) {
+        mCells += mCellDoc->cell();
+    } else {
+        mCells = mWorldDoc->selectedCells();
+        if (mCells.isEmpty()) {
+            foreach (WorldCell *cell, mWorld->cells()) {
+                if (!cell->isEmpty())
+                    mCells += cell;
+            }
         }
     }
 
