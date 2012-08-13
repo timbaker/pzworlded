@@ -25,6 +25,8 @@ class BaseGraphicsScene;
 class BaseGraphicsView;
 class Zoomable;
 
+class QToolButton;
+
 class MiniMap : public QGraphicsView
 {
     Q_OBJECT
@@ -54,6 +56,8 @@ private:
     QGraphicsPolygonItem *mViewportItem;
     QGraphicsItem *mExtraItem;
     QFrame *mButtons;
+    QToolButton *mBiggerButton;
+    QToolButton *mSmallerButton;
     int mWidth;
 };
 

@@ -297,6 +297,8 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     , mViewportItem(0)
     , mExtraItem(0)
     , mButtons(new QFrame(this))
+    , mBiggerButton(new QToolButton(mButtons))
+    , mSmallerButton(new QToolButton(mButtons))
 {
     setFrameStyle(NoFrame);
 
@@ -327,7 +329,7 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     mButtons->setLayout(layout);
     mButtons->setVisible(false);
 
-    QToolButton *button = new QToolButton(mButtons);
+    QToolButton *button = mSmallerButton;
     button->setAutoRaise(true);
     button->setAutoRepeat(true);
     button->setIconSize(QSize(16, 16));
@@ -336,7 +338,7 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     connect(button, SIGNAL(clicked()), SLOT(smaller()));
     layout->addWidget(button);
 
-    button = new QToolButton(mButtons);
+    button = mBiggerButton;
     button->setAutoRaise(true);
     button->setAutoRepeat(true);
     button->setIconSize(QSize(16, 16));
@@ -365,7 +367,7 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
 void MiniMap::setScene(BaseGraphicsScene *scene)
 {
     mScene = scene;
-    sceneRectChanged(mScene->sceneRect());
+    widthChanged(mWidth);
     connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
 }
 
@@ -407,18 +409,21 @@ void MiniMap::sceneRectChanged(const QRectF &sceneRect)
 
 void MiniMap::bigger()
 {
-    Preferences::instance()->setMiniMapWidth(qMin(mWidth + 32, 512));
+    Preferences::instance()->setMiniMapWidth(qMin(mWidth + 32, MINIMAP_WIDTH_MAX));
 }
 
 void MiniMap::smaller()
 {
-    Preferences::instance()->setMiniMapWidth(qMax(mWidth - 32, 128));
+    Preferences::instance()->setMiniMapWidth(qMax(mWidth - 32, MINIMAP_WIDTH_MIN));
 }
 
 void MiniMap::widthChanged(int width)
 {
     mWidth = width;
     sceneRectChanged(mScene->sceneRect());
+
+    mSmallerButton->setEnabled(mWidth > MINIMAP_WIDTH_MIN);
+    mBiggerButton->setEnabled(mWidth < MINIMAP_WIDTH_MAX);
 }
 
 bool MiniMap::event(QEvent *event)

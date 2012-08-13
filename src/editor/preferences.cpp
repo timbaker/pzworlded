@@ -166,8 +166,8 @@ void Preferences::setShowMiniMap(bool show)
 
 void Preferences::setMiniMapWidth(int width)
 {
-    width = qMin(width, 512);
-    width = qMax(width, 128);
+    width = qMin(width, MINIMAP_WIDTH_MAX);
+    width = qMax(width, MINIMAP_WIDTH_MIN);
 
     if (mMiniMapWidth == width)
         return;

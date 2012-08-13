@@ -55,8 +55,11 @@ signals:
 
     void useOpenGLChanged(bool useOpenGL);
 
+#define MINIMAP_WIDTH_MIN 128
+#define MINIMAP_WIDTH_MAX 512
     void showMiniMapChanged(bool show);
     void miniMapWidthChanged(int width);
+
     void highlightCurrentLevelChanged(bool highlight);
     void mapsDirectoryChanged();
 
