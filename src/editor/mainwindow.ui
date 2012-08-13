@@ -404,7 +404,7 @@
   </action>
   <action name="actionProperties">
    <property name="text">
-    <string>Properties...</string>
+    <string>Property Definitions...</string>
    </property>
   </action>
   <action name="actionTemplates">
