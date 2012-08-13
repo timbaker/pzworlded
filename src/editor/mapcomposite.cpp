@@ -542,6 +542,13 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
         // When setting the bounds of the scene, make sure the highest level is included
         // in the sceneRect() so the grid won't be cut off.
         int maxLevel = levelRecursive() + mMaxLevel;
+        if (mParent /*!mMapInfo->isBeingEdited()*/) {
+            maxLevel = levelRecursive();
+            foreach (CompositeLayerGroup *layerGroup, mSortedLayerGroups) {
+                if (!layerGroup->bounds().isEmpty())
+                    maxLevel = levelRecursive() + layerGroup->level();
+            }
+        }
         if (maxLevel > renderer->maxLevel())
             maxLevel = renderer->maxLevel();
         unionSceneRects(bounds,
@@ -617,7 +624,7 @@ MapComposite::ZOrderList MapComposite::zOrder()
         ++layerIndex;
         int level;
         bool hasGroup = levelForLayer(layer, &level);
-        if (TileLayer *tl = layer->asTileLayer()) {
+        if (layer->isTileLayer()) {
             // The layer may not be in a group yet during renaming.
             if (hasGroup && mLayerGroups.contains(level)) {
                 if (!seenLevels.contains(level)) {
