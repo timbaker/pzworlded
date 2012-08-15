@@ -134,7 +134,6 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 
 WorldDocument::~WorldDocument()
 {
-    qDeleteAll(mCellClipboard);
     delete mWorld;
 }
 
@@ -382,6 +381,12 @@ void WorldDocument::addTemplate(const QString &name, const QString &desc)
     undoStack()->push(new AddTemplateToWorld(this, index, pt));
 }
 
+void WorldDocument::addTemplate(PropertyTemplate *pt)
+{
+    int index = mWorld->propertyTemplates().size();
+    undoStack()->push(new AddTemplateToWorld(this, index, pt));
+}
+
 void WorldDocument::removeTemplate(int index)
 {
     PropertyTemplate *remove = mWorld->propertyTemplates().at(index);
@@ -407,6 +412,21 @@ void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &nam
 void WorldDocument::changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc)
 {
     undoStack()->push(new ChangeTemplate(this, pt, name, desc));
+}
+
+void WorldDocument::changeTemplate(PropertyTemplate *pt, PropertyTemplate *other)
+{
+    for (int i = 0; i < pt->templates().size(); i++)
+        removeTemplate(pt, i);
+    foreach (PropertyTemplate *ptOther, other->templates())
+        addTemplate(pt, ptOther->mName);
+
+    for (int i = 0; i < pt->properties().size(); i++)
+        removeProperty(pt, i);
+    foreach (Property *pOther, other->properties())
+        addProperty(pt, pOther->mDefinition->mName, pOther->mValue); // FIXME: copy mNote
+
+    changeTemplate(pt, other->mName, other->mDescription);
 }
 
 void WorldDocument::addObjectGroup(WorldObjectGroup *newGroup)
@@ -465,6 +485,19 @@ void WorldDocument::changeObjectGroupDefType(WorldObjectGroup *og, ObjectType *o
     undoStack()->push(new SetObjectGroupDefType(this, og, ot));
 }
 
+void WorldDocument::changeObjectGroup(WorldObjectGroup *og, WorldObjectGroup *other)
+{
+    if (og->name() != other->name())
+        changeObjectGroupName(og, other->name());
+    if (og->color() != other->color())
+        changeObjectGroupColor(og, other->color());
+    if (og->type()->name() != other->type()->name()) {
+        ObjectType *ot = mWorld->objectTypes().find(other->type()->name());
+        Q_ASSERT(ot);
+        changeObjectGroupDefType(og, ot);
+    }
+}
+
 void WorldDocument::addObjectType(ObjectType *newType)
 {
     int index = mWorld->objectTypes().size();
@@ -506,6 +539,12 @@ void WorldDocument::changeObjectTypeName(ObjectType *objType, const QString &nam
     undoStack()->push(new SetObjectTypeName(this, objType, name));
 }
 
+void WorldDocument::changeObjectType(ObjectType *ot, ObjectType *other)
+{
+    if (ot->name() != other->name())
+        changeObjectTypeName(ot, other->name());
+}
+
 void WorldDocument::addTemplate(PropertyHolder *ph, const QString &name)
 {
     PropertyTemplate *pt = mWorld->propertyTemplates().find(name);
@@ -522,7 +561,13 @@ void WorldDocument::removeTemplate(PropertyHolder *ph, int index)
 void WorldDocument::addProperty(PropertyHolder *ph, const QString &name)
 {
     PropertyDef *pd = mWorld->propertyDefinitions().findPropertyDef(name);
-    Property *p = new Property(pd, pd->mDefaultValue);
+    addProperty(ph, name, pd->mDefaultValue);
+}
+
+void WorldDocument::addProperty(PropertyHolder *ph, const QString &name, const QString &value)
+{
+    PropertyDef *pd = mWorld->propertyDefinitions().findPropertyDef(name);
+    Property *p = new Property(pd, value);
     int index = ph->properties().size();
     undoStack()->push(new AddPropertyToPH(this, ph, index, p));
 }
@@ -536,22 +581,6 @@ void WorldDocument::removeProperty(PropertyHolder *ph, int index)
 void WorldDocument::setPropertyValue(PropertyHolder *ph, Property *p, const QString &value)
 {
     undoStack()->push(new SetPropertyValue(this, ph, p, value));
-}
-
-void WorldDocument::copyCellsToClipboard(const QList<WorldCell *> &cells)
-{
-    clearCellClipboard();
-    foreach (WorldCell *cell, cells) {
-        WorldCellContents *contents = new WorldCellContents(cell, false);
-        mCellClipboard += contents;
-    }
-    emit cellClipboardChanged();
-}
-
-void WorldDocument::clearCellClipboard()
-{
-    qDeleteAll(mCellClipboard);
-    mCellClipboard.clear();
 }
 
 void WorldDocument::removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd)
@@ -573,20 +602,6 @@ void WorldDocument::removeTemplate(PropertyHolder *ph, PropertyTemplate *pt)
         undoStack()->push(new RemoveTemplateFromPH(this, ph, index, pt));
 }
 
-void WorldDocument::removeTemplateFromCellClipboard(int index)
-{
-    PropertyTemplate *pt = mWorld->propertyTemplates().at(index);
-    foreach (WorldCellContents *contents, mCellClipboard)
-        contents->removeTemplate(pt);
-}
-
-void WorldDocument::removePropertyDefFromCellClipboard(int index)
-{
-    PropertyDef *pd = mWorld->propertyDefinitions().at(index);
-    foreach (WorldCellContents *contents, mCellClipboard)
-        contents->removePropertyDef(pd);
-}
-
 /////
 
 WorldDocumentUndoRedo::WorldDocumentUndoRedo(WorldDocument *worldDoc)
@@ -604,7 +619,6 @@ void WorldDocumentUndoRedo::addPropertyDefinition(int index, PropertyDef *pd)
 PropertyDef *WorldDocumentUndoRedo::removePropertyDefinition(int index)
 {
     emit propertyDefinitionAboutToBeRemoved(index);
-    mWorldDoc->removePropertyDefFromCellClipboard(index);
     return mWorld->removePropertyDefinition(index);
 }
 
@@ -645,7 +659,6 @@ void WorldDocumentUndoRedo::addTemplateToWorld(int index, PropertyTemplate *pt)
 PropertyTemplate *WorldDocumentUndoRedo::removeTemplateFromWorld(int index)
 {
     emit templateAboutToBeRemoved(index);
-    mWorldDoc->removeTemplateFromCellClipboard(index);
     return mWorld->removeTemplate(index);
 }
 

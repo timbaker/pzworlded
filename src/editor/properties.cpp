@@ -19,6 +19,15 @@
 
 /////
 
+bool PropertyDef::operator ==(const PropertyDef &other) const
+{
+    return mName == other.mName &&
+            mDefaultValue == other.mDefaultValue &&
+            mDescription == other.mDescription;
+}
+
+/////
+
 PropertyDef *PropertyDefList::findPropertyDef(const QString &name) const
 {
     const_iterator it = constBegin();
@@ -46,6 +55,15 @@ PropertyDefList PropertyDefList::sorted() const
         ++it;
     }
     return sorted;
+}
+
+/////
+
+bool Property::operator ==(const Property &other) const
+{
+    return *mDefinition == *other.mDefinition &&
+            mValue == other.mValue &&
+            mNote == other.mNote;
 }
 
 /////
@@ -98,6 +116,48 @@ PropertyList PropertyList::sorted() const
     return sorted;
 }
 
+bool PropertyList::operator ==(const PropertyList &other) const
+{
+    if (size() != other.size())
+        return false;
+    const_iterator it = constBegin();
+    const_iterator it2 = other.constBegin();
+    while (it != constEnd()) {
+        Property *p = *it;
+        Property *p2 = *it2;
+        if (*p != *p2)
+            return false;
+        it++;
+        it2++;
+    }
+    return true;
+}
+
+/////
+
+#include "world.h"
+PropertyTemplate::PropertyTemplate(World *world, PropertyTemplate *other)
+    : mName(other->mName)
+    , mDescription(other->mDescription)
+{
+    foreach (PropertyTemplate *pt, other->templates())
+        addTemplate(templates().size(), new PropertyTemplate(world, pt));
+
+    foreach (Property *pOther, other->properties()) {
+        PropertyDef* pd = world->propertyDefinitions().findPropertyDef(pOther->mDefinition->mName);
+        Property *p = new Property(pd, pOther->mValue);
+        p->mNote = pOther->mNote;
+        addProperty(properties().size(), p);
+    }
+}
+
+bool PropertyTemplate::operator ==(const PropertyTemplate &other) const
+{
+    return PropertyHolder::operator ==(other) &&
+            (mName == other.mName) &&
+            (mDescription == other.mDescription);
+}
+
 /////
 
 PropertyTemplate *PropertyTemplateList::find(const QString &name) const
@@ -127,6 +187,23 @@ PropertyTemplateList PropertyTemplateList::sorted() const
         it++;
     }
     return sorted;
+}
+
+bool PropertyTemplateList::operator ==(const PropertyTemplateList &other) const
+{
+    if (size() != other.size())
+        return false;
+    const_iterator it = constBegin();
+    const_iterator it2 = other.constBegin();
+    while (it != constEnd()) {
+        PropertyTemplate *pt = *it;
+        PropertyTemplate *pt2 = *it2;
+        if (*pt != *pt2)
+            return false;
+        it++;
+        it2++;
+    }
+    return true;
 }
 
 /////
@@ -198,4 +275,13 @@ void PropertyHolder::setTemplates(const PropertyTemplateList &templates)
 Property *PropertyHolder::removeProperty(int index)
 {
     return mProperties.takeAt(index);
+}
+
+bool PropertyHolder::operator ==(const PropertyHolder &other) const
+{
+    if (mTemplates != other.mTemplates)
+        return false;
+    if (mProperties != other.mProperties)
+        return false;
+    return true;
 }

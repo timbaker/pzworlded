@@ -39,16 +39,8 @@ class WorldCellContents;
 class WorldCellLot
 {
 public:
-    WorldCellLot(WorldCell *cell, const QString &name, int x, int y, int z, int width, int height)
-        : mName(name)
-        , mX(x)
-        , mY(y)
-        , mZ(z)
-        , mWidth(width)
-        , mHeight(height)
-        , mCell(cell)
-    {
-    }
+    WorldCellLot(WorldCell *cell, const QString &name, int x, int y, int z, int width, int height);
+    WorldCellLot(WorldCell *cell, WorldCellLot *other);
 
     void setMapName(const QString &mapName) { mName = mapName; }
     const QString &mapName() const { return mName; }
@@ -125,11 +117,16 @@ class ObjectType
 public:
     ObjectType();
     ObjectType(const QString &name);
+    ObjectType(World *world, ObjectType *other);
 
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
 
     bool isNull() { return mName.isEmpty(); }
+
+    bool operator ==(const ObjectType &other) const;
+    bool operator !=(const ObjectType &other) const
+    { return !(*this == other); }
 
 private:
     QString mName;
@@ -147,6 +144,7 @@ public:
     WorldObjectGroup(World *world);
     WorldObjectGroup(World *world, const QString &name);
     WorldObjectGroup(World *world, const QString &name, const QColor &color);
+    WorldObjectGroup(World *world, WorldObjectGroup *other);
 
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
@@ -165,6 +163,10 @@ public:
     void setType(ObjectType *type) { mType = type; }
     ObjectType *type() { return mType; }
 
+    bool operator ==(const WorldObjectGroup &other) const;
+    bool operator !=(const WorldObjectGroup &other) const
+    { return !(*this == other); }
+
 private:
     QString mName;
     QColor mColor;
@@ -180,8 +182,11 @@ class WorldCellObject : public PropertyHolder
 public:
     WorldCellObject(WorldCell *cell,
                     const QString &name, ObjectType *type,
+                    WorldObjectGroup *group,
                     qreal x, qreal y, int level,
                     qreal width, qreal height);
+
+    WorldCellObject(WorldCell *cell, WorldCellObject *other);
 
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
@@ -236,7 +241,8 @@ public:
         const_iterator it = constBegin();
         while (it != constEnd()) {
             WorldCellObject *obj = (*it);
-            copy += new WorldCellObject(cell, obj->name(), obj->type(), obj->x(), obj->y(),
+            copy += new WorldCellObject(cell, obj->name(), obj->type(),
+                                        obj->group(), obj->x(), obj->y(),
                                         obj->level(), obj->width(), obj->height());
             it++;
         }
@@ -387,16 +393,6 @@ public:
     { return mObjects; }
 
     /**
-      * Removal of templates and properties is needed
-      * only by the cell clipboard.
-      */
-    void removeTemplate(PropertyTemplate *pt)
-    { mTemplates.removeAll(pt); }
-
-    void removePropertyDef(PropertyDef *pd)
-    { mProperties.removeAll(pd); }
-
-    /**
       * This is for the convenience of the cell clipboard.
       * For pasting cells, at least the relative positions of
       * cells in the clipboard is needed.
@@ -405,6 +401,8 @@ public:
     { mPos = pos; }
     QPoint pos() const
     { return mPos; }
+
+    void swapWorld(World *world);
 
 private:
     PropertyTemplateList mTemplates;

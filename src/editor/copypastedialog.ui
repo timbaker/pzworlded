@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -40,7 +40,7 @@
            <enum>Checked</enum>
           </property>
           <property name="flags">
-           <set>ItemIsSelectable|ItemIsEnabled</set>
+           <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
           </property>
          </item>
          <item>
@@ -51,7 +51,7 @@
            <enum>Checked</enum>
           </property>
           <property name="flags">
-           <set>ItemIsSelectable|ItemIsEnabled</set>
+           <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
           </property>
          </item>
          <item>
@@ -62,7 +62,7 @@
            <enum>Checked</enum>
           </property>
           <property name="flags">
-           <set>ItemIsSelectable|ItemIsEnabled</set>
+           <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
           </property>
          </item>
          <item>
@@ -73,7 +73,7 @@
            <enum>Checked</enum>
           </property>
           <property name="flags">
-           <set>ItemIsSelectable|ItemIsEnabled</set>
+           <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
           </property>
          </item>
         </widget>
@@ -96,9 +96,17 @@
              <property name="headerHidden">
               <bool>true</bool>
              </property>
+             <property name="columnCount">
+              <number>2</number>
+             </property>
              <column>
               <property name="text">
                <string notr="true">1</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string notr="true">2</string>
               </property>
              </column>
             </widget>

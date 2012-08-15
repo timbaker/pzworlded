@@ -20,6 +20,7 @@
 #include "basegraphicsview.h"
 #include "celldocument.h"
 #include "cellscene.h"
+#include "clipboard.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "preferences.h"
@@ -209,11 +210,10 @@ void CreateObjectTool::startNewMapObject(const QPointF &pos)
 {
     WorldObjectGroup *og = mScene->document()->currentObjectGroup();
     WorldCellObject *obj = new WorldCellObject(mScene->cell(),
-                                               QString(), og->type(),
+                                               QString(), og->type(), og,
                                                pos.x(), pos.y(),
                                                mScene->document()->currentLevel(),
                                                MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
-    obj->setGroup(og);
     mItem = new ObjectItem(obj, mScene);
     mItem->setZValue(10000);
     mScene->addItem(mItem);
@@ -1146,14 +1146,14 @@ void PasteCellsTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : 0;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(cellClipboardChanged()),
+        connect(Clipboard::instance(), SIGNAL(clipboardChanged()),
                 SLOT(updateEnabledState()));
     }
 }
 
 void PasteCellsTool::updateEnabledState()
 {
-    setEnabled(mScene && mScene->worldDocument()->cellsInClipboardCount());
+    setEnabled(mScene && Clipboard::instance()->cellsInClipboardCount());
 }
 
 void PasteCellsTool::keyPressEvent(QKeyEvent *event)
@@ -1202,7 +1202,7 @@ void PasteCellsTool::startMoving()
 {
     QRectF tileBounds;
 
-    foreach (WorldCellContents *contents, mScene->worldDocument()->cellsInClipboard()) {
+    foreach (WorldCellContents *contents, Clipboard::instance()->cellsInClipboard()) {
         PasteCellItem *dndItem = new PasteCellItem(contents, mScene);
         mDnDItems.append(dndItem);
         dndItem->setZValue(1000);
@@ -1269,11 +1269,63 @@ void PasteCellsTool::pasteCells(const QPointF &pos)
     int count = mDnDItems.size();
     undoStack->beginMacro(tr("Paste %1 Cell%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
     undoStack->push(new ProgressBegin(tr("Pasting Cells"))); // in case of multiple loadMap() calls
+#if 1
+    World *world = Clipboard::instance()->world();
+    WorldDocument *worldDoc = mScene->worldDocument();
+    foreach (PropertyDef *pdClip, world->propertyDefinitions()) {
+        PropertyDef *pd = mScene->world()->propertyDefinitions().findPropertyDef(pdClip->mName);
+        if (pd) {
+            if (*pd != *pdClip)
+                worldDoc->changePropertyDefinition(pd, pdClip->mName,
+                                                   pdClip->mDefaultValue,
+                                                   pdClip->mDescription);
+        } else {
+            pd = new PropertyDef();
+            *pd = *pdClip;
+            worldDoc->addPropertyDefinition(pd);
+        }
+    }
+    foreach (PropertyTemplate *ptClip, world->propertyTemplates()) {
+        PropertyTemplate *pt = mScene->world()->propertyTemplates().find(ptClip->mName);
+        if (pt) {
+            if (*pt != *ptClip)
+                worldDoc->changeTemplate(pt, ptClip);
+        } else {
+            pt = new PropertyTemplate(mScene->world(), ptClip);
+            worldDoc->addTemplate(pt);
+        }
+    }
+    foreach (ObjectType *otClip, world->objectTypes()) {
+        ObjectType *ot = mScene->world()->objectTypes().find(otClip->name());
+        if (ot) {
+            if (*ot != *otClip)
+                worldDoc->changeObjectType(ot, otClip);
+        } else {
+            ot = new ObjectType(mScene->world(), otClip);
+            worldDoc->addObjectType(ot);
+        }
+    }
+    foreach (WorldObjectGroup *ogClip, world->objectGroups()) {
+        WorldObjectGroup *og = mScene->world()->objectGroups().find(ogClip->name());
+        if (og) {
+            if (*og != *ogClip)
+                worldDoc->changeObjectGroup(og, ogClip);
+        } else {
+            og = new WorldObjectGroup(mScene->world(), ogClip);
+            worldDoc->addObjectGroup(og);
+        }
+    }
+
+#endif
     QList<WorldCell*> newSelection;
     foreach (PasteCellItem *item, mDnDItems) {
         QPoint newPos = item->cellPos() + dropCellPos - startCellPos;
         WorldCell *replace = mScene->world()->cellAt(newPos);
         WorldCellContents *contents = new WorldCellContents(item->contents(), replace);
+#if 1
+        // PropertyDefs, Templates, ObjectTypes, ObjectGroups -> from clipboard-world to document-world
+        contents->swapWorld(mScene->world());
+#endif
         undoStack->push(new ReplaceCell(mScene->worldDocument(), replace, contents));
         newSelection += mScene->world()->cellAt(newPos);
     }

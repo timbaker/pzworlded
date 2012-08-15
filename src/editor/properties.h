@@ -28,6 +28,10 @@ public:
     QString mName;
     QString mDefaultValue;
     QString mDescription;
+
+    bool operator ==(const PropertyDef &other) const;
+    bool operator !=(const PropertyDef &other) const
+    { return !(*this == other); }
 };
 
 class PropertyDefList : public QList<PropertyDef*>
@@ -46,6 +50,10 @@ public:
     {
     }
 
+    bool operator ==(const Property &other) const;
+    bool operator !=(const Property &other) const
+    { return !(*this == other); }
+
     PropertyDef *mDefinition;
     QString mValue;
     QString mNote;
@@ -60,6 +68,10 @@ public:
 
     PropertyList clone() const;
     PropertyList sorted() const;
+
+    bool operator ==(const PropertyList &other) const;
+    bool operator !=(const PropertyList &other) const
+    { return !(*this == other); }
 };
 
 class PropertyTemplate;
@@ -68,6 +80,10 @@ class PropertyTemplateList : public QList<PropertyTemplate*>
 public:
     PropertyTemplate *find(const QString &name) const;
     PropertyTemplateList sorted() const;
+
+    bool operator ==(const PropertyTemplateList &other) const;
+    bool operator !=(const PropertyTemplateList &other) const
+    { return !(*this == other); }
 };
 
 class PropertyHolder
@@ -93,6 +109,10 @@ public:
 
     virtual bool isTemplate() const { return false; }
 
+    bool operator ==(const PropertyHolder &other) const;
+    bool operator !=(const PropertyHolder &other) const
+    { return !(*this == other); }
+
 private:
     PropertyTemplateList mTemplates;
     PropertyList mProperties;
@@ -100,9 +120,13 @@ private:
     friend class WorldCellContents;
 };
 
+class World;
 class PropertyTemplate : public PropertyHolder
 {
 public:
+    PropertyTemplate() {}
+    PropertyTemplate(World *world, PropertyTemplate *other);
+
     virtual bool isTemplate() const { return true; }
 
     bool canAddTemplate(PropertyTemplate *pt) const
@@ -121,6 +145,8 @@ public:
         }
         return set;
     }
+
+    bool operator ==(const PropertyTemplate &other) const;
 
     QString mName;
     QString mDescription;

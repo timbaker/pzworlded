@@ -20,9 +20,10 @@
 #include "world.h"
 
 WorldCellObject::WorldCellObject(WorldCell *cell, const QString &name, ObjectType *type,
-                                 qreal x, qreal y, int level, qreal width, qreal height)
+                                 WorldObjectGroup *group, qreal x, qreal y,
+                                 int level, qreal width, qreal height)
     : mName(name)
-    , mGroup(cell->world()->nullObjectGroup())
+    , mGroup(group)
     , mType(type)
     , mX(x)
     , mY(y)
@@ -32,4 +33,23 @@ WorldCellObject::WorldCellObject(WorldCell *cell, const QString &name, ObjectTyp
     , mCell(cell)
     , mVisible(true)
 {
+}
+
+WorldCellObject::WorldCellObject(WorldCell *cell, WorldCellObject *other)
+    : mName(other->name())
+    , mX(other->x())
+    , mY(other->y())
+    , mZ(other->level())
+    , mWidth(other->width())
+    , mHeight(other->height())
+    , mCell(cell)
+    , mVisible(other->isVisible())
+{
+    World *world = cell->world();
+
+    WorldObjectGroup *og = world->objectGroups().find(other->group()->name());
+    mGroup = og ? og : world->nullObjectGroup();
+
+    ObjectType *ot = world->objectTypes().find(other->type()->name());
+    mType = ot ? ot : world->nullObjectType();
 }

@@ -40,7 +40,9 @@ public:
         MapType,
         Object,
         ObjectGroup,
+        ObjectType_Type,
         PropertyType,
+        PropertyDefType,
         TemplateType
     };
 
@@ -97,7 +99,10 @@ public:
     typedef CopyPasteDialog::MapTypeItem MapTypeItem;
     typedef CopyPasteDialog::ObjectGroupItem ObjectGroupItem;
     typedef CopyPasteDialog::ObjectItem ObjectItem;
+    typedef CopyPasteDialog::ObjectGroupItem ObjectGroupItem;
+    typedef CopyPasteDialog::ObjectTypeItem ObjectTypeItem;
     typedef CopyPasteDialog::PropertyItem PropertyItem;
+    typedef CopyPasteDialog::PropertyDefItem PropertyDefItem;
     typedef CopyPasteDialog::TemplateItem TemplateItem;
 
     CellItem *asCellItem();
@@ -106,7 +111,9 @@ public:
     MapTypeItem *asMapItem();
     ObjectItem *asObjectItem();
     ObjectGroupItem *asObjectGroupItem();
+    ObjectTypeItem *asObjectTypeItem();
     PropertyItem *asPropertyItem();
+    PropertyDefItem *asPropertyDefItem();
     TemplateItem *asTemplateItem();
 
     Item *mParent;
@@ -213,6 +220,19 @@ public:
     QList<ObjectItem*> mObjects;
 };
 
+
+class CopyPasteDialog::ObjectTypeItem : public CopyPasteDialog::Item
+{
+public:
+    ObjectTypeItem(ObjectType *ot)
+        : Item(ObjectType_Type)
+        , mType(ot)
+    {
+    }
+
+    ObjectType *mType;
+};
+
 class CopyPasteDialog::PropertyItem : public CopyPasteDialog::Item
 {
 public:
@@ -223,6 +243,18 @@ public:
     }
 
     Property *mProperty;
+};
+
+class CopyPasteDialog::PropertyDefItem : public CopyPasteDialog::Item
+{
+public:
+    PropertyDefItem(PropertyDef *pd)
+        : Item(PropertyDefType)
+        , mPropertyDef(pd)
+    {
+    }
+
+    PropertyDef *mPropertyDef;
 };
 
 class CopyPasteDialog::TemplateItem : public CopyPasteDialog::Item
@@ -269,9 +301,19 @@ CopyPasteDialog::Item::ObjectGroupItem *CopyPasteDialog::Item::asObjectGroupItem
     return (mType == ObjectGroup) ? static_cast<ObjectGroupItem*>(this) : 0;
 }
 
+CopyPasteDialog::Item::ObjectTypeItem *CopyPasteDialog::Item::asObjectTypeItem()
+{
+    return (mType == ObjectType_Type) ? static_cast<ObjectTypeItem*>(this) : 0;
+}
+
 CopyPasteDialog::Item::PropertyItem *CopyPasteDialog::Item::asPropertyItem()
 {
     return (mType == PropertyType) ? static_cast<PropertyItem*>(this) : 0;
+}
+
+CopyPasteDialog::Item::PropertyDefItem *CopyPasteDialog::Item::asPropertyDefItem()
+{
+    return (mType == PropertyDefType) ? static_cast<PropertyDefItem*>(this) : 0;
 }
 
 CopyPasteDialog::Item::TemplateItem *CopyPasteDialog::Item::asTemplateItem()
@@ -344,13 +386,181 @@ CopyPasteDialog::CopyPasteDialog(CellDocument *cellDoc, QWidget *parent)
 
 CopyPasteDialog::~CopyPasteDialog()
 {
+    for (int c = FirstWorldCat; c < MaxWorldCat; c++)
+        delete mWorldRootItem[c];
     for (int c = FirstCellCat; c < MaxCellCat; c++)
-        delete mRootItem[c];
+        delete mCellRootItem[c];
+}
+
+World *CopyPasteDialog::toWorld() const
+{
+    World *world = new World(mWorldDoc->world()->width(),
+                             mWorldDoc->world()->height());
+
+    if (ui->worldCat->item(PropertyDefs)->checkState() == Qt::Checked) {
+        Item *root = mWorldRootItem[PropertyDefs];
+        foreach (Item *item, root->children()) {
+            PropertyDefItem *pdItem = item->asPropertyDefItem();
+            if (pdItem->mChecked) {
+                PropertyDef *pd = new PropertyDef();
+                *pd = *pdItem->mPropertyDef;
+                world->addPropertyDefinition(world->propertyDefinitions().size(), pd);
+            }
+        }
+    }
+    if (ui->worldCat->item(Templates)->checkState() == Qt::Checked) {
+        Item *root = mWorldRootItem[Templates];
+        foreach (Item *item, root->children()) {
+            TemplateItem *ptItem = item->asTemplateItem();
+            if (PropertyTemplate *pt = cloneTemplate(world, ptItem->mTemplate))
+                world->addPropertyTemplate(world->propertyTemplates().size(), pt);
+        }
+    }
+    /* Types must come before Groups. */
+    if (ui->worldCat->item(ObjectTypes)->checkState() == Qt::Checked) {
+        Item *root = mWorldRootItem[ObjectTypes];
+        foreach (Item *item, root->children()) {
+            ObjectTypeItem *otItem = item->asObjectTypeItem();
+            if (otItem->mChecked) {
+                ObjectType *ot = new ObjectType(otItem->mType->name());
+                world->insertObjectType(world->objectTypes().size(), ot);
+            }
+        }
+    }
+    if (ui->worldCat->item(ObjectGroups)->checkState() == Qt::Checked) {
+        Item *root = mWorldRootItem[ObjectGroups];
+        foreach (Item *item, root->children()) {
+            ObjectGroupItem *ogItem = item->asObjectGroupItem();
+            if (ogItem->mChecked) {
+                WorldObjectGroup *og = new WorldObjectGroup(world,
+                                                            ogItem->mGroup);
+                world->insertObjectGroup(0, og);
+            }
+        }
+    }
+
+    /////
+
+    if (ui->cellCat->item(Map)->checkState() == Qt::Checked) {
+        Item *root = mCellRootItem[Map];
+        foreach (Item *item0, root->children()) {
+            CellItem *cellItem = item0->asCellItem();
+            if (!cellItem->mChecked)
+                continue;
+            WorldCell *cell = world->cellAt(cellItem->mCell->x(),
+                                             cellItem->mCell->y());
+            MapTypeItem *mapItem = cellItem->children(Item::MapType).first()->asMapItem();
+            if (mapItem->mChecked)
+                cell->setMapFilePath(mapItem->mName);
+        }
+    }
+
+    if (ui->cellCat->item(Properties)->checkState() == Qt::Checked) {
+        Item *root = mCellRootItem[Properties];
+        foreach (Item *item0, root->children()) {
+            CellItem *cellItem = item0->asCellItem();
+            if (!cellItem->mChecked)
+                continue;
+            WorldCell *cell = world->cellAt(cellItem->mCell->x(),
+                                             cellItem->mCell->y());
+            foreach (Item *item1, cellItem->children()) {
+                PropertyItem *pItem = item1->asPropertyItem();
+                if (!pItem->mChecked)
+                    continue;
+                if (Property *p = cloneProperty(world, pItem->mProperty))
+                    cell->addProperty(cell->properties().size(), p);
+            }
+        }
+    }
+
+    if (ui->cellCat->item(CellTemplates)->checkState() == Qt::Checked) {
+        Item *root = mCellRootItem[CellTemplates];
+        foreach (Item *item0, root->children()) {
+            CellItem *cellItem = item0->asCellItem();
+            if (!cellItem->mChecked)
+                continue;
+            WorldCell *cell = world->cellAt(cellItem->mCell->x(),
+                                             cellItem->mCell->y());
+            foreach (Item *item1, cellItem->children()) {
+                TemplateItem *ptItem = item1->asTemplateItem();
+                if (!ptItem->mChecked)
+                    continue;
+                if (PropertyTemplate *pt = cloneTemplate(world, ptItem->mTemplate))
+                    cell->addTemplate(cell->templates().size(), pt);
+            }
+        }
+    }
+
+    if (ui->cellCat->item(Lots)->checkState() == Qt::Checked) {
+        Item *root = mCellRootItem[Lots];
+        foreach (Item *item0, root->children()) {
+            CellItem *cellItem = item0->asCellItem();
+            if (!cellItem->mChecked)
+                continue;
+
+            QList<LevelItem*> levelItems;
+            foreach (LevelItem *lvItem, cellItem->mLevels.values())
+                levelItems.insert(0, lvItem);
+            foreach (LevelItem *lvItem, levelItems) {
+                if (!lvItem->mChecked)
+                    continue;
+
+                WorldCell *cell = world->cellAt(cellItem->mCell->x(),
+                                                cellItem->mCell->y());
+                foreach (LotItem *lotItem, lvItem->mLots) {
+                    if (!lotItem->mChecked)
+                        continue;
+                    WorldCellLot *lot = new WorldCellLot(cell,
+                                                         lotItem->mLot);
+                    cell->insertLot(0, lot);
+                }
+            }
+        }
+    }
+
+    if (ui->cellCat->item(Objects)->checkState() == Qt::Checked) {
+        Item *root = mCellRootItem[Objects];
+        foreach (Item *item0, root->children()) {
+            CellItem *cellItem = item0->asCellItem();
+            if (!cellItem->mChecked)
+                continue;
+
+            QList<LevelItem*> levelItems;
+            foreach (LevelItem *lvItem, cellItem->mLevels.values())
+                levelItems.insert(0, lvItem);
+            foreach (LevelItem *lvItem, levelItems) {
+                if (!lvItem->mChecked)
+                    continue;
+
+                WorldCell *cell = world->cellAt(cellItem->mCell->x(),
+                                                 cellItem->mCell->y());
+                foreach (ObjectGroupItem *ogItem, lvItem->mObjectGroups) {
+                    if (!ogItem->mChecked)
+                        continue;
+                    foreach (Item *item3, ogItem->children()) {
+                        ObjectItem *objItem = item3->asObjectItem();
+                        if (!objItem->mChecked)
+                            continue;
+                        WorldCellObject *obj = new WorldCellObject(cell,
+                                                                   objItem->mObject);
+                        cell->insertObject(0, obj);
+                    }
+                }
+            }
+        }
+    }
+
+    return world;
 }
 
 void CopyPasteDialog::setup()
 {
-    QHeaderView *header = ui->cellTree->header();
+    QHeaderView *header = ui->worldTree->header();
+    header->setStretchLastSection(false);
+    header->setResizeMode(0, QHeaderView::ResizeToContents);
+    header->setResizeMode(1, QHeaderView::ResizeToContents);
+
+    header = ui->cellTree->header();
     header->setStretchLastSection(false);
     header->setResizeMode(0, QHeaderView::ResizeToContents);
     header->setResizeMode(1, QHeaderView::ResizeToContents);
@@ -364,8 +574,30 @@ void CopyPasteDialog::setup()
     connect(ui->worldCheckAll, SIGNAL(clicked()), SLOT(worldCheckAll()));
     connect(ui->worldCheckNone, SIGNAL(clicked()), SLOT(worldCheckNone()));
 
-    foreach (PropertyDef *pd, mWorld->propertyDefinitions())
-        mCheckedPropertyDefs[pd] = true;
+    mWorldRootItem[PropertyDefs] = new Item();
+    mWorldRootItem[Templates] = new Item();
+    mWorldRootItem[ObjectTypes] = new Item();
+    mWorldRootItem[ObjectGroups] = new Item();
+
+    Item *root = mWorldRootItem[PropertyDefs];
+    foreach (PropertyDef *pd, mWorld->propertyDefinitions().sorted())
+        root->insertChild(-1, new PropertyDefItem(pd));
+
+    root = mWorldRootItem[Templates];
+    foreach (PropertyTemplate *pt, mWorld->propertyTemplates().sorted())
+        root->insertChild(-1, new TemplateItem(pt));
+
+    root = mWorldRootItem[ObjectTypes];
+    foreach (ObjectType *ot, mWorld->objectTypes()) {
+        if (ot->isNull()) continue;
+        root->insertChild(-1, new ObjectTypeItem(ot));
+    }
+
+    root = mWorldRootItem[ObjectGroups];
+    foreach (WorldObjectGroup *og, mWorld->objectGroups()) {
+        if (og->isNull()) continue;
+        root->insertChild(0, new ObjectGroupItem(og));
+    }
 
     ///// CELLS /////
 
@@ -373,6 +605,8 @@ void CopyPasteDialog::setup()
             SLOT(cellCategoryChanged(int)));
     connect(ui->cellTree, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
             SLOT(cellItemChanged(QTreeWidgetItem*,int)));
+    connect(ui->cellCheckAll, SIGNAL(clicked()), SLOT(cellCheckAll()));
+    connect(ui->cellCheckNone, SIGNAL(clicked()), SLOT(cellCheckNone()));
 
     if (mCellDoc) {
         mCells += mCellDoc->cell();
@@ -386,30 +620,30 @@ void CopyPasteDialog::setup()
         }
     }
 
-    mRootItem[CellTemplates] = new Item();
-    mRootItem[Lots] = new Item();
-    mRootItem[Map] = new Item();
-    mRootItem[Objects] = new Item();
-    mRootItem[Properties] = new Item();
+    mCellRootItem[CellTemplates] = new Item();
+    mCellRootItem[Lots] = new Item();
+    mCellRootItem[Map] = new Item();
+    mCellRootItem[Objects] = new Item();
+    mCellRootItem[Properties] = new Item();
 
     foreach (WorldCell *cell, mCells) {
 
         CellItem *cellItem = new CellItem(cell);
-        mRootItem[Map]->insertChild(-1, cellItem);
+        mCellRootItem[Map]->insertChild(-1, cellItem);
         cellItem->insertChild(-1, new MapTypeItem(cell->mapFilePath()));
 
         cellItem = new CellItem(cell);
-        mRootItem[Properties]->insertChild(-1, cellItem);
+        mCellRootItem[Properties]->insertChild(-1, cellItem);
         foreach (Property *p, cell->properties().sorted())
             cellItem->insertChild(-1, new PropertyItem(p));
 
         cellItem = new CellItem(cell);
-        mRootItem[CellTemplates]->insertChild(-1, cellItem);
+        mCellRootItem[CellTemplates]->insertChild(-1, cellItem);
         foreach (PropertyTemplate *pt, cell->templates().sorted())
             cellItem->insertChild(-1, new TemplateItem(pt));
 
         cellItem = new CellItem(cell);
-        mRootItem[Objects]->insertChild(-1, cellItem);
+        mCellRootItem[Objects]->insertChild(-1, cellItem);
         foreach (WorldCellObject *obj, cell->objects()) {
             LevelItem *levelItem = cellItem->itemForLevel(obj->level());
             foreach (WorldObjectGroup *og, mWorld->objectGroups())
@@ -419,62 +653,101 @@ void CopyPasteDialog::setup()
         }
 
         cellItem = new CellItem(cell);
-        mRootItem[Lots]->insertChild(-1, cellItem);
+        mCellRootItem[Lots]->insertChild(-1, cellItem);
         foreach (WorldCellLot *lot, cell->lots())
             cellItem->itemForLevel(lot->level())->insertChild(0, new LotItem(lot));
     }
+}
+
+PropertyTemplate *CopyPasteDialog::cloneTemplate(World *world, PropertyTemplate *ptIn) const
+{
+    if (ui->worldCat->item(Templates)->checkState() != Qt::Checked)
+        return 0;
+    Item *root = mWorldRootItem[Templates];
+    foreach (Item *item, root->children()) {
+        if ((item->asTemplateItem()->mTemplate == ptIn) && !item->mChecked)
+            return 0;
+    }
+
+    PropertyTemplate *pt = new PropertyTemplate();
+    pt->mName = ptIn->mName;
+    pt->mDescription = ptIn->mDescription;
+    foreach (PropertyTemplate *pt1, ptIn->templates())
+        if (PropertyTemplate *pt2 = cloneTemplate(world, pt1))
+            pt->addTemplate(pt->templates().size(), pt1);
+    foreach (Property *p, ptIn->properties()) {
+        if (Property *p1 = cloneProperty(world, p))
+            pt->addProperty(pt->properties().size(), p1);
+    }
+    return pt;
+}
+
+Property *CopyPasteDialog::cloneProperty(World *world, Property *pIn) const
+{
+    if (PropertyDef *pd = world->propertyDefinitions().findPropertyDef(pIn->mDefinition->mName)) {
+        Property *p = new Property(pd, pIn->mValue);
+        p->mNote = pIn->mNote;
+        return p;
+    }
+    return 0;
 }
 
 ///// WORLD /////
 
 void CopyPasteDialog::showPropertyDefs()
 {
-    ui->worldTree->clear();
-    foreach (PropertyDef *pd, mWorld->propertyDefinitions().sorted()) {
-        QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << pd->mName);
-        item->setCheckState(0, mCheckedPropertyDefs[pd]
-                            ? Qt::Checked : Qt::Unchecked);
-        mItemToPropertyDef[item] = pd;
-        ui->worldTree->addTopLevelItem(item);
+    QTreeWidget *v = ui->worldTree;
+    v->setColumnHidden(1, false);
+    v->clear();
+    Item *root = mWorldRootItem[PropertyDefs];
+    root->setViewItem(0);
+    foreach (Item *item, root->children()) {
+        PropertyDefItem *pdItem = item->asPropertyDefItem();
+        addToTree(v, 0, -1, item, pdItem->mPropertyDef->mName,
+                  pdItem->mPropertyDef->mDefaultValue);
     }
 }
 
 void CopyPasteDialog::showTemplates()
 {
-    ui->worldTree->clear();
-    foreach (PropertyTemplate *pt, mWorld->propertyTemplates().sorted()) {
-        QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << pt->mName);
-        item->setCheckState(0, Qt::Checked);
-        ui->worldTree->addTopLevelItem(item);
+    QTreeWidget *v = ui->worldTree;
+    v->clear();
+    Item *root = mWorldRootItem[Templates];
+    root->setViewItem(0);
+    foreach (Item *item, root->children()) {
+        TemplateItem *ptItem = item->asTemplateItem();
+        addToTree(v, 0, -1, item, ptItem->mTemplate->mName);
     }
 }
 
 void CopyPasteDialog::showObjectTypes()
 {
-    ui->worldTree->clear();
-    foreach (ObjectType *ot, mWorld->objectTypes()) {
-        if (ot->isNull())
-            continue;
-        QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << ot->name());
-        item->setCheckState(0, Qt::Checked);
-        ui->worldTree->addTopLevelItem(item);
+    QTreeWidget *v = ui->worldTree;
+    v->clear();
+    Item *root = mWorldRootItem[ObjectTypes];
+    root->setViewItem(0);
+    foreach (Item *item, root->children()) {
+        ObjectTypeItem *otItem = item->asObjectTypeItem();
+        addToTree(v, 0, -1, item, otItem->mType->name());
     }
 }
 
 void CopyPasteDialog::showObjectGroups()
 {
-    ui->worldTree->clear();
-    foreach (WorldObjectGroup *og, mWorld->objectGroups()) {
-        if (og->isNull())
-            continue;
-        QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << og->name());
-        item->setCheckState(0, Qt::Checked);
-        ui->worldTree->insertTopLevelItem(0, item);
+    QTreeWidget *v = ui->worldTree;
+    v->clear();
+    Item *root = mWorldRootItem[ObjectGroups];
+    root->setViewItem(0);
+    foreach (Item *item, root->children()) {
+        ObjectGroupItem *ogItem = item->asObjectGroupItem();
+        addToTree(v, 0, -1, item, ogItem->mGroup->name());
     }
 }
 
 void CopyPasteDialog::worldSelectionChanged(int index)
 {
+    ui->worldTree->setColumnHidden(1, true);
+
     mWorldCat = static_cast<enum WorldCat>(index);
     switch (mWorldCat) {
     case PropertyDefs:
@@ -492,19 +765,11 @@ void CopyPasteDialog::worldSelectionChanged(int index)
     }
 }
 
-void CopyPasteDialog::worldItemChanged(QTreeWidgetItem *item, int column)
+void CopyPasteDialog::worldItemChanged(QTreeWidgetItem *viewItem, int column)
 {
-    switch (mWorldCat) {
-    case PropertyDefs:
-        mCheckedPropertyDefs[mItemToPropertyDef[item]] = item->checkState(column);
-        break;
-    case Templates:
-        break;
-    case ObjectTypes:
-        break;
-    case ObjectGroups:
-        break;
-    }
+    Q_UNUSED(column)
+    Item *item = viewItem->data(0, Qt::UserRole).value<Item*>();
+    item->mChecked = viewItem->checkState(0) == Qt::Checked;
 }
 
 void CopyPasteDialog::worldCheckAll()
@@ -542,18 +807,18 @@ void CopyPasteDialog::showCellProperties()
     QTreeWidget *v = ui->cellTree;
     v->setColumnHidden(1, false);
     v->clear();
-    Item *root = mRootItem[Properties];
+    Item *root = mCellRootItem[Properties];
     root->setViewItem(0);
     foreach (Item *item, root->children()) {
         CellItem *cellItem = item->asCellItem();
         WorldCell *cell = cellItem->mCell;
         if (cell->properties().isEmpty())
             continue;
-        addToTree(0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (Item *item, cellItem->children(Item::PropertyType)) {
             PropertyItem *propertyItem = item->asPropertyItem();
-            addToTree(cellItem, -1, propertyItem,
+            addToTree(v, cellItem, -1, propertyItem,
                       propertyItem->mProperty->mDefinition->mName,
                       propertyItem->mProperty->mValue);
         }
@@ -565,18 +830,18 @@ void CopyPasteDialog::showCellTemplates()
 {
     QTreeWidget *v = ui->cellTree;
     v->clear();
-    Item *root = mRootItem[CellTemplates];
+    Item *root = mCellRootItem[CellTemplates];
     root->setViewItem(0);
     foreach (Item *item, root->children()) {
         CellItem *cellItem = item->asCellItem();
         WorldCell *cell = cellItem->mCell;
         if (cell->templates().isEmpty())
             continue;
-        addToTree(0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (Item *item, cellItem->children(Item::TemplateType)) {
             TemplateItem *templateItem = item->asTemplateItem();
-            addToTree(cellItem, -1, templateItem, templateItem->mTemplate->mName);
+            addToTree(v, cellItem, -1, templateItem, templateItem->mTemplate->mName);
         }
     }
     v->expandAll();
@@ -586,22 +851,22 @@ void CopyPasteDialog::showCellLots()
 {
     QTreeWidget *v = ui->cellTree;
     v->clear();
-    Item *root = mRootItem[Lots];
+    Item *root = mCellRootItem[Lots];
     root->setViewItem(0);
     foreach (Item *item, root->children()) {
         CellItem *cellItem = item->asCellItem();
         WorldCell *cell = cellItem->mCell;
         if (cell->lots().isEmpty())
             continue;
-        addToTree(0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (LevelItem *levelItem, cellItem->mLevels.values()) {
             if (levelItem->mLots.size() == 0)
                 continue;
-            addToTree(cellItem, 0, levelItem, tr("Level %1").arg(levelItem->mZ));
+            addToTree(v, cellItem, 0, levelItem, tr("Level %1").arg(levelItem->mZ));
 
             foreach (LotItem *lotItem, levelItem->mLots)
-                addToTree(levelItem, -1, lotItem,
+                addToTree(v, levelItem, -1, lotItem,
                           QFileInfo(lotItem->mLot->mapName()).fileName());
         }
 
@@ -614,14 +879,14 @@ void CopyPasteDialog::showCellObjects()
     QTreeWidget *v = ui->cellTree;
     v->setColumnHidden(1, false);
     v->clear();
-    Item *root = mRootItem[Objects];
+    Item *root = mCellRootItem[Objects];
     root->setViewItem(0);
     foreach (Item *item, root->children()) {
         CellItem *cellItem = item->asCellItem();
         WorldCell *cell = cellItem->mCell;
         if (cell->objects().isEmpty())
             continue;
-        addToTree(0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (LevelItem *levelItem, cellItem->mLevels.values()) {
             int anyObjects = 0;
@@ -631,7 +896,7 @@ void CopyPasteDialog::showCellObjects()
             if (!anyObjects)
                 continue;
 
-            addToTree(cellItem, 0, levelItem, tr("Level %1").arg(levelItem->mZ));
+            addToTree(v, cellItem, 0, levelItem, tr("Level %1").arg(levelItem->mZ));
 
             foreach (ObjectGroupItem *ogItem, levelItem->mObjectGroups) {
                 if (!ogItem->mObjects.size())
@@ -639,7 +904,7 @@ void CopyPasteDialog::showCellObjects()
                 QString text = ogItem->mGroup->name();
                 if (text.isEmpty())
                     text = tr("<no group>");
-                addToTree(levelItem, -1, ogItem, text);
+                addToTree(v, levelItem, -1, ogItem, text);
 
                 foreach (ObjectItem *objItem, ogItem->mObjects) {
                     QString name = objItem->mObject->name();
@@ -648,7 +913,7 @@ void CopyPasteDialog::showCellObjects()
                         name = tr("<no name>");
                     if (type.isEmpty())
                         type = tr("<no type>");
-                    addToTree(ogItem, -1, objItem, name, type);
+                    addToTree(v, ogItem, -1, objItem, name, type);
                 }
             }
         }
@@ -660,7 +925,7 @@ void CopyPasteDialog::showCellMap()
 {
     QTreeWidget *v = ui->cellTree;
     v->clear();
-    Item *root = mRootItem[Map];
+    Item *root = mCellRootItem[Map];
     root->setViewItem(0);
     foreach (Item *item, root->children()) {
         CellItem *cellItem = item->asCellItem();
@@ -668,10 +933,10 @@ void CopyPasteDialog::showCellMap()
         if (cell->mapFilePath().isEmpty())
             continue;
 
-        addToTree(0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         MapTypeItem *mapItem = cellItem->children(Item::MapType).first()->asMapItem();
-        addToTree(cellItem, 0, mapItem, QFileInfo(mapItem->mName).fileName());
+        addToTree(v, cellItem, 0, mapItem, QFileInfo(mapItem->mName).fileName());
     }
     v->expandAll();
 }
@@ -702,26 +967,34 @@ void CopyPasteDialog::cellCategoryChanged(int index)
 
 void CopyPasteDialog::cellItemChanged(QTreeWidgetItem *viewItem, int column)
 {
+    Q_UNUSED(column)
     Item *item = viewItem->data(0, Qt::UserRole).value<Item*>();
     item->mChecked = viewItem->checkState(0) == Qt::Checked;
 }
 
 void CopyPasteDialog::cellCheckAll()
 {
+    QTreeWidget *view = ui->cellTree;
+    for (int i = 0; i < view->topLevelItemCount(); i++)
+        view->topLevelItem(i)->setCheckState(0, Qt::Checked);
 }
 
 void CopyPasteDialog::cellCheckNone()
 {
+    QTreeWidget *view = ui->cellTree;
+    for (int i = 0; i < view->topLevelItemCount(); i++)
+        view->topLevelItem(i)->setCheckState(0, Qt::Unchecked);
 }
 
-void CopyPasteDialog::addToTree(Item *parent, int index, Item *item,
-                                const QString &text, const QString &text2)
+void CopyPasteDialog::addToTree(QTreeWidget *v, Item *parent, int index,
+                                Item *item, const QString &text, const QString &text2)
 {
-    QTreeWidget *v = ui->cellTree;
     item->mViewItem = new QTreeWidgetItem(QStringList() << text << text2);
-    if (!parent)
+    if (!parent) {
+        if (index == -1)
+            index = v->topLevelItemCount();
         v->insertTopLevelItem(index, item->mViewItem);
-    else {
+    } else {
         if (index == -1)
             index = parent->mViewItem->childCount();
         parent->mViewItem->insertChild(index, item->mViewItem);

@@ -93,8 +93,6 @@ public slots:
 
     void copy();
     void paste();
-    void copyCellsToClipboard();
-    void pasteCellsFromClipboard();
 
     void removeLot();
     void removeObject();

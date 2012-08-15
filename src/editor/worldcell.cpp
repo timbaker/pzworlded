@@ -19,6 +19,31 @@
 
 #include "world.h"
 
+WorldCellLot::WorldCellLot(WorldCell *cell, const QString &name, int x, int y,
+                           int z, int width, int height)
+    : mName(name)
+    , mX(x)
+    , mY(y)
+    , mZ(z)
+    , mWidth(width)
+    , mHeight(height)
+    , mCell(cell)
+{
+}
+
+WorldCellLot::WorldCellLot(WorldCell *cell, WorldCellLot *other)
+    : mName(other->mapName())
+    , mX(other->x())
+    , mY(other->y())
+    , mZ(other->level())
+    , mWidth(other->width())
+    , mHeight(other->height())
+    , mCell(cell)
+{
+}
+
+/////
+
 WorldCell::WorldCell(World *world, int x, int y)
     : mX(x)
     , mY(y)
@@ -91,6 +116,22 @@ WorldObjectGroup::WorldObjectGroup(World *world, const QString &name, const QCol
     Q_ASSERT(!name.isEmpty());
 }
 
+WorldObjectGroup::WorldObjectGroup(World *world, WorldObjectGroup *other)
+    : mName(other->name())
+    , mColor(other->color())
+{
+    mType = world->objectTypes().find(other->type()->name());
+    if (!mType)
+        mType = world->nullObjectType();
+}
+
+bool WorldObjectGroup::operator ==(const WorldObjectGroup &other) const
+{
+    return mName == other.mName &&
+            mColor == other.mColor &&
+            mType->name() == other.mType->name();
+}
+
 /////
 
 ObjectType::ObjectType()
@@ -101,4 +142,40 @@ ObjectType::ObjectType(const QString &name)
     : mName(name)
 {
     Q_ASSERT(!name.isEmpty());
+}
+
+ObjectType::ObjectType(World *world, ObjectType *other)
+    : mName(other->name())
+{
+    Q_UNUSED(world)
+}
+
+bool ObjectType::operator ==(const ObjectType &other) const
+{
+    return mName == other.name();
+}
+
+/////
+
+void WorldCellContents::swapWorld(World *world)
+{
+    foreach (Property *p, mProperties) {
+        PropertyDef *pd = world->propertyDefinitions().findPropertyDef(p->mDefinition->mName);
+        Q_ASSERT(pd);
+        p->mDefinition = pd;
+    }
+
+    for (int i = 0; i < mTemplates.size(); i++) {
+        PropertyTemplate *pt = world->propertyTemplates().find(mTemplates.at(i)->mName);
+        Q_ASSERT(pt);
+        mTemplates[i] = pt;
+    }
+
+    foreach (WorldCellObject *obj, mObjects) {
+        WorldObjectGroup *og = world->objectGroups().find(obj->group()->name());
+        obj->setGroup(og ? og : world->nullObjectGroup());
+
+        ObjectType *ot = world->objectTypes().find(obj->type()->name());
+        obj->setType(ot ? ot : world->nullObjectType());
+    }
 }

@@ -210,9 +210,6 @@
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
     <addaction name="separator"/>
-    <addaction name="actionCopyCells"/>
-    <addaction name="actionPasteCells"/>
-    <addaction name="separator"/>
     <addaction name="actionPreferences"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -421,16 +418,6 @@
    </property>
    <property name="text">
     <string>Show Coordinates</string>
-   </property>
-  </action>
-  <action name="actionCopyCells">
-   <property name="text">
-    <string>Copy Cells</string>
-   </property>
-  </action>
-  <action name="actionPasteCells">
-   <property name="text">
-    <string>Paste Cells</string>
    </property>
   </action>
   <action name="actionRemoveLot">

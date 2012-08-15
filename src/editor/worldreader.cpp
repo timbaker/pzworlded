@@ -366,9 +366,8 @@ private:
                 atts.value(QLatin1String("height")).toString().toDouble();
 
         // No check wanted/needed on Object coordinates
-        WorldCellObject *obj = new WorldCellObject(cell, name, objType, x, y,
-                                                   level, width, height);
-        obj->setGroup(objGroup);
+        WorldCellObject *obj = new WorldCellObject(cell, name, objType, objGroup,
+                                                   x, y, level, width, height);
         cell->insertObject(cell->objects().size(), obj);
 
         while (xml.readNextStartElement()) {

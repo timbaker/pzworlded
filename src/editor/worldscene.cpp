@@ -135,7 +135,7 @@ WorldCellItem *WorldScene::itemForCell(int x, int y)
 void WorldScene::pasteCellsFromClipboard()
 {
     ToolManager::instance()->selectTool(mPasteCellsTool);
-    mActiveTool = mPasteCellsTool;
+//    mActiveTool = mPasteCellsTool;
 }
 
 QPointF WorldScene::pixelToCellCoords(qreal x, qreal y) const

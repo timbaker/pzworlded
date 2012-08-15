@@ -23,10 +23,13 @@
 
 class CellDocument;
 class PropertyDef;
+class Property;
+class PropertyTemplate;
 class World;
 class WorldCell;
 class WorldDocument;
 
+class QTreeWidget;
 class QTreeWidgetItem;
 
 namespace Ui {
@@ -41,14 +44,20 @@ public:
     explicit CopyPasteDialog(CellDocument *cellDoc, QWidget *parent = 0);
     ~CopyPasteDialog();
 
+    World *toWorld() const;
+
 private:
     void setup();
+    PropertyTemplate *cloneTemplate(World *world, PropertyTemplate *ptIn) const;
+    Property *cloneProperty(World *world, Property *pIn) const;
 
     enum WorldCat {
-        PropertyDefs = 0,
+        FirstWorldCat = 0,
+        PropertyDefs = FirstWorldCat,
         Templates,
         ObjectTypes,
-        ObjectGroups
+        ObjectGroups,
+        MaxWorldCat
     };
 
     void showPropertyDefs();
@@ -58,7 +67,7 @@ private:
 
 private slots:
     void worldSelectionChanged(int index);
-    void worldItemChanged(QTreeWidgetItem *item, int column);
+    void worldItemChanged(QTreeWidgetItem *viewItem, int column);
     void worldCheckAll();
     void worldCheckNone();
 
@@ -92,8 +101,6 @@ private:
     World *mWorld;
 
     WorldCat mWorldCat;
-    QMap<PropertyDef*,bool> mCheckedPropertyDefs;
-    QMap<QTreeWidgetItem*,PropertyDef*> mItemToPropertyDef;
 
     CellCat mCellCat;
     QList<WorldCell*> mCells;
@@ -106,13 +113,16 @@ public: // public for Q_DECLARE_METATYPE
     class MapTypeItem;
     class ObjectGroupItem;
     class ObjectItem;
+    class ObjectTypeItem;
+    class PropertyDefItem;
     class PropertyItem;
     class TemplateItem;
 
-    Item *mRootItem[MaxCellCat];
+    Item *mWorldRootItem[MaxWorldCat];
+    Item *mCellRootItem[MaxCellCat];
 
-    void addToTree(Item *parent, int index, Item *item, const QString &text,
-                   const QString &text2 = QString());
+    void addToTree(QTreeWidget *view, Item *parent, int index, Item *item,
+                   const QString &text,  const QString &text2 = QString());
 };
 
 #endif // COPYPASTEDIALOG_H

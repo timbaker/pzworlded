@@ -237,6 +237,7 @@ public:
       * This operation is undo-able.
       */
     void addTemplate(const QString &name, const QString &desc);
+    void addTemplate(PropertyTemplate *pt);
 
     void removeTemplate(int index);
 
@@ -253,16 +254,20 @@ public:
       */
     void changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc);
 
+    void changeTemplate(PropertyTemplate *pt, PropertyTemplate *other);
+
     void addObjectGroup(WorldObjectGroup *newGroup);
     bool removeObjectGroup(WorldObjectGroup *objGroup);
     void changeObjectGroupName(WorldObjectGroup *objGroup, const QString &name);
     void changeObjectGroupColor(WorldObjectGroup *objGroup, const QColor &color);
     void reorderObjectGroup(WorldObjectGroup *og, int index);
     void changeObjectGroupDefType(WorldObjectGroup *og, ObjectType *ot);
+    void changeObjectGroup(WorldObjectGroup *og, WorldObjectGroup *other);
 
     void addObjectType(ObjectType *newType);
     bool removeObjectType(ObjectType *objType);
     void changeObjectTypeName(ObjectType *objType, const QString &name);
+    void changeObjectType(ObjectType *ot, ObjectType *other);
 
     /**
       * Adds a new instance of the template called \a name
@@ -273,33 +278,16 @@ public:
     void removeTemplate(PropertyHolder *ph, int index);
 
     void addProperty(PropertyHolder *ph, const QString &name);
+    void addProperty(PropertyHolder *ph, const QString &name, const QString &value);
     void removeProperty(PropertyHolder *ph, int index);
 
     void setPropertyValue(PropertyHolder *ph, Property *p, const QString &value);
-
-    void copyCellsToClipboard(const QList<WorldCell*> &cells);
-
-    const QList<WorldCellContents*> &cellsInClipboard() const
-    { return mCellClipboard; }
-
-    const int cellsInClipboardCount() const
-    { return mCellClipboard.size(); }
-
-    void clearCellClipboard();
 
     WorldDocumentUndoRedo &undoRedo() { return mUndoRedo; }
 
 private:
     void removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd);
     void removeTemplate(PropertyHolder *ph, PropertyTemplate *pt);
-
-    /**
-      * Cells can be copied to our "clipboard".  If a template or
-      * property definition is deleted, then we must update the
-      * contents of the clipboard.
-      */
-    void removeTemplateFromCellClipboard(int index);
-    void removePropertyDefFromCellClipboard(int index);
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
@@ -363,7 +351,6 @@ private:
     QList<WorldCell*> mSelectedCells;
     QList<WorldCellObject*> mSelectedObjects;
     QList<WorldCellLot*> mSelectedLots;
-    QList<WorldCellContents*> mCellClipboard;
     QString mFileName;
 
     friend class WorldDocumentUndoRedo;

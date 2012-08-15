@@ -82,7 +82,8 @@ SOURCES += main.cpp\
     preferencesdialog.cpp \
     objectgroupsdialog.cpp \
     colorbutton.cpp \
-    copypastedialog.cpp
+    copypastedialog.cpp \
+    clipboard.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -124,7 +125,8 @@ HEADERS  += mainwindow.h \
     preferencesdialog.h \
     objectgroupsdialog.h \
     colorbutton.h \
-    copypastedialog.h
+    copypastedialog.h \
+    clipboard.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

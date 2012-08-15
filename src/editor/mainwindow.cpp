@@ -21,6 +21,7 @@
 #include "celldocument.h"
 #include "cellscene.h"
 #include "cellview.h"
+#include "clipboard.h"
 #include "copypastedialog.h"
 #include "documentmanager.h"
 #include "layersdock.h"
@@ -45,6 +46,7 @@
 #include "worldreader.h"
 #include "worldscene.h"
 #include "worldview.h"
+#include "worldwriter.h"
 #include "zoomable.h"
 
 #include "layer.h"
@@ -53,6 +55,8 @@
 #include "tileset.h"
 
 #include <QtCore/qmath.h>
+#include <QBuffer>
+#include <QClipboard>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QFileDialog>
@@ -174,8 +178,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
     connect(ui->actionPaste, SIGNAL(triggered()), SLOT(paste()));
-    connect(ui->actionCopyCells, SIGNAL(triggered()), SLOT(copyCellsToClipboard()));
-    connect(ui->actionPasteCells, SIGNAL(triggered()), SLOT(pasteCellsFromClipboard()));
+
     connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
 
     connect(ui->actionObjectGroups, SIGNAL(triggered()), SLOT(objectGroupsDialog()));
@@ -751,30 +754,32 @@ void MainWindow::copy()
 {
     if (!mCurrentDocument)
         return;
+    World *world = 0;
     if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument()) {
         CopyPasteDialog dialog(worldDoc, this);
-        dialog.exec();
-
+        if (dialog.exec() == QDialog::Accepted)
+            world = dialog.toWorld();
     }
     if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
         CopyPasteDialog dialog(cellDoc, this);
-        dialog.exec();
+        if (dialog.exec() == QDialog::Accepted)
+            world = dialog.toWorld();
+    }
+    if (world) {
+        WorldWriter w;
+        QByteArray bytes;
+        QBuffer buffer(&bytes);
+        buffer.open(QIODevice::WriteOnly);
+        w.writeWorld(world, &buffer, QDir::rootPath());
+        qApp->clipboard()->setText(QString::fromUtf8(bytes.constData(),
+                                                     bytes.size()));
+
+        Clipboard::instance()->setWorld(world);
+        updateActions();
     }
 }
 
 void MainWindow::paste()
-{
-}
-
-void MainWindow::copyCellsToClipboard()
-{
-    Q_ASSERT(mCurrentDocument && mCurrentDocument->isWorldDocument());
-    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    worldDoc->copyCellsToClipboard(worldDoc->selectedCells());
-    updateActions();
-}
-
-void MainWindow::pasteCellsFromClipboard()
 {
     Q_ASSERT(mCurrentDocument && mCurrentDocument->isWorldDocument());
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
@@ -936,10 +941,9 @@ void MainWindow::extractObjects()
                     x += 3 * og->level(), y += 3 * og->level();
 
                 WorldCellObject *obj = new WorldCellObject(cell, o->type(),
-                                                           type, x, y,
+                                                           type, group, x, y,
                                                            og->level(),
                                                            width, height);
-                obj->setGroup(group);
                 worldDoc->addCellObject(cell, cell->objects().size(), obj);
             }
         }
@@ -1126,8 +1130,8 @@ void MainWindow::updateActions()
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
 
-    ui->actionCopyCells->setEnabled(worldDoc && worldDoc->selectedCellCount());
-    ui->actionPasteCells->setEnabled(worldDoc && worldDoc->cellsInClipboardCount());
+    ui->actionCopy->setEnabled(worldDoc);
+    ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
 
     ui->actionEditCell->setEnabled(false);
     ui->actionObjectTypes->setEnabled(hasDoc);
