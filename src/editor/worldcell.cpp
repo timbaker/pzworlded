@@ -179,3 +179,30 @@ void WorldCellContents::swapWorld(World *world)
         obj->setType(ot ? ot : world->nullObjectType());
     }
 }
+
+void WorldCellContents::mergeOnto(WorldCell *cell)
+{
+    World *world = cell->world();
+    foreach (Property *pCell, cell->properties()) {
+        Property *p = mProperties.find(pCell->mDefinition);
+        if (!p)
+            mProperties += new Property(world, pCell);
+    }
+    foreach (PropertyTemplate *ptCell, cell->templates()) {
+        PropertyTemplate *pt = mTemplates.find(ptCell->mName);
+        if (!pt)
+            mTemplates += new PropertyTemplate(world, ptCell);
+    }
+    int index = 0;
+    foreach (WorldCellLot *lotCell, cell->lots()) {
+        WorldCellLot *lot = new WorldCellLot(cell, lotCell);
+        mLots.insert(index++, lot);
+    }
+    index = 0;
+    foreach (WorldCellObject *objCell, cell->objects()) {
+        WorldCellObject *obj = new WorldCellObject(cell, objCell);
+        mObjects.insert(index++, obj);
+    }
+    if (mMapFilePath.isEmpty())
+        mMapFilePath = cell->mapFilePath();
+}

@@ -1325,6 +1325,7 @@ void PasteCellsTool::pasteCells(const QPointF &pos)
 #if 1
         // PropertyDefs, Templates, ObjectTypes, ObjectGroups -> from clipboard-world to document-world
         contents->swapWorld(mScene->world());
+        contents->mergeOnto(replace);
 #endif
         undoStack->push(new ReplaceCell(mScene->worldDocument(), replace, contents));
         newSelection += mScene->world()->cellAt(newPos);

@@ -17,6 +17,8 @@
 
 #include "properties.h"
 
+#include "world.h"
+
 /////
 
 bool PropertyDef::operator ==(const PropertyDef &other) const
@@ -59,6 +61,14 @@ PropertyDefList PropertyDefList::sorted() const
 
 /////
 
+Property::Property(World *world, Property *other)
+    : mValue(other->mValue)
+    , mNote(other->mNote)
+{
+    mDefinition = world->propertyDefinitions().findPropertyDef(other->mDefinition->mName);
+    Q_ASSERT(mDefinition);
+}
+
 bool Property::operator ==(const Property &other) const
 {
     return *mDefinition == *other.mDefinition &&
@@ -67,6 +77,17 @@ bool Property::operator ==(const Property &other) const
 }
 
 /////
+
+Property *PropertyList::find(PropertyDef *pd) const
+{
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        if ((*it)->mDefinition == pd)
+            return (*it);
+        it++;
+    }
+    return 0;
+}
 
 bool PropertyList::contains(PropertyDef *pd) const
 {
@@ -135,7 +156,6 @@ bool PropertyList::operator ==(const PropertyList &other) const
 
 /////
 
-#include "world.h"
 PropertyTemplate::PropertyTemplate(World *world, PropertyTemplate *other)
     : mName(other->mName)
     , mDescription(other->mDescription)

@@ -404,6 +404,8 @@ public:
 
     void swapWorld(World *world);
 
+    void mergeOnto(WorldCell *cell);
+
 private:
     PropertyTemplateList mTemplates;
     PropertyList mProperties;

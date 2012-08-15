@@ -22,6 +22,8 @@
 #include <QSet>
 #include <QString>
 
+class World;
+
 class PropertyDef
 {
 public:
@@ -50,6 +52,8 @@ public:
     {
     }
 
+    Property(World *world, Property *other);
+
     bool operator ==(const Property &other) const;
     bool operator !=(const Property &other) const
     { return !(*this == other); }
@@ -62,6 +66,8 @@ public:
 class PropertyList : public QList<Property*>
 {
 public:
+    Property *find(PropertyDef *pd) const;
+
     bool contains(PropertyDef *pd) const;
 
     void removeAll(PropertyDef *pd);
@@ -120,7 +126,6 @@ private:
     friend class WorldCellContents;
 };
 
-class World;
 class PropertyTemplate : public PropertyHolder
 {
 public:
