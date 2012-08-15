@@ -300,7 +300,9 @@ void PropertiesModel::redrawProperty(Item *item, PropertyDef *pd)
     if (item->usesPropertyDef(pd)) {
         QModelIndex index = this->index(item);
         int oldRow = index.row();
-        int newRow = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
+        PropertyHolder *ph = item->propertyHolder();
+        Q_ASSERT(ph);
+        int newRow = ph->properties().sorted().indexOf(item->p);
         if (oldRow != newRow) {
             Item *parentItem = item->parent;
             QModelIndex parent = this->index(parentItem);

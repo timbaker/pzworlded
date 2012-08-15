@@ -237,6 +237,14 @@ private:
             return 0;
         }
 
+        PropertyHolder *propertyHolder() const
+        {
+            Q_ASSERT(p || pt);
+            if (parent->parent->ph)
+                return parent->parent->ph;
+            return parent->parent->pt;
+        }
+
         Item *parent;
         QList<Item *> children;
         PropertyTemplate *pt;
