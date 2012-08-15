@@ -849,21 +849,26 @@ void PropertiesDock::setDocument(Document *doc)
     mWorldDoc = doc ? doc->asWorldDocument() : 0;
     mCellDoc = doc ? doc->asCellDocument() : 0;
 
+    WorldDocument *worldDoc = 0;
     if (mCellDoc) {
         mPropertyHolder = mCellDoc->cell();
         mView->setPropertyHolder(mCellDoc->worldDocument(), mPropertyHolder);
         connect(mCellDoc, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
-        connect(mCellDoc->worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)),
-                SLOT(objectNameChanged(WorldCellObject*)));
+        worldDoc = mCellDoc->worldDocument();
     } else if (mWorldDoc) {
         connect(mWorldDoc, SIGNAL(selectedCellsChanged()), SLOT(selectedCellsChanged()));
         connect(mWorldDoc, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
-        connect(mWorldDoc, SIGNAL(cellObjectNameChanged(WorldCellObject*)),
-                SLOT(objectNameChanged(WorldCellObject*)));
+        worldDoc = mWorldDoc;
         selectedCellsChanged();
     } else {
         mPropertyHolder = 0;
         mView->clearPropertyHolder();
+    }
+    if (worldDoc) {
+        connect(worldDoc, SIGNAL(cellObjectNameChanged(WorldCellObject*)),
+                SLOT(objectNameChanged(WorldCellObject*)));
+        connect(worldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
+                SLOT(selectionChanged()));
     }
     setLabel(mPropertyHolder);
 }
