@@ -325,6 +325,22 @@ void PropertiesModel::redrawTemplate(Item *item, PropertyTemplate *pt)
 {
     if (item->pt == pt) {
         QModelIndex index = this->index(item);
+        int oldRow = index.row();
+        PropertyHolder *ph = item->propertyHolder();
+        Q_ASSERT(ph);
+        int newRow = ph->templates().sorted().indexOf(item->pt);
+        if (oldRow != newRow) {
+            Item *parentItem = item->parent;
+            QModelIndex parent = this->index(parentItem);
+            int destRow = newRow;
+            if (destRow > oldRow)
+                ++destRow;
+            beginMoveRows(parent, oldRow, oldRow, parent, destRow);
+            parentItem->children.takeAt(oldRow);
+            parentItem->children.insert(newRow, item);
+            endMoveRows();
+            index = this->index(item);
+        }
         emit dataChanged(index, index);
     }
     foreach (Item *child, item->children)
@@ -515,12 +531,12 @@ void PropertiesModel::addTemplate(Item *parent, int index, PropertyTemplate *pt)
     Item *item = new Item(parent, index, pt);
 
     Item *header = new Item(item, item->children.size(), Item::HeaderTemplates);
-    foreach (PropertyTemplate *pt, pt->templates()) {
-        addTemplate(header, header->children.size(), pt);
+    foreach (PropertyTemplate *pt2, pt->templates().sorted()) {
+        addTemplate(header, header->children.size(), pt2);
     }
 
     header = new Item(item, item->children.size(), Item::HeaderProperties);
-    foreach (Property *p, pt->properties()) {
+    foreach (Property *p, pt->properties().sorted()) {
         addProperty(header, header->children.size(), p);
     }
 }
