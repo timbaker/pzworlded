@@ -60,9 +60,10 @@ WorldCellObject *WorldCell::removeObject(int index)
 bool WorldCell::isEmpty() const
 {
     if (!mMapFilePath.isEmpty()
-        || !mLots.isEmpty()
-        || !properties().isEmpty()
-        || !templates().isEmpty())
+            || !mLots.isEmpty()
+            || !mObjects.isEmpty()
+            || !properties().isEmpty()
+            || !templates().isEmpty())
         return false;
     return true;
 }
