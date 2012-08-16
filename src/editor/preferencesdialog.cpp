@@ -41,6 +41,11 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
     Preferences *prefs = Preferences::instance();
     mSearchPaths = prefs->searchPaths();
 
+    mGridColor = prefs->gridColor();
+    ui->gridColor->setColor(mGridColor);
+    connect(ui->gridColor, SIGNAL(colorChanged(QColor)),
+            SLOT(gridColorChanged(QColor)));
+
     setPathsList();
     ui->openGL->setChecked(prefs->useOpenGL());
 }
@@ -72,6 +77,11 @@ int PreferencesDialog::selectedPath()
     if (selection.size() == 1)
         return view->row(selection.first()) + 1; // view->currentRow()
     return 0;
+}
+
+void PreferencesDialog::gridColorChanged(const QColor &gridColor)
+{
+    mGridColor = gridColor;
 }
 
 void PreferencesDialog::addPath()
@@ -122,4 +132,5 @@ void PreferencesDialog::dialogAccepted()
     Preferences *prefs = Preferences::instance();
     prefs->setSearchPaths(mSearchPaths);
     prefs->setUseOpenGL(ui->openGL->isChecked());
+    prefs->setGridColor(mGridColor);
 }

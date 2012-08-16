@@ -79,6 +79,8 @@ Preferences::Preferences()
     mShowCoordinates = mSettings->value(QLatin1String("ShowCoordinates"), true).toBool();
     mShowWorldGrid = mSettings->value(QLatin1String("ShowWorldGrid"), true).toBool();
     mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
+    mGridColor = QColor(mSettings->value(QLatin1String("GridColor"),
+                                         QColor(Qt::black).name()).toString());
     mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
     mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
@@ -141,6 +143,16 @@ void Preferences::setShowCellGrid(bool showGrid)
     mShowCellGrid = showGrid;
     mSettings->setValue(QLatin1String("Interface/ShowCellGrid"), mShowCellGrid);
     emit showCellGridChanged(mShowCellGrid);
+}
+
+void Preferences::setGridColor(const QColor &gridColor)
+{
+    if (mGridColor == gridColor)
+        return;
+
+    mGridColor = gridColor;
+    mSettings->setValue(QLatin1String("Interface/GridColor"), mGridColor.name());
+    emit gridColorChanged(mGridColor);
 }
 
 void Preferences::setUseOpenGL(bool useOpenGL)

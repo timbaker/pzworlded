@@ -332,6 +332,7 @@ public slots:
 
     void currentLevelChanged(int index);
     void setGridVisible(bool visible);
+    void gridColorChanged(const QColor &gridColor);
     void setHighlightCurrentLevel(bool highlight);
     void handlePendingUpdates();
 

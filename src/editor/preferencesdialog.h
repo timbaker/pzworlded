@@ -41,6 +41,8 @@ private:
     int selectedPath();
     
 private slots:
+    void gridColorChanged(const QColor &gridColor);
+
     void addPath();
     void removePath();
     void movePathUp();
@@ -54,6 +56,7 @@ private:
     Ui::PreferencesDialog *ui;
     WorldDocument *mWorldDoc;
     QStringList mSearchPaths;
+    QColor mGridColor;
 };
 
 #endif // PREFERENCESDIALOG_H

@@ -19,6 +19,7 @@
 #define PREFERENCES_H
 
 #include <QObject>
+#include <QColor>
 #include <QStringList>
 
 class QSettings;
@@ -34,6 +35,7 @@ public:
     bool showCoordinates() const;
     bool showWorldGrid() const;
     bool showCellGrid() const;
+    QColor gridColor() const { return mGridColor; }
     bool showMiniMap() const;
     int miniMapWidth() const;
     bool highlightCurrentLevel() const;
@@ -52,6 +54,7 @@ signals:
     void showCoordinatesChanged(bool showGrid);
     void showWorldGridChanged(bool showGrid);
     void showCellGridChanged(bool showGrid);
+    void gridColorChanged(const QColor &gridColor);
 
     void useOpenGLChanged(bool useOpenGL);
 
@@ -68,6 +71,7 @@ public slots:
     void setShowCoordinates(bool showCoords);
     void setShowWorldGrid(bool showGrid);
     void setShowCellGrid(bool showGrid);
+    void setGridColor(const QColor &gridColor);
     void setShowMiniMap(bool show);
     void setMiniMapWidth(int width);
     void setHighlightCurrentLevel(bool highlight);
@@ -82,6 +86,7 @@ private:
     bool mShowCoordinates;
     bool mShowWorldGrid;
     bool mShowCellGrid;
+    QColor mGridColor;
     bool mUseOpenGL;
     bool mShowMiniMap;
     int mMiniMapWidth;

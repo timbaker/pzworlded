@@ -77,7 +77,8 @@ public:
                          const QStyleOptionGraphicsItem *option,
                          QWidget *)
     {
-        mScene->renderer()->drawGrid(painter, option->exposedRect, Qt::black,
+        QColor gridColor = Preferences::instance()->gridColor();
+        mScene->renderer()->drawGrid(painter, option->exposedRect, gridColor,
                                      mScene->document()->currentLevel());
     }
 
@@ -839,6 +840,7 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, SIGNAL(showCellGridChanged(bool)), SLOT(setGridVisible(bool)));
     connect(prefs, SIGNAL(highlightCurrentLevelChanged(bool)), SLOT(setHighlightCurrentLevel(bool)));
     setGridVisible(prefs->showCellGrid());
+    connect(prefs, SIGNAL(gridColorChanged(QColor)), SLOT(update()));
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
 }
@@ -1450,6 +1452,12 @@ void CellScene::selectedLotsChanged()
 void CellScene::setGridVisible(bool visible)
 {
     mGridItem->setVisible(visible);
+}
+
+void CellScene::gridColorChanged(const QColor &gridColor)
+{
+    Q_UNUSED(gridColor)
+    mGridItem->update();
 }
 
 void CellScene::setHighlightCurrentLevel(bool highlight)
