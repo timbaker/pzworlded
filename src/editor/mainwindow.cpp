@@ -178,6 +178,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
     connect(ui->actionPaste, SIGNAL(triggered()), SLOT(paste()));
+    connect(ui->actionClipboard, SIGNAL(triggered()), SLOT(showClipboard()));
 
     connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
 
@@ -784,6 +785,27 @@ void MainWindow::paste()
     Q_ASSERT(mCurrentDocument && mCurrentDocument->isWorldDocument());
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
     ((WorldScene *)worldDoc->view()->scene())->pasteCellsFromClipboard();
+
+void MainWindow::showClipboard()
+{
+    World *world = Clipboard::instance()->world();
+    if (!world)
+        return;
+    CopyPasteDialog dialog(world, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        world = dialog.toWorld();
+
+        WorldWriter w;
+        QByteArray bytes;
+        QBuffer buffer(&bytes);
+        buffer.open(QIODevice::WriteOnly);
+        w.writeWorld(world, &buffer, QDir::rootPath());
+        qApp->clipboard()->setText(QString::fromUtf8(bytes.constData(),
+                                                     bytes.size()));
+
+        Clipboard::instance()->setWorld(world);
+        updateActions();
+    }
 }
 
 void MainWindow::removeLot()

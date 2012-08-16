@@ -209,6 +209,7 @@
     <addaction name="separator"/>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
+    <addaction name="actionClipboard"/>
     <addaction name="separator"/>
     <addaction name="actionPreferences"/>
    </widget>
@@ -539,6 +540,11 @@
    </property>
    <property name="text">
     <string>Paste</string>
+   </property>
+  </action>
+  <action name="actionClipboard">
+   <property name="text">
+    <string>Show Clipboard</string>
    </property>
   </action>
  </widget>

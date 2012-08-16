@@ -384,6 +384,18 @@ CopyPasteDialog::CopyPasteDialog(CellDocument *cellDoc, QWidget *parent)
     setup();
 }
 
+CopyPasteDialog::CopyPasteDialog(World *world, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::CopyPasteDialog)
+    , mWorldDoc(0)
+    , mCellDoc(0)
+    , mWorld(world)
+{
+    ui->setupUi(this);
+
+    setup();
+}
+
 CopyPasteDialog::~CopyPasteDialog()
 {
     for (int c = FirstWorldCat; c < MaxWorldCat; c++)
@@ -394,16 +406,14 @@ CopyPasteDialog::~CopyPasteDialog()
 
 World *CopyPasteDialog::toWorld() const
 {
-    World *world = new World(mWorldDoc->world()->width(),
-                             mWorldDoc->world()->height());
+    World *world = new World(mWorld->width(), mWorld->height());
 
     if (ui->worldCat->item(PropertyDefs)->checkState() == Qt::Checked) {
         Item *root = mWorldRootItem[PropertyDefs];
         foreach (Item *item, root->children()) {
             PropertyDefItem *pdItem = item->asPropertyDefItem();
             if (pdItem->mChecked) {
-                PropertyDef *pd = new PropertyDef();
-                *pd = *pdItem->mPropertyDef;
+                PropertyDef *pd = new PropertyDef(pdItem->mPropertyDef);
                 world->addPropertyDefinition(world->propertyDefinitions().size(), pd);
             }
         }
@@ -416,7 +426,7 @@ World *CopyPasteDialog::toWorld() const
                 world->addPropertyTemplate(world->propertyTemplates().size(), pt);
         }
     }
-    /* Types must come before Groups. */
+    /* Types must come before Groups (which have a default Type). */
     if (ui->worldCat->item(ObjectTypes)->checkState() == Qt::Checked) {
         Item *root = mWorldRootItem[ObjectTypes];
         foreach (Item *item, root->children()) {
@@ -541,6 +551,7 @@ World *CopyPasteDialog::toWorld() const
                         ObjectItem *objItem = item3->asObjectItem();
                         if (!objItem->mChecked)
                             continue;
+                        // FIXME: Objects have Properties/Templates too
                         WorldCellObject *obj = new WorldCellObject(cell,
                                                                    objItem->mObject);
                         cell->insertObject(0, obj);
@@ -608,15 +619,21 @@ void CopyPasteDialog::setup()
     connect(ui->cellCheckAll, SIGNAL(clicked()), SLOT(cellCheckAll()));
     connect(ui->cellCheckNone, SIGNAL(clicked()), SLOT(cellCheckNone()));
 
+    mCells.clear();
     if (mCellDoc) {
         mCells += mCellDoc->cell();
-    } else {
+    } else if (mWorldDoc) {
         mCells = mWorldDoc->selectedCells();
         if (mCells.isEmpty()) {
             foreach (WorldCell *cell, mWorld->cells()) {
                 if (!cell->isEmpty())
                     mCells += cell;
             }
+        }
+    } else {
+        foreach (WorldCell *cell, mWorld->cells()) {
+            if (!cell->isEmpty())
+                mCells += cell;
         }
     }
 
@@ -684,11 +701,8 @@ PropertyTemplate *CopyPasteDialog::cloneTemplate(World *world, PropertyTemplate 
 
 Property *CopyPasteDialog::cloneProperty(World *world, Property *pIn) const
 {
-    if (PropertyDef *pd = world->propertyDefinitions().findPropertyDef(pIn->mDefinition->mName)) {
-        Property *p = new Property(pd, pIn->mValue);
-        p->mNote = pIn->mNote;
-        return p;
-    }
+    if (world->propertyDefinitions().findPropertyDef(pIn->mDefinition->mName) != 0)
+        return new Property(world, pIn);
     return 0;
 }
 

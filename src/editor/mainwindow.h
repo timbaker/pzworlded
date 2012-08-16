@@ -93,6 +93,7 @@ public slots:
 
     void copy();
     void paste();
+    void showClipboard();
 
     void removeLot();
     void removeObject();

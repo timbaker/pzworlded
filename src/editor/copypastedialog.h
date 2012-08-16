@@ -42,6 +42,7 @@ class CopyPasteDialog : public QDialog
 public:
     explicit CopyPasteDialog(WorldDocument *worldDoc, QWidget *parent = 0);
     explicit CopyPasteDialog(CellDocument *cellDoc, QWidget *parent = 0);
+    explicit CopyPasteDialog(World *world, QWidget *parent = 0);
     ~CopyPasteDialog();
 
     World *toWorld() const;
