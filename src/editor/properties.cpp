@@ -21,6 +21,21 @@
 
 /////
 
+PropertyDef::PropertyDef(const QString &name, const QString &defaultValue,
+                         const QString &description)
+    : mName(name)
+    , mDefaultValue(defaultValue)
+    , mDescription(description)
+{
+}
+
+PropertyDef::PropertyDef(PropertyDef *other)
+    : mName(other->mName)
+    , mDefaultValue(other->mDefaultValue)
+    , mDescription(other->mDescription)
+{
+}
+
 bool PropertyDef::operator ==(const PropertyDef &other) const
 {
     return mName == other.mName &&

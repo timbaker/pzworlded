@@ -27,13 +27,17 @@ class World;
 class PropertyDef
 {
 public:
-    QString mName;
-    QString mDefaultValue;
-    QString mDescription;
+    PropertyDef(const QString &name, const QString &defaultValue,
+                const QString &description);
+    PropertyDef(PropertyDef *other);
 
     bool operator ==(const PropertyDef &other) const;
     bool operator !=(const PropertyDef &other) const
     { return !(*this == other); }
+
+    QString mName;
+    QString mDefaultValue;
+    QString mDescription;
 };
 
 class PropertyDefList : public QList<PropertyDef*>

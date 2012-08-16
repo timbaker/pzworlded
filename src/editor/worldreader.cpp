@@ -133,10 +133,7 @@ private:
                 readUnknownElement();
         }
 
-        PropertyDef *pd = new PropertyDef;
-        pd->mName = name;
-        pd->mDefaultValue = defaultValue;
-        pd->mDescription = desc;
+        PropertyDef *pd = new PropertyDef(name, defaultValue, desc);
         mWorld->addPropertyDefinition(mWorld->propertyDefinitions().size(), pd);
     }
 

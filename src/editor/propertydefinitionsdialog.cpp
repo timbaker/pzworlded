@@ -78,10 +78,10 @@ void PropertyDefinitionsDialog::definitionSelected()
 
 void PropertyDefinitionsDialog::addDefinition()
 {
-    PropertyDef *pd = new PropertyDef();
-    pd->mName = ui->defNameEdit->text();
-    pd->mDefaultValue = ui->defDefaultEdit->text();
-    pd->mDescription = ui->defDescEdit->toPlainText();
+    QString name = ui->defNameEdit->text();
+    QString defaultValue = ui->defDefaultEdit->text();
+    QString description = ui->defDescEdit->toPlainText();
+    PropertyDef *pd = new PropertyDef(name, defaultValue, description);
 
     mWorldDoc->addPropertyDefinition(pd);
 
