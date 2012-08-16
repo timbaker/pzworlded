@@ -220,7 +220,10 @@
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
     <addaction name="actionShowMiniMap"/>
+    <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
+    <addaction name="actionLevelAbove"/>
+    <addaction name="actionLevelBelow"/>
     <addaction name="separator"/>
     <addaction name="actionZoomIn"/>
     <addaction name="actionZoomOut"/>
@@ -545,6 +548,22 @@
   <action name="actionClipboard">
    <property name="text">
     <string>Show Clipboard</string>
+   </property>
+  </action>
+  <action name="actionLevelAbove">
+   <property name="text">
+    <string>Select Level Above</string>
+   </property>
+   <property name="shortcut">
+    <string>PgUp</string>
+   </property>
+  </action>
+  <action name="actionLevelBelow">
+   <property name="text">
+    <string>Select Level Below</string>
+   </property>
+   <property name="shortcut">
+    <string>PgDown</string>
    </property>
   </action>
  </widget>

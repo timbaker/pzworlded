@@ -202,6 +202,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)), prefs, SLOT(setShowMiniMap(bool)));
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
+    connect(ui->actionLevelAbove, SIGNAL(triggered()), SLOT(selectLevelAbove()));
+    connect(ui->actionLevelBelow, SIGNAL(triggered()), SLOT(selectLevelBelow()));
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
@@ -451,6 +453,24 @@ void MainWindow::documentCloseRequested(int tabIndex)
             return;
     }
     docman()->closeDocument(tabIndex);
+}
+
+void MainWindow::selectLevelAbove()
+{
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
+        int level = cellDoc->currentLevel();
+        if (level < cellDoc->scene()->mapComposite()->maxLevel())
+            cellDoc->setCurrentLevel(level + 1);
+    }
+}
+
+void MainWindow::selectLevelBelow()
+{
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
+        int level = cellDoc->currentLevel();
+        if (level > 0)
+            cellDoc->setCurrentLevel(level - 1);
+    }
 }
 
 void MainWindow::zoomIn()
@@ -1189,6 +1209,9 @@ void MainWindow::updateActions()
 
     ui->actionHighlightCurrentLevel->setEnabled(cellDoc != 0);
 
+    ui->actionLevelAbove->setEnabled(false);
+    ui->actionLevelBelow->setEnabled(false);
+
     updateZoom();
 
     if (worldDoc) {
@@ -1212,6 +1235,8 @@ void MainWindow::updateActions()
         int level = cellDoc->currentLevel();
         ui->currentLevelButton->setText(tr("Level: %1 ").arg(level)); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(true);
+        ui->actionLevelAbove->setEnabled(level < cellDoc->scene()->mapComposite()->maxLevel());
+        ui->actionLevelBelow->setEnabled(level > 0);
         WorldObjectGroup *og = cellDoc->currentObjectGroup();
         ui->objectGroupButton->setText(tr("Obj Grp: %1 ")
                                        .arg((og && !og->name().isEmpty())

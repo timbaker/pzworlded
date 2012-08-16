@@ -76,6 +76,9 @@ public slots:
 
     void updateZoom();
 
+    void selectLevelAbove();
+    void selectLevelBelow();
+
     void zoomIn();
     void zoomOut();
     void zoomNormal();
