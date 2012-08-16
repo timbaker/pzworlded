@@ -280,7 +280,7 @@ AddRemoveTemplateToFromPH::AddRemoveTemplateToFromPH(WorldDocument *doc, Propert
 
 AddRemoveTemplateToFromPH::~AddRemoveTemplateToFromPH()
 {
-    delete mTemplate;
+//    delete mTemplate;
 }
 
 void AddRemoveTemplateToFromPH::add()
