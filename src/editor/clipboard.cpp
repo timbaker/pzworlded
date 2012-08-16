@@ -19,6 +19,9 @@
 
 #include "world.h"
 #include "worldcell.h"
+#include "worlddocument.h"
+
+#include <QUndoStack>
 
 Clipboard *Clipboard::mInstance = 0;
 
@@ -81,6 +84,58 @@ const QList<WorldCellContents *> &Clipboard::cellsInClipboard() const
 const int Clipboard::cellsInClipboardCount() const
 {
     return mCellContents.size();
+}
+
+/**
+  * This can be called multiple times by PasteCellsTool. It mustn't make
+  * changes more than once.
+  */
+void Clipboard::pasteEverythingButCells(WorldDocument *worldDoc)
+{
+    worldDoc->undoStack()->beginMacro(tr("Paste"));
+    World *world = worldDoc->world();
+    World *worldClip = mWorld;
+    foreach (PropertyDef *pdClip, worldClip->propertyDefinitions()) {
+        PropertyDef *pd = world->propertyDefinitions().findPropertyDef(pdClip->mName);
+        if (pd) {
+            if (*pd != *pdClip)
+                worldDoc->changePropertyDefinition(pd, pdClip);
+        } else {
+            pd = new PropertyDef(pdClip);
+            worldDoc->addPropertyDefinition(pd);
+        }
+    }
+    foreach (PropertyTemplate *ptClip, worldClip->propertyTemplates()) {
+        PropertyTemplate *pt = world->propertyTemplates().find(ptClip->mName);
+        if (pt) {
+            if (*pt != *ptClip)
+                worldDoc->changeTemplate(pt, ptClip);
+        } else {
+            pt = new PropertyTemplate(world, ptClip);
+            worldDoc->addTemplate(pt);
+        }
+    }
+    foreach (ObjectType *otClip, worldClip->objectTypes()) {
+        ObjectType *ot = world->objectTypes().find(otClip->name());
+        if (ot) {
+            if (*ot != *otClip)
+                worldDoc->changeObjectType(ot, otClip);
+        } else {
+            ot = new ObjectType(world, otClip);
+            worldDoc->addObjectType(ot);
+        }
+    }
+    foreach (WorldObjectGroup *ogClip, worldClip->objectGroups()) {
+        WorldObjectGroup *og = world->objectGroups().find(ogClip->name());
+        if (og) {
+            if (*og != *ogClip)
+                worldDoc->changeObjectGroup(og, ogClip);
+        } else {
+            og = new WorldObjectGroup(world, ogClip);
+            worldDoc->addObjectGroup(og);
+        }
+    }
+    worldDoc->undoStack()->endMacro();
 }
 
 Clipboard::Clipboard(QObject *parent)

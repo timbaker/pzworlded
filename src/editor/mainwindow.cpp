@@ -100,6 +100,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionClose->setShortcuts(QKeySequence::Close);
     ui->actionQuit->setShortcuts(QKeySequence::Quit);
 
+    ui->actionCopy->setShortcuts(QKeySequence::Copy);
+    ui->actionPaste->setShortcuts(QKeySequence::Paste);
+
     ui->actionSnapToGrid->setChecked(prefs->snapToGrid());
     ui->actionShowCoordinates->setChecked(prefs->showCoordinates());
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
@@ -784,7 +787,11 @@ void MainWindow::paste()
 {
     Q_ASSERT(mCurrentDocument && mCurrentDocument->isWorldDocument());
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    ((WorldScene *)worldDoc->view()->scene())->pasteCellsFromClipboard();
+    if (Clipboard::instance()->cellsInClipboardCount())
+        worldDoc->view()->scene()->asWorldScene()->pasteCellsFromClipboard();
+    else
+        Clipboard::instance()->pasteEverythingButCells(worldDoc);
+}
 
 void MainWindow::showClipboard()
 {

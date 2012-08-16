@@ -247,6 +247,7 @@ public:
       * This operation is undo-able.
       */
     void changePropertyDefinition(PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc);
+    void changePropertyDefinition(PropertyDef *pd, PropertyDef *other);
 
     /**
       * Changes the name, and/or description of an existing template.

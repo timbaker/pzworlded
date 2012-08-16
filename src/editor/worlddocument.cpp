@@ -404,9 +404,17 @@ void WorldDocument::removeTemplate(int index)
     undoStack()->endMacro();
 }
 
-void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc)
+void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &name,
+                                             const QString &defValue, const QString &desc)
 {
     undoStack()->push(new EditPropertyDef(this, pd, name, defValue, desc));
+}
+
+void WorldDocument::changePropertyDefinition(PropertyDef *pd, PropertyDef *other)
+{
+    undoStack()->push(new EditPropertyDef(this, pd, other->mName,
+                                          other->mDefaultValue,
+                                          other->mDescription));
 }
 
 void WorldDocument::changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc)

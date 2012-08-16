@@ -22,6 +22,7 @@
 
 class World;
 class WorldCellContents;
+class WorldDocument;
 
 class Clipboard : public QObject
 {
@@ -37,6 +38,8 @@ public:
 
     const QList<WorldCellContents*> &cellsInClipboard() const;
     const int cellsInClipboardCount() const;
+
+    void pasteEverythingButCells(WorldDocument *worldDoc);
 
 signals:
     void clipboardChanged();
