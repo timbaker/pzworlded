@@ -1137,6 +1137,14 @@ void PasteCellsTool::activate()
     startMoving();
 }
 
+void PasteCellsTool::deactivate()
+{
+    BaseWorldSceneTool::deactivate();
+
+    // The user might switch tools while this tool is active
+    cancelMoving();
+}
+
 void PasteCellsTool::setScene(BaseGraphicsScene *scene)
 {
     if (mScene) {
@@ -1161,8 +1169,7 @@ void PasteCellsTool::keyPressEvent(QKeyEvent *event)
     if (event->key() == Qt::Key_Escape) {
         ToolManager::instance()->selectTool(WorldCellTool::instance());
         if (!isCurrent()) {
-            qDeleteAll(mDnDItems);
-            mDnDItems.clear();
+            cancelMoving();
         }
         event->accept();
     }
@@ -1179,8 +1186,7 @@ void PasteCellsTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         ToolManager::instance()->selectTool(WorldCellTool::instance());
         if (!isCurrent()) {
-            qDeleteAll(mDnDItems);
-            mDnDItems.clear();
+            cancelMoving();
         }
         event->accept();
     }
@@ -1289,4 +1295,10 @@ void PasteCellsTool::pasteCells(const QPointF &pos)
     mScene->worldDocument()->setSelectedCells(newSelection, true);
     undoStack->push(new ProgressEnd(tr("Undoing Paste Cells"))); // in case of multiple loadMap() calls
     undoStack->endMacro();
+}
+
+void PasteCellsTool::cancelMoving()
+{
+    qDeleteAll(mDnDItems);
+    mDnDItems.clear();
 }

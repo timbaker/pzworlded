@@ -428,6 +428,7 @@ public:
     ~PasteCellsTool();
 
     void activate();
+    void deactivate();
 
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
@@ -449,7 +450,7 @@ private:
     void startMoving();
     void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
     void pasteCells(const QPointF &pos);
-    QPointF restrictMoving(const QPointF &pos);
+    void cancelMoving();
 
     QPointF mStartScenePos;
     QPoint mDropTilePos;
