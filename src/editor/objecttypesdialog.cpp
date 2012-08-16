@@ -124,16 +124,22 @@ void ObjectTypesDialog::synchButtons()
     bool enableAdd = false;
     bool enableRemove = false;
 
+    QString name = ui->nameEdit->text();
     if (mObjType) {
-        if (ui->nameEdit->text() != mObjType->name()) {
+        if (name != mObjType->name())
             enableUpdate = true;
-        }
         enableRemove = true;
     }
 
-    QString name = ui->nameEdit->text();
-    if (!name.isEmpty()) {
-        enableAdd = !mWorldDoc->world()->objectTypes().contains(name);
+    if (!name.isEmpty())
+        enableAdd = true;
+    else
+        enableUpdate = false;
+
+    if (ObjectType *ot = mWorldDoc->world()->objectTypes().find(name)) {
+        enableAdd = false;
+        if (ot != mObjType)
+            enableUpdate = false;
     }
 
     ui->addButton->setEnabled(enableAdd);

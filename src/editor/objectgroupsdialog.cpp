@@ -145,16 +145,22 @@ void ObjectGroupsDialog::synchButtons()
     bool enableAdd = false;
     bool enableRemove = false;
 
+    QString name = ui->nameEdit->text();
     if (mObjGroup) {
-        if (ui->nameEdit->text() != mObjGroup->name()) {
+        if (name != mObjGroup->name())
             enableUpdate = true;
-        }
         enableRemove = true;
     }
 
-    QString name = ui->nameEdit->text();
-    if (!name.isEmpty()) {
-        enableAdd = !mWorldDoc->world()->objectGroups().contains(name);
+    if (!name.isEmpty())
+        enableAdd = true;
+    else
+        enableUpdate = false;
+
+    if (WorldObjectGroup *og = mWorldDoc->world()->objectGroups().find(name)) {
+        enableAdd = false;
+        if (og != mObjGroup)
+            enableUpdate = false;
     }
 
     ui->addButton->setEnabled(enableAdd);

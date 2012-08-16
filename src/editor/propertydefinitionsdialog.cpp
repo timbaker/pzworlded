@@ -145,8 +145,9 @@ void PropertyDefinitionsDialog::synchButtons()
     bool enableAdd = false;
     bool enableRemove = false;
 
+    QString name = ui->defNameEdit->text();
     if (mDef) {
-        if (ui->defNameEdit->text() != mDef->mName ||
+        if (name != mDef->mName ||
                 ui->defDefaultEdit->text() != mDef->mDefaultValue ||
                 ui->defDescEdit->toPlainText() != mDef->mDescription) {
             enableUpdate = true;
@@ -154,15 +155,15 @@ void PropertyDefinitionsDialog::synchButtons()
         enableRemove = true;
     }
 
-    QString name = ui->defNameEdit->text();
-    if (!name.isEmpty()) {
+    if (!name.isEmpty())
         enableAdd = true;
-        foreach (PropertyDef *pd, mWorldDoc->world()->propertyDefinitions()) {
-            if (name == pd->mName) {
-                enableAdd = false;
-                break;
-             }
-        }
+    else
+        enableUpdate = false;
+
+    if (PropertyDef *pd = mWorldDoc->world()->propertyDefinitions().findPropertyDef(name)) {
+        enableAdd = false;
+        if (pd != mDef)
+            enableUpdate = false;
     }
 
     ui->addDefButton->setEnabled(enableAdd);

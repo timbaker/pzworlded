@@ -156,23 +156,24 @@ void TemplatesDialog::synchButtons()
     bool enableAdd = false;
     bool enableRemove = false;
 
+    QString name = ui->templateName->text();
     if (mTemplate) {
-        if (ui->templateName->text() != mTemplate->mName ||
+        if (name != mTemplate->mName ||
                 ui->templateDesc->toPlainText() != mTemplate->mDescription) {
             enableUpdate = true;
         }
         enableRemove = true;
     }
 
-    QString name = ui->templateName->text();
-    if (!name.isEmpty()) {
+    if (!name.isEmpty())
         enableAdd = true;
-        foreach (PropertyTemplate *pt, mWorldDoc->world()->propertyTemplates()) {
-            if (name == pt->mName) {
-                enableAdd = false;
-                break;
-             }
-        }
+    else
+        enableUpdate = false;
+
+    if (PropertyTemplate *pt = mWorldDoc->world()->propertyTemplates().find(name)) {
+        enableAdd = false;
+        if (pt != mTemplate)
+            enableUpdate = false;
     }
 
     ui->addTemplate->setEnabled(enableAdd);
