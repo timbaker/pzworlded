@@ -303,10 +303,8 @@ void MainWindow::editCell()
 {
     Document *doc = docman()->currentDocument();
     if (WorldDocument *worldDoc = doc->asWorldDocument()) {
-        if (worldDoc->selectedCellCount()) {
-            WorldCell *cell = worldDoc->selectedCells().first();
+        foreach (WorldCell *cell, worldDoc->selectedCells())
             worldDoc->editCell(cell);
-        }
     }
 }
 
