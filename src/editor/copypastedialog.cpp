@@ -828,7 +828,7 @@ void CopyPasteDialog::showCellProperties()
         WorldCell *cell = cellItem->mCell;
         if (cell->properties().isEmpty())
             continue;
-        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, -1, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (Item *item, cellItem->children(Item::PropertyType)) {
             PropertyItem *propertyItem = item->asPropertyItem();
@@ -851,7 +851,7 @@ void CopyPasteDialog::showCellTemplates()
         WorldCell *cell = cellItem->mCell;
         if (cell->templates().isEmpty())
             continue;
-        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, -1, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (Item *item, cellItem->children(Item::TemplateType)) {
             TemplateItem *templateItem = item->asTemplateItem();
@@ -872,7 +872,7 @@ void CopyPasteDialog::showCellLots()
         WorldCell *cell = cellItem->mCell;
         if (cell->lots().isEmpty())
             continue;
-        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, -1, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (LevelItem *levelItem, cellItem->mLevels.values()) {
             if (levelItem->mLots.size() == 0)
@@ -900,7 +900,7 @@ void CopyPasteDialog::showCellObjects()
         WorldCell *cell = cellItem->mCell;
         if (cell->objects().isEmpty())
             continue;
-        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, -1, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         foreach (LevelItem *levelItem, cellItem->mLevels.values()) {
             int anyObjects = 0;
@@ -947,7 +947,7 @@ void CopyPasteDialog::showCellMap()
         if (cell->mapFilePath().isEmpty())
             continue;
 
-        addToTree(v, 0, 0, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        addToTree(v, 0, -1, cellItem, tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
 
         MapTypeItem *mapItem = cellItem->children(Item::MapType).first()->asMapItem();
         addToTree(v, cellItem, 0, mapItem, QFileInfo(mapItem->mName).fileName());
