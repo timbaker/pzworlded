@@ -32,6 +32,9 @@ namespace Tiled {
 class ZTileLayerGroup;
 }
 
+class QLabel;
+class QSlider;
+
 class LayersDock : public QDockWidget
 {
     Q_OBJECT
@@ -47,6 +50,8 @@ protected:
 private slots:
     void documentAboutToClose(int index, Document *doc);
     void cellMapFileAboutToChange(WorldCell *cell);
+    void opacitySliderValueChanged(int value);
+    void updateOpacitySlider();
 
 private:
     void retranslateUi();
@@ -57,6 +62,8 @@ private:
     LayersView *mView;
     CellDocument *mCellDocument;
     QMap<CellDocument*,QList<CompositeLayerGroup*> > mExpandedLevels;
+    QLabel *mOpacityLabel;
+    QSlider *mOpacitySlider;
 };
 
 class LayersView : public QTreeView

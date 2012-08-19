@@ -1151,6 +1151,18 @@ void CellScene::setObjectVisible(WorldCellObject *obj, bool visible)
     }
 }
 
+void CellScene::setLevelOpacity(int level, qreal opacity)
+{
+    if (mTileLayerGroupItems.contains(level))
+        mTileLayerGroupItems[level]->setOpacity(opacity);
+}
+
+qreal CellScene::levelOpacity(int level)
+{
+    if (mTileLayerGroupItems.contains(level))
+        return mTileLayerGroupItems[level]->opacity();
+}
+
 void CellScene::keyPressEvent(QKeyEvent *event)
 {
     mActiveTool->keyPressEvent(event);

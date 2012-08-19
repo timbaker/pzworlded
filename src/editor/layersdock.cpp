@@ -33,6 +33,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QSlider>
 
 using namespace Tiled;
 
@@ -40,12 +41,25 @@ LayersDock::LayersDock(QWidget *parent)
     : QDockWidget(parent)
     , mView(new LayersView())
     , mCellDocument(0)
+    , mOpacityLabel(new QLabel)
+    , mOpacitySlider(new QSlider(Qt::Horizontal))
 {
     setObjectName(QLatin1String("LevelsDock"));
+
+    QHBoxLayout *opacityLayout = new QHBoxLayout;
+    mOpacitySlider->setRange(0, 100);
+    mOpacitySlider->setEnabled(false);
+    opacityLayout->addWidget(mOpacityLabel);
+    opacityLayout->addWidget(mOpacitySlider);
+    mOpacityLabel->setBuddy(mOpacitySlider);
+
+    connect(mOpacitySlider, SIGNAL(valueChanged(int)),
+            SLOT(opacitySliderValueChanged(int)));
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
     layout->setMargin(2);
+    layout->addLayout(opacityLayout);
     layout->addWidget(mView);
 
     setWidget(widget);
@@ -64,6 +78,7 @@ void LayersDock::setCellDocument(CellDocument *doc)
 {
     if (mCellDocument) {
         saveExpandedLevels(mCellDocument);
+        mCellDocument->disconnect(this);
     }
 
     mCellDocument = doc;
@@ -71,13 +86,18 @@ void LayersDock::setCellDocument(CellDocument *doc)
     mView->setCellDocument(mCellDocument);
 
     if (mCellDocument) {
-        // This connection won't break until the document is closed
+        connect(mCellDocument, SIGNAL(currentLevelChanged(int)),
+                SLOT(updateOpacitySlider()));
+
+        // These connections won't break until the document is closed
         connect(mCellDocument->worldDocument(), SIGNAL(cellMapFileAboutToChange(WorldCell*)),
                 SLOT(cellMapFileAboutToChange(WorldCell*)), Qt::UniqueConnection);
         connect(mCellDocument->worldDocument(), SIGNAL(cellContentsAboutToChange(WorldCell*)),
                 SLOT(cellMapFileAboutToChange(WorldCell*)), Qt::UniqueConnection);
         restoreExpandedLevels(mCellDocument);
     }
+
+    updateOpacitySlider();
 }
 
 void LayersDock::changeEvent(QEvent *e)
@@ -95,6 +115,7 @@ void LayersDock::changeEvent(QEvent *e)
 void LayersDock::retranslateUi()
 {
     setWindowTitle(tr("Layers"));
+    mOpacityLabel->setText(tr("Opacity:"));
 }
 
 void LayersDock::saveExpandedLevels(CellDocument *doc)
@@ -137,6 +158,26 @@ void LayersDock::cellMapFileAboutToChange(WorldCell *cell)
     CellDocument *doc = DocumentManager::instance()->findDocument(cell);
     if (doc && mExpandedLevels.contains(doc))
         mExpandedLevels.remove(doc);
+}
+
+void LayersDock::opacitySliderValueChanged(int value)
+{
+    if (mCellDocument)
+        mCellDocument->scene()->setLevelOpacity(
+                    mCellDocument->currentLevel(),
+                    qreal(value) / 100.0);
+}
+
+void LayersDock::updateOpacitySlider()
+{
+    if (mCellDocument) {
+        qreal opacity = mCellDocument->scene()->levelOpacity(mCellDocument->currentLevel());
+        mOpacitySlider->setValue(opacity * 100);
+        mOpacitySlider->setEnabled(true);
+    } else {
+        mOpacitySlider->setValue(100);
+        mOpacitySlider->setEnabled(false);
+    }
 }
 
 ///// ///// ///// ///// /////

@@ -312,6 +312,9 @@ public:
     void setSubMapVisible(WorldCellLot *lot, bool visible);
     void setObjectVisible(WorldCellObject *obj, bool visible);
 
+    void setLevelOpacity(int level, qreal opacity);
+    qreal levelOpacity(int level);
+
     void keyPressEvent(QKeyEvent *event);
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
