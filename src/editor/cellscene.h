@@ -331,6 +331,7 @@ public:
 protected:
     void loadMap();
     void updateCurrentLevelHighlight();
+    bool shouldObjectItemBeVisible(ObjectItem *item);
 
 public slots:
     void cellMapFileChanged();
