@@ -35,6 +35,7 @@ class CompositeLayerGroup;
 class MapComposite;
 class MapImage;
 class MapInfo;
+class ObjectItem;
 class ResizeHandle;
 class SubMap;
 class World;
@@ -48,6 +49,29 @@ namespace Tiled {
 class MapRenderer;
 class Layer;
 class ZTileLayerGroup;
+}
+
+class ObjectLabelItem : public QGraphicsSimpleTextItem
+{
+public:
+    ObjectLabelItem(ObjectItem *item, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+    QPainterPath shape() const;
+    bool contains(const QPointF &point) const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+               QWidget *widget);
+
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
+
+    void synch();
+
+    ObjectItem *objectItem() const { return mItem; }
+
+private:
+    ObjectItem *mItem;
+    QColor mBgColor;
 };
 
 /**
@@ -89,16 +113,19 @@ public:
 
     QRectF tileBounds() const;
 
+    bool isMouseOver() const { return mIsMouseOver != 0; }
+
 private:
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
     WorldCellObject *mObject;
     bool mIsEditable;
     bool mIsSelected;
-    bool mIsMouseOver;
+    int mIsMouseOver;
     QPointF mDragOffset;
     QSizeF mResizeDelta;
     ResizeHandle *mResizeHandle;
+    ObjectLabelItem *mLabel;
 };
 
 /**
@@ -254,6 +281,8 @@ public:
 
     void setTool(AbstractTool *tool);
 
+    void viewTransformChanged(BaseGraphicsView *view);
+
     Tiled::Map *map() const { return mMap; }
 
     MapComposite *mapComposite() const { return mMapComposite; }
@@ -333,6 +362,7 @@ public slots:
     void currentLevelChanged(int index);
     void setGridVisible(bool visible);
     void gridColorChanged(const QColor &gridColor);
+    void showObjectNamesChanged(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void handlePendingUpdates();
 

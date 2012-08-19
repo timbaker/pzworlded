@@ -63,6 +63,9 @@ void BaseGraphicsView::adjustScale(qreal scale)
     setTransform(QTransform::fromScale(scale, scale));
     setRenderHint(QPainter::SmoothPixmapTransform,
                   mZoomable->smoothTransform());
+
+    if (mScene)
+        mScene->viewTransformChanged(this);
 }
 
 void BaseGraphicsView::autoScrollTimeout()

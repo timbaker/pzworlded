@@ -107,6 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowCoordinates->setChecked(prefs->showCoordinates());
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
     ui->actionShowMiniMap->setChecked(prefs->showMiniMap());
+    ui->actionShowObjectNames->setChecked(prefs->showObjectNames());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
 
     // Make sure Ctrl+= also works for zooming in
@@ -201,6 +202,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
     connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)), prefs, SLOT(setShowMiniMap(bool)));
+    connect(ui->actionShowObjectNames, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjectNames(bool)));
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
     connect(ui->actionLevelAbove, SIGNAL(triggered()), SLOT(selectLevelAbove()));
     connect(ui->actionLevelBelow, SIGNAL(triggered()), SLOT(selectLevelBelow()));

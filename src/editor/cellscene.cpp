@@ -281,6 +281,81 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
 
 /////
 
+ObjectLabelItem::ObjectLabelItem(ObjectItem *item, QGraphicsItem *parent)
+    : QGraphicsSimpleTextItem(parent)
+    , mItem(item)
+{
+    setAcceptsHoverEvents(true);
+    setFlag(ItemIgnoresTransformations);
+
+    synch();
+}
+
+QRectF ObjectLabelItem::boundingRect() const
+{
+    return QGraphicsSimpleTextItem::boundingRect().adjusted(-3, -3, 2, 2);
+}
+
+QPainterPath ObjectLabelItem::shape() const
+{
+    QPainterPath path;
+    path.addRect(boundingRect());
+    return path;
+}
+
+bool ObjectLabelItem::contains(const QPointF &point) const
+{
+    return boundingRect().contains(point);
+}
+
+void ObjectLabelItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                            QWidget *widget)
+{
+    QRectF r = QGraphicsSimpleTextItem::boundingRect().adjusted(-3, -3, 2, 2);
+    painter->fillRect(r, mBgColor);
+
+    QGraphicsSimpleTextItem::paint(painter, option, widget);
+}
+
+void ObjectLabelItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+{
+    mItem->hoverEnterEvent(event);
+}
+
+void ObjectLabelItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+{
+    mItem->hoverLeaveEvent(event);
+}
+
+#include <QGraphicsView>
+void ObjectLabelItem::synch()
+{
+    if (!Preferences::instance()->showObjectNames()
+            || mItem->object()->name().isEmpty())
+        setVisible(false);
+    else {
+        setVisible(true);
+        setText(mItem->object()->name());
+
+        if (scene() && !scene()->views().isEmpty()) {
+            QRectF bounds = QGraphicsSimpleTextItem::boundingRect();
+            QGraphicsView *view = scene()->views().at(0);
+            // item coords -> view coords -> scene coords
+            bounds = deviceTransform(view->viewportTransform()).inverted().mapRect(bounds);
+            bounds = view->mapToScene(bounds.toAlignedRect()).boundingRect();
+            QPointF center = mItem->boundingRect().center();
+            setPos(center - (bounds.center() - bounds.topLeft()));
+        }
+
+        mBgColor = mItem->isMouseOver() ? Qt::white : Qt::lightGray;
+        mBgColor.setAlphaF(0.75);
+
+        update();
+    }
+}
+
+/////
+
 /**
  * A resize handle that allows resizing of a WorldCellObject.
  */
@@ -434,12 +509,14 @@ ObjectItem::ObjectItem(WorldCellObject *obj, CellScene *scene, QGraphicsItem *pa
     , mObject(obj)
     , mIsEditable(false)
     , mIsSelected(false)
-    , mIsMouseOver(false)
+    , mIsMouseOver(0)
     , mResizeDelta(0, 0)
     , mResizeHandle(new ResizeHandle(this, scene))
+    , mLabel(new ObjectLabelItem(this, this))
 {
     setAcceptHoverEvents(true);
-    mBoundingRect = ::boundingRect(mRenderer, QRectF(mObject->pos(), mObject->size()), mObject->level()).adjusted(-2, -3, 2, 2);
+    mBoundingRect = ::boundingRect(mRenderer, QRectF(mObject->pos(), mObject->size()),
+                                   mObject->level()).adjusted(-2, -3, 2, 2);
     mResizeHandle->setVisible(false);
 
     // Update the tooltip
@@ -497,18 +574,21 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
 void ObjectItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
-    if (ObjectTool::instance()->isCurrent()) {
-        mIsMouseOver = true;
+    if ((++mIsMouseOver == 1) && ObjectTool::instance()->isCurrent()) {
         update();
+
+        mLabel->synch();
     }
 }
 
 void ObjectItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
-    if (mIsMouseOver) {
-        mIsMouseOver = false;
+    Q_ASSERT(mIsMouseOver > 0);
+    if (--mIsMouseOver == 0) {
         update();
+
+        mLabel->synch();
     }
 }
 
@@ -574,6 +654,8 @@ void ObjectItem::synchWithObject()
         mBoundingRect = sceneBounds;
     }
     mResizeHandle->synch();
+
+    mLabel->synch();
 }
 
 void ObjectItem::setDragOffset(const QPointF &offset)
@@ -841,6 +923,7 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, SIGNAL(highlightCurrentLevelChanged(bool)), SLOT(setHighlightCurrentLevel(bool)));
     setGridVisible(prefs->showCellGrid());
     connect(prefs, SIGNAL(gridColorChanged(QColor)), SLOT(update()));
+    connect(prefs, SIGNAL(showObjectNamesChanged(bool)), SLOT(showObjectNamesChanged(bool)));
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
 }
@@ -884,6 +967,13 @@ void CellScene::setTool(AbstractTool *tool)
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
+}
+
+void CellScene::viewTransformChanged(BaseGraphicsView *view)
+{
+    Q_UNUSED(view)
+    foreach (ObjectItem *item, mObjectItems)
+        item->synchWithObject(); // actually just need to update the label
 }
 
 void CellScene::setDocument(CellDocument *doc)
@@ -1133,6 +1223,7 @@ void CellScene::loadMap()
     foreach (WorldCellObject *obj, cell()->objects()) {
         ObjectItem *item = new ObjectItem(obj, this);
         addItem(item);
+        item->synchWithObject(); // for ObjectLabelItem
         mObjectItems += item;
         mMapComposite->ensureMaxLevels(obj->level());
     }
@@ -1248,6 +1339,7 @@ void CellScene::cellObjectAdded(WorldCell *cell, int index)
     WorldCellObject *obj = cell->objects().at(index);
     ObjectItem *item = new ObjectItem(obj, this);
     addItem(item);
+    item->synchWithObject(); // update label coords
     mObjectItems += item;
 
     doLater(ZOrder);
@@ -1458,6 +1550,13 @@ void CellScene::gridColorChanged(const QColor &gridColor)
 {
     Q_UNUSED(gridColor)
     mGridItem->update();
+}
+
+void CellScene::showObjectNamesChanged(bool show)
+{
+    Q_UNUSED(show)
+    foreach (ObjectItem *item, mObjectItems)
+        item->synchWithObject(); // just synch the label
 }
 
 void CellScene::setHighlightCurrentLevel(bool highlight)

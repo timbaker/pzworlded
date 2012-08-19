@@ -457,9 +457,17 @@ void ObjectTool::finishMoving(const QPointF &pos)
 
 ObjectItem *ObjectTool::topmostItemAt(const QPointF &scenePos)
 {
-    foreach (QGraphicsItem *item, mScene->items(scenePos)) {
+    // ObjectLabelItem uses ItemIgnoresTransformations to keep its size the
+    // same regardless of the view's scale.
+    QTransform xform = mScene->views().at(0)->viewportTransform();
+    foreach (QGraphicsItem *item, mScene->items(scenePos,
+                                                Qt::IntersectsItemShape,
+                                                Qt::DescendingOrder, xform)) {
         if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item))
             return objectItem;
+
+        if (ObjectLabelItem *labelItem = dynamic_cast<ObjectLabelItem*>(item))
+            return labelItem->objectItem();
     }
     return 0;
 }

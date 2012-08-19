@@ -41,6 +41,11 @@ public:
     bool isWorldScene() const { return mType == WorldSceneType; }
     bool isCellScene() const { return mType == CellSceneType; }
 
+    virtual void viewTransformChanged(BaseGraphicsView *view)
+    {
+        Q_UNUSED(view)
+    }
+
     WorldScene *asWorldScene();
     CellScene *asCellScene();
 

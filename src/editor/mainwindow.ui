@@ -220,6 +220,7 @@
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
     <addaction name="actionShowMiniMap"/>
+    <addaction name="actionShowObjectNames"/>
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
     <addaction name="actionLevelAbove"/>
@@ -564,6 +565,14 @@
    </property>
    <property name="shortcut">
     <string>PgDown</string>
+   </property>
+  </action>
+  <action name="actionShowObjectNames">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Object Names</string>
    </property>
   </action>
  </widget>

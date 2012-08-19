@@ -81,6 +81,7 @@ Preferences::Preferences()
     mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
     mGridColor = QColor(mSettings->value(QLatin1String("GridColor"),
                                          QColor(Qt::black).name()).toString());
+    mShowObjectNames = mSettings->value(QLatin1String("ShowObjectNames"), true).toBool();
     mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
     mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
@@ -164,6 +165,17 @@ void Preferences::setUseOpenGL(bool useOpenGL)
     mSettings->setValue(QLatin1String("Interface/OpenGL"), mUseOpenGL);
 
     emit useOpenGLChanged(mUseOpenGL);
+}
+
+void Preferences::setShowObjectNames(bool show)
+{
+    if (mShowObjectNames == show)
+        return;
+
+    mShowObjectNames = show;
+    mSettings->setValue(QLatin1String("Interface/ShowObjectNames"), mShowObjectNames);
+
+    emit showObjectNamesChanged(mShowObjectNames);
 }
 
 void Preferences::setShowMiniMap(bool show)

@@ -49,6 +49,8 @@ public:
     bool useOpenGL() const { return mUseOpenGL; }
     void setUseOpenGL(bool useOpenGL);
 
+    bool showObjectNames() const { return mShowObjectNames; }
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
@@ -57,6 +59,8 @@ signals:
     void gridColorChanged(const QColor &gridColor);
 
     void useOpenGLChanged(bool useOpenGL);
+
+    void showObjectNamesChanged(bool show);
 
 #define MINIMAP_WIDTH_MIN 128
 #define MINIMAP_WIDTH_MAX 512
@@ -74,6 +78,7 @@ public slots:
     void setGridColor(const QColor &gridColor);
     void setShowMiniMap(bool show);
     void setMiniMapWidth(int width);
+    void setShowObjectNames(bool show);
     void setHighlightCurrentLevel(bool highlight);
 
 private:
@@ -88,6 +93,7 @@ private:
     bool mShowCellGrid;
     QColor mGridColor;
     bool mUseOpenGL;
+    bool mShowObjectNames;
     bool mShowMiniMap;
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;
