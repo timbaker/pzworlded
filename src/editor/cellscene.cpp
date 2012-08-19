@@ -347,7 +347,7 @@ void ObjectLabelItem::synch()
             setPos(center - (bounds.center() - bounds.topLeft()));
         }
 
-        mBgColor = mItem->isMouseOver() ? Qt::white : Qt::lightGray;
+        mBgColor = mItem->isMouseOverHighlighted() ? Qt::white : Qt::lightGray;
         mBgColor.setAlphaF(0.75);
 
         update();
@@ -509,7 +509,7 @@ ObjectItem::ObjectItem(WorldCellObject *obj, CellScene *scene, QGraphicsItem *pa
     , mObject(obj)
     , mIsEditable(false)
     , mIsSelected(false)
-    , mIsMouseOver(0)
+    , mHoverRefCount(0)
     , mResizeDelta(0, 0)
     , mResizeHandle(new ResizeHandle(this, scene))
     , mLabel(new ObjectLabelItem(this, this))
@@ -533,7 +533,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
     QColor color = mObject->group()->color();
     if (mIsSelected)
         color = QColor(0x33,0x99,0xff/*,255/8*/);
-    if (mIsMouseOver)
+    if (isMouseOverHighlighted())
         color = color.lighter();
     mRenderer->drawFancyRectangle(painter, tileBounds(), color, mObject->level());
 
@@ -574,7 +574,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
 void ObjectItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
-    if ((++mIsMouseOver == 1) && ObjectTool::instance()->isCurrent()) {
+    if ((++mHoverRefCount == 1) && ObjectTool::instance()->isCurrent()) {
         update();
 
         mLabel->synch();
@@ -584,8 +584,8 @@ void ObjectItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 void ObjectItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
-    Q_ASSERT(mIsMouseOver > 0);
-    if (--mIsMouseOver == 0) {
+    Q_ASSERT(mHoverRefCount > 0);
+    if (--mHoverRefCount == 0) {
         update();
 
         mLabel->synch();
@@ -673,6 +673,11 @@ void ObjectItem::setResizeDelta(const QSizeF &delta)
 QRectF ObjectItem::tileBounds() const
 {
     return QRectF(mObject->pos() + mDragOffset, mObject->size() + mResizeDelta);
+}
+
+bool ObjectItem::isMouseOverHighlighted() const
+{
+    return (mHoverRefCount > 0) && ObjectTool::instance()->isCurrent();
 }
 
 /////

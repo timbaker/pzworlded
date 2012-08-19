@@ -113,7 +113,7 @@ public:
 
     QRectF tileBounds() const;
 
-    bool isMouseOver() const { return mIsMouseOver != 0; }
+    bool isMouseOverHighlighted() const;
 
 private:
     Tiled::MapRenderer *mRenderer;
@@ -121,7 +121,7 @@ private:
     WorldCellObject *mObject;
     bool mIsEditable;
     bool mIsSelected;
-    int mIsMouseOver;
+    int mHoverRefCount;
     QPointF mDragOffset;
     QSizeF mResizeDelta;
     ResizeHandle *mResizeHandle;
