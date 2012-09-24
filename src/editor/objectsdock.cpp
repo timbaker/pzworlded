@@ -412,6 +412,8 @@ void ObjectsView::selectedObjectsChanged()
         selectionModel()->select(model()->index(obj),
                                  QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
+    if (mCellDoc->selectedObjectCount() == 1)
+        scrollTo(model()->index(mCellDoc->selectedObjects().first()));
     mSynchingSelection = false;
 }
 
