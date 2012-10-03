@@ -171,6 +171,38 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos, QVector<const Cell *
     return !cells.isEmpty();
 }
 
+// This is for the benefit of LotFilesManager.  It ignores the visibility of
+// layers (so NoRender layers are included) and visibility of sub-maps.
+bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell *> &cells) const
+{
+    bool cleared = false;
+    int index = -1;
+    foreach (TileLayer *tl, mLayers) {
+        ++index;
+        QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
+        if (tl->contains(subPos)) {
+            const Cell *cell = &tl->cellAt(subPos);
+            if (!cell->isEmpty()) {
+                if (!cleared) {
+                    cells.clear();
+                    cleared = true;
+                }
+                cells.append(cell);
+            }
+        }
+    }
+
+    // Overwrite map cells with sub-map cells at this location
+    foreach (MapComposite *subMap, mOwner->subMaps()) {
+        int levelOffset = subMap->levelOffset();
+        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
+        if (layerGroup)
+            layerGroup->orderedCellsAt2(pos - subMap->origin(), cells);
+    }
+
+    return !cells.isEmpty();
+}
+
 void CompositeLayerGroup::synch()
 {
     QRect r;

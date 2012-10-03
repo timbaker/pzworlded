@@ -50,6 +50,8 @@ private slots:
 
     void pathSelectionChanged();
 
+    void lotsDirectoryBrowse();
+
     void dialogAccepted();
     
 private:
@@ -57,6 +59,7 @@ private:
     WorldDocument *mWorldDoc;
     QStringList mSearchPaths;
     QColor mGridColor;
+    QString mLotsDirectory;
 };
 
 #endif // PREFERENCESDIALOG_H

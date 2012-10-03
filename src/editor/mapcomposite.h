@@ -50,6 +50,8 @@ public:
 
     QRectF boundingRect(const Tiled::MapRenderer *renderer);
 
+    bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
+
     void setLayerVisibility(const QString &layerName, bool visible);
     void setLayerVisibility(Tiled::TileLayer *tl, bool visible);
     bool isLayerVisible(Tiled::TileLayer *tl);

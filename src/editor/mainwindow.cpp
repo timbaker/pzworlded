@@ -26,6 +26,7 @@
 #include "documentmanager.h"
 #include "layersdock.h"
 #include "lotsdock.h"
+#include "lotfilesmanager.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mapsdock.h"
@@ -178,6 +179,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionSaveAs, SIGNAL(triggered()), SLOT(saveFileAs()));
     connect(ui->actionClose, SIGNAL(triggered()), SLOT(closeFile()));
     connect(ui->actionCloseAll, SIGNAL(triggered()), SLOT(closeAllFiles()));
+    connect(ui->actionGenerateLots, SIGNAL(triggered()), SLOT(generateLots()));
     connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
@@ -719,6 +721,19 @@ void MainWindow::closeAllFiles()
         docman()->closeAllDocuments();
 }
 
+void MainWindow::generateLots()
+{
+    if (!mCurrentDocument)
+        return;
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    if (!LotFilesManager::instance()->generateWorld(worldDoc)) {
+        QMessageBox::warning(this, tr("Lot Generation Failed!"),
+                             LotFilesManager::instance()->errorString());
+    }
+}
+
 void MainWindow::preferencesDialog()
 {
     if (!mCurrentDocument)
@@ -981,7 +996,8 @@ void MainWindow::extractObjects()
                 // Adjust coordinates to whole numbers
                 // I'm trying to match what PZ's Lot Creator does.
                 int x = qFloor(o->x()), y = qFloor(o->y());
-                int width = qFloor(o->width()), height = qFloor(o->height());
+                int x2 = qCeil(o->x() + o->width()), y2 = qCeil(o->y() + o->height());
+                int width = x2 - x, height = y2 - y;
                 width = qMax(MIN_OBJECT_SIZE, qreal(width));
                 height = qMax(MIN_OBJECT_SIZE, qreal(height));
 
@@ -1178,6 +1194,8 @@ void MainWindow::updateActions()
     ui->actionSaveAs->setEnabled(hasDoc);
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
+
+    ui->actionGenerateLots->setEnabled(hasDoc);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

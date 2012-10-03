@@ -93,6 +93,10 @@ Preferences::Preferences()
     mMapsDirectory = mSettings->value(QLatin1String("Current"), QString()).toString();
     mSettings->endGroup();
 
+    mSettings->beginGroup(QLatin1String("LotsDirectory"));
+    mLotsDirectory = mSettings->value(QLatin1String("Current"), QString()).toString();
+    mSettings->endGroup();
+
     mSearchPaths = mSettings->value(QLatin1String("SearchPaths"), QStringList()).toStringList();
 }
 
@@ -104,6 +108,11 @@ Preferences::~Preferences()
 QString Preferences::mapsDirectory() const
 {
     return mMapsDirectory;
+}
+
+QString Preferences::lotsDirectory() const
+{
+    return mLotsDirectory;
 }
 
 void Preferences::setSnapToGrid(bool snapToGrid)
@@ -222,6 +231,16 @@ void Preferences::setMapsDirectory(const QString &path)
 //    ZProgressManager::instance()->begin(QLatin1String("Checking lots..."));
 
     emit mapsDirectoryChanged();
+}
+
+void Preferences::setLotsDirectory(const QString &path)
+{
+    if (mLotsDirectory == path)
+        return;
+    mLotsDirectory = path;
+    mSettings->setValue(QLatin1String("LotsDirectory/Current"), path);
+
+    emit lotsDirectoryChanged();
 }
 
 QStringList Preferences::searchPaths() const

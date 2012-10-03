@@ -1158,6 +1158,7 @@ qreal CellScene::levelOpacity(int level)
 {
     if (mTileLayerGroupItems.contains(level))
         return mTileLayerGroupItems[level]->opacity();
+    return 1.0;
 }
 
 void CellScene::keyPressEvent(QKeyEvent *event)

@@ -43,6 +43,9 @@ public:
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
 
+    QString lotsDirectory() const;
+    void setLotsDirectory(const QString &path);
+
     QStringList searchPaths() const;
     void setSearchPaths(const QStringList &paths);
 
@@ -69,6 +72,7 @@ signals:
 
     void highlightCurrentLevelChanged(bool highlight);
     void mapsDirectoryChanged();
+    void lotsDirectoryChanged();
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -98,6 +102,7 @@ private:
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;
     QString mMapsDirectory;
+    QString mLotsDirectory;
     QStringList mSearchPaths;
 
     static Preferences *mInstance;

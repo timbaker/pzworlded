@@ -192,6 +192,8 @@
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
+    <addaction name="actionGenerateLots"/>
+    <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
     <addaction name="actionQuit"/>
@@ -573,6 +575,11 @@
    </property>
    <property name="text">
     <string>Show Object Names</string>
+   </property>
+  </action>
+  <action name="actionGenerateLots">
+   <property name="text">
+    <string>Generate Lots</string>
    </property>
   </action>
  </widget>

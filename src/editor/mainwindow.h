@@ -88,6 +88,8 @@ public slots:
     void closeFile();
     void closeAllFiles();
 
+    void generateLots();
+
     void preferencesDialog();
     void objectGroupsDialog();
     void objectTypesDialog();

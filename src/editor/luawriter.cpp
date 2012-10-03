@@ -51,6 +51,7 @@ public:
 
     void writeWorld(World *world, QIODevice *device, const QString &absDirPath)
     {
+        Q_UNUSED(absDirPath)
         mWorld = world;
 
         LuaTableWriter w(device);

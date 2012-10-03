@@ -48,6 +48,10 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
 
     setPathsList();
     ui->openGL->setChecked(prefs->useOpenGL());
+
+    mLotsDirectory = prefs->lotsDirectory();
+    ui->lotsDirEdit->setText(mLotsDirectory);
+    connect(ui->lotsDirBrowse, SIGNAL(clicked()), SLOT(lotsDirectoryBrowse()));
 }
 
 void PreferencesDialog::setPathsList()
@@ -127,10 +131,21 @@ void PreferencesDialog::pathSelectionChanged()
     synchPathsButtons();
 }
 
+void PreferencesDialog::lotsDirectoryBrowse()
+{
+    QString f = QFileDialog::getExistingDirectory(this, tr("Choose the Lots Folder"),
+        ui->lotsDirEdit->text());
+    if (!f.isEmpty()) {
+        mLotsDirectory = f;
+        ui->lotsDirEdit->setText(mLotsDirectory);
+    }
+}
+
 void PreferencesDialog::dialogAccepted()
 {
     Preferences *prefs = Preferences::instance();
     prefs->setSearchPaths(mSearchPaths);
     prefs->setUseOpenGL(ui->openGL->isChecked());
     prefs->setGridColor(mGridColor);
+    prefs->setLotsDirectory(mLotsDirectory);
 }
