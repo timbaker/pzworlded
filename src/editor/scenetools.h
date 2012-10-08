@@ -458,4 +458,154 @@ private:
     static PasteCellsTool *mInstance;
 };
 
+/////
+
+class Road;
+class RoadItem;
+
+/**
+  * This WorldScene tool creates Roads.
+  */
+class CreateRoadTool : public BaseWorldSceneTool
+{
+    Q_OBJECT
+
+public:
+    static CreateRoadTool *instance();
+    static void deleteInstance();
+
+    explicit CreateRoadTool();
+    ~CreateRoadTool();
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Create Roads"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+    void setCurrentRoadWidth(int width)
+    { mCurrentRoadWidth = width; }
+
+    int curretRoadWidth() const
+    { return mCurrentRoadWidth; }
+
+private:
+    Q_DISABLE_COPY(CreateRoadTool)
+
+    void startNewRoadItem(const QPointF &scenePos);
+    void clearNewRoadItem();
+    void cancelNewRoadItem();
+    void finishNewRoadItem();
+
+    QPoint mStartRoadPos;
+    Road *mRoad;
+    RoadItem *mRoadItem;
+    bool mCreating;
+    int mCurrentRoadWidth;
+    static CreateRoadTool *mInstance;
+};
+
+/////
+
+/**
+  * This WorldScene tool edits Road endpoints.
+  */
+class EditRoadTool : public BaseWorldSceneTool
+{
+    Q_OBJECT
+
+public:
+    static EditRoadTool *instance();
+    static void deleteInstance();
+
+    explicit EditRoadTool();
+    ~EditRoadTool();
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Edit Roads"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private:
+    Q_DISABLE_COPY(EditRoadTool)
+
+    void startMoving(const QPointF &scenePos);
+    void finishMoving();
+    void cancelMoving();
+
+    RoadItem *mSelectedRoadItem;
+    Road *mRoad;
+    RoadItem *mRoadItem;
+    bool mMoving;
+    bool mMovingStart;
+
+    static EditRoadTool *mInstance;
+};
+
+/////
+
+/**
+  * This WorldScene tool selects and moves Roads.
+  */
+class SelectMoveRoadTool : public BaseWorldSceneTool
+{
+    Q_OBJECT
+
+public:
+    static SelectMoveRoadTool *instance();
+    static void deleteInstance();
+
+    explicit SelectMoveRoadTool();
+    ~SelectMoveRoadTool();
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Select and Move Roads"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private:
+    Q_DISABLE_COPY(SelectMoveRoadTool)
+
+    void startSelecting();
+    void updateSelection(QGraphicsSceneMouseEvent *event);
+    void startMoving();
+    void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
+    void finishMoving(const QPointF &pos);
+
+    enum Mode {
+        NoMode,
+        Selecting,
+        Moving,
+        CancelMoving
+    };
+
+    RoadItem *topmostItemAt(const QPointF &scenePos);
+
+    Mode mMode;
+    bool mMousePressed;
+    QPointF mStartScenePos;
+    QPoint mDropRoadPos;
+    RoadItem *mClickedItem;
+    QList<Road*> mMovingRoads;
+    QGraphicsPolygonItem *mSelectionRectItem;
+    static SelectMoveRoadTool *mInstance;
+};
+
 #endif // SCENETOOLS_H

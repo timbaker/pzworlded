@@ -30,6 +30,7 @@ class BaseWorldSceneTool;
 class MapImage;
 class MapInfo;
 class PasteCellsTool;
+class Road;
 class World;
 class WorldCellTool;
 class WorldDocument;
@@ -249,6 +250,46 @@ private:
     QList<WorldCellLot*> mLots;
 };
 
+/**
+  * This item represents a road.
+  */
+class RoadItem : public QGraphicsItem
+{
+public:
+    RoadItem(WorldScene *scene, Road *road);
+
+    QRectF boundingRect() const;
+
+    QPainterPath shape() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+    Road *road() const
+    { return mRoad; }
+
+    void synchWithRoad();
+
+    void setSelected(bool selected);
+    void setEditable(bool editable);
+
+    void setDragging(bool dragging);
+    void setDragOffset(const QPoint &offset);
+    QPoint dragOffset() const { return mDragOffset; }
+
+    QPolygonF polygon() const;
+
+private:
+    WorldScene *mScene;
+    QRectF mBoundingRect;
+    Road *mRoad;
+    bool mSelected;
+    bool mEditable;
+    bool mDragging;
+    QPoint mDragOffset;
+};
+
 class WorldScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -288,6 +329,17 @@ public:
     WorldCellItem *itemForCell(WorldCell *cell);
     WorldCellItem *itemForCell(int x, int y);
 
+    QPoint pixelToRoadCoords(qreal x, qreal y) const;
+
+    inline QPoint pixelToRoadCoords(const QPointF &point) const
+    { return pixelToRoadCoords(point.x(), point.y()); }
+
+    QPointF roadToSceneCoords(const QPoint &pt) const;
+
+    RoadItem *itemForRoad(Road *road);
+
+    QList<Road*> roadsInRect(const QRectF &bounds);
+
     void pasteCellsFromClipboard();
 
 signals:
@@ -301,6 +353,12 @@ public slots:
     void cellContentsChanged(WorldCell *cell);
     void setShowGrid(bool show);
     void setShowCoordinates(bool show);
+
+    void selectedRoadsChanged();
+    void roadAdded(int index);
+    void roadAboutToBeRemoved(int index);
+    void roadCoordsChanged(int index);
+    void roadWidthChanged(int index);
 
 protected:
     void keyPressEvent(QKeyEvent *event);
@@ -324,6 +382,8 @@ private:
     PasteCellsTool *mPasteCellsTool;
     BaseWorldSceneTool *mActiveTool;
     DragMapImageItem *mDragMapImageItem;
+    QList<RoadItem*> mRoadItems;
+    QSet<RoadItem*> mSelectedRoadItems;
 };
 
 #endif // WORLDSCENE_H

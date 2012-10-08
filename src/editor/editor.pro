@@ -84,7 +84,9 @@ SOURCES += main.cpp\
     colorbutton.cpp \
     copypastedialog.cpp \
     clipboard.cpp \
-    lotfilesmanager.cpp
+    lotfilesmanager.cpp \
+    road.cpp \
+    roadsdock.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -128,7 +130,9 @@ HEADERS  += mainwindow.h \
     colorbutton.h \
     copypastedialog.h \
     clipboard.h \
-    lotfilesmanager.h
+    lotfilesmanager.h \
+    road.h \
+    roadsdock.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

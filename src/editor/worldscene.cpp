@@ -73,6 +73,17 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
             SLOT(cellContentsChanged(WorldCell*)));
 
+    connect(mWorldDoc, SIGNAL(selectedRoadsChanged()),
+            SLOT(selectedRoadsChanged()));
+    connect(mWorldDoc, SIGNAL(roadAdded(int)),
+            SLOT(roadAdded(int)));
+    connect(mWorldDoc, SIGNAL(roadAboutToBeRemoved(int)),
+            SLOT(roadAboutToBeRemoved(int)));
+    connect(mWorldDoc, SIGNAL(roadCoordsChanged(int)),
+            SLOT(roadCoordsChanged(int)));
+    connect(mWorldDoc, SIGNAL(roadWidthChanged(int)),
+            SLOT(roadWidthChanged(int)));
+
     mGridItem->updateBoundingRect();
     setSceneRect(mGridItem->boundingRect());
     mCoordItem->updateBoundingRect();
@@ -86,6 +97,13 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
             item->setZValue(1); // below mGridItem
             mCellItems[y * world()->width() + x] = item;
         }
+    }
+
+    foreach (Road *road, world()->roads()) {
+        RoadItem *item = new RoadItem(this, road);
+        item->setZValue(20000);
+        addItem(item);
+        mRoadItems += item;
     }
 
     Preferences *prefs = Preferences::instance();
@@ -113,6 +131,10 @@ void WorldScene::setTool(AbstractTool *tool)
     if (mActiveTool) {
         mActiveTool->activate();
     }
+
+    if (mActiveTool != EditRoadTool::instance())
+        foreach (RoadItem *item, mRoadItems)
+            item->setEditable(false);
 }
 
 World *WorldScene::world() const
@@ -130,6 +152,42 @@ WorldCellItem *WorldScene::itemForCell(int x, int y)
     if (!world()->contains(x, y))
         return 0;
     return mCellItems[y * world()->width() + x];
+}
+
+QPoint WorldScene::pixelToRoadCoords(qreal x, qreal y) const
+{
+    QPointF cellPos = pixelToCellCoords(x, y);
+    return QPoint(cellPos.x() * 300, cellPos.y() * 300);
+}
+
+QPointF WorldScene::roadToSceneCoords(const QPoint &pt) const
+{
+    return cellToPixelCoords(QPointF(pt) / 300.0);
+}
+
+RoadItem *WorldScene::itemForRoad(Road *road)
+{
+    foreach (RoadItem *item, mRoadItems)
+        if (item->road() == road)
+            return item;
+
+    return 0;
+}
+
+QList<Road *> WorldScene::roadsInRect(const QRectF &bounds)
+{
+    QPolygonF polygon;
+    polygon += cellToPixelCoords(bounds.topLeft());
+    polygon += cellToPixelCoords(bounds.topRight());
+    polygon += cellToPixelCoords(bounds.bottomRight());
+    polygon += cellToPixelCoords(bounds.bottomLeft());
+
+    QList<Road*> result;
+    foreach (QGraphicsItem *item, items(polygon)) {
+        if (RoadItem *roadItem = dynamic_cast<RoadItem*>(item))
+            result += roadItem->road();
+    }
+    return result;
 }
 
 void WorldScene::pasteCellsFromClipboard()
@@ -264,6 +322,66 @@ void WorldScene::setShowCoordinates(bool show)
     mCoordItem->setVisible(show);
 }
 
+void WorldScene::selectedRoadsChanged()
+{
+    const QList<Road*> &selection = worldDocument()->selectedRoads();
+
+    QSet<RoadItem*> items;
+    foreach (Road *road, selection)
+        items.insert(itemForRoad(road));
+
+    foreach (RoadItem *item, mSelectedRoadItems - items) {
+        item->setSelected(false);
+        item->setEditable(false);
+    }
+
+    bool editable = EditRoadTool::instance()->isCurrent();
+    foreach (RoadItem *item, items - mSelectedRoadItems) {
+        item->setSelected(true);
+        item->setEditable(editable);
+    }
+
+    mSelectedRoadItems = items;
+}
+
+void WorldScene::roadAdded(int index)
+{
+    Road *road = world()->roads().at(index);
+    Q_ASSERT(itemForRoad(road) == 0);
+    RoadItem *item = new RoadItem(this, road);
+    item->setZValue(20000);
+    addItem(item);
+    mRoadItems += item;
+}
+
+void WorldScene::roadAboutToBeRemoved(int index)
+{
+    Road *road = world()->roads().at(index);
+    RoadItem *item = itemForRoad(road);
+    Q_ASSERT(item);
+    mRoadItems.removeAll(item);
+    removeItem(item);
+    delete item;
+}
+
+void WorldScene::roadCoordsChanged(int index)
+{
+    Road *road = world()->roads().at(index);
+    RoadItem *item = itemForRoad(road);
+    Q_ASSERT(item);
+    item->synchWithRoad();
+    item->update();
+}
+
+void WorldScene::roadWidthChanged(int index)
+{
+    Road *road = world()->roads().at(index);
+    RoadItem *item = itemForRoad(road);
+    Q_ASSERT(item);
+    item->synchWithRoad();
+    item->update();
+}
+
 void WorldScene::keyPressEvent(QKeyEvent *event)
 {
     QGraphicsScene::keyPressEvent(event);
@@ -312,6 +430,8 @@ void WorldScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void WorldScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
+    if (mActiveTool != WorldCellTool::instance())
+        return;
     if (WorldCell *cell = pointToCell(event->scenePos())) {
         mWorldDoc->editCell(cell->x(), cell->y());
     }
@@ -848,4 +968,99 @@ void WorldSelectionItem::selectedCellsChanged()
 {
     updateBoundingRect();
     update();
+}
+
+/////
+
+RoadItem::RoadItem(WorldScene *scene, Road *road)
+    : QGraphicsItem()
+    , mScene(scene)
+    , mRoad(road)
+    , mSelected(false)
+    , mEditable(false)
+    , mDragging(false)
+{
+    synchWithRoad();
+}
+
+QRectF RoadItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+QPainterPath RoadItem::shape() const
+{
+    QPainterPath path;
+    path.addPolygon(polygon());
+    return path;
+}
+
+void RoadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
+
+    QColor c = Qt::blue;
+    if (mSelected)
+        c = Qt::green;
+    if (mEditable)
+        c = Qt::yellow;
+    painter->fillPath(shape(), c);
+}
+
+void RoadItem::synchWithRoad()
+{
+    QRectF bounds = polygon().boundingRect();
+    if (bounds != mBoundingRect) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
+}
+
+void RoadItem::setSelected(bool selected)
+{
+    mSelected = selected;
+    update();
+}
+
+void RoadItem::setEditable(bool editable)
+{
+    mEditable = editable;
+    update();
+}
+
+void RoadItem::setDragging(bool dragging)
+{
+    mDragging = dragging;
+    synchWithRoad();
+}
+
+void RoadItem::setDragOffset(const QPoint &offset)
+{
+    mDragOffset = offset;
+    synchWithRoad();
+}
+
+QPolygonF RoadItem::polygon() const
+{
+    QPolygonF polygon;
+
+    QPoint offset = mDragging ? mDragOffset : QPoint();
+    QPoint start = mRoad->start() + offset;
+    QPoint end = mRoad->end() + offset;
+    int w = mRoad->width();
+
+    if (mRoad->start().x() == mRoad->end().x()) {
+        polygon += mScene->roadToSceneCoords(start + QPoint(-w/2, 0));
+        polygon += mScene->roadToSceneCoords(start + QPoint(w-w/2, 0));
+        polygon += mScene->roadToSceneCoords(end + QPoint(w-w/2, 0));
+        polygon += mScene->roadToSceneCoords(end + QPoint(-w/2, 0));
+    } else {
+        polygon += mScene->roadToSceneCoords(start + QPoint(0, -w/2));
+        polygon += mScene->roadToSceneCoords(start + QPoint(0, w-w/2));
+        polygon += mScene->roadToSceneCoords(end + QPoint(0, w-w/2));
+        polygon += mScene->roadToSceneCoords(end + QPoint(0, -w/2));
+    }
+
+    return polygon;
 }

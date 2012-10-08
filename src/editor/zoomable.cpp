@@ -59,7 +59,7 @@ Zoomable::Zoomable(QObject *parent)
     , mComboValidator(0)
 {
     for (int i = 0; i < zoomFactorCount; i++)
-        mZoomFactors << zoomFactors[i];
+        mZoomFactors << ::zoomFactors[i];
 }
 
 void Zoomable::setScale(qreal scale)

@@ -30,12 +30,21 @@ class Property;
 class PropertyDef;
 class PropertyHolder;
 class PropertyTemplate;
+class Road;
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
 class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
+
+/**
+ * These undo command IDs are used by Qt to determine whether two undo commands
+ * can be merged.
+ */
+enum UndoCommands {
+    UndoCmd_ChangeRoadWidth,
+};
 
 class SetCellMainMap : public QUndoCommand
 {
@@ -321,6 +330,91 @@ private:
     WorldDocument *mDocument;
     WorldCellObject *mObject;
     int mIndex;
+};
+
+/////
+
+// Base class for AddCellObject/RemoveCellObject
+class AddRemoveRoad : public QUndoCommand
+{
+public:
+    AddRemoveRoad(WorldDocument *doc, int index, Road *road);
+    ~AddRemoveRoad();
+
+protected:
+    void add();
+    void remove();
+
+    WorldDocument *mDocument;
+    Road *mRoad;
+    int mIndex;
+};
+
+class AddRoad : public AddRemoveRoad
+{
+public:
+    AddRoad(WorldDocument *doc, int index, Road *obj)
+        : AddRemoveRoad(doc, index, obj)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Add Road"));
+    }
+
+    void undo() { remove(); }
+    void redo() { add(); }
+};
+
+class RemoveRoad : public AddRemoveRoad
+{
+public:
+    RemoveRoad(WorldDocument *doc, int index)
+        : AddRemoveRoad(doc, index, 0)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Remove Road"));
+    }
+
+    void undo() { add(); }
+    void redo() { remove(); }
+};
+
+/////
+
+class ChangeRoadCoords : public QUndoCommand
+{
+public:
+    ChangeRoadCoords(WorldDocument *doc, Road *road,
+                     const QPoint &start, const QPoint &end);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    Road *mRoad;
+    QPoint mStart;
+    QPoint mEnd;
+};
+
+/////
+
+class ChangeRoadWidth : public QUndoCommand
+{
+public:
+    ChangeRoadWidth(WorldDocument *doc, Road *road, int newWidth);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+    int id() const { return UndoCmd_ChangeRoadWidth; }
+    bool mergeWith(const QUndoCommand *other);
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    Road *mRoad;
+    int mWidth;
 };
 
 /////

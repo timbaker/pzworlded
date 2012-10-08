@@ -31,6 +31,7 @@ class Property;
 class PropertyDef;
 class PropertyHolder;
 class PropertyTemplate;
+class Road;
 class World;
 class WorldCell;
 class WorldCellContents;
@@ -97,6 +98,12 @@ public:
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
     int reorderCellObject(WorldCellObject *obj, int index);
 
+    void insertRoad(int index, Road *road);
+    Road *removeRoad(int index);
+    void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end,
+                          QPoint &oldStart, QPoint &oldEnd);
+    int changeRoadWidth(Road *road, int newWidth);
+
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
 signals:
@@ -150,6 +157,11 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
+    void roadAdded(int index);
+    void roadAboutToBeRemoved(int index);
+    void roadCoordsChanged(int index);
+    void roadWidthChanged(int index);
+
     void selectedCellsChanged();
 
 private:
@@ -184,6 +196,10 @@ public:
     const QList<WorldCellLot*> &selectedLots() const { return mSelectedLots; }
     int selectedLotCount() const { return mSelectedLots.size(); }
 
+    void setSelectedRoads(const QList<Road *> &selectedRoads);
+    const QList<Road*> &selectedRoads() const { return mSelectedRoads; }
+    int selectedRoadCount() const { return mSelectedRoads.size(); }
+
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
 
@@ -202,6 +218,11 @@ public:
     void setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og);
     void setCellObjectType(WorldCellObject *obj, const QString &type);
     void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
+
+    void insertRoad(int index, Road *road);
+    void removeRoad(int index);
+    void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end);
+    void changeRoadWidth(Road *road, int newWidth);
 
     /**
       * Transfers the contents of \a cell to a different cell at
@@ -309,6 +330,7 @@ signals:
     void selectedCellsChanged();
     void selectedObjectsChanged();
     void selectedLotsChanged();
+    void selectedRoadsChanged();
 
     void propertyAdded(PropertyHolder *ph, int index);
     void propertyAboutToBeRemoved(PropertyHolder *ph, int index);
@@ -335,6 +357,11 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
+    void roadAdded(int index);
+    void roadAboutToBeRemoved(int index);
+    void roadCoordsChanged(int index);
+    void roadWidthChanged(int index);
+
     void templateAdded(int index);
     void templateAboutToBeRemoved(int index);
     void templateChanged(PropertyTemplate *pt);
@@ -352,6 +379,7 @@ private:
     QList<WorldCell*> mSelectedCells;
     QList<WorldCellObject*> mSelectedObjects;
     QList<WorldCellLot*> mSelectedLots;
+    QList<Road*> mSelectedRoads;
     QString mFileName;
 
     friend class WorldDocumentUndoRedo;

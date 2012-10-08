@@ -19,6 +19,7 @@
 #define WORLD_H
 
 #include "properties.h"
+#include "road.h"
 
 #include <QRect>
 #include <QSize>
@@ -85,6 +86,10 @@ public:
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
 
+    void insertRoad(int index, Road *road);
+    Road *removeRoad(int index);
+    RoadList roadsInRect(const QRect &bounds);
+
     const ObjectGroupList &objectGroups() const
     { return mObjectGroups; }
     const ObjectTypeList &objectTypes() const
@@ -93,6 +98,8 @@ public:
     { return mPropertyDefs; }
     const PropertyTemplateList &propertyTemplates() const
     { return mPropertyTemplates; }
+    const RoadList &roads() const
+    { return mRoads; }
 
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
@@ -107,6 +114,7 @@ private:
     WorldObjectGroup *mNullObjectGroup;
     PropertyDefList mPropertyDefs;
     PropertyTemplateList mPropertyTemplates;
+    RoadList mRoads;
 };
 
 #endif // WORLD_H

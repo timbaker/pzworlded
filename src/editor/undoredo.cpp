@@ -17,6 +17,7 @@
 
 #include "undoredo.h"
 
+#include "road.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
@@ -241,6 +242,77 @@ void ReorderCellObject::swap()
     mIndex = mDocument->undoRedo().reorderCellObject(mObject, mIndex);
 }
 
+/////
+
+
+AddRemoveRoad::AddRemoveRoad(WorldDocument *doc, int index, Road *road)
+    : mDocument(doc)
+    , mRoad(road)
+    , mIndex(index)
+{
+}
+
+AddRemoveRoad::~AddRemoveRoad()
+{
+    delete mRoad;
+}
+
+void AddRemoveRoad::add()
+{
+    mDocument->undoRedo().insertRoad(mIndex, mRoad);
+    mRoad = 0;
+}
+
+void AddRemoveRoad::remove()
+{
+    mRoad = mDocument->undoRedo().removeRoad(mIndex);
+}
+
+/////
+
+ChangeRoadCoords::ChangeRoadCoords(WorldDocument *doc, Road *road,
+                                   const QPoint &start, const QPoint &end)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Reposition Road"))
+    , mDocument(doc)
+    , mRoad(road)
+    , mStart(start)
+    , mEnd(end)
+{
+}
+
+void ChangeRoadCoords::swap()
+{
+    QPoint start, end;
+    mDocument->undoRedo().changeRoadCoords(mRoad, mStart, mEnd,
+                                           start, end);
+    mStart = start, mEnd = end;
+}
+
+/////
+
+ChangeRoadWidth::ChangeRoadWidth(WorldDocument *doc, Road *road,
+                                 int newWidth)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Road Width"))
+    , mDocument(doc)
+    , mRoad(road)
+    , mWidth(newWidth)
+{
+}
+
+bool ChangeRoadWidth::mergeWith(const QUndoCommand *other)
+{
+    if (other->id() != id())
+        return false;
+    const ChangeRoadWidth *_other = static_cast<const ChangeRoadWidth*>(other);
+    if (_other->mRoad != mRoad)
+        return false;
+    return true;
+}
+
+void ChangeRoadWidth::swap()
+{
+    mWidth = mDocument->undoRedo().changeRoadWidth(mRoad, mWidth);
+}
 
 /////
 

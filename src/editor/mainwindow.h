@@ -32,6 +32,7 @@ class LotsDock;
 class MapsDock;
 class ObjectsDock;
 class PropertiesDock;
+class RoadsDock;
 class UndoDock;
 class World;
 class WorldDocument;
@@ -145,6 +146,7 @@ private:
     MapsDock *mMapsDock;
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
+    RoadsDock *mRoadsDock;
     Document *mCurrentDocument;
     QComboBox *mZoomComboBox;
     QMenu *mCurrentLevelMenu;

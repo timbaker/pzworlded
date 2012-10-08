@@ -19,12 +19,15 @@
 
 #include "world.h"
 #include "worldscene.h"
+#include "zoomable.h"
 
 #include <QMouseEvent>
 
 WorldView::WorldView(QWidget *parent)
     : BaseGraphicsView(parent)
 {
+    QVector<qreal> zoomFactors = zoomable()->zoomFactors();
+    zoomable()->setZoomFactors(zoomFactors << 6.0 << 8.0);
 }
 
 void WorldView::setScene(WorldScene *scene)

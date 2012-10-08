@@ -38,6 +38,7 @@
 #include "progress.h"
 #include "propertiesdock.h"
 #include "propertydefinitionsdialog.h"
+#include "roadsdock.h"
 #include "scenetools.h"
 #include "templatesdialog.h"
 #include "toolmanager.h"
@@ -80,6 +81,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mMapsDock(new MapsDock(this))
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
+    , mRoadsDock(new RoadsDock(this))
     , mCurrentDocument(0)
     , mCurrentLevelMenu(new QMenu(this))
     , mObjectGroupMenu(new QMenu(this))
@@ -161,14 +163,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mMapsDock->toggleViewAction());
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
+    ui->menuView->addAction(mRoadsDock->toggleViewAction());
 
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
+    addDockWidget(Qt::LeftDockWidgetArea, mRoadsDock);
     addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
     addDockWidget(Qt::RightDockWidgetArea, mLayersDock);
     addDockWidget(Qt::RightDockWidgetArea, mMapsDock);
     tabifyDockWidget(mPropertiesDock, mLayersDock);
     tabifyDockWidget(mLayersDock, mMapsDock);
+    tabifyDockWidget(mObjectsDock, mLotsDock);
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
@@ -221,6 +226,9 @@ MainWindow::MainWindow(QWidget *parent)
     ToolManager *toolManager = ToolManager::instance();
     toolManager->registerTool(WorldCellTool::instance());
     toolManager->registerTool(PasteCellsTool::instance());
+    toolManager->registerTool(SelectMoveRoadTool::instance());
+    toolManager->registerTool(CreateRoadTool::instance());
+    toolManager->registerTool(EditRoadTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SubMapTool::instance());
     toolManager->registerTool(ObjectTool::instance());
@@ -424,6 +432,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
 
         mLotsDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
+        mRoadsDock->setDocument(doc);
 
         mZoomable = mCurrentDocument->view()->zoomable();
         mZoomable->connectToComboBox(mZoomComboBox);
@@ -436,6 +445,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLayersDock->setCellDocument(0);
         mLotsDock->clearDocument();
         mObjectsDock->clearDocument();
+        mRoadsDock->clearDocument();
     }
 
     ToolManager::instance()->setScene(doc ? doc->view()->scene() : 0);

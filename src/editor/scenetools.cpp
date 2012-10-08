@@ -1310,3 +1310,610 @@ void PasteCellsTool::cancelMoving()
     qDeleteAll(mDnDItems);
     mDnDItems.clear();
 }
+
+/////
+
+CreateRoadTool *CreateRoadTool::mInstance = 0;
+
+CreateRoadTool *CreateRoadTool::instance()
+{
+    if (!mInstance)
+        mInstance = new CreateRoadTool();
+    return mInstance;
+}
+
+void CreateRoadTool::deleteInstance()
+{
+    delete mInstance;
+}
+
+CreateRoadTool::CreateRoadTool()
+    : BaseWorldSceneTool(tr("Create Roads"),
+                         QIcon(QLatin1String(":/images/24x24/insert-polyline.png")),
+                         QKeySequence())
+    , mCreating(false)
+    , mCurrentRoadWidth(4)
+{
+}
+
+CreateRoadTool::~CreateRoadTool()
+{
+    delete mRoad;
+    delete mRoadItem;
+}
+
+void CreateRoadTool::keyPressEvent(QKeyEvent *event)
+{
+    if ((event->key() == Qt::Key_Escape) && mCreating) {
+        cancelNewRoadItem();
+        event->accept();
+    }
+}
+
+void CreateRoadTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (mCreating)
+            return;
+        startNewRoadItem(event->scenePos());
+        mCreating = true;
+    }
+    if (event->button() == Qt::RightButton) {
+        if (!mCreating)
+            return;
+        cancelNewRoadItem();
+        mCreating = false;
+    }
+}
+
+void CreateRoadTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (!mCreating)
+        return;
+    QPoint curPos = mScene->pixelToRoadCoords(event->scenePos());
+    QPoint delta = curPos - mStartRoadPos;
+    if (qAbs(delta.x()) >= qAbs(delta.y()))
+        delta.setY(0);
+    else
+        delta.setX(0);
+    mRoad->setCoords(mStartRoadPos, mStartRoadPos + delta);
+    mRoadItem->synchWithRoad();
+}
+
+void CreateRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (!mCreating)
+            return;
+        if (mRoad->start() == mRoad->end())
+            return;
+        finishNewRoadItem();
+        mCreating = false;
+    }
+}
+
+void CreateRoadTool::startNewRoadItem(const QPointF &scenePos)
+{
+    mStartRoadPos = mScene->pixelToRoadCoords(scenePos);
+    mRoad = new Road(mScene->world(),
+                     mStartRoadPos.x(), mStartRoadPos.y(),
+                     mStartRoadPos.x(), mStartRoadPos.y(),
+                     mCurrentRoadWidth, -1);
+    mRoadItem = new RoadItem(mScene, mRoad);
+    mRoadItem->setZValue(20000);
+    mScene->addItem(mRoadItem);
+}
+
+void CreateRoadTool::clearNewRoadItem()
+{
+    mScene->removeItem(mRoadItem);
+    delete mRoadItem;
+    mRoadItem = 0;
+}
+
+void CreateRoadTool::cancelNewRoadItem()
+{
+    clearNewRoadItem();
+    delete mRoad;
+    mRoad = 0;
+}
+
+void CreateRoadTool::finishNewRoadItem()
+{
+    clearNewRoadItem();
+
+    QUndoStack *undoStack = mScene->worldDocument()->undoStack();
+    undoStack->push(new AddRoad(mScene->worldDocument(),
+                                mScene->world()->roads().count(),
+                                mRoad));
+    mRoad = 0;
+}
+
+/////
+
+/**
+ * A handle that allows moving around a point of a Road.
+ */
+class RoadPointHandle : public QGraphicsItem
+{
+public:
+    RoadPointHandle(RoadItem *roadItem, int pointIndex)
+        : QGraphicsItem()
+        , mRoadItem(roadItem)
+        , mPointIndex(pointIndex)
+        , mSelected(false)
+        , mDragging(false)
+    {
+        setFlags(QGraphicsItem::ItemIgnoresTransformations |
+                 QGraphicsItem::ItemIgnoresParentOpacity);
+        setZValue(10000);
+        setCursor(Qt::SizeAllCursor);
+    }
+
+    Road *road() const { return mRoadItem->road(); }
+
+    int pointIndex() const { return mPointIndex; }
+
+    QPoint pointPosition() const;
+    void setPointPosition(const QPoint &pos);
+
+    // These override the QGraphicsItem members
+    void setSelected(bool selected) { mSelected = selected; update(); }
+    bool isSelected() const { return mSelected; }
+
+    void setDragging(bool dragging)
+    {
+        if (dragging != mDragging) {
+            mDragging = dragging;
+            if (mDragging)
+                mStartPos = pointPosition();
+        }
+    }
+
+    void setDragOffset(const QPoint &offset)
+    {
+        mDragOffset = offset;
+        update();
+    }
+
+    QPoint dragOffset() const
+    { return mDragOffset; }
+
+    QPoint startPosition() const
+    { return mStartPos; }
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+private:
+    RoadItem *mRoadItem;
+    int mPointIndex;
+    bool mSelected;
+    bool mDragging;
+    QPoint mDragOffset;
+    QPoint mStartPos;
+};
+
+QPoint RoadPointHandle::pointPosition() const
+{
+    if (mPointIndex == 0)
+        return road()->start();
+    else
+        return road()->end();
+}
+
+void RoadPointHandle::setPointPosition(const QPoint &pos)
+{
+    if (mPointIndex == 0)
+        road()->setCoords(pos, road()->end());
+    else
+        road()->setCoords(road()->start(), pos);
+    mRoadItem->synchWithRoad();
+}
+
+QRectF RoadPointHandle::boundingRect() const
+{
+    return QRectF(-5, -5, 10 + 1, 10 + 1);
+}
+
+void RoadPointHandle::paint(QPainter *painter,
+                            const QStyleOptionGraphicsItem *,
+                            QWidget *)
+{
+    painter->setPen(Qt::black);
+    if (mSelected) {
+        painter->setBrush(QApplication::palette().highlight());
+        painter->drawRect(QRectF(-4, -4, 8, 8));
+    } else {
+        painter->setBrush(Qt::lightGray);
+        painter->drawRect(QRectF(-3, -3, 6, 6));
+    }
+}
+
+/////
+
+EditRoadTool *EditRoadTool::mInstance = 0;
+
+EditRoadTool *EditRoadTool::instance()
+{
+    if (!mInstance)
+        mInstance = new EditRoadTool();
+    return mInstance;
+}
+
+void EditRoadTool::deleteInstance()
+{
+    delete mInstance;
+}
+
+EditRoadTool::EditRoadTool()
+    : BaseWorldSceneTool(tr("Edit Roads"),
+                         QIcon(QLatin1String(":/images/24x24/tool-edit-polygons.png")),
+                         QKeySequence())
+    , mSelectedRoadItem(0)
+    , mRoad(0)
+    , mRoadItem(0)
+    , mMoving(false)
+{
+}
+
+EditRoadTool::~EditRoadTool()
+{
+    delete mRoadItem;
+    delete mRoad;
+}
+
+void EditRoadTool::keyPressEvent(QKeyEvent *event)
+{
+    if ((event->key() == Qt::Key_Escape) && mMoving) {
+        cancelMoving();
+        event->accept();
+    }
+}
+
+void EditRoadTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (mMoving)
+            return;
+        startMoving(event->scenePos());
+    }
+    if (event->button() == Qt::RightButton) {
+        if (!mMoving)
+            return;
+        cancelMoving();
+        mMoving = false;
+    }
+}
+
+void EditRoadTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (!mMoving)
+        return;
+    QPoint curPos = mScene->pixelToRoadCoords(event->scenePos());
+    QPoint delta = curPos - (mMovingStart
+            ? mSelectedRoadItem->road()->start()
+            : mSelectedRoadItem->road()->end());
+    if (mSelectedRoadItem->road()->isVertical())
+        delta.setX(0);
+    else
+        delta.setY(0);
+    if (mMovingStart)
+        mRoad->setCoords(mSelectedRoadItem->road()->start() + delta, mRoad->end());
+    else
+        mRoad->setCoords(mRoad->start(), mSelectedRoadItem->road()->end() + delta);
+    mRoadItem->synchWithRoad();
+}
+
+void EditRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (!mMoving)
+            return;
+        if (mRoad->start() == mSelectedRoadItem->road()->start() &&
+                mRoad->end() == mSelectedRoadItem->road()->end())
+            return;
+        finishMoving();
+        mMoving = false;
+    }
+}
+
+void EditRoadTool::startMoving(const QPointF &scenePos)
+{
+    if (mSelectedRoadItem) {
+        QPoint roadPos = mScene->pixelToRoadCoords(scenePos);
+        QRect r(roadPos.x() - 4, roadPos.y() - 4, 8, 8);
+        if (r.contains(mSelectedRoadItem->road()->start())) {
+            mMovingStart = true;
+        } else if (r.contains(mSelectedRoadItem->road()->end())) {
+            mMovingStart = false;
+        } else {
+            mSelectedRoadItem->setEditable(false);
+            mSelectedRoadItem = 0;
+        }
+        if (mSelectedRoadItem) {
+            mMoving = true;
+
+            mRoad = new Road(mScene->world(),
+                             mSelectedRoadItem->road()->x1(), mSelectedRoadItem->road()->y1(),
+                             mSelectedRoadItem->road()->x2(), mSelectedRoadItem->road()->y2(),
+                             mSelectedRoadItem->road()->width(), -1);
+            mRoadItem = new RoadItem(mScene, mRoad);
+            mRoadItem->setEditable(true);
+            mRoadItem->setZValue(20001);
+            mScene->addItem(mRoadItem);
+            mSelectedRoadItem->setVisible(false);
+            return;
+        }
+    }
+
+    foreach (QGraphicsItem *item, mScene->items(scenePos)) {
+        if (RoadItem *roadItem = dynamic_cast<RoadItem*>(item)) {
+            mSelectedRoadItem = roadItem;
+            mSelectedRoadItem->setEditable(true);
+            break;
+        }
+    }
+}
+
+void EditRoadTool::finishMoving()
+{
+    QUndoStack *undoStack = mScene->worldDocument()->undoStack();
+    undoStack->push(new ChangeRoadCoords(mScene->worldDocument(),
+                                         mSelectedRoadItem->road(),
+                                         mRoad->start(), mRoad->end()));
+    cancelMoving();
+}
+
+void EditRoadTool::cancelMoving()
+{
+    mSelectedRoadItem->setVisible(true);
+
+    mScene->removeItem(mRoadItem);
+    delete mRoadItem;
+    mRoadItem = 0;
+
+    delete mRoad;
+    mRoad = 0;
+}
+
+/////
+
+SelectMoveRoadTool *SelectMoveRoadTool::mInstance = 0;
+
+SelectMoveRoadTool *SelectMoveRoadTool::instance()
+{
+    if (!mInstance)
+        mInstance = new SelectMoveRoadTool();
+    return mInstance;
+}
+
+void SelectMoveRoadTool::deleteInstance()
+{
+    delete mInstance;
+}
+
+SelectMoveRoadTool::SelectMoveRoadTool()
+    : BaseWorldSceneTool(tr("Select and Move Roads"),
+                         QIcon(QLatin1String(":/images/22x22/tool-select-objects.png")),
+                         QKeySequence())
+    , mMode(NoMode)
+    , mMousePressed(false)
+    , mSelectionRectItem(new QGraphicsPolygonItem)
+{
+    mSelectionRectItem->setZValue(1000);
+    mSelectionRectItem->setPen(QColor(0x33,0x99,0xff));
+    mSelectionRectItem->setBrush(QBrush(QColor(0x33,0x99,0xff,255/8)));
+}
+
+SelectMoveRoadTool::~SelectMoveRoadTool()
+{
+    delete mSelectionRectItem;
+}
+
+void SelectMoveRoadTool::keyPressEvent(QKeyEvent *event)
+{
+    if ((event->key() == Qt::Key_Escape) && (mMode == Moving)) {
+        mMode = CancelMoving;
+        foreach (Road *road, mMovingRoads)
+            mScene->itemForRoad(road)->setDragging(false);
+        mMovingRoads.clear();
+        event->accept();
+    }
+}
+
+void SelectMoveRoadTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    switch (event->button()) {
+    case Qt::LeftButton:
+        if (mMode != NoMode) // Ignore additional presses during select/move
+            break;
+        mMousePressed = true;
+        mStartScenePos = event->scenePos();
+        mDropRoadPos = mScene->pixelToCellCoordsInt(mStartScenePos);
+        mClickedItem = topmostItemAt(mStartScenePos);
+        break;
+    case Qt::RightButton:
+        // Right-clicks exits moving, same as the Escape key.
+        if (mMode == Moving) {
+            mMode = CancelMoving;
+            foreach (Road *road, mMovingRoads)
+                mScene->itemForRoad(road)->setDragging(false);
+            mMovingRoads.clear();
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void SelectMoveRoadTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (mMode == NoMode && mMousePressed) {
+        const int dragDistance = (mStartScenePos - event->scenePos()).manhattanLength();
+        if (dragDistance >= QApplication::startDragDistance()) {
+            if (mClickedItem &&
+                    mScene->worldDocument()->selectedRoads().contains(mClickedItem->road()) &&
+                    !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
+                startMoving();
+            else
+                startSelecting();
+        }
+    }
+
+    switch (mMode) {
+    case Selecting:
+    {
+        QPointF start = mScene->pixelToCellCoords(mStartScenePos);
+        QPointF end = mScene->pixelToCellCoords(event->scenePos());
+        QRectF bounds = QRectF(start, end).normalized();
+        mSelectionRectItem->setPolygon(mScene->cellRectToPolygon(bounds));
+        break;
+    }
+    case Moving:
+        updateMovingItems(event->scenePos(), event->modifiers());
+        break;
+    case NoMode:
+        break;
+    case CancelMoving:
+        break;
+    }
+}
+
+void SelectMoveRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() != Qt::LeftButton)
+        return;
+
+    switch (mMode) {
+    case NoMode:
+    {
+        bool toggle = event->modifiers() & Qt::ControlModifier;
+        bool extend = event->modifiers() & Qt::ShiftModifier;
+        QList<Road*> newSelection;
+        if (extend || toggle)
+            newSelection = mScene->worldDocument()->selectedRoads();
+        if (mClickedItem) {
+            if (toggle && newSelection.contains(mClickedItem->road()))
+                newSelection.removeOne(mClickedItem->road());
+            else if (!newSelection.contains(mClickedItem->road()))
+                newSelection += mClickedItem->road();
+        }
+        mScene->worldDocument()->setSelectedRoads(newSelection);
+        break;
+    }
+    case Selecting:
+        updateSelection(event);
+        mScene->removeItem(mSelectionRectItem);
+        mMode = NoMode;
+        break;
+    case Moving:
+        finishMoving(event->scenePos());
+        break;
+    case CancelMoving:
+        mMode = NoMode;
+        break;
+    }
+
+    mMousePressed = false;
+    mClickedItem = 0;
+}
+
+void SelectMoveRoadTool::startSelecting()
+{
+    mMode = Selecting;
+    mScene->addItem(mSelectionRectItem);
+}
+
+void SelectMoveRoadTool::updateSelection(QGraphicsSceneMouseEvent *event)
+{
+    QPointF start = mScene->pixelToCellCoords(mStartScenePos);
+    QPointF end = mScene->pixelToCellCoords(event->scenePos());
+    QRectF bounds = QRectF(start, end).normalized();
+
+    bool toggle = event->modifiers() & Qt::ControlModifier;
+    bool extend = event->modifiers() & Qt::ShiftModifier;
+
+    QList<Road*> selection;
+    if (extend || toggle)
+        selection = mScene->worldDocument()->selectedRoads();
+
+    foreach (Road *road, mScene->roadsInRect(bounds)) {
+        if (toggle && selection.contains(road))
+            selection.removeOne(road);
+        else if (!selection.contains(road))
+            selection += road;
+    }
+
+    mScene->worldDocument()->setSelectedRoads(selection);
+}
+
+void SelectMoveRoadTool::startMoving()
+{
+    mMovingRoads = mScene->worldDocument()->selectedRoads();
+
+    // Move only the clicked item, if it was not part of the selection
+    if (!mMovingRoads.contains(mClickedItem->road())) {
+        mMovingRoads.clear();
+        mMovingRoads += mClickedItem->road();
+        mScene->worldDocument()->setSelectedRoads(mMovingRoads);
+    }
+
+    mMode = Moving;
+}
+
+void SelectMoveRoadTool::updateMovingItems(const QPointF &pos,
+                                      Qt::KeyboardModifiers modifiers)
+{
+    Q_UNUSED(modifiers)
+
+    QPoint startPos = mScene->pixelToRoadCoords(mStartScenePos);
+    mDropRoadPos = mScene->pixelToRoadCoords(pos);
+
+    foreach (Road *road, mMovingRoads) {
+        RoadItem *item = mScene->itemForRoad(road);
+        item->setDragging(true);
+        item->setDragOffset(mDropRoadPos - startPos);
+    }
+}
+
+void SelectMoveRoadTool::finishMoving(const QPointF &pos)
+{
+    Q_UNUSED(pos)
+    Q_ASSERT(mMode == Moving);
+    mMode = NoMode;
+
+    foreach (Road *road, mMovingRoads)
+        mScene->itemForRoad(road)->setDragging(false);
+
+    QPoint startPos = mScene->pixelToRoadCoords(mStartScenePos);
+    QPoint dropPos = mDropRoadPos;
+    QPoint diff = dropPos - startPos;
+    if (startPos != dropPos) {
+        QUndoStack *undoStack = mScene->worldDocument()->undoStack();
+        int count = mMovingRoads.size();
+        undoStack->beginMacro(tr("Move %1 Road%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
+        foreach (Road *road, mMovingRoads) {
+            mScene->worldDocument()->changeRoadCoords(road,
+                                                      road->start() + diff,
+                                                      road->end() + diff);
+        }
+        undoStack->endMacro();
+    }
+
+    mMovingRoads.clear();
+}
+
+RoadItem *SelectMoveRoadTool::topmostItemAt(const QPointF &scenePos)
+{
+    foreach (QGraphicsItem *item, mScene->items(scenePos)) {
+        if (RoadItem *roadItem = dynamic_cast<RoadItem*>(item))
+            return roadItem;
+    }
+    return 0;
+}
+
+/////
