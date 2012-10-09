@@ -38,3 +38,31 @@ void Road::setWidth(int newWidth)
     Q_ASSERT(newWidth > 0);
     mWidth = newWidth;
 }
+
+QRect Road::bounds() const
+{
+    int left, top, right, bottom;
+    int roadWidth = width();
+    if (isVertical()) {
+        left = x1() - roadWidth / 2;
+        right = left + roadWidth;
+        if (y1() < y2()) { // north-to-south
+            top = y1();
+            bottom = y2();
+        } else { // south-to-north
+            top = y2();
+            bottom = y1();
+        }
+    } else {
+        top = y1() - roadWidth / 2;
+        bottom = top + roadWidth;
+        if (x1() < x2()) { // west-to-east
+            left = x1();
+            right = x2();
+        } else { // east-to-west
+            left = x2();
+            right = x1();
+        }
+    }
+    return QRect(left, top, right - left, bottom - top);
+}

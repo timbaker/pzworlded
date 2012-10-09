@@ -477,6 +477,9 @@ public:
     explicit CreateRoadTool();
     ~CreateRoadTool();
 
+    void activate();
+    void deactivate();
+
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
@@ -507,6 +510,7 @@ private:
     RoadItem *mRoadItem;
     bool mCreating;
     int mCurrentRoadWidth;
+    QGraphicsPolygonItem *mCursorItem;
     static CreateRoadTool *mInstance;
 };
 
@@ -526,6 +530,9 @@ public:
     explicit EditRoadTool();
     ~EditRoadTool();
 
+    void activate();
+    void deactivate();
+
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
@@ -544,11 +551,15 @@ private:
     void finishMoving();
     void cancelMoving();
 
+    void updateHandles(Road *road);
+
     RoadItem *mSelectedRoadItem;
     Road *mRoad;
     RoadItem *mRoadItem;
     bool mMoving;
     bool mMovingStart;
+    QGraphicsPolygonItem *mStartHandle, *mEndHandle;
+    bool mHandlesVisible;
 
     static EditRoadTool *mInstance;
 };

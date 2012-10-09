@@ -19,6 +19,7 @@
 #define ROAD_H
 
 #include <QPoint>
+#include <QRect>
 #include <QList>
 
 class World;
@@ -35,6 +36,7 @@ public:
     void setCoords(int x1, int y1, int x2, int y2);
 
     void setWidth(int newWidth);
+    int width() const { return mWidth; }
 
     QPoint start() const { return mStart; }
     QPoint end() const { return mEnd; }
@@ -44,7 +46,7 @@ public:
     int x2() const { return mEnd.x(); }
     int y2() const { return mEnd.y(); }
 
-    int width() const { return mWidth; }
+    QRect bounds() const;
 
     bool isVertical() const
     { return mStart.x() == mEnd.x(); }

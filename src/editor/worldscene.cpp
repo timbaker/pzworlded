@@ -101,7 +101,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 
     foreach (Road *road, world()->roads()) {
         RoadItem *item = new RoadItem(this, road);
-        item->setZValue(20000);
+        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
         mRoadItems += item;
     }
@@ -163,6 +163,16 @@ QPoint WorldScene::pixelToRoadCoords(qreal x, qreal y) const
 QPointF WorldScene::roadToSceneCoords(const QPoint &pt) const
 {
     return cellToPixelCoords(QPointF(pt) / 300.0);
+}
+
+QPolygonF WorldScene::roadRectToScenePolygon(const QRect &roadRect) const
+{
+    QPolygonF polygon;
+    polygon += roadToSceneCoords(roadRect.topLeft());
+    polygon += roadToSceneCoords(roadRect.topRight());
+    polygon += roadToSceneCoords(roadRect.bottomRight());
+    polygon += roadToSceneCoords(roadRect.bottomLeft());
+    return polygon;
 }
 
 RoadItem *WorldScene::itemForRoad(Road *road)
@@ -333,12 +343,14 @@ void WorldScene::selectedRoadsChanged()
     foreach (RoadItem *item, mSelectedRoadItems - items) {
         item->setSelected(false);
         item->setEditable(false);
+        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
     }
 
     bool editable = EditRoadTool::instance()->isCurrent();
     foreach (RoadItem *item, items - mSelectedRoadItems) {
         item->setSelected(true);
         item->setEditable(editable);
+        item->setZValue(ZVALUE_ROADITEM_SELECTED);
     }
 
     mSelectedRoadItems = items;
@@ -349,7 +361,7 @@ void WorldScene::roadAdded(int index)
     Road *road = world()->roads().at(index);
     Q_ASSERT(itemForRoad(road) == 0);
     RoadItem *item = new RoadItem(this, road);
-    item->setZValue(20000);
+    item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
     addItem(item);
     mRoadItems += item;
 }
@@ -360,6 +372,7 @@ void WorldScene::roadAboutToBeRemoved(int index)
     RoadItem *item = itemForRoad(road);
     Q_ASSERT(item);
     mRoadItems.removeAll(item);
+    mSelectedRoadItems.remove(item); // paranoia
     removeItem(item);
     delete item;
 }

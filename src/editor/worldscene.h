@@ -39,6 +39,10 @@ class WorldScene;
 #define GRID_WIDTH (512)
 #define GRID_HEIGHT (256)
 
+#define ZVALUE_ROADITEM_CREATING 20002
+#define ZVALUE_ROADITEM_SELECTED 20001
+#define ZVALUE_ROADITEM_UNSELECTED 20000
+
 /**
   * Item that draws the grid-lines in a WorldScene.
   */
@@ -335,6 +339,7 @@ public:
     { return pixelToRoadCoords(point.x(), point.y()); }
 
     QPointF roadToSceneCoords(const QPoint &pt) const;
+    QPolygonF roadRectToScenePolygon(const QRect &roadRect) const;
 
     RoadItem *itemForRoad(Road *road);
 
