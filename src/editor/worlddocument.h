@@ -167,6 +167,8 @@ signals:
 private:
     WorldDocument *mWorldDoc;
     World *mWorld;
+
+    friend class WorldDocument;
 };
 
 class WorldDocument : public Document
@@ -310,6 +312,8 @@ public:
 private:
     void removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd);
     void removeTemplate(PropertyHolder *ph, PropertyTemplate *pt);
+
+    void removeRoadFromSelection(Road *road);
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);

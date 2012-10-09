@@ -367,7 +367,6 @@ void WorldDocument::removeRoad(int index)
     undoStack()->push(new RemoveRoad(this, index));
 }
 
-
 void WorldDocument::changeRoadCoords(Road *road,
                                      const QPoint &start, const QPoint &end)
 {
@@ -656,6 +655,14 @@ void WorldDocument::removeTemplate(PropertyHolder *ph, PropertyTemplate *pt)
     int index = ph->templates().indexOf(pt);
     if (index != -1)
         undoStack()->push(new RemoveTemplateFromPH(this, ph, index, pt));
+}
+
+void WorldDocument::removeRoadFromSelection(Road *road)
+{
+    if (mSelectedRoads.contains(road)) {
+        mSelectedRoads.removeAll(road);
+        emit selectedRoadsChanged();
+    }
 }
 
 /////
@@ -961,7 +968,11 @@ void WorldDocumentUndoRedo::insertRoad(int index, Road *road)
 Road *WorldDocumentUndoRedo::removeRoad(int index)
 {
     Road *road = mWorld->roads().at(index);
-    mWorldDoc->mSelectedRoads.removeAll(road);
+    Q_ASSERT(road);
+
+    // Must make sure to remove the road from the selection so WorldScene
+    // can update its mSelectedRoadItems
+    mWorldDoc->removeRoadFromSelection(road);
 
     emit roadAboutToBeRemoved(index);
     return mWorld->removeRoad(index);
