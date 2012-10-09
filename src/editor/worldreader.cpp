@@ -102,6 +102,8 @@ private:
                 readObjectGroup();
             else if (xml.name() == "objecttype")
                 readObjectType();
+            else if (xml.name() == "road")
+                readRoad();
             else if (xml.name() == "cell")
                 readCell();
             else
@@ -270,6 +272,27 @@ private:
         ph->addTemplate(ph->templates().size(), pt);
 
         xml.skipCurrentElement();
+    }
+
+    void readRoad()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "road");
+
+        const QXmlStreamAttributes atts = xml.attributes();
+
+        const int x1 =  atts.value(QLatin1String("x1")).toString().toInt();
+        const int y1 = atts.value(QLatin1String("y1")).toString().toInt();
+        const int x2 =  atts.value(QLatin1String("x2")).toString().toInt();
+        const int y2 = atts.value(QLatin1String("y2")).toString().toInt();
+        const int width = atts.value(QLatin1String("width")).toString().toInt();
+
+        // No check wanted/needed on Object coordinates
+        Road *road = new Road(mWorld, x1, y1, x2, y2, width, -1);
+        mWorld->insertRoad(mWorld->roads().size(), road);
+
+        while (xml.readNextStartElement()) {
+            readUnknownElement();
+        }
     }
 
     void readCell()

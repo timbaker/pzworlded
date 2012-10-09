@@ -96,6 +96,11 @@ public:
             writeObjectGroup(w, og);
         }
 
+
+        foreach (Road *road, world->roads()) {
+            writeRoad(w, road);
+        }
+
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 WorldCell *cell = world->cellAt(x, y);
@@ -152,6 +157,21 @@ public:
         w.writeStartElement(QLatin1String("property"));
         w.writeAttribute(QLatin1String("name"), p->mDefinition->mName);
         w.writeAttribute(QLatin1String("value"), p->mValue);
+        w.writeEndElement();
+    }
+
+    void writeRoad(QXmlStreamWriter &w, Road *road)
+    {
+        w.writeStartElement(QLatin1String("road"));
+
+        w.writeAttribute(QLatin1String("x1"), QString::number(road->x1()));
+        w.writeAttribute(QLatin1String("y1"), QString::number(road->y1()));
+        w.writeAttribute(QLatin1String("x2"), QString::number(road->x2()));
+        w.writeAttribute(QLatin1String("y2"), QString::number(road->y2()));
+        w.writeAttribute(QLatin1String("width"), QString::number(road->width()));
+//        if (!obj->isVisible())
+//            w.writeAttribute(QLatin1String("visible"), QLatin1String("0"));
+
         w.writeEndElement();
     }
 
