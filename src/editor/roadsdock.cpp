@@ -24,6 +24,8 @@
 #include "worlddocument.h"
 
 #include <QEvent>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QSpinBox>
 #include <QUndoStack>
 #include <QVBoxLayout>
@@ -38,6 +40,9 @@ RoadsDock::RoadsDock(QWidget *parent)
 
     QWidget *w = new QWidget(this);
 
+    QLabel *label = new QLabel(w);
+    label->setText(tr("Width:"));
+
     mRoadWidthSpinBox = new QSpinBox(w);
     mRoadWidthSpinBox->setMinimum(1);
     mRoadWidthSpinBox->setMaximum(50);
@@ -45,8 +50,13 @@ RoadsDock::RoadsDock(QWidget *parent)
     connect(mRoadWidthSpinBox, SIGNAL(valueChanged(int)),
             SLOT(roadWidthSpinBoxValueChanged(int)));
 
-    QVBoxLayout *layout = new QVBoxLayout(w);
-    layout->addWidget(mRoadWidthSpinBox);
+    QHBoxLayout *hlayout = new QHBoxLayout();
+    hlayout->addWidget(label);
+    hlayout->addWidget(mRoadWidthSpinBox);
+
+    QVBoxLayout *layout = new QVBoxLayout();
+    layout->addLayout(hlayout);
+    w->setLayout(layout);
 
     setWidget(w);
 
