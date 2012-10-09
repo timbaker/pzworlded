@@ -184,7 +184,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionSaveAs, SIGNAL(triggered()), SLOT(saveFileAs()));
     connect(ui->actionClose, SIGNAL(triggered()), SLOT(closeFile()));
     connect(ui->actionCloseAll, SIGNAL(triggered()), SLOT(closeAllFiles()));
-    connect(ui->actionGenerateLots, SIGNAL(triggered()), SLOT(generateLots()));
+    connect(ui->actionGenerateLotsAll, SIGNAL(triggered()),
+            SLOT(generateLotsAll()));
+    connect(ui->actionGenerateLotsSelected, SIGNAL(triggered()),
+            SLOT(generateLotsSelected()));
     connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
@@ -731,17 +734,28 @@ void MainWindow::closeAllFiles()
         docman()->closeAllDocuments();
 }
 
-void MainWindow::generateLots()
+static void generateLots(MainWindow *mainWin, Document *doc,
+                         LotFilesManager::GenerateMode mode)
 {
-    if (!mCurrentDocument)
+    if (!doc)
         return;
-    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+    WorldDocument *worldDoc = doc->asWorldDocument();
+    if (CellDocument *cellDoc = doc->asCellDocument())
         worldDoc = cellDoc->worldDocument();
-    if (!LotFilesManager::instance()->generateWorld(worldDoc)) {
-        QMessageBox::warning(this, tr("Lot Generation Failed!"),
+    if (!LotFilesManager::instance()->generateWorld(worldDoc, mode)) {
+        QMessageBox::warning(mainWin, mainWin->tr("Lot Generation Failed!"),
                              LotFilesManager::instance()->errorString());
     }
+}
+
+void MainWindow::generateLotsAll()
+{
+    generateLots(this, mCurrentDocument, LotFilesManager::GenerateAll);
+}
+
+void MainWindow::generateLotsSelected()
+{
+    generateLots(this, mCurrentDocument, LotFilesManager::GenerateSelected);
 }
 
 void MainWindow::preferencesDialog()
@@ -1205,7 +1219,9 @@ void MainWindow::updateActions()
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
 
-    ui->actionGenerateLots->setEnabled(hasDoc);
+    ui->actionGenerateLotsAll->setEnabled(hasDoc);
+    ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
+                                               worldDoc->selectedCellCount());
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

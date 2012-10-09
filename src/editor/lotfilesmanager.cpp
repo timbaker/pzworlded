@@ -54,7 +54,7 @@ LotFilesManager::~LotFilesManager()
 {
 }
 
-bool LotFilesManager::generateWorld(WorldDocument *worldDoc)
+bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
     PROGRESS progress(QLatin1String("Generating .lot files"));
 
@@ -80,10 +80,16 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc)
 
     World *world = worldDoc->world();
 
-    for (int y = 0; y < world->height(); y++) {
-        for (int x = 0; x < world->width(); x++) {
-            if (!generateCell(world->cellAt(x, y)))
+    if (mode == GenerateSelected) {
+        foreach (WorldCell *cell, worldDoc->selectedCells())
+            if (!generateCell(cell))
                 return false;
+    } else {
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                if (!generateCell(world->cellAt(x, y)))
+                    return false;
+            }
         }
     }
 
@@ -98,9 +104,11 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     if (cell->mapFilePath().isEmpty())
         return true;
 
+#if 0
     // Don't regenerate the .lot files unless the cell's map is newer than
     // the .lot files.
     // TODO: check the modification time of all the lots included by the map.
+    // TODO: check for roads changing
     {
     QFileInfo mapFileInfo(cell->mapFilePath());
     QString fileName = tr("world_%1_%2.lotpack")
@@ -112,6 +120,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             (mapFileInfo.lastModified() < lotFileInfo.lastModified()))
         return true;
     }
+#endif
 
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
     if (!mapInfo)

@@ -6,6 +6,7 @@
 #include <QObject>
 
 class MapComposite;
+class Road;
 class World;
 class WorldDocument;
 class WorldCell;
@@ -140,7 +141,12 @@ public:
     static LotFilesManager *instance();
     static void deleteInstance();
 
-    bool generateWorld(WorldDocument *worldDoc);
+    enum GenerateMode {
+        GenerateAll,
+        GenerateSelected
+    };
+
+    bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
     bool generateCell(WorldCell *cell);
     bool generateHeader(WorldCell *cell, MapComposite *mapComposite);
     bool generateHeaderAux(WorldCell *cell, MapComposite *mapComposite);
