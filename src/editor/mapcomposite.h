@@ -27,6 +27,7 @@
 #include <QVector>
 
 class MapInfo;
+class Road;
 
 namespace Tiled {
 class Layer;
@@ -179,6 +180,10 @@ public:
     typedef QList<ZOrderItem> ZOrderList;
     ZOrderList zOrder();
 
+    void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
+    Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
+    Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }
+
 signals:
     void layerGroupAdded(int level);
 
@@ -202,6 +207,9 @@ private:
     bool mSavedGroupVisible;
     bool mSavedVisible;
     bool mHiddenDuringDrag;
+
+    Tiled::TileLayer *mRoadLayer1;
+    Tiled::TileLayer *mRoadLayer0;
 };
 
 #endif // MAPCOMPOSITE_H

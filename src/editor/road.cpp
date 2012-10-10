@@ -23,8 +23,10 @@ Road::Road(World *world, int x1, int y1, int x2, int y2, int width, int style)
     , mEnd(x2, y2)
     , mWidth(width)
     , mStyle(style)
+    , mTrafficLines(0)
 {
     Q_ASSERT(mWidth > 0);
+    mTrafficLines = RoadTemplates::instance()->nullTrafficLines();
 }
 
 void Road::setCoords(const QPoint &start, const QPoint &end)
@@ -41,28 +43,57 @@ void Road::setWidth(int newWidth)
 
 QRect Road::bounds() const
 {
-    int left, top, right, bottom;
-    int roadWidth = width();
-    if (isVertical()) {
-        left = x1() - roadWidth / 2;
-        right = left + roadWidth;
-        if (y1() < y2()) { // north-to-south
-            top = y1();
-            bottom = y2();
-        } else { // south-to-north
-            top = y2();
-            bottom = y1();
-        }
+    return startBounds() | endBounds();
+}
+
+QRect Road::startBounds() const
+{
+    return QRect(x1() - mWidth / 2, y1() - mWidth / 2, mWidth, mWidth);
+}
+
+QRect Road::endBounds() const
+{
+    return QRect(x2() - mWidth / 2, y2() - mWidth / 2, mWidth, mWidth);
+}
+
+Road::RoadOrient Road::orient() const
+{
+    if (x1() == x2()) {
+        if (y1() < y2())
+            return NorthSouth;
+        else
+            return SouthNorth;
     } else {
-        top = y1() - roadWidth / 2;
-        bottom = top + roadWidth;
-        if (x1() < x2()) { // west-to-east
-            left = x1();
-            right = x2();
-        } else { // east-to-west
-            left = x2();
-            right = x1();
-        }
+        if (x1() < x2())
+            return WestEast;
+        else
+            return EastWest;
     }
-    return QRect(left, top, right - left, bottom - top);
+}
+
+/////
+
+RoadTemplates *RoadTemplates::mInstance = 0;
+
+RoadTemplates *RoadTemplates::instance()
+{
+    if (!mInstance)
+        mInstance = new RoadTemplates();
+    return mInstance;
+}
+
+void RoadTemplates::deleteInstance()
+{
+    delete mInstance;
+    mInstance = 0;
+}
+
+TrafficLines *RoadTemplates::findLines(const QString &name)
+{
+    foreach (TrafficLines *lines, mTrafficLines) {
+        if (lines->name == name)
+            return lines;
+    }
+
+    return mNullTrafficLines;
 }

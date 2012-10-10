@@ -153,6 +153,30 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos, QVector<const Cell *
             continue;
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
+#if 1
+            if (!level() && MapComposite::layerNameWithoutPrefix(tl) == QLatin1String("Floor")) {
+                const Cell *cell = &mOwner->roadLayer0()->cellAt(subPos);
+                if (!cell->isEmpty()) {
+                    if (!cleared) {
+                        cells.clear();
+                        cleared = true;
+                    }
+                    cells.append(cell);
+                    continue;
+                }
+            }
+            if (!level() && MapComposite::layerNameWithoutPrefix(tl) == QLatin1String("FloorOverlay")) {
+                const Cell *cell = &mOwner->roadLayer1()->cellAt(subPos);
+                if (!cell->isEmpty()) {
+                    if (!cleared) {
+                        cells.clear();
+                        cleared = true;
+                    }
+                    cells.append(cell);
+                    continue;
+                }
+            }
+#endif
             const Cell *cell = &tl->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
@@ -463,6 +487,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
         mSortedLayerGroups.append(mLayerGroups[level]);
     }
+
+    mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+    mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
 }
 
 MapComposite::~MapComposite()
@@ -683,4 +710,155 @@ MapComposite::ZOrderList MapComposite::zOrder()
     }
 
     return result;
+}
+
+#include "road.h"
+#include "tileset.h"
+#include <QRegion>
+
+static QList<Road*> roadsWithEndpoint(const QPoint &roadPos,
+                                      const QList<Road*> &roads,
+                                      Road *exclude)
+{
+    QList<Road*> result;
+    foreach (Road *road, roads) {
+        if (road == exclude)
+            continue;
+        if (road->start() == roadPos || road->end() == roadPos)
+            result += road;
+    }
+    return result;
+}
+
+static Tile *parseTileDescription(const QString &tileName,
+                                  const QList<Tileset*> &tilesets)
+{
+    if (tileName.isEmpty())
+        return 0;
+    int n = tileName.lastIndexOf(QLatin1Char('_'));
+    if (n < 0)
+        return 0;
+    QString tilesetName = tileName.mid(0, n);
+    int tileID = tileName.mid(n + 1).toInt();
+    foreach (Tileset *ts, tilesets) {
+        if (ts->name() == tilesetName) { // FIXME: file-name not tileset-name!!!
+            if (tileID < ts->tileCount())
+                return ts->tileAt(tileID);
+            break;
+        }
+    }
+    return 0;
+}
+
+static Tile *tileForRoad(Road *road, const QList<Tileset*> &tilesets)
+{
+    return parseTileDescription(road->tileName(), tilesets);
+}
+
+void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads)
+{
+    QRect cellRect(roadPos, QSize(300, 300));
+    QList<Road*> roadsInCell;
+    foreach (Road *road, roads) {
+        QRect roadBounds = road->bounds();
+        if (roadBounds.intersects(cellRect))
+            roadsInCell += road;
+    }
+
+    mRoadLayer1->erase(QRegion(0, 0, mRoadLayer0->width(), mRoadLayer0->height()));
+    mRoadLayer0->erase(QRegion(0, 0, mRoadLayer0->width(), mRoadLayer0->height()));
+
+    // Fill roads with road tile
+
+    foreach (Road *road, roadsInCell) {
+        Tile *tile;
+        if (!(tile = tileForRoad(road, mMap->tilesets())))
+            continue;
+        Cell cell0(tile);
+        QRect roadBounds = road->bounds();
+        roadBounds.translate(-roadPos); // layer coordinates
+        for (int x = roadBounds.left(); x <= roadBounds.right(); x++) {
+            for (int y = roadBounds.top(); y <= roadBounds.bottom(); y++) {
+                if (mRoadLayer0->contains(x, y))
+                    mRoadLayer0->setCell(x, y, cell0);
+            }
+        }
+    }
+
+    // Traffic lines
+
+    Tileset *ts1 = 0;
+    foreach (Tileset *ts2, mMap->tilesets()) {
+        if (ts2->name() == QLatin1String("street_trafficlines_01")) {
+            ts1 = ts2;
+            break;
+        }
+    }
+    if (!ts1) return;
+    Cell cell1(ts1->tileAt(16)); // vert yellow right-of-center
+    Cell cell2(ts1->tileAt(20)); // vert yellow left-of-center
+    Cell cell3(ts1->tileAt(18)); // horiz yellow south-of-center
+    Cell cell4(ts1->tileAt(22)); // horiz yellow north-of-center
+
+    foreach (Road *road, roadsInCell) {
+        if (!road->trafficLines())
+            continue;
+        Tile *tile1 = parseTileDescription(road->trafficLines()->inner.ns,
+                                           mMap->tilesets());
+        Tile *tile2 = parseTileDescription(road->trafficLines()->outer.ns,
+                                           mMap->tilesets());
+        Tile *tile3 = parseTileDescription(road->trafficLines()->inner.we,
+                                           mMap->tilesets());
+        Tile *tile4 = parseTileDescription(road->trafficLines()->outer.we,
+                                           mMap->tilesets());
+        QRect roadBounds = road->bounds();
+        roadBounds.translate(-roadPos); // layer coordinates
+        QList<Road*> roadsAtStart = roadsWithEndpoint(road->start(), roadsInCell,
+                                                      road);
+        QList<Road*> roadsAtEnd = roadsWithEndpoint(road->end(), roadsInCell,
+                                                    road);
+        if (road->isVertical()) {
+            int x = road->x1() - roadPos.x();
+            int y1 = roadBounds.top(), y2 = roadBounds.bottom();
+            if (roadsAtStart.count()) {
+                if (road->orient() == Road::NorthSouth)
+                    y1 += road->width() / 2;
+                else
+                    y2 -= road->width() -  road->width() / 2;
+            }
+            if (roadsAtEnd.count()) {
+                if (road->orient() == Road::NorthSouth)
+                    y2 -= road->width() -  road->width() / 2;
+                else
+                    y1 += road->width() / 2;
+            }
+            for (int y = y1; y <= y2; y++) {
+                if (tile1 && mRoadLayer1->contains(x, y))
+                    mRoadLayer1->setCell(x, y, Cell(tile1));
+                if (tile2 && mRoadLayer1->contains(x-1, y) && road->width() > 1)
+                    mRoadLayer1->setCell(x-1, y, Cell(tile2));
+            }
+        } else {
+            int y = road->y1() - roadPos.y();
+            int x1 = roadBounds.left(), x2 = roadBounds.right();
+            if (roadsAtStart.count()) {
+                if (road->orient() == Road::WestEast)
+                    x1 += road->width() / 2;
+                else
+                    x2 -= road->width() -  road->width() / 2;
+            }
+            if (roadsAtEnd.count()) {
+                if (road->orient() == Road::WestEast)
+                    x2 -= road->width() -  road->width() / 2;
+                else
+                    x1 += road->width() / 2;
+            }
+            for (int x = x1; x <= x2; x++) {
+                if (tile3 && mRoadLayer1->contains(x, y))
+                    mRoadLayer1->setCell(x, y, Cell(tile3));
+                if (tile4 && mRoadLayer1->contains(x, y-1) && road->width() > 1)
+                    mRoadLayer1->setCell(x, y-1, Cell(tile4));
+            }
+        }
+    }
 }

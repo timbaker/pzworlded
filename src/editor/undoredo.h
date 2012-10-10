@@ -31,6 +31,7 @@ class PropertyDef;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
+struct TrafficLines;
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
@@ -415,6 +416,42 @@ private:
     WorldDocument *mDocument;
     Road *mRoad;
     int mWidth;
+};
+
+/////
+
+class ChangeRoadTileName : public QUndoCommand
+{
+public:
+    ChangeRoadTileName(WorldDocument *doc, Road *road, const QString &tileName);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    Road *mRoad;
+    QString mTileName;
+};
+
+/////
+
+class ChangeRoadLines : public QUndoCommand
+{
+public:
+    ChangeRoadLines(WorldDocument *doc, Road *road, TrafficLines *lines);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    Road *mRoad;
+    TrafficLines *mLines;
 };
 
 /////

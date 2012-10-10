@@ -285,9 +285,14 @@ private:
         const int x2 =  atts.value(QLatin1String("x2")).toString().toInt();
         const int y2 = atts.value(QLatin1String("y2")).toString().toInt();
         const int width = atts.value(QLatin1String("width")).toString().toInt();
+        QString tileName = atts.value(QLatin1String("tile")).toString();
+        QString linesName = atts.value(QLatin1String("traffic-lines")).toString();
+        TrafficLines *lines = RoadTemplates::instance()->findLines(linesName);
 
         // No check wanted/needed on Object coordinates
         Road *road = new Road(mWorld, x1, y1, x2, y2, width, -1);
+        road->setTileName(tileName);
+        road->setTrafficLines(lines);
         mWorld->insertRoad(mWorld->roads().size(), road);
 
         while (xml.readNextStartElement()) {

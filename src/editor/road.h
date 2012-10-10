@@ -21,8 +21,22 @@
 #include <QPoint>
 #include <QRect>
 #include <QList>
+#include <QString>
 
 class World;
+
+struct TrafficLines
+{
+    QString name;
+    struct {
+        QString ns;
+        QString we;
+    } inner;
+    struct {
+        QString ns;
+        QString we;
+    } outer;
+};
 
 class Road
 {
@@ -47,9 +61,33 @@ public:
     int y2() const { return mEnd.y(); }
 
     QRect bounds() const;
+    QRect startBounds() const;
+    QRect endBounds() const;
+
+    enum RoadOrient
+    {
+        NorthSouth,
+        SouthNorth,
+        WestEast,
+        EastWest
+    };
+
+    RoadOrient orient() const;
 
     bool isVertical() const
     { return mStart.x() == mEnd.x(); }
+
+    void setTileName(const QString &tileName)
+    { mTileName = tileName; }
+
+    QString tileName() const
+    { return mTileName; }
+
+    void setTrafficLines(TrafficLines *lines)
+    { mTrafficLines = lines; }
+
+    TrafficLines *trafficLines() const
+    { return mTrafficLines; }
 
 private:
     World *mWorld;
@@ -57,8 +95,61 @@ private:
     QPoint mEnd;
     int mWidth;
     int mStyle;
+    QString mTileName;
+    TrafficLines *mTrafficLines;
 };
 
 typedef QList<Road*> RoadList;
+
+/////
+
+#include <QVector>
+
+class RoadTemplates
+{
+public:
+    static RoadTemplates *instance();
+    static void deleteInstance();
+
+    RoadTemplates()
+    {
+        TrafficLines *lines = new TrafficLines();
+        lines->name = QLatin1String("None");
+        mNullTrafficLines = lines;
+        mTrafficLines += mNullTrafficLines;
+
+        lines = new TrafficLines();
+        lines->name = QLatin1String("Double Yellow");
+        lines->inner.ns = QLatin1String("street_trafficlines_01_16");
+        lines->inner.we = QLatin1String("street_trafficlines_01_18");
+        lines->outer.ns = QLatin1String("street_trafficlines_01_20");
+        lines->outer.we = QLatin1String("street_trafficlines_01_22");
+        mTrafficLines += lines;
+    }
+
+    QVector<QString> roadTiles()
+    {
+        QVector<QString> roads;
+        roads += QLatin1String("floors_exterior_street_01_16");
+        roads += QLatin1String("floors_exterior_street_01_17");
+        roads += QLatin1String("floors_exterior_street_01_18");
+        return roads;
+    }
+
+    const QVector<TrafficLines*> &trafficLines() const
+    { return mTrafficLines; }
+
+    TrafficLines *nullTrafficLines() const
+    { return mNullTrafficLines; }
+
+    TrafficLines *findLines(const QString &name);
+
+private:
+    Q_DISABLE_COPY(RoadTemplates)
+    static RoadTemplates *mInstance;
+
+    QVector<TrafficLines*> mTrafficLines;
+    TrafficLines *mNullTrafficLines;
+};
 
 #endif // ROAD_H

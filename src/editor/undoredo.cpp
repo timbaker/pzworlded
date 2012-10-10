@@ -316,6 +316,38 @@ void ChangeRoadWidth::swap()
 
 /////
 
+ChangeRoadTileName::ChangeRoadTileName(WorldDocument *doc, Road *road,
+                                       const QString &tileName)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Road Tile"))
+    , mDocument(doc)
+    , mRoad(road)
+    , mTileName(tileName)
+{
+}
+
+void ChangeRoadTileName::swap()
+{
+    mTileName = mDocument->undoRedo().changeRoadTileName(mRoad, mTileName);
+}
+
+/////
+
+ChangeRoadLines::ChangeRoadLines(WorldDocument *doc, Road *road,
+                                 TrafficLines *lines)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Road Lines"))
+    , mDocument(doc)
+    , mRoad(road)
+    , mLines(lines)
+{
+}
+
+void ChangeRoadLines::swap()
+{
+    mLines = mDocument->undoRedo().changeRoadLines(mRoad, mLines);
+}
+
+/////
+
 AddRemoveProperty::AddRemoveProperty(WorldDocument *doc, PropertyHolder *ph, int index, Property *p)
     : mDocument(doc)
     , mPH(ph)

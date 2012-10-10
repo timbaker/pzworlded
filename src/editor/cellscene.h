@@ -370,6 +370,8 @@ public slots:
     void setHighlightCurrentLevel(bool highlight);
     void handlePendingUpdates();
 
+    void roadsChanged();
+
 public:
     enum Pending {
         None = 0,

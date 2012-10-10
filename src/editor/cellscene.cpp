@@ -1023,6 +1023,19 @@ void CellScene::setDocument(CellDocument *doc)
             SLOT(objectGroupVisibilityChanged(WorldObjectGroup*,int)));
     connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
 
+    connect(worldDocument(), SIGNAL(roadAdded(int)),
+           SLOT(roadsChanged()));
+    connect(worldDocument(), SIGNAL(roadRemoved(Road*)),
+           SLOT(roadsChanged()));
+    connect(worldDocument(), SIGNAL(roadCoordsChanged(int)),
+           SLOT(roadsChanged()));
+    connect(worldDocument(), SIGNAL(roadWidthChanged(int)),
+           SLOT(roadsChanged()));
+    connect(worldDocument(), SIGNAL(roadTileNameChanged(int)),
+            SLOT(roadsChanged()));
+    connect(worldDocument(), SIGNAL(roadLinesChanged(int)),
+            SLOT(roadsChanged()));
+
     loadMap();
 }
 
@@ -1254,6 +1267,9 @@ void CellScene::loadMap()
     addItem(mGridItem);
 
     updateCurrentLevelHighlight();
+
+    mMapComposite->generateRoadLayers(QPoint(cell()->x()*300, cell()->y()*300),
+                                      world()->roads());
 }
 
 void CellScene::cellMapFileChanged()
@@ -1686,6 +1702,15 @@ void CellScene::handlePendingUpdates()
     mPendingFlags = None;
     mPendingGroupItems.clear();
     mPendingActive = false;
+}
+
+void CellScene::roadsChanged()
+{
+    mMapComposite->generateRoadLayers(QPoint(cell()->x() * 300, cell()->y() * 300),
+                                      world()->roads());
+    if (CompositeLayerGroup *lg = mMapComposite->tileLayersForLevel(0))
+        if (mTileLayerGroupItems.contains(0))
+            mTileLayerGroupItems[0]->update();
 }
 
 void CellScene::updateCurrentLevelHighlight()

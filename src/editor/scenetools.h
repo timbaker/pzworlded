@@ -462,6 +462,7 @@ private:
 
 class Road;
 class RoadItem;
+struct TrafficLines;
 
 /**
   * This WorldScene tool creates Roads.
@@ -497,6 +498,18 @@ public:
     int curretRoadWidth() const
     { return mCurrentRoadWidth; }
 
+    void setCurrentTrafficLines(TrafficLines *lines)
+    { mCurrentTrafficLines = lines; }
+
+    TrafficLines *currentTrafficLines() const
+    { return mCurrentTrafficLines; }
+
+    void setCurrentTileName(const QString &tileName)
+    { mCurrentTileName = tileName; }
+
+    QString currentTileName() const
+    { return mCurrentTileName; }
+
 private:
     Q_DISABLE_COPY(CreateRoadTool)
 
@@ -510,6 +523,8 @@ private:
     RoadItem *mRoadItem;
     bool mCreating;
     int mCurrentRoadWidth;
+    TrafficLines *mCurrentTrafficLines;
+    QString mCurrentTileName;
     QGraphicsPolygonItem *mCursorItem;
     static CreateRoadTool *mInstance;
 };

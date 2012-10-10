@@ -32,6 +32,7 @@ class PropertyDef;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
+struct TrafficLines;
 class World;
 class WorldCell;
 class WorldCellContents;
@@ -103,6 +104,8 @@ public:
     void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end,
                           QPoint &oldStart, QPoint &oldEnd);
     int changeRoadWidth(Road *road, int newWidth);
+    QString changeRoadTileName(Road *road, const QString &tileName);
+    TrafficLines *changeRoadLines(Road *road, TrafficLines *lines);
 
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
@@ -159,8 +162,11 @@ signals:
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
+    void roadRemoved(Road *road);
     void roadCoordsChanged(int index);
     void roadWidthChanged(int index);
+    void roadTileNameChanged(int index);
+    void roadLinesChanged(int index);
 
     void selectedCellsChanged();
 
@@ -225,6 +231,8 @@ public:
     void removeRoad(int index);
     void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end);
     void changeRoadWidth(Road *road, int newWidth);
+    void changeRoadTileName(Road *road, const QString &tileName);
+    void changeRoadLines(Road *road, TrafficLines *lines);
 
     /**
       * Transfers the contents of \a cell to a different cell at
@@ -363,8 +371,11 @@ signals:
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
+    void roadRemoved(Road *road);
     void roadCoordsChanged(int index);
     void roadWidthChanged(int index);
+    void roadTileNameChanged(int index);
+    void roadLinesChanged(int index);
 
     void templateAdded(int index);
     void templateAboutToBeRemoved(int index);

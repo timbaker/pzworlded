@@ -169,6 +169,9 @@ public:
         w.writeAttribute(QLatin1String("x2"), QString::number(road->x2()));
         w.writeAttribute(QLatin1String("y2"), QString::number(road->y2()));
         w.writeAttribute(QLatin1String("width"), QString::number(road->width()));
+        w.writeAttribute(QLatin1String("tile"), road->tileName());
+        if (road->trafficLines() != RoadTemplates::instance()->nullTrafficLines())
+            w.writeAttribute(QLatin1String("traffic-lines"), road->trafficLines()->name);
 //        if (!obj->isVisible())
 //            w.writeAttribute(QLatin1String("visible"), QLatin1String("0"));
 

@@ -18,13 +18,19 @@
 #ifndef ROADSDOCK_H
 #define ROADSDOCK_H
 
+#include <QAbstractListModel>
 #include <QDockWidget>
+#include <QTableView>
 
 class CellDocument;
 class Document;
+class Road;
 class WorldDocument;
 
+class QComboBox;
 class QSpinBox;
+
+class RoadTypeView;
 
 class RoadsDock : public QDockWidget
 {
@@ -42,11 +48,56 @@ public:
 private slots:
     void selectedRoadsChanged();
     void roadWidthSpinBoxValueChanged(int newValue);
+    void trafficLineComboBoxActivated(int index);
+    void roadTypeSelected();
 
 private:
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
     QSpinBox *mRoadWidthSpinBox;
+    QComboBox *mTrafficLineComboBox;
+    RoadTypeView *mRoadTypeView;
+};
+
+class RoadTypeModel : public QAbstractListModel
+{
+public:
+    RoadTypeModel(QObject *parent = 0);
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const;
+
+    int columnCount(const QModelIndex &parent = QModelIndex()) const;
+
+    QVariant data(const QModelIndex &index,
+                  int role = Qt::DisplayRole) const;
+
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const;
+
+    QModelIndex indexOfTile(int tileNum);
+
+    int tileAt(const QModelIndex &index);
+};
+
+class RoadTypeView : public QTableView
+{
+public:
+    RoadTypeView(QWidget *parent = 0);
+
+    RoadTypeModel *model() const
+    { return mModel; }
+
+    QSize sizeHint() { return QSize((64+2)*3, 128+2); }
+
+    void setDocument(Document *doc);
+    void clearDocument();
+
+    void selectTileForRoad(Road *road);
+
+private:
+    RoadTypeModel *mModel;
+    CellDocument *mCellDoc;
+    WorldDocument *mWorldDoc;
 };
 
 #endif // ROADSDOCK_H

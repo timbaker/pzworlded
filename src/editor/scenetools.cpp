@@ -1329,10 +1329,11 @@ void CreateRoadTool::deleteInstance()
 
 CreateRoadTool::CreateRoadTool()
     : BaseWorldSceneTool(tr("Create Roads"),
-                         QIcon(QLatin1String(":/images/24x24/insert-polyline.png")),
+                         QIcon(QLatin1String(":/images/22x22/road-tool-create.png")),
                          QKeySequence())
     , mCreating(false)
-    , mCurrentRoadWidth(4)
+    , mCurrentRoadWidth(8)
+    , mCurrentTrafficLines(RoadTemplates::instance()->nullTrafficLines())
     , mCursorItem(new QGraphicsPolygonItem)
 {
     mCursorItem->setBrush(Qt::cyan);
@@ -1383,69 +1384,27 @@ void CreateRoadTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-static QRect getRoadHandleRect(Road *road, bool start)
-{
-    QPoint roadPos = start ? road->start() : road->end();
-    QPoint topLeft = roadPos;
-    int roadWidth = road->width();
-    if (road->isVertical()) {
-        if (road->y1() < road->y2()) { // north-to-south
-            start ? topLeft += QPoint(-roadWidth/2, 0)
-                    : topLeft += QPoint(-roadWidth/2, -roadWidth);
-        } else { // south-to-north
-            start ? topLeft += QPoint(-roadWidth/2, -roadWidth)
-                    : topLeft += QPoint(-roadWidth/2, 0);
-        }
-    } else {
-        if (road->x1() < road->x2()) { // west-to-east
-            start ? topLeft += QPoint(0, -roadWidth / 2)
-                    : topLeft += QPoint(-roadWidth, -roadWidth / 2);
-        } else { // east-to-west
-            start ? topLeft += QPoint(-roadWidth, -roadWidth / 2)
-                    : topLeft += QPoint(0, -roadWidth / 2);
-        }
-    }
-    return QRect(topLeft, QSize(road->width() + 1, road->width() + 1));
-}
-
 void CreateRoadTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     QPoint roadPos = mScene->pixelToRoadCoords(event->scenePos());
 
     if (mCreating) {
         QPoint delta = roadPos - mStartRoadPos;
-        QPoint cursorFudgeStart, cursorFudgeEnd;
         if (qAbs(delta.x()) >= qAbs(delta.y())) {
             delta.setY(0); // horizontal road
-            if (delta.x() > 0) {
-                cursorFudgeStart.setX(-mCurrentRoadWidth / 2);
-                cursorFudgeEnd.setX(mCurrentRoadWidth - mCurrentRoadWidth / 2);
-            } else {
-                cursorFudgeStart.setX(mCurrentRoadWidth - mCurrentRoadWidth / 2);
-                cursorFudgeEnd.setX(-mCurrentRoadWidth / 2);
-            }
         } else {
             delta.setX(0); // vertical road
-            if (delta.y() > 0) {
-                cursorFudgeStart.setY(-mCurrentRoadWidth / 2);
-                cursorFudgeEnd.setY(mCurrentRoadWidth - mCurrentRoadWidth / 2);
-            } else {
-                cursorFudgeStart.setY(mCurrentRoadWidth - mCurrentRoadWidth / 2);
-                cursorFudgeEnd.setY(-mCurrentRoadWidth / 2);
-            }
         }
-        mRoad->setCoords(mStartRoadPos + cursorFudgeStart,
-                         mStartRoadPos + cursorFudgeEnd + delta);
+        mRoad->setCoords(mStartRoadPos, mStartRoadPos + delta);
         mRoadItem->synchWithRoad();
 
-        roadPos = mRoad->end() - cursorFudgeEnd;
+        roadPos = mRoad->end();
     }
 
     QPoint topLeft = roadPos - QPoint(mCurrentRoadWidth / 2, mCurrentRoadWidth / 2);
-    QPoint botRight = roadPos + QPoint(mCurrentRoadWidth - mCurrentRoadWidth / 2,
-                                       mCurrentRoadWidth - mCurrentRoadWidth / 2);
+    QSize size(mCurrentRoadWidth, mCurrentRoadWidth);
 
-    mCursorItem->setPolygon(mScene->roadRectToScenePolygon(QRect(topLeft, botRight)));
+    mCursorItem->setPolygon(mScene->roadRectToScenePolygon(QRect(topLeft, size)));
 }
 
 void CreateRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -1467,6 +1426,8 @@ void CreateRoadTool::startNewRoadItem(const QPointF &scenePos)
                      mStartRoadPos.x(), mStartRoadPos.y(),
                      mStartRoadPos.x(), mStartRoadPos.y(),
                      mCurrentRoadWidth, -1);
+    mRoad->setTileName(mCurrentTileName);
+    mRoad->setTrafficLines(mCurrentTrafficLines);
     mRoadItem = new RoadItem(mScene, mRoad);
     mRoadItem->setZValue(ZVALUE_ROADITEM_CREATING);
     mScene->addItem(mRoadItem);
@@ -1619,7 +1580,7 @@ void EditRoadTool::deleteInstance()
 
 EditRoadTool::EditRoadTool()
     : BaseWorldSceneTool(tr("Edit Roads"),
-                         QIcon(QLatin1String(":/images/24x24/tool-edit-polygons.png")),
+                         QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                          QKeySequence())
     , mSelectedRoadItem(0)
     , mRoad(0)
@@ -1724,9 +1685,9 @@ void EditRoadTool::startMoving(const QPointF &scenePos)
 {
     if (mSelectedRoadItem) {
         QPoint roadPos = mScene->pixelToRoadCoords(scenePos);
-        if (getRoadHandleRect(mSelectedRoadItem->road(), true).contains(roadPos)) {
+        if (mSelectedRoadItem->road()->startBounds().adjusted(0, 0, 1, 1).contains(roadPos)) {
             mMovingStart = true;
-        } else if (getRoadHandleRect(mSelectedRoadItem->road(), false).contains(roadPos)) {
+        } else if (mSelectedRoadItem->road()->endBounds().adjusted(0, 0, 1, 1).contains(roadPos)) {
             mMovingStart = false;
         } else {
             mSelectedRoadItem->setEditable(false);
@@ -1788,8 +1749,8 @@ void EditRoadTool::cancelMoving()
 void EditRoadTool::updateHandles(Road *road)
 {
     if (road) {
-        mStartHandle->setPolygon(mScene->roadRectToScenePolygon(getRoadHandleRect(road, true)));
-        mEndHandle->setPolygon(mScene->roadRectToScenePolygon(getRoadHandleRect(road, false)));
+        mStartHandle->setPolygon(mScene->roadRectToScenePolygon(road->startBounds()));
+        mEndHandle->setPolygon(mScene->roadRectToScenePolygon(road->endBounds()));
         if (mHandlesVisible == false) {
             mScene->addItem(mStartHandle);
             mScene->addItem(mEndHandle);
@@ -1820,7 +1781,7 @@ void SelectMoveRoadTool::deleteInstance()
 
 SelectMoveRoadTool::SelectMoveRoadTool()
     : BaseWorldSceneTool(tr("Select and Move Roads"),
-                         QIcon(QLatin1String(":/images/22x22/tool-select-objects.png")),
+                         QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
                          QKeySequence())
     , mMode(NoMode)
     , mMousePressed(false)

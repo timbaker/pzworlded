@@ -69,5 +69,8 @@
         <file>images/24x24/system-run.png</file>
         <file>images/16x16/show_hide_others.png</file>
         <file>images/24x24/dice.png</file>
+        <file>images/22x22/road-tool-create.png</file>
+        <file>images/22x22/road-tool-edit.png</file>
+        <file>images/22x22/road-tool-select.png</file>
     </qresource>
 </RCC>

@@ -168,10 +168,11 @@ QPointF WorldScene::roadToSceneCoords(const QPoint &pt) const
 QPolygonF WorldScene::roadRectToScenePolygon(const QRect &roadRect) const
 {
     QPolygonF polygon;
-    polygon += roadToSceneCoords(roadRect.topLeft());
-    polygon += roadToSceneCoords(roadRect.topRight());
-    polygon += roadToSceneCoords(roadRect.bottomRight());
-    polygon += roadToSceneCoords(roadRect.bottomLeft());
+    QRect adjusted = roadRect.adjusted(0, 0, 1, 1);
+    polygon += roadToSceneCoords(adjusted.topLeft());
+    polygon += roadToSceneCoords(adjusted.topRight());
+    polygon += roadToSceneCoords(adjusted.bottomRight());
+    polygon += roadToSceneCoords(adjusted.bottomLeft());
     return polygon;
 }
 
@@ -1056,24 +1057,7 @@ void RoadItem::setDragOffset(const QPoint &offset)
 
 QPolygonF RoadItem::polygon() const
 {
-    QPolygonF polygon;
-
     QPoint offset = mDragging ? mDragOffset : QPoint();
-    QPoint start = mRoad->start() + offset;
-    QPoint end = mRoad->end() + offset;
-    int w = mRoad->width();
 
-    if (mRoad->start().x() == mRoad->end().x()) {
-        polygon += mScene->roadToSceneCoords(start + QPoint(-w/2, 0));
-        polygon += mScene->roadToSceneCoords(start + QPoint(w-w/2, 0));
-        polygon += mScene->roadToSceneCoords(end + QPoint(w-w/2, 0));
-        polygon += mScene->roadToSceneCoords(end + QPoint(-w/2, 0));
-    } else {
-        polygon += mScene->roadToSceneCoords(start + QPoint(0, -w/2));
-        polygon += mScene->roadToSceneCoords(start + QPoint(0, w-w/2));
-        polygon += mScene->roadToSceneCoords(end + QPoint(0, w-w/2));
-        polygon += mScene->roadToSceneCoords(end + QPoint(0, -w/2));
-    }
-
-    return polygon;
+    return mScene->roadRectToScenePolygon(mRoad->bounds().translated(offset));
 }
