@@ -916,7 +916,7 @@ void CellEditRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene->asCellScene();
+    mScene = scene ? scene->asCellScene() : 0;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
@@ -1145,7 +1145,7 @@ void CellSelectMoveRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene->asCellScene();
+    mScene = scene ? scene->asCellScene() : 0;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
@@ -2279,7 +2279,7 @@ void WorldEditRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene->asWorldScene();
+    mScene = scene ? scene->asWorldScene() : 0;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
@@ -2496,7 +2496,7 @@ void WorldSelectMoveRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene->asWorldScene();
+    mScene = scene ? scene->asWorldScene() : 0;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
