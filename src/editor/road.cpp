@@ -90,8 +90,8 @@ void RoadTemplates::deleteInstance()
 
 RoadTemplates::RoadTemplates()
 {
-#if 0
     mRoadTiles += QString();
+#if 0
     mRoadTiles += QLatin1String("floors_exterior_street_01_16");
     mRoadTiles += QLatin1String("floors_exterior_street_01_17");
     mRoadTiles += QLatin1String("floors_exterior_street_01_18");
