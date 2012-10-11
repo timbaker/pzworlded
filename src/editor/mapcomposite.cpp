@@ -205,6 +205,30 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
         ++index;
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
+#if 1
+            if (!level() && MapComposite::layerNameWithoutPrefix(tl) == QLatin1String("Floor")) {
+                const Cell *cell = &mOwner->roadLayer0()->cellAt(subPos);
+                if (!cell->isEmpty()) {
+                    if (!cleared) {
+                        cells.clear();
+                        cleared = true;
+                    }
+                    cells.append(cell);
+                    continue;
+                }
+            }
+            if (!level() && MapComposite::layerNameWithoutPrefix(tl) == QLatin1String("FloorOverlay")) {
+                const Cell *cell = &mOwner->roadLayer1()->cellAt(subPos);
+                if (!cell->isEmpty()) {
+                    if (!cleared) {
+                        cells.clear();
+                        cleared = true;
+                    }
+                    cells.append(cell);
+                    continue;
+                }
+            }
+#endif
             const Cell *cell = &tl->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {

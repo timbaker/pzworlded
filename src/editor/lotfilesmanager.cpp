@@ -127,6 +127,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
 
     MapComposite *mapComposite = new MapComposite(mapInfo);
+    mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
+                                     cell->world()->roads());
 
     generateHeader(cell, mapComposite);
 
