@@ -802,6 +802,84 @@ void SubMapItem::subMapMoved()
 
 /////
 
+CellRoadItem::CellRoadItem(CellScene *scene, Road *road)
+    : QGraphicsItem()
+    , mScene(scene)
+    , mRoad(road)
+    , mSelected(false)
+    , mEditable(false)
+    , mDragging(false)
+{
+    synchWithRoad();
+}
+
+QRectF CellRoadItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+QPainterPath CellRoadItem::shape() const
+{
+    QPainterPath path;
+    path.addPolygon(polygon());
+    return path;
+}
+
+void CellRoadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
+
+    QColor c = Qt::blue;
+    if (mSelected)
+        c = Qt::green;
+    if (mEditable)
+        c = Qt::yellow;
+    painter->setPen(c);
+    painter->drawPath(shape());
+}
+
+void CellRoadItem::synchWithRoad()
+{
+    QPoint offset = mDragging ? mDragOffset : QPoint();
+    QPolygonF polygon = mScene->roadRectToScenePolygon(mRoad->bounds().translated(offset));
+    if (polygon != mPolygon) {
+        mPolygon = polygon;
+    }
+
+    QRectF bounds = polygon.boundingRect();
+    if (bounds != mBoundingRect) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
+}
+
+void CellRoadItem::setSelected(bool selected)
+{
+    mSelected = selected;
+    update();
+}
+
+void CellRoadItem::setEditable(bool editable)
+{
+    mEditable = editable;
+    update();
+}
+
+void CellRoadItem::setDragging(bool dragging)
+{
+    mDragging = dragging;
+    synchWithRoad();
+}
+
+void CellRoadItem::setDragOffset(const QPoint &offset)
+{
+    mDragOffset = offset;
+    synchWithRoad();
+}
+
+/////
+
 DnDItem::DnDItem(const QString &path, MapRenderer *renderer, int level, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mMapImage(MapImageManager::instance()->getMapImage(path))
@@ -902,6 +980,10 @@ public:
 
 #define DARKENING_FACTOR 0.6
 
+const int CellScene::ZVALUE_ROADITEM_CREATING = 20002;
+const int CellScene::ZVALUE_ROADITEM_SELECTED = 20001;
+const int CellScene::ZVALUE_ROADITEM_UNSELECTED = 20000;
+
 CellScene::CellScene(QObject *parent)
     : BaseGraphicsScene(CellSceneType, parent)
     , mMap(0)
@@ -969,6 +1051,12 @@ void CellScene::setTool(AbstractTool *tool)
             item->setEditable(true);
     }
 
+    if (mActiveTool != CellEditRoadTool::instance())
+        foreach (CellRoadItem *item, mRoadItems)
+            item->setEditable(false);
+    if (mActiveTool != CellSelectMoveRoadTool::instance())
+        worldDocument()->setSelectedRoads(QList<Road*>());
+
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
@@ -1024,17 +1112,19 @@ void CellScene::setDocument(CellDocument *doc)
     connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
-           SLOT(roadsChanged()));
+           SLOT(roadAdded(int)));
     connect(worldDocument(), SIGNAL(roadRemoved(Road*)),
-           SLOT(roadsChanged()));
+           SLOT(roadRemoved(Road*)));
     connect(worldDocument(), SIGNAL(roadCoordsChanged(int)),
-           SLOT(roadsChanged()));
+           SLOT(roadCoordsChanged(int)));
     connect(worldDocument(), SIGNAL(roadWidthChanged(int)),
-           SLOT(roadsChanged()));
+           SLOT(roadWidthChanged(int)));
     connect(worldDocument(), SIGNAL(roadTileNameChanged(int)),
             SLOT(roadsChanged()));
     connect(worldDocument(), SIGNAL(roadLinesChanged(int)),
             SLOT(roadsChanged()));
+    connect(worldDocument(), SIGNAL(selectedRoadsChanged()),
+            SLOT(selectedRoadsChanged()));
 
     loadMap();
 }
@@ -1200,6 +1290,7 @@ void CellScene::loadMap()
         mSelectedObjectItems.clear();
         mSubMapItems.clear();
         mSelectedSubMapItems.clear();
+        mRoadItems.clear();
 
         // mMap, mMapInfo are shared, don't destroy
         mMap = 0;
@@ -1255,6 +1346,11 @@ void CellScene::loadMap()
         mObjectItems += item;
         mMapComposite->ensureMaxLevels(obj->level());
     }
+
+    // FIXME: This creates a new CellRoadItem for every road in the world,
+    // even if many are not visible in this cell.
+    for (int i = 0; i < world()->roads().count(); i++)
+        roadAdded(i);
 
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
     // all the items in the scene (without getting smaller, ever).
@@ -1704,6 +1800,74 @@ void CellScene::handlePendingUpdates()
     mPendingActive = false;
 }
 
+void CellScene::roadAdded(int index)
+{
+    Road *road = world()->roads().at(index);
+    Q_ASSERT(itemForRoad(road) == 0);
+    CellRoadItem *item = new CellRoadItem(this, road);
+    item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+    addItem(item);
+    mRoadItems += item;
+
+    roadsChanged();
+}
+
+void CellScene::roadRemoved(Road *road)
+{
+    CellRoadItem *item = itemForRoad(road);
+    Q_ASSERT(item);
+    mRoadItems.removeAll(item);
+//    mSelectedRoadItems.remove(item); // paranoia
+    removeItem(item);
+    delete item;
+
+    roadsChanged();
+}
+
+void CellScene::roadCoordsChanged(int index)
+{
+    Road *road = world()->roads().at(index);
+    CellRoadItem *item = itemForRoad(road);
+    Q_ASSERT(item);
+    item->synchWithRoad();
+
+    roadsChanged();
+}
+
+void CellScene::roadWidthChanged(int index)
+{
+    Road *road = world()->roads().at(index);
+    CellRoadItem *item = itemForRoad(road);
+    Q_ASSERT(item);
+    item->synchWithRoad();
+
+    roadsChanged();
+}
+
+void CellScene::selectedRoadsChanged()
+{
+    const QList<Road*> &selection = worldDocument()->selectedRoads();
+
+    QSet<CellRoadItem*> items;
+    foreach (Road *road, selection)
+        items.insert(itemForRoad(road));
+
+    foreach (CellRoadItem *item, mSelectedRoadItems - items) {
+        item->setSelected(false);
+        item->setEditable(false);
+        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+    }
+
+    bool editable = CellEditRoadTool::instance()->isCurrent();
+    foreach (CellRoadItem *item, items - mSelectedRoadItems) {
+        item->setSelected(true);
+        item->setEditable(editable);
+        item->setZValue(ZVALUE_ROADITEM_SELECTED);
+    }
+
+    mSelectedRoadItems = items;
+}
+
 void CellScene::roadsChanged()
 {
     mMapComposite->generateRoadLayers(QPoint(cell()->x() * 300, cell()->y() * 300),
@@ -1881,4 +2045,47 @@ void CellScene::dropEvent(QGraphicsSceneDragDropEvent *event)
         return;
     }
     event->ignore();
+}
+
+QPoint CellScene::pixelToRoadCoords(qreal x, qreal y) const
+{
+    QPoint tileCoords = mRenderer->pixelToTileCoordsInt(QPointF(x, y));
+    return tileCoords + QPoint(cell()->x() * 300, cell()->y() * 300);
+}
+
+QPointF CellScene::roadToSceneCoords(const QPoint &pt) const
+{
+    QPoint tileCoords = pt - QPoint(cell()->x() * 300, cell()->y() * 300);
+    return mRenderer->tileToPixelCoords(tileCoords);
+}
+
+QPolygonF CellScene::roadRectToScenePolygon(const QRect &roadRect) const
+{
+    QPolygonF polygon;
+    QRect adjusted = roadRect.adjusted(0, 0, 1, 1);
+    polygon += roadToSceneCoords(adjusted.topLeft());
+    polygon += roadToSceneCoords(adjusted.topRight());
+    polygon += roadToSceneCoords(adjusted.bottomRight());
+    polygon += roadToSceneCoords(adjusted.bottomLeft());
+    polygon += polygon[0];
+    return polygon;
+}
+
+CellRoadItem *CellScene::itemForRoad(Road *road)
+{
+    foreach (CellRoadItem *item, mRoadItems) {
+        if (item->road() == road)
+            return item;
+    }
+    return 0;
+}
+
+QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
+{
+    QList<Road*> result;
+    foreach (QGraphicsItem *item, items(bounds)) {
+        if (CellRoadItem *roadItem = dynamic_cast<CellRoadItem*>(item))
+            result += roadItem->road();
+    }
+    return result;
 }

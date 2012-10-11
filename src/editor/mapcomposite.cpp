@@ -787,30 +787,26 @@ void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *>
 
     // Traffic lines
 
-    Tileset *ts1 = 0;
-    foreach (Tileset *ts2, mMap->tilesets()) {
-        if (ts2->name() == QLatin1String("street_trafficlines_01")) {
-            ts1 = ts2;
-            break;
-        }
-    }
-    if (!ts1) return;
-    Cell cell1(ts1->tileAt(16)); // vert yellow right-of-center
-    Cell cell2(ts1->tileAt(20)); // vert yellow left-of-center
-    Cell cell3(ts1->tileAt(18)); // horiz yellow south-of-center
-    Cell cell4(ts1->tileAt(22)); // horiz yellow north-of-center
-
     foreach (Road *road, roadsInCell) {
         if (!road->trafficLines())
             continue;
-        Tile *tile1 = parseTileDescription(road->trafficLines()->inner.ns,
-                                           mMap->tilesets());
-        Tile *tile2 = parseTileDescription(road->trafficLines()->outer.ns,
-                                           mMap->tilesets());
-        Tile *tile3 = parseTileDescription(road->trafficLines()->inner.we,
-                                           mMap->tilesets());
-        Tile *tile4 = parseTileDescription(road->trafficLines()->outer.we,
-                                           mMap->tilesets());
+        Tile *tileInnerNS = parseTileDescription(road->trafficLines()->inner.ns,
+                                                 mMap->tilesets());
+        Tile *tileInnerWE = parseTileDescription(road->trafficLines()->inner.we,
+                                                 mMap->tilesets());
+        Tile *tileInnerNW = parseTileDescription(road->trafficLines()->inner.nw,
+                                                 mMap->tilesets());
+        Tile *tileInnerSW = parseTileDescription(road->trafficLines()->inner.sw,
+                                                 mMap->tilesets());
+
+        Tile *tileOuterNS = parseTileDescription(road->trafficLines()->outer.ns,
+                                                 mMap->tilesets());
+        Tile *tileOuterWE = parseTileDescription(road->trafficLines()->outer.we,
+                                                 mMap->tilesets());
+        Tile *tileOuterNE = parseTileDescription(road->trafficLines()->outer.ne,
+                                                 mMap->tilesets());
+        Tile *tileOuterSE = parseTileDescription(road->trafficLines()->outer.se,
+                                                 mMap->tilesets());
         QRect roadBounds = road->bounds();
         roadBounds.translate(-roadPos); // layer coordinates
         QList<Road*> roadsAtStart = roadsWithEndpoint(road->start(), roadsInCell,
@@ -833,10 +829,28 @@ void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *>
                     y1 += road->width() / 2;
             }
             for (int y = y1; y <= y2; y++) {
-                if (tile1 && mRoadLayer1->contains(x, y))
-                    mRoadLayer1->setCell(x, y, Cell(tile1));
-                if (tile2 && mRoadLayer1->contains(x-1, y) && road->width() > 1)
-                    mRoadLayer1->setCell(x-1, y, Cell(tile2));
+                if (tileInnerNS && mRoadLayer1->contains(x, y)) {
+                    Tile *curTile = mRoadLayer1->cellAt(x, y).tile;
+                    if (curTile == tileInnerWE)
+                        mRoadLayer1->setCell(x, y, Cell(tileInnerNW));
+                    else if (curTile == tileOuterWE)
+                        mRoadLayer1->setCell(x, y, Cell(tileInnerSW));
+                    else if (curTile == tileInnerNW || curTile == tileInnerSW)
+                        ;
+                    else
+                        mRoadLayer1->setCell(x, y, Cell(tileInnerNS));
+                }
+                if (tileOuterNS && mRoadLayer1->contains(x-1, y) && road->width() > 1) {
+                    Tile *curTile = mRoadLayer1->cellAt(x-1, y).tile;
+                    if (curTile == tileInnerWE)
+                        mRoadLayer1->setCell(x-1, y, Cell(tileOuterNE));
+                    else if (curTile == tileOuterWE)
+                        mRoadLayer1->setCell(x-1, y, Cell(tileOuterSE));
+                    else if (curTile == tileOuterNE || curTile == tileOuterSE)
+                        ;
+                    else
+                        mRoadLayer1->setCell(x-1, y, Cell(tileOuterNS));
+                }
             }
         } else {
             int y = road->y1() - roadPos.y();
@@ -854,10 +868,28 @@ void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *>
                     x1 += road->width() / 2;
             }
             for (int x = x1; x <= x2; x++) {
-                if (tile3 && mRoadLayer1->contains(x, y))
-                    mRoadLayer1->setCell(x, y, Cell(tile3));
-                if (tile4 && mRoadLayer1->contains(x, y-1) && road->width() > 1)
-                    mRoadLayer1->setCell(x, y-1, Cell(tile4));
+                if (tileInnerWE && mRoadLayer1->contains(x, y)) {
+                    Tile *curTile = mRoadLayer1->cellAt(x, y).tile;
+                    if (curTile == tileOuterNS)
+                        mRoadLayer1->setCell(x, y, Cell(tileOuterNE));
+                    else if (curTile == tileInnerNS)
+                        mRoadLayer1->setCell(x, y, Cell(tileInnerNW));
+                    else if (curTile == tileOuterNE || curTile == tileInnerNW)
+                        ;
+                    else
+                        mRoadLayer1->setCell(x, y, Cell(tileInnerWE));
+                }
+                if (tileOuterWE && mRoadLayer1->contains(x, y-1) && road->width() > 1) {
+                    Tile *curTile = mRoadLayer1->cellAt(x, y-1).tile;
+                    if (curTile == tileOuterNS)
+                        mRoadLayer1->setCell(x, y-1, Cell(tileOuterSE));
+                    else if (curTile == tileInnerNS)
+                        mRoadLayer1->setCell(x, y-1, Cell(tileInnerSW));
+                    else if (curTile == tileOuterSE || curTile == tileInnerSW)
+                        ;
+                    else
+                        mRoadLayer1->setCell(x, y-1, Cell(tileOuterWE));
+                }
             }
         }
     }

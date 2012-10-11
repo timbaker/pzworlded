@@ -102,6 +102,8 @@ public slots:
     void paste();
     void showClipboard();
 
+    void removeRoad();
+
     void removeLot();
     void removeObject();
     void extractLots();

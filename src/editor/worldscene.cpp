@@ -100,7 +100,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     }
 
     foreach (Road *road, world()->roads()) {
-        RoadItem *item = new RoadItem(this, road);
+        WorldRoadItem *item = new WorldRoadItem(this, road);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
         mRoadItems += item;
@@ -132,8 +132,8 @@ void WorldScene::setTool(AbstractTool *tool)
         mActiveTool->activate();
     }
 
-    if (mActiveTool != EditRoadTool::instance())
-        foreach (RoadItem *item, mRoadItems)
+    if (mActiveTool != WorldEditRoadTool::instance())
+        foreach (WorldRoadItem *item, mRoadItems)
             item->setEditable(false);
 }
 
@@ -176,9 +176,9 @@ QPolygonF WorldScene::roadRectToScenePolygon(const QRect &roadRect) const
     return polygon;
 }
 
-RoadItem *WorldScene::itemForRoad(Road *road)
+WorldRoadItem *WorldScene::itemForRoad(Road *road)
 {
-    foreach (RoadItem *item, mRoadItems)
+    foreach (WorldRoadItem *item, mRoadItems)
         if (item->road() == road)
             return item;
 
@@ -195,7 +195,7 @@ QList<Road *> WorldScene::roadsInRect(const QRectF &bounds)
 
     QList<Road*> result;
     foreach (QGraphicsItem *item, items(polygon)) {
-        if (RoadItem *roadItem = dynamic_cast<RoadItem*>(item))
+        if (WorldRoadItem *roadItem = dynamic_cast<WorldRoadItem*>(item))
             result += roadItem->road();
     }
     return result;
@@ -337,18 +337,18 @@ void WorldScene::selectedRoadsChanged()
 {
     const QList<Road*> &selection = worldDocument()->selectedRoads();
 
-    QSet<RoadItem*> items;
+    QSet<WorldRoadItem*> items;
     foreach (Road *road, selection)
         items.insert(itemForRoad(road));
 
-    foreach (RoadItem *item, mSelectedRoadItems - items) {
+    foreach (WorldRoadItem *item, mSelectedRoadItems - items) {
         item->setSelected(false);
         item->setEditable(false);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
     }
 
-    bool editable = EditRoadTool::instance()->isCurrent();
-    foreach (RoadItem *item, items - mSelectedRoadItems) {
+    bool editable = WorldEditRoadTool::instance()->isCurrent();
+    foreach (WorldRoadItem *item, items - mSelectedRoadItems) {
         item->setSelected(true);
         item->setEditable(editable);
         item->setZValue(ZVALUE_ROADITEM_SELECTED);
@@ -361,7 +361,7 @@ void WorldScene::roadAdded(int index)
 {
     Road *road = world()->roads().at(index);
     Q_ASSERT(itemForRoad(road) == 0);
-    RoadItem *item = new RoadItem(this, road);
+    WorldRoadItem *item = new WorldRoadItem(this, road);
     item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
     addItem(item);
     mRoadItems += item;
@@ -370,7 +370,7 @@ void WorldScene::roadAdded(int index)
 void WorldScene::roadAboutToBeRemoved(int index)
 {
     Road *road = world()->roads().at(index);
-    RoadItem *item = itemForRoad(road);
+    WorldRoadItem *item = itemForRoad(road);
     Q_ASSERT(item);
     mRoadItems.removeAll(item);
     mSelectedRoadItems.remove(item); // paranoia
@@ -381,7 +381,7 @@ void WorldScene::roadAboutToBeRemoved(int index)
 void WorldScene::roadCoordsChanged(int index)
 {
     Road *road = world()->roads().at(index);
-    RoadItem *item = itemForRoad(road);
+    WorldRoadItem *item = itemForRoad(road);
     Q_ASSERT(item);
     item->synchWithRoad();
     item->update();
@@ -390,7 +390,7 @@ void WorldScene::roadCoordsChanged(int index)
 void WorldScene::roadWidthChanged(int index)
 {
     Road *road = world()->roads().at(index);
-    RoadItem *item = itemForRoad(road);
+    WorldRoadItem *item = itemForRoad(road);
     Q_ASSERT(item);
     item->synchWithRoad();
     item->update();
@@ -986,7 +986,7 @@ void WorldSelectionItem::selectedCellsChanged()
 
 /////
 
-RoadItem::RoadItem(WorldScene *scene, Road *road)
+WorldRoadItem::WorldRoadItem(WorldScene *scene, Road *road)
     : QGraphicsItem()
     , mScene(scene)
     , mRoad(road)
@@ -997,19 +997,19 @@ RoadItem::RoadItem(WorldScene *scene, Road *road)
     synchWithRoad();
 }
 
-QRectF RoadItem::boundingRect() const
+QRectF WorldRoadItem::boundingRect() const
 {
     return mBoundingRect;
 }
 
-QPainterPath RoadItem::shape() const
+QPainterPath WorldRoadItem::shape() const
 {
     QPainterPath path;
     path.addPolygon(polygon());
     return path;
 }
 
-void RoadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void WorldRoadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     Q_UNUSED(option)
     Q_UNUSED(widget)
@@ -1022,7 +1022,7 @@ void RoadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     painter->fillPath(shape(), c);
 }
 
-void RoadItem::synchWithRoad()
+void WorldRoadItem::synchWithRoad()
 {
     QRectF bounds = polygon().boundingRect();
     if (bounds != mBoundingRect) {
@@ -1031,31 +1031,31 @@ void RoadItem::synchWithRoad()
     }
 }
 
-void RoadItem::setSelected(bool selected)
+void WorldRoadItem::setSelected(bool selected)
 {
     mSelected = selected;
     update();
 }
 
-void RoadItem::setEditable(bool editable)
+void WorldRoadItem::setEditable(bool editable)
 {
     mEditable = editable;
     update();
 }
 
-void RoadItem::setDragging(bool dragging)
+void WorldRoadItem::setDragging(bool dragging)
 {
     mDragging = dragging;
     synchWithRoad();
 }
 
-void RoadItem::setDragOffset(const QPoint &offset)
+void WorldRoadItem::setDragOffset(const QPoint &offset)
 {
     mDragOffset = offset;
     synchWithRoad();
 }
 
-QPolygonF RoadItem::polygon() const
+QPolygonF WorldRoadItem::polygon() const
 {
     QPoint offset = mDragging ? mDragOffset : QPoint();
 

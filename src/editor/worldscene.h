@@ -257,10 +257,10 @@ private:
 /**
   * This item represents a road.
   */
-class RoadItem : public QGraphicsItem
+class WorldRoadItem : public QGraphicsItem
 {
 public:
-    RoadItem(WorldScene *scene, Road *road);
+    WorldRoadItem(WorldScene *scene, Road *road);
 
     QRectF boundingRect() const;
 
@@ -341,7 +341,7 @@ public:
     QPointF roadToSceneCoords(const QPoint &pt) const;
     QPolygonF roadRectToScenePolygon(const QRect &roadRect) const;
 
-    RoadItem *itemForRoad(Road *road);
+    WorldRoadItem *itemForRoad(Road *road);
 
     QList<Road*> roadsInRect(const QRectF &bounds);
 
@@ -387,8 +387,8 @@ private:
     PasteCellsTool *mPasteCellsTool;
     BaseWorldSceneTool *mActiveTool;
     DragMapImageItem *mDragMapImageItem;
-    QList<RoadItem*> mRoadItems;
-    QSet<RoadItem*> mSelectedRoadItems;
+    QList<WorldRoadItem*> mRoadItems;
+    QSet<WorldRoadItem*> mSelectedRoadItems;
 };
 
 #endif // WORLDSCENE_H

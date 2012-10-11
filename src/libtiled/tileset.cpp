@@ -175,7 +175,7 @@ void TilesetImageCache::addTileset(Tileset *ts)
 
     mTilesets.append(cached);
 
-    qDebug() << "added tileset image " << ts->imageSource() << " to cache";
+//    qDebug() << "added tileset image " << ts->imageSource() << " to cache";
 }
 
 Tileset *TilesetImageCache::findMatch(Tileset *ts, const QString &imageSource)
@@ -187,7 +187,7 @@ Tileset *TilesetImageCache::findMatch(Tileset *ts, const QString &imageSource)
                 && candidate->tileSpacing() == ts->tileSpacing()
                 && candidate->margin() == ts->margin()
                 && candidate->transparentColor() == ts->transparentColor()) {
-            qDebug() << "retrieved tileset image " << candidate->imageSource() << " from cache";
+//            qDebug() << "retrieved tileset image " << candidate->imageSource() << " from cache";
             return candidate;
         }
     }

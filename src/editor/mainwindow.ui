@@ -251,6 +251,8 @@
     <addaction name="separator"/>
     <addaction name="actionProperties"/>
     <addaction name="actionTemplates"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemoveRoad"/>
    </widget>
    <widget class="QMenu" name="menuCell">
     <property name="title">
@@ -592,6 +594,18 @@
   <action name="actionGenerateLotsSelected">
    <property name="text">
     <string>Selected Cells Only</string>
+   </property>
+  </action>
+  <action name="actionRemoveRoad">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Removed Selected Roads</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove Selected Roads</string>
    </property>
   </action>
  </widget>

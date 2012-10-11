@@ -82,7 +82,6 @@ public:
     {
         Tileset *ts = new Tileset;
         QImage image = QImage(path);
-        int width = image.width(), height = image.height();
         for (int y = 0; y < image.height(); y += 128) {
             for (int x = 0; x < image.width(); x += 64) {
                 QImage tileImage = image.copy(x, y, 64, 128);
@@ -108,11 +107,17 @@ RoadsDock::RoadsDock(QWidget *parent)
     , mRoadWidthSpinBox(0)
     , mTrafficLineComboBox(0)
     , mRoadTypeView(0)
+    , mSynching(false)
 {
     setObjectName(QLatin1String("RoadsDock"));
     retranslateUi();
 
     QWidget *w = new QWidget(this);
+
+    /////
+
+    mNumSelectedLabel = new QLabel(w);
+    mNumSelectedLabel->setText(tr("No roads selected."));
 
     /////
 
@@ -158,6 +163,7 @@ RoadsDock::RoadsDock(QWidget *parent)
     /////
 
     QVBoxLayout *layout = new QVBoxLayout();
+    layout->addWidget(mNumSelectedLabel);
     layout->addLayout(hlayout);
     layout->addLayout(hlayout2);
     layout->addWidget(mRoadTypeView);
@@ -200,9 +206,19 @@ void RoadsDock::setDocument(Document *doc)
     mCellDoc = doc ? doc->asCellDocument() : 0;
     mWorldDoc = doc ? doc->asWorldDocument() : 0;
 
-    if (mWorldDoc) {
-        mRoadWidthSpinBox->setValue(CreateRoadTool::instance()->curretRoadWidth());
-        connect(mWorldDoc, SIGNAL(selectedRoadsChanged()),
+    WorldDocument *worldDoc = mWorldDoc ? mWorldDoc
+                                        : (mCellDoc ? mCellDoc->worldDocument()
+                                                    : 0);
+
+    if (worldDoc) {
+        mRoadWidthSpinBox->setValue(WorldCreateRoadTool::instance()->currentRoadWidth());
+        connect(worldDoc, SIGNAL(selectedRoadsChanged()),
+                SLOT(selectedRoadsChanged()));
+        connect(worldDoc, SIGNAL(roadWidthChanged(int)),
+                SLOT(selectedRoadsChanged()));
+        connect(worldDoc, SIGNAL(roadTileNameChanged(int)),
+                SLOT(selectedRoadsChanged()));
+        connect(worldDoc, SIGNAL(roadLinesChanged(int)),
                 SLOT(selectedRoadsChanged()));
     }
 }
@@ -214,25 +230,33 @@ void RoadsDock::clearDocument()
 
 void RoadsDock::selectedRoadsChanged()
 {
-    if (!mWorldDoc)
+    WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : (mCellDoc ? mCellDoc->worldDocument() : 0);
+    if (!worldDoc)
         return;
-    QList<Road*> selectedRoads = mWorldDoc->selectedRoads();
+    QList<Road*> selectedRoads = worldDoc->selectedRoads();
     if (selectedRoads.count() > 0) {
         Road *road = selectedRoads.first();
+        mSynching = true;
         mRoadWidthSpinBox->setValue(road->width());
         mTrafficLineComboBox->setCurrentIndex(RoadTemplates::instance()->trafficLines().indexOf(road->trafficLines()));
         mRoadTypeView->selectTileForRoad(road);
+        mSynching = false;
     } else {
     }
+
+    mNumSelectedLabel->setText(tr("%1 roads selected").arg(selectedRoads.count()));
 }
 
 void RoadsDock::roadWidthSpinBoxValueChanged(int newValue)
 {
-    CreateRoadTool::instance()->setCurrentRoadWidth(newValue);
-    if (!mWorldDoc)
+    WorldCreateRoadTool::instance()->setCurrentRoadWidth(newValue);
+    if (mSynching)
+        return;
+    WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : (mCellDoc ? mCellDoc->worldDocument() : 0);
+    if (!worldDoc)
         return;
     QList<Road*> roads;
-    foreach (Road *road, mWorldDoc->selectedRoads()) {
+    foreach (Road *road, worldDoc->selectedRoads()) {
         if (road->width() == newValue)
             continue;
         roads += road;
@@ -241,34 +265,35 @@ void RoadsDock::roadWidthSpinBoxValueChanged(int newValue)
     if (!count)
         return;
     if (count > 1)
-        mWorldDoc->undoStack()->beginMacro(tr("Change %1 Roads' Width to %2")
+        worldDoc->undoStack()->beginMacro(tr("Change %1 Roads' Width to %2")
                                            .arg(count).arg(newValue));
     foreach (Road *road, roads) {
-        if (road->width() == newValue)
-            continue;
-        mWorldDoc->changeRoadWidth(road, newValue);
+        worldDoc->changeRoadWidth(road, newValue);
     }
     if (count > 1)
-        mWorldDoc->undoStack()->endMacro();
+        worldDoc->undoStack()->endMacro();
 }
 
 void RoadsDock::trafficLineComboBoxActivated(int index)
 {
     TrafficLines *lines = RoadTemplates::instance()->trafficLines().at(index);
-    CreateRoadTool::instance()->setCurrentTrafficLines(lines);
-    if (mWorldDoc) {
+    WorldCreateRoadTool::instance()->setCurrentTrafficLines(lines);
+    if (mSynching)
+        return;
+    WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : (mCellDoc ? mCellDoc->worldDocument() : 0);
+    if (worldDoc) {
         QList<Road*> roads;
-        foreach (Road *road, mWorldDoc->selectedRoads()) {
+        foreach (Road *road, worldDoc->selectedRoads()) {
             if (road->trafficLines() != lines)
                 roads += road;
         }
         if (int count = roads.count()) {
             if (count > 1)
-                mWorldDoc->undoStack()->beginMacro(tr("Change %1 Roads' Lines").arg(count));
+                worldDoc->undoStack()->beginMacro(tr("Change %1 Roads' Lines").arg(count));
             foreach (Road *road, roads)
-                mWorldDoc->changeRoadLines(road, lines);
+                worldDoc->changeRoadLines(road, lines);
             if (count > 1)
-                mWorldDoc->undoStack()->endMacro();
+                worldDoc->undoStack()->endMacro();
         }
     }
 }
@@ -279,20 +304,23 @@ void RoadsDock::roadTypeSelected()
     int tileNum = mRoadTypeView->model()->tileAt(index);
     if (tileNum != -1) {
         QString tileName = RoadTemplates::instance()->roadTiles().at(tileNum);
-        CreateRoadTool::instance()->setCurrentTileName(tileName);
-        if (mWorldDoc) {
+        WorldCreateRoadTool::instance()->setCurrentTileName(tileName);
+        if (mSynching)
+            return;
+        WorldDocument *worldDoc = mWorldDoc ? mWorldDoc : (mCellDoc ? mCellDoc->worldDocument() : 0);
+        if (worldDoc) {
             QList<Road*> roads;
-            foreach (Road *road, mWorldDoc->selectedRoads()) {
+            foreach (Road *road, worldDoc->selectedRoads()) {
                 if (road->tileName() !=  tileName)
                     roads += road;
             }
             if (int count = roads.count()) {
                 if (count > 1)
-                    mWorldDoc->undoStack()->beginMacro(tr("Change %1 Roads' Tile").arg(count));
+                    worldDoc->undoStack()->beginMacro(tr("Change %1 Roads' Tile").arg(count));
                 foreach (Road *road, roads)
-                    mWorldDoc->changeRoadTileName(road, tileName);
+                    worldDoc->changeRoadTileName(road, tileName);
                 if (count > 1)
-                    mWorldDoc->undoStack()->endMacro();
+                    worldDoc->undoStack()->endMacro();
             }
         }
     }
@@ -346,6 +374,9 @@ QVariant RoadTypeModel::data(const QModelIndex &index, int role) const
 
 QVariant RoadTypeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+    Q_UNUSED(section)
+    Q_UNUSED(orientation)
+
     if (role == Qt::SizeHintRole)
         return QSize(1, 1);
     return QVariant();
@@ -400,12 +431,15 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &index) const
     {
+        Q_UNUSED(option)
+        Q_UNUSED(index)
         return QSize(64 + 2, 128 + 2);
     }
 };
 
 RoadTypeView::RoadTypeView(QWidget *parent)
-    : mModel(new RoadTypeModel)
+    : QTableView(parent)
+    , mModel(new RoadTypeModel)
 {
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);

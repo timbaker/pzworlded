@@ -413,7 +413,7 @@ private:
 
     QString resolveReference(const QString &fileName, const QString &relativeTo)
     {
-        qDebug() << "resolveReference" << fileName << "relative to" << relativeTo;
+//        qDebug() << "resolveReference" << fileName << "relative to" << relativeTo;
         if (fileName.isEmpty())
             return fileName;
         if (QDir::isRelativePath(fileName))

@@ -200,6 +200,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
+    connect(ui->actionRemoveRoad, SIGNAL(triggered()), SLOT(removeRoad()));
 
     connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
@@ -229,13 +230,16 @@ MainWindow::MainWindow(QWidget *parent)
     ToolManager *toolManager = ToolManager::instance();
     toolManager->registerTool(WorldCellTool::instance());
     toolManager->registerTool(PasteCellsTool::instance());
-    toolManager->registerTool(SelectMoveRoadTool::instance());
-    toolManager->registerTool(CreateRoadTool::instance());
-    toolManager->registerTool(EditRoadTool::instance());
+    toolManager->registerTool(WorldSelectMoveRoadTool::instance());
+    toolManager->registerTool(WorldCreateRoadTool::instance());
+    toolManager->registerTool(WorldEditRoadTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SubMapTool::instance());
     toolManager->registerTool(ObjectTool::instance());
     toolManager->registerTool(CreateObjectTool::instance());
+    toolManager->registerTool(CellSelectMoveRoadTool::instance());
+    toolManager->registerTool(CellCreateRoadTool::instance());
+    toolManager->registerTool(CellEditRoadTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -423,6 +427,8 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc->worldDocument(),
                     SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
                     SLOT(updateActions()));
+            connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
+                    SLOT(updateActions()));
         }
 
         if (WorldDocument *worldDoc = doc->asWorldDocument()) {
@@ -431,6 +437,8 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(worldDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
             connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
+            connect(worldDoc, SIGNAL(selectedRoadsChanged()),
+                    SLOT(updateActions()));
         }
 
         mLotsDock->setDocument(doc);
@@ -874,6 +882,29 @@ void MainWindow::showClipboard()
     }
 }
 
+void MainWindow::removeRoad()
+{
+    Q_ASSERT(mCurrentDocument);
+    WorldDocument *worldDoc = 0;
+    if ((worldDoc = mCurrentDocument->asWorldDocument())) {
+    }
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
+        worldDoc = cellDoc->worldDocument();
+    }
+    int count = worldDoc->selectedRoadCount();
+    Q_ASSERT(count);
+
+    QUndoStack *undoStack = worldDoc->undoStack();
+    undoStack->beginMacro(tr("Remove %1 Road%2").arg(count)
+                          .arg((count > 1) ? QLatin1String("s") : QLatin1String("")));
+    foreach (Road *road, worldDoc->selectedRoads()) {
+        int index = worldDoc->world()->roads().indexOf(road);
+        Q_ASSERT(index >= 0);
+        worldDoc->removeRoad(index);
+    }
+    undoStack->endMacro();
+}
+
 void MainWindow::removeLot()
 {
     Q_ASSERT(mCurrentDocument);
@@ -1225,6 +1256,10 @@ void MainWindow::updateActions()
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
+
+    bool removeRoad = (worldDoc && worldDoc->selectedRoadCount()) ||
+            (cellDoc && cellDoc->worldDocument()->selectedRoadCount());
+    ui->actionRemoveRoad->setEnabled(removeRoad);
 
     ui->actionEditCell->setEnabled(false);
     ui->actionObjectTypes->setEnabled(hasDoc);

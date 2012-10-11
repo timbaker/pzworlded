@@ -28,6 +28,7 @@ class Road;
 class WorldDocument;
 
 class QComboBox;
+class QLabel;
 class QSpinBox;
 
 class RoadTypeView;
@@ -54,9 +55,11 @@ private slots:
 private:
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
+    QLabel *mNumSelectedLabel;
     QSpinBox *mRoadWidthSpinBox;
     QComboBox *mTrafficLineComboBox;
     RoadTypeView *mRoadTypeView;
+    bool mSynching;
 };
 
 class RoadTypeModel : public QAbstractListModel

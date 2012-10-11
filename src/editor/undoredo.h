@@ -31,7 +31,7 @@ class PropertyDef;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
-struct TrafficLines;
+class TrafficLines;
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
@@ -44,7 +44,10 @@ class WorldObjectGroup;
  * can be merged.
  */
 enum UndoCommands {
+    UndoCmd_ChangeRoadCoords,
     UndoCmd_ChangeRoadWidth,
+    UndoCmd_ChangeRoadTile,
+    UndoCmd_ChangeRoadLines
 };
 
 class SetCellMainMap : public QUndoCommand
@@ -388,6 +391,9 @@ public:
     void undo() { swap(); }
     void redo() { swap(); }
 
+    int id() const { return UndoCmd_ChangeRoadCoords; }
+    bool mergeWith(const QUndoCommand *other);
+
 private:
     void swap();
 
@@ -428,6 +434,9 @@ public:
     void undo() { swap(); }
     void redo() { swap(); }
 
+    int id() const { return UndoCmd_ChangeRoadTile; }
+    bool mergeWith(const QUndoCommand *other);
+
 private:
     void swap();
 
@@ -445,6 +454,9 @@ public:
 
     void undo() { swap(); }
     void redo() { swap(); }
+
+    int id() const { return UndoCmd_ChangeRoadLines; }
+    bool mergeWith(const QUndoCommand *other);
 
 private:
     void swap();

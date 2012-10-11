@@ -88,6 +88,74 @@ void RoadTemplates::deleteInstance()
     mInstance = 0;
 }
 
+RoadTemplates::RoadTemplates()
+{
+#if 0
+    mRoadTiles += QString();
+    mRoadTiles += QLatin1String("floors_exterior_street_01_16");
+    mRoadTiles += QLatin1String("floors_exterior_street_01_17");
+    mRoadTiles += QLatin1String("floors_exterior_street_01_18");
+#endif
+
+    /////
+
+    TrafficLines *lines = new TrafficLines();
+    lines->name = QLatin1String("None");
+    mNullTrafficLines = lines;
+    mTrafficLines += mNullTrafficLines;
+#if 0
+    lines = new TrafficLines();
+    lines->name = QLatin1String("Double White (Faded)");
+    lines->inner.ns = QLatin1String("street_trafficlines_01_0");
+    lines->inner.we = QLatin1String("street_trafficlines_01_2");
+    lines->inner.nw = QLatin1String("street_trafficlines_01_1");
+    lines->inner.sw = QLatin1String("street_trafficlines_01_7");
+    lines->outer.ns = QLatin1String("street_trafficlines_01_4");
+    lines->outer.we = QLatin1String("street_trafficlines_01_6");
+    lines->outer.ne = QLatin1String("street_trafficlines_01_3");
+    lines->outer.se = QLatin1String("street_trafficlines_01_5");
+    mTrafficLines += lines;
+
+    lines = new TrafficLines();
+    lines->name = QLatin1String("Double White");
+    lines->inner.ns = QLatin1String("street_trafficlines_01_8");
+    lines->inner.we = QLatin1String("street_trafficlines_01_10");
+    lines->inner.nw = QLatin1String("street_trafficlines_01_9");
+    lines->inner.sw = QLatin1String("street_trafficlines_01_15");
+    lines->outer.ns = QLatin1String("street_trafficlines_01_12");
+    lines->outer.we = QLatin1String("street_trafficlines_01_14");
+    lines->outer.ne = QLatin1String("street_trafficlines_01_11");
+    lines->outer.se = QLatin1String("street_trafficlines_01_13");
+    mTrafficLines += lines;
+
+    lines = new TrafficLines();
+    lines->name = QLatin1String("Double Yellow (Faded)");
+    lines->inner.ns = QLatin1String("street_trafficlines_01_16");
+    lines->inner.we = QLatin1String("street_trafficlines_01_18");
+    lines->inner.nw = QLatin1String("street_trafficlines_01_17");
+    lines->inner.sw = QLatin1String("street_trafficlines_01_23");
+    lines->outer.ns = QLatin1String("street_trafficlines_01_20");
+    lines->outer.we = QLatin1String("street_trafficlines_01_22");
+    lines->outer.ne = QLatin1String("street_trafficlines_01_19");
+    lines->outer.se = QLatin1String("street_trafficlines_01_21");
+    mTrafficLines += lines;
+
+    lines = new TrafficLines();
+    lines->name = QLatin1String("Double Yellow");
+    lines->inner.ns = QLatin1String("street_trafficlines_01_24");
+    lines->inner.we = QLatin1String("street_trafficlines_01_26");
+    lines->inner.nw = QLatin1String("street_trafficlines_01_25");
+    lines->inner.sw = QLatin1String("street_trafficlines_01_31");
+    lines->outer.ns = QLatin1String("street_trafficlines_01_28");
+    lines->outer.we = QLatin1String("street_trafficlines_01_30");
+    lines->outer.ne = QLatin1String("street_trafficlines_01_27");
+    lines->outer.se = QLatin1String("street_trafficlines_01_29");
+    mTrafficLines += lines;
+#endif
+
+    parseRoadsDotTxt();
+}
+
 TrafficLines *RoadTemplates::findLines(const QString &name)
 {
     foreach (TrafficLines *lines, mTrafficLines) {
@@ -96,4 +164,58 @@ TrafficLines *RoadTemplates::findLines(const QString &name)
     }
 
     return mNullTrafficLines;
+}
+
+#include <QCoreApplication>
+#include <QDebug>
+#include <QMessageBox>
+
+void RoadTemplates::parseRoadsDotTxt()
+{
+    QString appDirectory = QCoreApplication::applicationDirPath();
+    QString filePath = appDirectory + QLatin1Char('/') + QLatin1String("Roads.txt");
+    SimpleFile simpleFile;
+    if (!simpleFile.read(filePath)) {
+        QMessageBox::warning(0, QLatin1String("Error reading Roads.txt"),
+                             QString(QLatin1String("Failed to open %1")).arg(filePath));
+        return;
+    }
+
+//    simpleFile.print();
+
+    foreach (SimpleFileBlock block, simpleFile.blocks) {
+        if (block.name == QLatin1String("road"))
+            handleRoad(block);
+        else if (block.name == QLatin1String("lines"))
+            handleLines(block);
+        else {
+            QMessageBox::warning(0, QLatin1String("Error reading Roads.txt"),
+                                 QString(QLatin1String("Unknown block name '%1'.\nProbable syntax error in Roads.txt.\nDo not save the project file, road info is messed up!")).arg(block.name));
+        }
+    }
+}
+
+void RoadTemplates::handleRoad(SimpleFileBlock block)
+{
+    mRoadTiles += block.value("tile");
+}
+
+void RoadTemplates::handleLines(SimpleFileBlock block)
+{
+    TrafficLines *lines = new TrafficLines;
+    lines->name = block.value("name");
+
+    SimpleFileBlock inner = block.block("inner");
+    lines->inner.ns = inner.value("ns");
+    lines->inner.we = inner.value("we");
+    lines->inner.nw = inner.value("nw");
+    lines->inner.sw = inner.value("sw");
+
+    SimpleFileBlock outer = block.block("outer");
+    lines->outer.ns = outer.value("ns");
+    lines->outer.we = outer.value("we");
+    lines->outer.ne = outer.value("ne");
+    lines->outer.se = outer.value("se");
+
+    mTrafficLines += lines;
 }

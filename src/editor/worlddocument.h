@@ -32,7 +32,7 @@ class PropertyDef;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
-struct TrafficLines;
+class TrafficLines;
 class World;
 class WorldCell;
 class WorldCellContents;

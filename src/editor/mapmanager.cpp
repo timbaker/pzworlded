@@ -312,7 +312,7 @@ MapInfo *MapManager::mapInfo(const QString &mapFilePath)
     if (!mapInfo)
         return NULL;
 
-    qDebug() << "read map info for" << mapFilePath;
+//    qDebug() << "read map info for" << mapFilePath;
     mapInfo->setFilePath(mapFilePath);
 
     mMapInfo[mapFilePath] = mapInfo;

@@ -218,6 +218,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
 bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite)
 {
+    Q_UNUSED(cell)
+
     Map *map = mapComposite->map();
 
     qDeleteAll(roomList);
@@ -314,6 +316,8 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
 bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapComposite)
 {
+    Q_UNUSED(mapComposite)
+
     QString fileName = tr("%1_%2.lotheader")
             .arg(cell->x())
             .arg(cell->y());
@@ -397,6 +401,9 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
 bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
                                     MapComposite *mapComposite, int cx, int cy)
 {
+    Q_UNUSED(cell)
+    Q_UNUSED(mapComposite)
+
     int notdonecount = 0;
     for (int z = 0; z < MaxLevel; z++)  {
         for (int x = 0; x < CHUNK_WIDTH; x++) {

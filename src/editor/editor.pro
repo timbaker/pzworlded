@@ -86,7 +86,8 @@ SOURCES += main.cpp\
     clipboard.cpp \
     lotfilesmanager.cpp \
     road.cpp \
-    roadsdock.cpp
+    roadsdock.cpp \
+    simplefile.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -132,7 +133,8 @@ HEADERS  += mainwindow.h \
     clipboard.h \
     lotfilesmanager.h \
     road.h \
-    roadsdock.h
+    roadsdock.h \
+    simplefile.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

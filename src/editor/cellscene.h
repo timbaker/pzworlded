@@ -37,6 +37,7 @@ class MapImage;
 class MapInfo;
 class ObjectItem;
 class ResizeHandle;
+class Road;
 class SubMap;
 class World;
 class WorldCell;
@@ -162,6 +163,47 @@ private:
     bool mIsMouseOver;
 };
 
+/**
+  * This item represents a road.
+  */
+class CellRoadItem : public QGraphicsItem
+{
+public:
+    CellRoadItem(CellScene *scene, Road *road);
+
+    QRectF boundingRect() const;
+
+    QPainterPath shape() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+    Road *road() const
+    { return mRoad; }
+
+    void synchWithRoad();
+
+    void setSelected(bool selected);
+    void setEditable(bool editable);
+
+    void setDragging(bool dragging);
+    void setDragOffset(const QPoint &offset);
+    QPoint dragOffset() const { return mDragOffset; }
+
+    QPolygonF polygon() const
+    { return mPolygon; }
+
+private:
+    CellScene *mScene;
+    QRectF mBoundingRect;
+    Road *mRoad;
+    bool mSelected;
+    bool mEditable;
+    bool mDragging;
+    QPoint mDragOffset;
+    QPolygonF mPolygon;
+};
 
 /**
  * Item that represents a map during drag-and-drop.
@@ -328,6 +370,22 @@ public:
 
     Tiled::MapRenderer *renderer() const { return mRenderer; }
 
+    QPoint pixelToRoadCoords(qreal x, qreal y) const;
+
+    inline QPoint pixelToRoadCoords(const QPointF &point) const
+    { return pixelToRoadCoords(point.x(), point.y()); }
+
+    QPointF roadToSceneCoords(const QPoint &pt) const;
+    QPolygonF roadRectToScenePolygon(const QRect &roadRect) const;
+
+    CellRoadItem *itemForRoad(Road *road);
+
+    QList<Road*> roadsInRect(const QRectF &bounds);
+
+    static const int ZVALUE_ROADITEM_CREATING;
+    static const int ZVALUE_ROADITEM_SELECTED;
+    static const int ZVALUE_ROADITEM_UNSELECTED;
+
 protected:
     void loadMap();
     void updateCurrentLevelHighlight();
@@ -370,6 +428,11 @@ public slots:
     void setHighlightCurrentLevel(bool highlight);
     void handlePendingUpdates();
 
+    void roadAdded(int index);
+    void roadRemoved(Road *road);
+    void roadCoordsChanged(int index);
+    void roadWidthChanged(int index);
+    void selectedRoadsChanged();
     void roadsChanged();
 
 public:
@@ -400,6 +463,8 @@ private:
     QSet<SubMapItem*> mSelectedSubMapItems;
     QList<ObjectItem*> mObjectItems;
     QSet<ObjectItem*> mSelectedObjectItems;
+    QList<CellRoadItem*> mRoadItems;
+    QSet<CellRoadItem*> mSelectedRoadItems;
     QGraphicsRectItem *mDarkRectangle;
     CellGridItem *mGridItem;
     bool mHighlightCurrentLevel;

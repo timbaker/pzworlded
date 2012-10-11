@@ -1,0 +1,89 @@
+road
+{
+    tile = floors_exterior_street_01_16
+}
+road
+{
+    tile = floors_exterior_street_01_17
+}
+road
+{
+    tile = floors_exterior_street_01_18
+}
+
+lines
+{
+    name = Double White (Faded)
+    inner
+    {
+		ns = street_trafficlines_01_0
+		we = street_trafficlines_01_2
+		nw = street_trafficlines_01_1
+		sw = street_trafficlines_01_7
+    }
+    outer
+    {
+		ns = street_trafficlines_01_4
+		we = street_trafficlines_01_6
+		ne = street_trafficlines_01_3
+		se = street_trafficlines_01_5
+    }
+}
+
+lines
+{
+    name = Double White
+    inner
+    {
+		ns = street_trafficlines_01_8
+		we = street_trafficlines_01_10
+		nw = street_trafficlines_01_9
+		sw = street_trafficlines_01_15
+    }
+    outer
+    {
+		ns = street_trafficlines_01_12
+		we = street_trafficlines_01_14
+		ne = street_trafficlines_01_11
+		se = street_trafficlines_01_13
+    }
+}
+
+lines
+{
+    name = Double Yellow (Faded)
+    inner
+    {
+		ns = street_trafficlines_01_16
+		we = street_trafficlines_01_18
+		nw = street_trafficlines_01_17
+		sw = street_trafficlines_01_23
+    }
+    outer
+    {
+		ns = street_trafficlines_01_20
+		we = street_trafficlines_01_22
+		ne = street_trafficlines_01_19
+		se = street_trafficlines_01_21
+    }
+}
+
+lines
+{
+    name = Double Yellow
+    inner
+    {
+		ns = street_trafficlines_01_24
+		we = street_trafficlines_01_26
+		nw = street_trafficlines_01_25
+		sw = street_trafficlines_01_31
+    }
+    outer
+    {
+		ns = street_trafficlines_01_28
+		we = street_trafficlines_01_30
+		ne = street_trafficlines_01_27
+		se = street_trafficlines_01_29
+    }
+}
+

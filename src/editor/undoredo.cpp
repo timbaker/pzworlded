@@ -280,6 +280,16 @@ ChangeRoadCoords::ChangeRoadCoords(WorldDocument *doc, Road *road,
 {
 }
 
+bool ChangeRoadCoords::mergeWith(const QUndoCommand *other)
+{
+    if (other->id() != id())
+        return false;
+    const ChangeRoadCoords *_other = static_cast<const ChangeRoadCoords*>(other);
+    if (_other->mRoad != mRoad)
+        return false;
+    return true;
+}
+
 void ChangeRoadCoords::swap()
 {
     QPoint start, end;
@@ -325,6 +335,16 @@ ChangeRoadTileName::ChangeRoadTileName(WorldDocument *doc, Road *road,
 {
 }
 
+bool ChangeRoadTileName::mergeWith(const QUndoCommand *other)
+{
+    if (other->id() != id())
+        return false;
+    const ChangeRoadTileName *_other = static_cast<const ChangeRoadTileName*>(other);
+    if (_other->mRoad != mRoad)
+        return false;
+    return true;
+}
+
 void ChangeRoadTileName::swap()
 {
     mTileName = mDocument->undoRedo().changeRoadTileName(mRoad, mTileName);
@@ -339,6 +359,16 @@ ChangeRoadLines::ChangeRoadLines(WorldDocument *doc, Road *road,
     , mRoad(road)
     , mLines(lines)
 {
+}
+
+bool ChangeRoadLines::mergeWith(const QUndoCommand *other)
+{
+    if (other->id() != id())
+        return false;
+    const ChangeRoadLines *_other = static_cast<const ChangeRoadLines*>(other);
+    if (_other->mRoad != mRoad)
+        return false;
+    return true;
 }
 
 void ChangeRoadLines::swap()

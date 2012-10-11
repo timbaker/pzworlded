@@ -25,16 +25,21 @@
 
 class World;
 
-struct TrafficLines
+class TrafficLines
 {
+public:
     QString name;
     struct {
         QString ns;
         QString we;
+        QString nw;
+        QString sw;
     } inner;
     struct {
         QString ns;
         QString we;
+        QString ne;
+        QString se;
     } outer;
 };
 
@@ -105,36 +110,18 @@ typedef QList<Road*> RoadList;
 
 #include <QVector>
 
+#include "simplefile.h"
+
 class RoadTemplates
 {
 public:
     static RoadTemplates *instance();
     static void deleteInstance();
 
-    RoadTemplates()
-    {
-        TrafficLines *lines = new TrafficLines();
-        lines->name = QLatin1String("None");
-        mNullTrafficLines = lines;
-        mTrafficLines += mNullTrafficLines;
-
-        lines = new TrafficLines();
-        lines->name = QLatin1String("Double Yellow");
-        lines->inner.ns = QLatin1String("street_trafficlines_01_16");
-        lines->inner.we = QLatin1String("street_trafficlines_01_18");
-        lines->outer.ns = QLatin1String("street_trafficlines_01_20");
-        lines->outer.we = QLatin1String("street_trafficlines_01_22");
-        mTrafficLines += lines;
-    }
+    RoadTemplates();
 
     QVector<QString> roadTiles()
-    {
-        QVector<QString> roads;
-        roads += QLatin1String("floors_exterior_street_01_16");
-        roads += QLatin1String("floors_exterior_street_01_17");
-        roads += QLatin1String("floors_exterior_street_01_18");
-        return roads;
-    }
+    { return mRoadTiles; }
 
     const QVector<TrafficLines*> &trafficLines() const
     { return mTrafficLines; }
@@ -145,8 +132,15 @@ public:
     TrafficLines *findLines(const QString &name);
 
 private:
+    void parseRoadsDotTxt();
+    void handleRoad(SimpleFileBlock block);
+    void handleLines(SimpleFileBlock block);
+
+private:
     Q_DISABLE_COPY(RoadTemplates)
     static RoadTemplates *mInstance;
+
+    QVector<QString> mRoadTiles;
 
     QVector<TrafficLines*> mTrafficLines;
     TrafficLines *mNullTrafficLines;
