@@ -18,6 +18,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "bmptotmx.h"
+#include "bmptotmxdialog.h"
 #include "celldocument.h"
 #include "cellscene.h"
 #include "cellview.h"
@@ -188,6 +190,10 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(generateLotsAll()));
     connect(ui->actionGenerateLotsSelected, SIGNAL(triggered()),
             SLOT(generateLotsSelected()));
+    connect(ui->actionBMPToTMXAll, SIGNAL(triggered()),
+            SLOT(BMPToTMXAll()));
+    connect(ui->actionBMPToTMXSelected, SIGNAL(triggered()),
+            SLOT(BMPToTMXSelected()));
     connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
@@ -766,6 +772,31 @@ void MainWindow::generateLotsSelected()
     generateLots(this, mCurrentDocument, LotFilesManager::GenerateSelected);
 }
 
+static void _BMPToTMX(MainWindow *mainWin, Document *doc,
+                      BMPToTMX::GenerateMode mode)
+{
+    WorldDocument *worldDoc = doc->asWorldDocument();
+    if (!worldDoc)
+        return;
+    BMPToTMXDialog dialog(worldDoc, mainWin);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    if (!BMPToTMX::instance()->generateWorld(worldDoc, mode)) {
+        QMessageBox::warning(mainWin, mainWin->tr("BMP To TMX Failed!"),
+                             BMPToTMX::instance()->errorString());
+    }
+}
+
+void MainWindow::BMPToTMXAll()
+{
+    _BMPToTMX(this, mCurrentDocument, BMPToTMX::GenerateAll);
+}
+
+void MainWindow::BMPToTMXSelected()
+{
+    _BMPToTMX(this, mCurrentDocument, BMPToTMX::GenerateSelected);
+}
+
 void MainWindow::preferencesDialog()
 {
     if (!mCurrentDocument)
@@ -1253,6 +1284,10 @@ void MainWindow::updateActions()
     ui->actionGenerateLotsAll->setEnabled(hasDoc);
     ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
                                                worldDoc->selectedCellCount());
+
+    ui->actionBMPToTMXAll->setEnabled(worldDoc);
+    ui->actionBMPToTMXSelected->setEnabled(worldDoc &&
+                                           worldDoc->selectedCellCount());
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

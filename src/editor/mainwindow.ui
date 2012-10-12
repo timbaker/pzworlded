@@ -194,12 +194,20 @@
      <addaction name="actionGenerateLotsAll"/>
      <addaction name="actionGenerateLotsSelected"/>
     </widget>
+    <widget class="QMenu" name="menuBMP_To_TMX">
+     <property name="title">
+      <string>BMP To TMX</string>
+     </property>
+     <addaction name="actionBMPToTMXAll"/>
+     <addaction name="actionBMPToTMXSelected"/>
+    </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
     <addaction name="menuGenerate_Lots"/>
+    <addaction name="menuBMP_To_TMX"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -606,6 +614,16 @@
    </property>
    <property name="toolTip">
     <string>Remove Selected Roads</string>
+   </property>
+  </action>
+  <action name="actionBMPToTMXAll">
+   <property name="text">
+    <string>All Cells</string>
+   </property>
+  </action>
+  <action name="actionBMPToTMXSelected">
+   <property name="text">
+    <string>Selected Cells Only</string>
    </property>
   </action>
  </widget>

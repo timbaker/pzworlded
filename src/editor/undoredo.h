@@ -25,6 +25,7 @@
 #include <QString>
 #include <QUndoCommand>
 
+class BMPToTMXSettings;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -932,5 +933,24 @@ private:
 
     QString mMsg;
 };
+
+/////
+
+class ChangeBMPToTMXSettings : public QUndoCommand
+{
+public:
+    ChangeBMPToTMXSettings(WorldDocument *doc, const BMPToTMXSettings &settings);
+    ~ChangeBMPToTMXSettings();
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    BMPToTMXSettings *mSettings;
+};
+
 
 #endif // UNDOREDO_H

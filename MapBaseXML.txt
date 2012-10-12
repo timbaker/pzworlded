@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="isometric" width="300" height="300" tilewidth="64" tileheight="32">
+ <tileset firstgid="1" name="appliances_cooking_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/appliances_cooking_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="65" name="appliances_refrigeration_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/appliances_refrigeration_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="129" name="appliances_laundry_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/appliances_laundry_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="193" name="appliances_television_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/appliances_television_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="257" name="camping_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/camping_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="321" name="carpentry_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/carpentry_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="385" name="fencing_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fencing_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="449" name="fixtures_bathroom_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_bathroom_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="513" name="fixtures_counters_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_counters_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="577" name="fixtures_doors_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_doors_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="641" name="fixtures_railings_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_railings_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="705" name="fixtures_sinks_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_sinks_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="769" name="fixtures_stairs_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_stairs_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="833" name="floors_exterior_natural_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/floors_exterior_natural_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="897" name="floors_exterior_street_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/floors_exterior_street_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="961" name="floors_interior_carpet_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/floors_interior_carpet_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1025" name="floors_interior_tilesandwood_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/floors_interior_tilesandwood_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1089" name="floors_rugs_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/floors_rugs_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1153" name="furniture_bedding_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_bedding_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1217" name="furniture_seating_indoor_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_seating_indoor_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1281" name="furniture_seating_indoor_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_seating_indoor_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1345" name="furniture_seating_outdoor_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_seating_outdoor_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1409" name="furniture_shelving_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_shelving_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1473" name="furniture_storage_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_storage_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1537" name="furniture_tables_high_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_tables_high_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1601" name="furniture_tables_low_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/furniture_tables_low_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1665" name="lighting_outdoor_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/lighting_outdoor_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1729" name="location_hospitality_sunstarmotel_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_hospitality_sunstarmotel_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1793" name="location_hospitality_sunstarmotel_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_hospitality_sunstarmotel_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1857" name="location_shop_generic_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_shop_generic_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1921" name="location_shop_greenes_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_shop_greenes_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="1985" name="location_trailer_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_trailer_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2049" name="location_trailer_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_trailer_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2113" name="roofs_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/roofs_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2177" name="street_decoration_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/street_decoration_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2241" name="street_trafficlines_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/street_trafficlines_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2305" name="trashcontainers_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/trashcontainers_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2369" name="vegetation_trees_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/vegetation_trees_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2433" name="vegetation_foliage_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/vegetation_foliage_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2497" name="vegetation_groundcover_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/vegetation_groundcover_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2561" name="walls_decoration_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_decoration_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2625" name="walls_exterior_wooden_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_exterior_wooden_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2689" name="walls_exterior_house_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_exterior_house_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2753" name="walls_exterior_roofs_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_exterior_roofs_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2817" name="walls_exterior_roofs_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_exterior_roofs_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2881" name="walls_exterior_roofs_03" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_exterior_roofs_03.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="2945" name="walls_commercial_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_commercial_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3009" name="walls_commercial_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_commercial_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3073" name="walls_interior_bathroom_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_interior_bathroom_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3137" name="walls_interior_house_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_interior_house_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3201" name="walls_interior_house_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_interior_house_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3265" name="walls_interior_house_03" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_interior_house_03.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3329" name="fixtures_windows_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/fixtures_windows_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3393" name="walls_detailing_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/walls_detailing_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3457" name="lighting_indoor_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/lighting_indoor_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3521" name="location_sewer_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_sewer_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3585" name="overlay_grime_floor_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/overlay_grime_floor_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3649" name="overlay_grime_wall_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/overlay_grime_wall_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3713" name="location_shop_fossoil_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_shop_fossoil_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3777" name="location_business_bank_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_business_bank_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3841" name="location_restaurant_spiffos_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_restaurant_spiffos_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3905" name="location_restaurant_spiffos_02" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_restaurant_spiffos_02.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="3969" name="location_community_church_small_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_community_church_small_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="4033" name="location_shop_accessories_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_shop_accessories_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="4097" name="vegetation_indoor_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/vegetation_indoor_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="4161" name="location_business_office_generic_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/location_business_office_generic_01.png" width="512" height="1024"/>
+ </tileset>
+ <tileset firstgid="4225" name="vegetation_ornamental_01" tilewidth="64" tileheight="128">
+  <image source="../Tiles/vegetation_ornamental_01.png" width="512" height="1024"/>
+ </tileset>
+  <layer name="0_Floor" width="300" height="300">
+	  <data encoding="csv">
+	  </data>
+  </layer>
+  <layer name="0_FloorOverlay" width="300" height="300">
+	  <data encoding="csv">
+	  </data>
+  </layer>
+  <layer name="0_FloorOverlay2" width="300" height="300">
+	  <data encoding="csv">
+	  </data>
+  </layer>
+  <layer name="0_FloorOverlay3" width="300" height="300">
+	  <data encoding="csv">
+	  </data>
+  </layer>
+  <layer name="0_FloorOverlay4" width="300" height="300">
+	  <data encoding="csv">
+	  </data>
+  </layer>
+ <layer name="0_Vegetation" width="300" height="300">
+	  <data encoding="csv">
+	  </data>
+  </layer>
+<objectgroup name="0_Lots" width="300" height="300">
+ 
+ </objectgroup>
+ </map>

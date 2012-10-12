@@ -25,6 +25,7 @@
 #include <QSize>
 #include <QVector>
 
+class BMPToTMXImages;
 class WorldObjectGroup;
 class ObjectType;
 class WorldCell;
@@ -45,6 +46,26 @@ public:
     ObjectType *find(const QString &name) const;
 
     QStringList names() const;
+};
+
+class BMPToTMXSettings
+{
+public:
+    QString exportDir;
+    QString rulesFile;
+    QString blendsFile;
+    QString mapbaseFile;
+
+    bool operator == (const BMPToTMXSettings &other)
+    {
+        return exportDir == other.exportDir &&
+                rulesFile == other.rulesFile &&
+                blendsFile == other.blendsFile &&
+                mapbaseFile == other.mapbaseFile;
+    }
+
+    bool operator != (const BMPToTMXSettings &other)
+    { return !operator==(other); }
 };
 
 class World
@@ -90,6 +111,9 @@ public:
     Road *removeRoad(int index);
     RoadList roadsInRect(const QRect &bounds);
 
+    void insertBmp(int index, BMPToTMXImages *images);
+    BMPToTMXImages *removeBmpImages(int index);
+
     const ObjectGroupList &objectGroups() const
     { return mObjectGroups; }
     const ObjectTypeList &objectTypes() const
@@ -100,6 +124,14 @@ public:
     { return mPropertyTemplates; }
     const RoadList &roads() const
     { return mRoads; }
+    const QList<BMPToTMXImages*> bmpImages() const
+    { return mBMPImages; }
+
+    void setBMPToTMXSettings(const BMPToTMXSettings &settings)
+    { mBMPToTMXSettings = settings; }
+
+    const BMPToTMXSettings &getBMPToTMXSettings() const
+    { return mBMPToTMXSettings; }
 
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
@@ -115,6 +147,8 @@ private:
     PropertyDefList mPropertyDefs;
     PropertyTemplateList mPropertyTemplates;
     RoadList mRoads;
+    QList<BMPToTMXImages*> mBMPImages;
+    BMPToTMXSettings mBMPToTMXSettings;
 };
 
 #endif // WORLD_H

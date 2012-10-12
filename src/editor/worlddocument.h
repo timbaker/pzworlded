@@ -26,6 +26,7 @@
 #include <QPoint>
 #include <QSize>
 
+class BMPToTMXSettings;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -41,6 +42,7 @@ class WorldCellObject;
 class WorldObjectGroup;
 
 class QUndoStack;
+
 
 /**
   * This class's methods are all called by the various QUndoCommand subclasses.
@@ -108,6 +110,8 @@ public:
     TrafficLines *changeRoadLines(Road *road, TrafficLines *lines);
 
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
+
+    BMPToTMXSettings changeBMPToTMXSettings(const BMPToTMXSettings &settings);
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
@@ -314,6 +318,8 @@ public:
     void removeProperty(PropertyHolder *ph, int index);
 
     void setPropertyValue(PropertyHolder *ph, Property *p, const QString &value);
+
+    void changeBMPToTMXSettings(const BMPToTMXSettings &settings);
 
     WorldDocumentUndoRedo &undoRedo() { return mUndoRedo; }
 

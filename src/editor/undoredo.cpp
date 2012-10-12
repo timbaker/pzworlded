@@ -18,6 +18,7 @@
 #include "undoredo.h"
 
 #include "road.h"
+#include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
@@ -697,4 +698,23 @@ void ProgressEnd::begin()
 void ProgressEnd::end()
 {
     Progress::instance()->end();
+}
+
+/////
+
+ChangeBMPToTMXSettings::ChangeBMPToTMXSettings(WorldDocument *doc, const BMPToTMXSettings &settings) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change BMP To TMX Settings")),
+    mDocument(doc),
+    mSettings(new BMPToTMXSettings(settings))
+{
+}
+
+ChangeBMPToTMXSettings::~ChangeBMPToTMXSettings()
+{
+    delete mSettings;
+}
+
+void ChangeBMPToTMXSettings::swap()
+{
+    *mSettings = mDocument->undoRedo().changeBMPToTMXSettings(*mSettings);
 }

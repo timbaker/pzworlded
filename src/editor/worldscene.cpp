@@ -18,6 +18,7 @@
 #include "worldscene.h"
 
 #include "basegraphicsview.h"
+#include "bmptotmx.h"
 #include "celldocument.h"
 #include "documentmanager.h"
 #include "mapimagemanager.h"
@@ -113,6 +114,25 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
 
     mPasteCellsTool = PasteCellsTool::instance();
+
+#if 1
+    foreach (BMPToTMXImages *images, world()->bmpImages())
+        addItem(new WorldBMPItem(this, images));
+#else
+    QTransform xform;
+    xform.scale(1, 0.5);
+    xform.shear(-1, 1);
+    mBmpXformed = mBmp.transformed(xform);
+
+    qreal cellsInX = mBmp.width() / 300.0;
+    qreal cellsInY = mBmp.height() / 300.0;
+    QRectF r = boundingRect(QRect(0, 0, cellsInX, cellsInY));
+    mBmpXformed = mBmpXformed.scaled(r.width(), r.height());
+
+    QGraphicsItem *item = new QGraphicsPixmapItem(QPixmap::fromImage(mBmpXformed));
+    item->setPos(cellToPixelCoords(0, 0));
+    addItem(item);
+#endif
 }
 
 void WorldScene::setTool(AbstractTool *tool)
@@ -1060,4 +1080,41 @@ QPolygonF WorldRoadItem::polygon() const
     QPoint offset = mDragging ? mDragOffset : QPoint();
 
     return mScene->roadRectToScenePolygon(mRoad->bounds().translated(offset));
+}
+
+/////
+
+WorldBMPItem::WorldBMPItem(WorldScene *scene, BMPToTMXImages *images)
+    : QGraphicsItem()
+    , mScene(scene)
+    , mImages(images)
+    , mBmpRecolored(images->mBmp)
+{
+    for (int x = 0; x < images->mBmp.width(); x++) {
+        for (int y = 0; y < images->mBmp.height(); y++) {
+            if (images->mBmpVeg.pixel(x, y) == qRgb(255, 0, 0))
+                mBmpRecolored.setPixel(x, y, qRgb(47, 76, 64));
+        }
+    }
+
+    // Transform the image to the isometric view
+    QTransform xform;
+    xform.scale(1, 0.5);
+    xform.shear(-1, 1);
+    mBmpXformed = mBmpRecolored.transformed(xform);
+
+    mMapImageBounds = mScene->boundingRect(mImages->mBounds);
+}
+
+QRectF WorldBMPItem::boundingRect() const
+{
+    return mMapImageBounds;
+}
+
+void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
+                         QWidget *)
+{
+    QRectF target = mMapImageBounds/*.translated(mDrawOffset)*/;
+    QRectF source = QRect(QPoint(0, 0), mBmpXformed.size());
+    painter->drawImage(target, mBmpXformed, source);
 }

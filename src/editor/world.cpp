@@ -17,6 +17,7 @@
 
 #include "world.h"
 
+#include "bmptotmx.h" // FIXME: remove from this file
 #include "worldcell.h"
 
 #include <QStringList>
@@ -40,6 +41,13 @@ World::World(int width, int height)
 
     // The nameless default type for WorldCellObjects
     mObjectTypes.append(mNullObjectType);
+
+#if 1
+    QString bmpPath = QLatin1String("C:\\Programming\\ProjectZomboid\\Maps\\muldraugh.bmp");
+    BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmpPath, QPoint(10, 10));
+    if (images)
+        mBMPImages += images;
+#endif
 }
 
 World::~World()
@@ -83,6 +91,16 @@ void World::insertRoad(int index, Road *road)
 Road *World::removeRoad(int index)
 {
     return mRoads.takeAt(index);
+}
+
+void World::insertBmp(int index, BMPToTMXImages *images)
+{
+    mBMPImages.insert(index, images);
+}
+
+BMPToTMXImages *World::removeBmpImages(int index)
+{
+    return mBMPImages.takeAt(index);
 }
 
 /////

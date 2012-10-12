@@ -71,6 +71,8 @@ public:
         w.writeAttribute(QLatin1String("width"), QString::number(world->width()));
         w.writeAttribute(QLatin1String("height"), QString::number(world->height()));
 
+        writeBMPToMap(w);
+
         foreach (PropertyDef *pd, world->propertyDefinitions()) {
             w.writeStartElement(QLatin1String("propertydef"));
             w.writeAttribute(QLatin1String("name"), pd->mName);
@@ -256,6 +258,38 @@ public:
             writeProperty(w, p);
 
         w.writeEndElement();
+    }
+
+    void writeBMPToMap(QXmlStreamWriter &w)
+    {
+        w.writeStartElement(QLatin1String("BMPToTMX"));
+        w.writeStartElement(QLatin1String("tmxexportdir"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(mWorld->getBMPToTMXSettings().exportDir));
+        w.writeEndElement();
+        w.writeStartElement(QLatin1String("rulesfile"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(mWorld->getBMPToTMXSettings().rulesFile));
+        w.writeEndElement();
+        w.writeStartElement(QLatin1String("blendsfile"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(mWorld->getBMPToTMXSettings().blendsFile));
+        w.writeEndElement();
+        w.writeStartElement(QLatin1String("mapbasefile"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(mWorld->getBMPToTMXSettings().mapbaseFile));
+        w.writeEndElement();
+        w.writeEndElement(); // </BMPToTMX>
+    }
+
+    QString relativeFileName(const QString &path)
+    {
+        if (!path.isEmpty()) {
+            QFileInfo fi(path);
+            if (fi.isAbsolute())
+                return mMapDir.relativeFilePath(path);
+        }
+        return path;
     }
 
     World *mWorld;

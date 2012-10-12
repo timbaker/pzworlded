@@ -1,7 +1,7 @@
 include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
 
-QT       += core gui
+QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
 
 TARGET = PZWorldEd
@@ -87,7 +87,9 @@ SOURCES += main.cpp\
     lotfilesmanager.cpp \
     road.cpp \
     roadsdock.cpp \
-    simplefile.cpp
+    simplefile.cpp \
+    bmptotmx.cpp \
+    bmptotmxdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -134,7 +136,9 @@ HEADERS  += mainwindow.h \
     lotfilesmanager.h \
     road.h \
     roadsdock.h \
-    simplefile.h
+    simplefile.h \
+    bmptotmx.h \
+    bmptotmxdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -143,7 +147,8 @@ FORMS    += mainwindow.ui \
     objecttypesdialog.ui \
     preferencesdialog.ui \
     objectgroupsdialog.ui \
-    copypastedialog.ui
+    copypastedialog.ui \
+    bmptotmxdialog.ui
 
 OTHER_FILES +=
 

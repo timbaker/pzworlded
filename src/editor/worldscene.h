@@ -27,6 +27,7 @@
 #include <QPolygonF>
 
 class BaseWorldSceneTool;
+class BMPToTMXImages;
 class MapImage;
 class MapInfo;
 class PasteCellsTool;
@@ -294,6 +295,25 @@ private:
     QPoint mDragOffset;
 };
 
+class WorldBMPItem : public QGraphicsItem
+{
+public:
+    WorldBMPItem(WorldScene *scene, BMPToTMXImages *images);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+private:
+    WorldScene *mScene;
+    BMPToTMXImages *mImages;
+    QImage mBmpRecolored;
+    QImage mBmpXformed;
+    QRectF mMapImageBounds;
+};
+
 class WorldScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -389,6 +409,7 @@ private:
     DragMapImageItem *mDragMapImageItem;
     QList<WorldRoadItem*> mRoadItems;
     QSet<WorldRoadItem*> mSelectedRoadItems;
+    QImage mBmp, mBmpXformed;
 };
 
 #endif // WORLDSCENE_H

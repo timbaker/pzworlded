@@ -1,0 +1,144 @@
+blend
+{
+    layer = 0_FloorOverlay
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_32
+    dir = n
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay2
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_33
+    dir = w
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay3
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_34
+    dir = e
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay4
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_35
+    dir = s
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_25
+    dir = nw
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay2
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_28
+    dir = ne
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay3
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_27
+    dir = sw
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay4
+    mainTile = floors_exterior_natural_01_24
+    blendTile = floors_exterior_natural_01_26
+    dir = se
+    exclude = 
+}
+
+blend
+{
+    layer = 0_FloorOverlay4
+    mainTile = floors_exterior_natural_01_0
+    blendTile = vegetation_groundcover_01_8
+    dir = s
+    exclude = floors_exterior_natural_01_24 floors_exterior_natural_01_2
+}
+
+blend
+{
+    layer = 0_FloorOverlay3
+    mainTile = floors_exterior_natural_01_0
+    blendTile = vegetation_groundcover_01_9
+    dir = e
+    exclude = floors_exterior_natural_01_24 floors_exterior_natural_01_2
+}
+
+blend
+{
+    layer = 0_FloorOverlay
+    mainTile = floors_exterior_natural_01_0
+    blendTile = vegetation_groundcover_01_10
+    dir = w
+    exclude = floors_exterior_natural_01_24 floors_exterior_natural_01_2
+}
+
+blend
+{
+    layer = 0_FloorOverlay2
+    mainTile = floors_exterior_natural_01_0
+    blendTile = vegetation_groundcover_01_11
+    dir = n
+    exclude = floors_exterior_natural_01_24 floors_exterior_natural_01_2
+}
+
+blend
+{
+    layer = 0_FloorOverlay
+    mainTile = floors_exterior_natural_01_2
+    blendTile = vegetation_groundcover_01_12
+    dir = s
+    exclude = floors_exterior_natural_01_24
+}
+
+blend
+{
+    layer = 0_FloorOverlay2
+    mainTile = floors_exterior_natural_01_2
+    blendTile = vegetation_groundcover_01_13
+    dir = e
+    exclude = floors_exterior_natural_01_24
+}
+
+blend
+{
+    layer = 0_FloorOverlay3
+    mainTile = floors_exterior_natural_01_2
+    blendTile = vegetation_groundcover_01_14
+    dir = w
+    exclude = floors_exterior_natural_01_24
+}
+
+blend
+{
+    layer = 0_FloorOverlay4
+    mainTile = floors_exterior_natural_01_2
+    blendTile = vegetation_groundcover_01_15
+    dir = n
+    exclude = floors_exterior_natural_01_24
+}
+

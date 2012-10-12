@@ -1,0 +1,21 @@
+# These are standard colour to tile mappings.
+# Bitmap index (0 = main, 1 = _veg), colour of pixel to detect, tile to put down, tmx layer to put it into.
+0,		90,	100, 35,	floors_exterior_natural_01_0,	0_Floor
+0,		120, 145, 50,	floors_exterior_natural_01_1,	0_Floor
+0,		145, 135, 60,	floors_exterior_natural_01_2,	0_Floor
+0,		210, 200, 160,	floors_exterior_natural_01_24,	0_Floor
+0,		165, 160, 140,	floors_exterior_natural_01_13,	0_Floor
+0,		220, 200, 150,	floors_exterior_natural_01_32,	0_Floor
+0,		100, 100, 100,	floors_exterior_street_01_16,	0_Floor
+0,		120, 120, 120,	floors_exterior_street_01_17,	0_Floor
+0,		140, 70, 15,	floors_exterior_natural_01_12,	0_Floor
+0,		120, 70, 20,	floors_exterior_natural_01_18,	0_Floor
+
+# These are for the vegetation layer, thus have space seperated varations on what can be placed.
+# Finally there is an optional extra colour at the end. This means the rule only fires if the 0, layer has the specified colour.
+
+1,		255, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 vegetation_trees_01_10 vegetation_trees_01_11,	0_Vegetation
+1,		128, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 vegetation_trees_01_10 vegetation_trees_01_11 null null null null,	0_Vegetation
+1,		64, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 null null null null,	0_Vegetation
+1,		0, 255, 0,		vegetation_groundcover_01_0 vegetation_groundcover_01_1 vegetation_groundcover_01_2, 0_Vegetation,	90, 100, 35
+1,		0, 255, 0,		vegetation_groundcover_01_4 null null null, 0_Vegetation,	145, 135, 60

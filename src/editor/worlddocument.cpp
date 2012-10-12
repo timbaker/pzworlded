@@ -654,6 +654,11 @@ void WorldDocument::setPropertyValue(PropertyHolder *ph, Property *p, const QStr
     undoStack()->push(new SetPropertyValue(this, ph, p, value));
 }
 
+void WorldDocument::changeBMPToTMXSettings(const BMPToTMXSettings &settings)
+{
+    undoStack()->push(new ChangeBMPToTMXSettings(this, settings));
+}
+
 void WorldDocument::removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd)
 {
     int index = 0;
@@ -1036,4 +1041,11 @@ QList<WorldCell *> WorldDocumentUndoRedo::setSelectedCells(const QList<WorldCell
     mWorldDoc->mSelectedCells = selection;
     emit selectedCellsChanged();
     return oldSelection;
+}
+
+BMPToTMXSettings WorldDocumentUndoRedo::changeBMPToTMXSettings(const BMPToTMXSettings &settings)
+{
+    BMPToTMXSettings old = mWorld->getBMPToTMXSettings();
+    mWorld->setBMPToTMXSettings(settings);
+    return old;
 }

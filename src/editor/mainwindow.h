@@ -92,6 +92,9 @@ public slots:
     void generateLotsAll();
     void generateLotsSelected();
 
+    void BMPToTMXAll();
+    void BMPToTMXSelected();
+
     void preferencesDialog();
     void objectGroupsDialog();
     void objectTypesDialog();

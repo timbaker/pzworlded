@@ -106,6 +106,8 @@ private:
                 readRoad();
             else if (xml.name() == "cell")
                 readCell();
+            else if (xml.name() == "BMPToTMX")
+                readBMPToTMX();
             else
                 readUnknownElement();
         }
@@ -405,6 +407,36 @@ private:
         }
     }
 
+    void readBMPToTMX()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "BMPToTMX");
+
+        BMPToTMXSettings settings;
+
+        while (xml.readNextStartElement()) {
+            if (xml.name() == "tmxexportdir") {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.exportDir = resolveReference(path, mPath);
+                xml.skipCurrentElement();
+            } else if (xml.name() == "rulesfile") {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.rulesFile = resolveReference(path, mPath);
+                xml.skipCurrentElement();
+            } else if (xml.name() == "blendsfile") {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.blendsFile = resolveReference(path, mPath);
+                xml.skipCurrentElement();
+            } else if (xml.name() == "mapbasefile") {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.mapbaseFile = resolveReference(path, mPath);
+                xml.skipCurrentElement();
+            } else
+                readUnknownElement();
+        }
+
+        mWorld->setBMPToTMXSettings(settings);
+    }
+
     void readUnknownElement()
     {
         qDebug() << "Unknown element (fixme):" << xml.name();
@@ -416,8 +448,13 @@ private:
 //        qDebug() << "resolveReference" << fileName << "relative to" << relativeTo;
         if (fileName.isEmpty())
             return fileName;
-        if (QDir::isRelativePath(fileName))
-            return relativeTo + QLatin1Char('/') + fileName;
+        if (QDir::isRelativePath(fileName)) {
+            QString path = relativeTo + QLatin1Char('/') + fileName;
+            QFileInfo info(path);
+            if (info.exists())
+                return info.canonicalFilePath();
+            return path;
+        }
         return fileName;
     }
 
