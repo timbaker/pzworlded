@@ -155,6 +155,9 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
     ZombieSpawnMap = images;
 
+    PROGRESS progress(tr("Generating .lot files (%1,%2)")
+                      .arg(cell->x()).arg(cell->y()));
+
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
     if (!mapInfo)
         return false;
