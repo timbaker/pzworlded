@@ -26,6 +26,7 @@
 #include <QUndoCommand>
 
 class BMPToTMXSettings;
+class GenerateLotsSettings;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -951,6 +952,24 @@ private:
 
     WorldDocument *mDocument;
     BMPToTMXSettings *mSettings;
+};
+
+/////
+
+class ChangeGenerateLotsSettings : public QUndoCommand
+{
+public:
+    ChangeGenerateLotsSettings(WorldDocument *doc, const GenerateLotsSettings &settings);
+    ~ChangeGenerateLotsSettings();
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    GenerateLotsSettings *mSettings;
 };
 
 /////

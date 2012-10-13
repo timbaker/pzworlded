@@ -71,7 +71,8 @@ public:
         w.writeAttribute(QLatin1String("width"), QString::number(world->width()));
         w.writeAttribute(QLatin1String("height"), QString::number(world->height()));
 
-        writeBMPToMap(w);
+        writeBMPToTMX(w);
+        writeGenerateLots(w);
 
         foreach (WorldBMP *bmp, world->bmps())
             writeBMP(w, bmp);
@@ -263,26 +264,40 @@ public:
         w.writeEndElement();
     }
 
-    void writeBMPToMap(QXmlStreamWriter &w)
+    void writeBMPToTMX(QXmlStreamWriter &w)
     {
+        const BMPToTMXSettings settings = mWorld->getBMPToTMXSettings();
+
         w.writeStartElement(QLatin1String("BMPToTMX"));
         w.writeStartElement(QLatin1String("tmxexportdir"));
         w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(mWorld->getBMPToTMXSettings().exportDir));
+                         relativeFileName(settings.exportDir));
         w.writeEndElement();
         w.writeStartElement(QLatin1String("rulesfile"));
         w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(mWorld->getBMPToTMXSettings().rulesFile));
+                         relativeFileName(settings.rulesFile));
         w.writeEndElement();
         w.writeStartElement(QLatin1String("blendsfile"));
         w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(mWorld->getBMPToTMXSettings().blendsFile));
+                         relativeFileName(settings.blendsFile));
         w.writeEndElement();
         w.writeStartElement(QLatin1String("mapbasefile"));
         w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(mWorld->getBMPToTMXSettings().mapbaseFile));
+                         relativeFileName(settings.mapbaseFile));
         w.writeEndElement();
         w.writeEndElement(); // </BMPToTMX>
+    }
+
+    void writeGenerateLots(QXmlStreamWriter &w)
+    {
+        const GenerateLotsSettings &settings = mWorld->getGenerateLotsSettings();
+
+        w.writeStartElement(QLatin1String("GenerateLots"));
+        w.writeStartElement(QLatin1String("exportdir"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(settings.exportDir));
+        w.writeEndElement();
+        w.writeEndElement(); // </GenerateLots>
     }
 
     void writeBMP(QXmlStreamWriter &w, WorldBMP *bmp)
@@ -297,7 +312,6 @@ public:
 
         w.writeEndElement();
     }
-
 
     QString relativeFileName(const QString &path)
     {

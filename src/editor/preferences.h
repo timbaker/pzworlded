@@ -43,9 +43,6 @@ public:
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
 
-    QString lotsDirectory() const;
-    void setLotsDirectory(const QString &path);
-
     QStringList searchPaths() const;
     void setSearchPaths(const QStringList &paths);
 
@@ -53,6 +50,7 @@ public:
     void setUseOpenGL(bool useOpenGL);
 
     bool showObjectNames() const { return mShowObjectNames; }
+    bool showBMPs() const { return mShowBMPs; }
 
 signals:
     void snapToGridChanged(bool snapToGrid);
@@ -64,6 +62,7 @@ signals:
     void useOpenGLChanged(bool useOpenGL);
 
     void showObjectNamesChanged(bool show);
+    void showBMPsChanged(bool show);
 
 #define MINIMAP_WIDTH_MIN 128
 #define MINIMAP_WIDTH_MAX 512
@@ -72,7 +71,6 @@ signals:
 
     void highlightCurrentLevelChanged(bool highlight);
     void mapsDirectoryChanged();
-    void lotsDirectoryChanged();
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -83,6 +81,7 @@ public slots:
     void setShowMiniMap(bool show);
     void setMiniMapWidth(int width);
     void setShowObjectNames(bool show);
+    void setShowBMPs(bool show);
     void setHighlightCurrentLevel(bool highlight);
 
 private:
@@ -98,11 +97,11 @@ private:
     QColor mGridColor;
     bool mUseOpenGL;
     bool mShowObjectNames;
+    bool mShowBMPs;
     bool mShowMiniMap;
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;
     QString mMapsDirectory;
-    QString mLotsDirectory;
     QStringList mSearchPaths;
 
     static Preferences *mInstance;

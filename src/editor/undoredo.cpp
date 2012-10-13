@@ -722,6 +722,26 @@ void ChangeBMPToTMXSettings::swap()
 
 /////
 
+ChangeGenerateLotsSettings::ChangeGenerateLotsSettings(WorldDocument *doc,
+                                                       const GenerateLotsSettings &settings) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Generate Lots Settings")),
+    mDocument(doc),
+    mSettings(new GenerateLotsSettings(settings))
+{
+}
+
+ChangeGenerateLotsSettings::~ChangeGenerateLotsSettings()
+{
+    delete mSettings;
+}
+
+void ChangeGenerateLotsSettings::swap()
+{
+    *mSettings = mDocument->undoRedo().changeGenerateLotsSettings(*mSettings);
+}
+
+/////
+
 MoveBMP::MoveBMP(WorldDocument *doc, WorldBMP *bmp, const QPoint &topLeft) :
     QUndoCommand(QCoreApplication::translate("Undo Commands", "Move BMP Image")),
     mDocument(doc),

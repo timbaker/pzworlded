@@ -40,10 +40,6 @@ class WorldScene;
 #define GRID_WIDTH (512)
 #define GRID_HEIGHT (256)
 
-#define ZVALUE_ROADITEM_CREATING 20002
-#define ZVALUE_ROADITEM_SELECTED 20001
-#define ZVALUE_ROADITEM_UNSELECTED 20000
-
 /**
   * Item that draws the grid-lines in a WorldScene.
   */
@@ -302,6 +298,8 @@ public:
 
     QRectF boundingRect() const;
 
+    QPainterPath shape() const;
+
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = 0);
@@ -311,17 +309,22 @@ public:
 
     void synchWithBMP();
 
+    void setSelected(bool selected);
+
     void setDragging(bool dragging);
     void setDragOffset(const QPoint &offset);
 
     QPoint dragOffset() const
     { return mDragOffset; }
 
+    QPolygonF polygon() const;
+
 private:
     WorldScene *mScene;
     WorldBMP *mBMP;
     MapImage *mMapImage;
     QRectF mMapImageBounds;
+    bool mSelected;
     bool mDragging;
     QPoint mDragOffset;
 };
@@ -332,6 +335,15 @@ class WorldScene : public BaseGraphicsScene
 public:
     explicit WorldScene(WorldDocument *worldDoc, QObject *parent = 0);
     
+    static const int ZVALUE_CELLITEM;
+    static const int ZVALUE_ROADITEM_UNSELECTED;
+    static const int ZVALUE_ROADITEM_SELECTED;
+    static const int ZVALUE_ROADITEM_CREATING;
+    static const int ZVALUE_GRIDITEM;
+    static const int ZVALUE_SELECTIONITEM;
+    static const int ZVALUE_COORDITEM;
+    static const int ZVALUE_DNDITEM;
+
     void setTool(AbstractTool *tool);
 
     QPointF pixelToCellCoords(qreal x, qreal y) const;
@@ -377,6 +389,8 @@ public:
 
     QList<Road*> roadsInRect(const QRectF &bounds);
 
+    QList<WorldBMP*> bmpsInRect(const QRectF &cellRect);
+
     void pasteCellsFromClipboard();
 
 signals:
@@ -390,6 +404,7 @@ public slots:
     void cellContentsChanged(WorldCell *cell);
     void setShowGrid(bool show);
     void setShowCoordinates(bool show);
+    void setShowBMPs(bool show);
 
     void selectedRoadsChanged();
     void roadAdded(int index);
@@ -397,6 +412,7 @@ public slots:
     void roadCoordsChanged(int index);
     void roadWidthChanged(int index);
 
+    void selectedBMPsChanged();
     void bmpAdded(int index);
     void bmpAboutToBeRemoved(int index);
     void bmpCoordsChanged(int index);
@@ -429,6 +445,7 @@ private:
     QList<WorldRoadItem*> mRoadItems;
     QSet<WorldRoadItem*> mSelectedRoadItems;
     QList<WorldBMPItem*> mBMPItems;
+    QSet<WorldBMPItem*> mSelectedBMPItems;
     WorldBMPItem *mDragBMPItem;
     bool mBMPToolActive;
 };

@@ -39,6 +39,7 @@ class ObjectItem;
 class Road;
 class SubMapItem;
 class TrafficLines;
+class WorldBMP;
 class WorldBMPItem;
 class WorldCellObject;
 class WorldRoadItem;
@@ -738,6 +739,7 @@ public:
 
 private slots:
     void roadAboutToBeRemoved(int index);
+    void roadCoordsChanged(int index);
 
 private:
     Q_DISABLE_COPY(WorldEditRoadTool)
@@ -748,6 +750,7 @@ private:
 
     void updateHandles(Road *road);
 
+    Road *mSelectedRoad;
     WorldRoadItem *mSelectedRoadItem;
     Road *mRoad;
     WorldRoadItem *mRoadItem;
@@ -836,6 +839,8 @@ public:
     explicit WorldBMPTool();
     ~WorldBMPTool();
 
+    void setScene(BaseGraphicsScene *scene);
+
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
@@ -853,6 +858,9 @@ private slots:
 private:
     Q_DISABLE_COPY(WorldBMPTool)
 
+    void startSelecting();
+    void updateSelection(QGraphicsSceneMouseEvent *event);
+
     void startMoving();
     void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
     void finishMoving(const QPointF &pos);
@@ -860,6 +868,7 @@ private:
 
     enum Mode {
         NoMode,
+        Selecting,
         Moving,
         CancelMoving
     };
@@ -869,8 +878,10 @@ private:
     Mode mMode;
     bool mMousePressed;
     QPointF mStartScenePos;
-    QPoint mDropRoadPos;
+    QPoint mDragOffset;
     WorldBMPItem *mClickedItem;
+    QList<WorldBMP*> mMovingBMPs;
+    QGraphicsPolygonItem *mSelectionRectItem;
     static WorldBMPTool *mInstance;
 };
 

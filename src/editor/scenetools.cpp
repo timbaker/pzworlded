@@ -2002,7 +2002,7 @@ WorldCreateRoadTool::WorldCreateRoadTool()
 {
     mCursorItem->setBrush(Qt::cyan);
     mCursorItem->setOpacity(0.66);
-    mCursorItem->setZValue(ZVALUE_ROADITEM_CREATING + 1);
+    mCursorItem->setZValue(WorldScene::ZVALUE_ROADITEM_CREATING + 0.5);
 }
 
 WorldCreateRoadTool::~WorldCreateRoadTool()
@@ -2093,7 +2093,7 @@ void WorldCreateRoadTool::startNewRoadItem(const QPointF &scenePos)
     mRoad->setTileName(mCurrentTileName);
     mRoad->setTrafficLines(mCurrentTrafficLines);
     mRoadItem = new WorldRoadItem(mScene, mRoad);
-    mRoadItem->setZValue(ZVALUE_ROADITEM_CREATING);
+    mRoadItem->setZValue(WorldScene::ZVALUE_ROADITEM_CREATING);
     mScene->addItem(mRoadItem);
 }
 
@@ -2250,6 +2250,7 @@ WorldEditRoadTool::WorldEditRoadTool()
     : BaseWorldSceneTool(tr("Edit Roads"),
                          QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                          QKeySequence())
+    , mSelectedRoad(0)
     , mSelectedRoadItem(0)
     , mRoad(0)
     , mRoadItem(0)
@@ -2260,11 +2261,11 @@ WorldEditRoadTool::WorldEditRoadTool()
 {
     mStartHandle->setBrush(Qt::cyan);
     mStartHandle->setOpacity(0.66);
-    mStartHandle->setZValue(ZVALUE_ROADITEM_CREATING + 1);
+    mStartHandle->setZValue(WorldScene::ZVALUE_ROADITEM_CREATING + 0.5);
 
     mEndHandle->setBrush(Qt::cyan);
     mEndHandle->setOpacity(0.66);
-    mEndHandle->setZValue(ZVALUE_ROADITEM_CREATING + 1);
+    mEndHandle->setZValue(WorldScene::ZVALUE_ROADITEM_CREATING + 0.5);
 }
 
 WorldEditRoadTool::~WorldEditRoadTool()
@@ -2283,6 +2284,8 @@ void WorldEditRoadTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : 0;
 
     if (mScene) {
+        connect(mScene->worldDocument(), SIGNAL(roadCoordsChanged(int)),
+                SLOT(roadCoordsChanged(int)));
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
                 SLOT(roadAboutToBeRemoved(int)));
     }
@@ -2366,14 +2369,23 @@ void WorldEditRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 void WorldEditRoadTool::roadAboutToBeRemoved(int index)
 {
     Road *road = mScene->world()->roads().at(index);
-    if (mSelectedRoadItem && road == mSelectedRoadItem->road()) {
+    if (mSelectedRoad && road == mSelectedRoad) {
         if (mMoving) {
+            mSelectedRoadItem = 0; // could have been deleted by WorldScene already
             cancelMoving();
             mMoving = false;
         }
         updateHandles(0);
         mSelectedRoadItem = 0;
+        mSelectedRoad = 0;
     }
+}
+
+void WorldEditRoadTool::roadCoordsChanged(int index)
+{
+    Road *road = mScene->world()->roads().at(index);
+    if (mSelectedRoadItem && road == mSelectedRoadItem->road())
+        updateHandles(road);
 }
 
 void WorldEditRoadTool::startMoving(const QPointF &scenePos)
@@ -2387,9 +2399,10 @@ void WorldEditRoadTool::startMoving(const QPointF &scenePos)
         } else {
             mSelectedRoadItem->setEditable(false);
             mSelectedRoadItem->setZValue(mSelectedRoadItem->isSelected() ?
-                                             ZVALUE_ROADITEM_SELECTED :
-                                             ZVALUE_ROADITEM_UNSELECTED);
+                                             WorldScene::ZVALUE_ROADITEM_SELECTED :
+                                             WorldScene::ZVALUE_ROADITEM_UNSELECTED);
             mSelectedRoadItem = 0;
+            mSelectedRoad = 0;
         }
         if (mSelectedRoadItem) {
             mMoving = true;
@@ -2400,7 +2413,7 @@ void WorldEditRoadTool::startMoving(const QPointF &scenePos)
                              mSelectedRoadItem->road()->width(), -1);
             mRoadItem = new WorldRoadItem(mScene, mRoad);
             mRoadItem->setEditable(true);
-            mRoadItem->setZValue(ZVALUE_ROADITEM_CREATING);
+            mRoadItem->setZValue(WorldScene::ZVALUE_ROADITEM_CREATING);
             mScene->addItem(mRoadItem);
             mSelectedRoadItem->setVisible(false);
             return;
@@ -2409,9 +2422,10 @@ void WorldEditRoadTool::startMoving(const QPointF &scenePos)
 
     foreach (QGraphicsItem *item, mScene->items(scenePos)) {
         if (WorldRoadItem *roadItem = dynamic_cast<WorldRoadItem*>(item)) {
+            mSelectedRoad = roadItem->road();
             mSelectedRoadItem = roadItem;
             mSelectedRoadItem->setEditable(true);
-            mSelectedRoadItem->setZValue(ZVALUE_ROADITEM_CREATING);
+            mSelectedRoadItem->setZValue(WorldScene::ZVALUE_ROADITEM_CREATING);
             updateHandles(mSelectedRoadItem->road());
             break;
         }
@@ -2430,8 +2444,11 @@ void WorldEditRoadTool::finishMoving()
 
 void WorldEditRoadTool::cancelMoving()
 {
-    mSelectedRoadItem->setVisible(true);
-    updateHandles(mSelectedRoadItem->road());
+    if (mSelectedRoadItem) {
+        mSelectedRoadItem->setVisible(true);
+        updateHandles(mSelectedRoadItem->road());
+    } else
+        updateHandles(0);
 
     mScene->removeItem(mRoadItem);
     delete mRoadItem;
@@ -2609,7 +2626,7 @@ void WorldSelectMoveRoadTool::roadAboutToBeRemoved(int index)
     if (mMode == Moving) {
         Road *road = mScene->world()->roads().at(index);
         if (mMovingRoads.contains(road)) {
-            mScene->itemForRoad(road)->setDragging(false);
+//            mScene->itemForRoad(road)->setDragging(false);
             mMovingRoads.removeAll(road);
             if (mMovingRoads.isEmpty())
                 mMode = CancelMoving;
@@ -2739,15 +2756,32 @@ void WorldBMPTool::deleteInstance()
 
 WorldBMPTool::WorldBMPTool()
     : BaseWorldSceneTool(tr("Select and Move BMP Images"),
-                         QIcon(QLatin1String(":/images/24x24/insert-image.png")),
+                         QIcon(QLatin1String(":/images/22x22/bmp-tool-select.png")),
                          QKeySequence())
     , mMode(NoMode)
     , mMousePressed(false)
+    , mSelectionRectItem(new QGraphicsPolygonItem)
 {
+    mSelectionRectItem->setZValue(1000);
+    mSelectionRectItem->setPen(QColor(0x33,0x99,0xff));
+    mSelectionRectItem->setBrush(QBrush(QColor(0x33,0x99,0xff,255/8)));
 }
 
 WorldBMPTool::~WorldBMPTool()
 {
+}
+
+void WorldBMPTool::setScene(BaseGraphicsScene *scene)
+{
+    if (mScene)
+        mScene->worldDocument()->disconnect(this);
+
+    mScene = scene ? scene->asWorldScene() : 0;
+
+    if (mScene) {
+        connect(mScene->worldDocument(), SIGNAL(bmpAboutToBeRemoved(int)),
+                SLOT(bmpAboutToBeRemoved(int)));
+    }
 }
 
 void WorldBMPTool::keyPressEvent(QKeyEvent *event)
@@ -2766,6 +2800,7 @@ void WorldBMPTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             break;
         mMousePressed = true;
         mStartScenePos = event->scenePos();
+        mDragOffset = QPoint();
         mClickedItem = topmostItemAt(mStartScenePos);
         break;
     case Qt::RightButton:
@@ -2784,10 +2819,20 @@ void WorldBMPTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         if (dragDistance >= QApplication::startDragDistance()) {
             if (mClickedItem)
                 startMoving();
+            else
+                startSelecting();
         }
     }
 
     switch (mMode) {
+    case Selecting:
+    {
+        QPointF start = mScene->pixelToCellCoords(mStartScenePos);
+        QPointF end = mScene->pixelToCellCoords(event->scenePos());
+        QRectF bounds = QRectF(start, end).normalized();
+        mSelectionRectItem->setPolygon(mScene->cellRectToPolygon(bounds));
+        break;
+    }
     case Moving:
         updateMovingItems(event->scenePos(), event->modifiers());
         break;
@@ -2806,8 +2851,26 @@ void WorldBMPTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     switch (mMode) {
     case NoMode:
     {
+        bool toggle = event->modifiers() & Qt::ControlModifier;
+        bool extend = event->modifiers() & Qt::ShiftModifier;
+        QList<WorldBMP*> newSelection;
+        if (extend || toggle)
+            newSelection = mScene->worldDocument()->selectedBMPs();
+        if (mClickedItem) {
+            WorldBMP *bmp = mClickedItem->bmp();
+            if (toggle && newSelection.contains(bmp))
+                newSelection.removeOne(bmp);
+            else if (!newSelection.contains(bmp))
+                newSelection += bmp;
+        }
+        mScene->worldDocument()->setSelectedBMPs(newSelection);
         break;
     }
+    case Selecting:
+        updateSelection(event);
+        mScene->removeItem(mSelectionRectItem);
+        mMode = NoMode;
+        break;
     case Moving:
         finishMoving(event->scenePos());
         break;
@@ -2822,34 +2885,79 @@ void WorldBMPTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void WorldBMPTool::bmpAboutToBeRemoved(int index)
 {
-    if (mClickedItem == 0)
-        return;
-    WorldBMP *bmp = mScene->world()->bmps().at(index);
-    if (bmp == mClickedItem->bmp())
-        cancelMoving();
+    if (mMode == Moving) {
+        WorldBMP *bmp = mScene->world()->bmps().at(index);
+        if (mMovingBMPs.contains(bmp)) {
+//            mScene->itemForBMP(bmp)->setDragging(false);
+            mMovingBMPs.removeAll(bmp);
+            if (mMovingBMPs.isEmpty())
+                mMode = CancelMoving;
+        }
+    }
+}
+
+void WorldBMPTool::startSelecting()
+{
+    mMode = Selecting;
+    mScene->addItem(mSelectionRectItem);
+}
+
+void WorldBMPTool::updateSelection(QGraphicsSceneMouseEvent *event)
+{
+    QPointF start = mScene->pixelToCellCoords(mStartScenePos);
+    QPointF end = mScene->pixelToCellCoords(event->scenePos());
+    QRectF bounds = QRectF(start, end).normalized();
+
+    bool toggle = event->modifiers() & Qt::ControlModifier;
+    bool extend = event->modifiers() & Qt::ShiftModifier;
+
+    QList<WorldBMP*> selection;
+    if (extend || toggle)
+        selection = mScene->worldDocument()->selectedBMPs();
+
+    foreach (WorldBMP *bmp, mScene->bmpsInRect(bounds)) {
+        if (toggle && selection.contains(bmp))
+            selection.removeOne(bmp);
+        else if (!selection.contains(bmp))
+            selection += bmp;
+    }
+
+    mScene->worldDocument()->setSelectedBMPs(selection);
 }
 
 void WorldBMPTool::startMoving()
 {
+    mMovingBMPs = mScene->worldDocument()->selectedBMPs();
+
+    // Move only the clicked item, if it was not part of the selection
+    if (!mMovingBMPs.contains(mClickedItem->bmp())) {
+        mMovingBMPs.clear();
+        mMovingBMPs += mClickedItem->bmp();
+        mScene->worldDocument()->setSelectedBMPs(mMovingBMPs);
+    }
+
     mMode = Moving;
 }
 
 void WorldBMPTool::updateMovingItems(const QPointF &pos,
-                                      Qt::KeyboardModifiers modifiers)
+                                     Qt::KeyboardModifiers modifiers)
 {
     Q_UNUSED(modifiers)
-
+#if 0
     // Restrict the drop position so the images stay in bounds
     QVector<QPoint> cellPositions;
     cellPositions.append(mClickedItem->bmp()->pos());
     cellPositions.append(mClickedItem->bmp()->bounds().bottomRight());
     QPointF pt = restrictDragging(cellPositions, mStartScenePos, pos);
-
+#endif
     QPoint startCellPos = mScene->pixelToCellCoordsInt(mStartScenePos);
-    QPoint dropCellPos = mScene->pixelToCellCoordsInt(pt);
+    QPoint dropCellPos = mScene->pixelToCellCoordsInt(pos);
+    mDragOffset = dropCellPos - startCellPos;
 
-    mClickedItem->setDragging(true);
-    mClickedItem->setDragOffset(dropCellPos - startCellPos);
+    foreach (WorldBMP *bmp, mMovingBMPs) {
+        mScene->itemForBMP(bmp)->setDragging(true);
+        mScene->itemForBMP(bmp)->setDragOffset(mDragOffset);
+    }
 }
 
 void WorldBMPTool::finishMoving(const QPointF &pos)
@@ -2858,18 +2966,31 @@ void WorldBMPTool::finishMoving(const QPointF &pos)
     Q_ASSERT(mMode == Moving);
     mMode = NoMode;
 
-    mClickedItem->setDragging(false);
+    foreach (WorldBMP *bmp, mMovingBMPs)
+        mScene->itemForBMP(bmp)->setDragging(false);
 
-    if (!mClickedItem->dragOffset().isNull())
-        mScene->worldDocument()->moveBMP(mClickedItem->bmp(),
-                                         mClickedItem->bmp()->pos() + mClickedItem->dragOffset());
+    int count = mMovingBMPs.size();
+    if (count && !mDragOffset.isNull()) {
+        QUndoStack *undoStack = mScene->worldDocument()->undoStack();
+        if (count > 1)
+            undoStack->beginMacro(tr("Move %1 BMP%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
+        foreach (WorldBMP *bmp, mMovingBMPs) {
+            mScene->worldDocument()->moveBMP(bmp, bmp->pos() + mDragOffset);
+        }
+        if (count > 1)
+            undoStack->endMacro();
+    }
+
+    mMovingBMPs.clear();
 }
 
 void WorldBMPTool::cancelMoving()
 {
     if (mMode == Moving) {
         mMode = CancelMoving;
-        mClickedItem->setDragging(false);
+        foreach (WorldBMP *bmp, mMovingBMPs)
+            mScene->itemForBMP(bmp)->setDragging(false);
+        mMovingBMPs.clear();
         mClickedItem = 0;
     }
 }

@@ -75,6 +75,20 @@ public:
     { return !operator==(other); }
 };
 
+class GenerateLotsSettings
+{
+public:
+    QString exportDir;
+
+    bool operator == (const GenerateLotsSettings &other)
+    {
+        return exportDir == other.exportDir;
+    }
+
+    bool operator != (const GenerateLotsSettings &other)
+    { return !operator==(other); }
+};
+
 /**
   * This class represents a single .bmp file used by BMP -> TMX conversion.
   */
@@ -191,6 +205,12 @@ public:
     const BMPToTMXSettings &getBMPToTMXSettings() const
     { return mBMPToTMXSettings; }
 
+    void setGenerateLotsSettings(const GenerateLotsSettings &settings)
+    { mGenerateLotsSettings = settings; }
+
+    const GenerateLotsSettings &getGenerateLotsSettings() const
+    { return mGenerateLotsSettings; }
+
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
@@ -207,6 +227,7 @@ private:
     RoadList mRoads;
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
+    GenerateLotsSettings mGenerateLotsSettings;
 };
 
 #endif // WORLD_H

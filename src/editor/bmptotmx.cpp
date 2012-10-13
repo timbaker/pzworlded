@@ -110,16 +110,11 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
 bool BMPToTMX::generateCell(WorldCell *cell)
 {
+    // Get the top-most BMP covering the cell
     int n = 0, bmpIndex = -1;
     foreach (WorldBMP *bmp, cell->world()->bmps()) {
-        if (bmp->bounds().contains(cell->pos())) {
-            if (bmpIndex != -1) {
-                mError = tr("Multiple BMP images cover cell %1,%2")
-                        .arg(cell->x()).arg(cell->y());
-                return false;
-            }
+        if (bmp->bounds().contains(cell->pos()))
             bmpIndex = n;
-        }
         n++;
     }
     if (bmpIndex == -1)
@@ -131,6 +126,9 @@ bool BMPToTMX::generateCell(WorldCell *cell)
 
     QImage bmp = images->mBmp;
     QImage bmpVeg = images->mBmpVeg;
+
+    PROGRESS progress(tr("Generating TMX files (%1,%2)")
+                      .arg(cell->x()).arg(cell->y()));
 
     // 300x300x(2+4)
     Entries.clear();
@@ -236,14 +234,21 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
 {
     QFileInfo info(path);
     if (!info.exists()) {
-        mError = tr("The image file can't be found.");
+        mError = tr("The image file can't be found.\n%1").arg(path);
         return 0;
     }
 
     QFileInfo infoVeg(info.absolutePath() + QLatin1Char('/')
                       + info.completeBaseName() + QLatin1String("_veg.bmp"));
     if (!infoVeg.exists()) {
-        mError = tr("The image_veg file can't be found.");
+        mError = tr("The image_veg file can't be found.\n%1").arg(path);
+        return 0;
+    }
+
+    QFileInfo infoZS(info.absolutePath() + QLatin1Char('/')
+                      + info.completeBaseName() + QLatin1String("_zs.bmp"));
+    if (!infoZS.exists()) {
+        mError = tr("The image_zs file can't be found.\n%1").arg(path);
         return 0;
     }
 
@@ -258,14 +263,22 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
         return 0;
     }
 
-    if (image.size() != imageVeg.size()) {
-        mError = tr("The image size is different than the image_veg size.");
+    QImage imageZS = loadImage(infoZS.canonicalFilePath(),
+                               QLatin1String("_zs"));
+    if (imageVeg.isNull()) {
+        return 0;
+    }
+
+    if ((image.size() != imageVeg.size()) ||
+            (imageZS.size() != image.size() / 10)) {
+        mError = tr("The images aren't the correct sizes.");
         return 0;
     }
 
     BMPToTMXImages *images = new BMPToTMXImages;
     images->mBmp = image;
     images->mBmpVeg = imageVeg;
+    images->mBmpZombieSpawnMap = imageZS;
     images->mPath = info.canonicalFilePath();
     images->mBounds = QRect(origin, QSize(image.width() / 300,
                                           image.height() / 300));
@@ -276,14 +289,21 @@ QSize BMPToTMX::validateImages(const QString &path)
 {
     QFileInfo info(path);
     if (!info.exists()) {
-        mError = tr("The image file can't be found.");
+        mError = tr("The image file can't be found.\n%1").arg(path);
         return QSize();
     }
 
     QFileInfo infoVeg(info.absolutePath() + QLatin1Char('/')
                       + info.completeBaseName() + QLatin1String("_veg.bmp"));
     if (!infoVeg.exists()) {
-        mError = tr("The image_veg file can't be found.");
+        mError = tr("The image_veg file can't be found.\n%1").arg(path);
+        return QSize();
+    }
+
+    QFileInfo infoZS(info.absolutePath() + QLatin1Char('/')
+                      + info.completeBaseName() + QLatin1String("_zs.bmp"));
+    if (!infoZS.exists()) {
+        mError = tr("The image_zs file can't be found.\n%1").arg(path);
         return QSize();
     }
 
@@ -297,8 +317,14 @@ QSize BMPToTMX::validateImages(const QString &path)
         return QSize();
     }
 
-    if (image.size() != imageVeg.size()) {
-        mError = tr("The image size is different than the image_veg size.");
+    QImageReader imageZS(infoZS.canonicalFilePath());
+    if (imageZS.size().isEmpty()) {
+        return QSize();
+    }
+
+    if ((image.size() != imageVeg.size()) ||
+            (imageZS.size() != image.size() / 10)) {
+        mError = tr("The images aren't the correct sizes.");
         return QSize();
     }
 
@@ -324,16 +350,11 @@ void BMPToTMX::assignMapsToCells(WorldDocument *worldDoc, BMPToTMX::GenerateMode
 
 void BMPToTMX::assignMapToCell(WorldCell *cell)
 {
+    // Get the top-most BMP covering the cell
     WorldBMP *bmp = 0;
     foreach (WorldBMP *bmp2, cell->world()->bmps()) {
-        if (bmp2->bounds().contains(cell->pos())) {
-            if (bmp != 0) {
-                mError = tr("Multiple BMP images cover cell %1,%2")
-                        .arg(cell->x()).arg(cell->y());
-                return;
-            }
+        if (bmp2->bounds().contains(cell->pos()))
             bmp = bmp2;
-        }
     }
     if (bmp == 0)
         return;

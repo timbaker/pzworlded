@@ -26,6 +26,7 @@
 #include "clipboard.h"
 #include "copypastedialog.h"
 #include "documentmanager.h"
+#include "generatelotsdialog.h"
 #include "layersdock.h"
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
@@ -113,6 +114,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
     ui->actionShowMiniMap->setChecked(prefs->showMiniMap());
     ui->actionShowObjectNames->setChecked(prefs->showObjectNames());
+    ui->actionShowBMP->setChecked(prefs->showBMPs());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
 
     // Make sure Ctrl+= also works for zooming in
@@ -207,6 +209,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
     connect(ui->actionRemoveRoad, SIGNAL(triggered()), SLOT(removeRoad()));
+    connect(ui->actionRemoveBMP, SIGNAL(triggered()), SLOT(removeBMP()));
 
     connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
@@ -220,6 +223,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)), prefs, SLOT(setShowMiniMap(bool)));
     connect(ui->actionShowObjectNames, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjectNames(bool)));
+    connect(ui->actionShowBMP, SIGNAL(toggled(bool)), prefs, SLOT(setShowBMPs(bool)));
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
     connect(ui->actionLevelAbove, SIGNAL(triggered()), SLOT(selectLevelAbove()));
     connect(ui->actionLevelBelow, SIGNAL(triggered()), SLOT(selectLevelBelow()));
@@ -445,6 +449,8 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
             connect(worldDoc, SIGNAL(selectedRoadsChanged()),
+                    SLOT(updateActions()));
+            connect(worldDoc, SIGNAL(selectedBMPsChanged()),
                     SLOT(updateActions()));
         }
 
@@ -755,8 +761,11 @@ static void generateLots(MainWindow *mainWin, Document *doc,
     if (!doc)
         return;
     WorldDocument *worldDoc = doc->asWorldDocument();
-    if (CellDocument *cellDoc = doc->asCellDocument())
-        worldDoc = cellDoc->worldDocument();
+    if (!worldDoc)
+        return;
+    GenerateLotsDialog dialog(worldDoc, mainWin);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
     if (!LotFilesManager::instance()->generateWorld(worldDoc, mode)) {
         QMessageBox::warning(mainWin, mainWin->tr("Lot Generation Failed!"),
                              LotFilesManager::instance()->errorString());
@@ -934,6 +943,23 @@ void MainWindow::removeRoad()
         Q_ASSERT(index >= 0);
         worldDoc->removeRoad(index);
     }
+    undoStack->endMacro();
+}
+
+void MainWindow::removeBMP()
+{
+    Q_ASSERT(mCurrentDocument);
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        return;
+    int count = worldDoc->selectedBMPCount();
+    Q_ASSERT(count);
+
+    QUndoStack *undoStack = worldDoc->undoStack();
+    undoStack->beginMacro(tr("Remove %1 BMP Image%2").arg(count)
+                          .arg((count > 1) ? QLatin1String("s") : QLatin1String("")));
+    foreach (WorldBMP *bmp, worldDoc->selectedBMPs())
+        worldDoc->removeBMP(bmp);
     undoStack->endMacro();
 }
 
@@ -1282,7 +1308,7 @@ void MainWindow::updateActions()
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
 
-    ui->actionGenerateLotsAll->setEnabled(hasDoc);
+    ui->actionGenerateLotsAll->setEnabled(worldDoc);
     ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
                                                worldDoc->selectedCellCount());
 
@@ -1296,6 +1322,8 @@ void MainWindow::updateActions()
     bool removeRoad = (worldDoc && worldDoc->selectedRoadCount()) ||
             (cellDoc && cellDoc->worldDocument()->selectedRoadCount());
     ui->actionRemoveRoad->setEnabled(removeRoad);
+
+    ui->actionRemoveBMP->setEnabled(worldDoc && worldDoc->selectedBMPCount());
 
     ui->actionEditCell->setEnabled(false);
     ui->actionObjectTypes->setEnabled(hasDoc);

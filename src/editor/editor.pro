@@ -89,7 +89,8 @@ SOURCES += main.cpp\
     roadsdock.cpp \
     simplefile.cpp \
     bmptotmx.cpp \
-    bmptotmxdialog.cpp
+    bmptotmxdialog.cpp \
+    generatelotsdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -138,7 +139,8 @@ HEADERS  += mainwindow.h \
     roadsdock.h \
     simplefile.h \
     bmptotmx.h \
-    bmptotmxdialog.h
+    bmptotmxdialog.h \
+    generatelotsdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -148,7 +150,8 @@ FORMS    += mainwindow.ui \
     preferencesdialog.ui \
     objectgroupsdialog.ui \
     copypastedialog.ui \
-    bmptotmxdialog.ui
+    bmptotmxdialog.ui \
+    generatelotsdialog.ui
 
 OTHER_FILES +=
 

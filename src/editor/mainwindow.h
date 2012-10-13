@@ -106,6 +106,7 @@ public slots:
     void showClipboard();
 
     void removeRoad();
+    void removeBMP();
 
     void removeLot();
     void removeObject();

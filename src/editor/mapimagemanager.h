@@ -68,6 +68,9 @@ public:
 
     MapImage *getMapImage(const QString &mapName, const QString &relativeTo = QString());
 
+    QString errorString() const
+    { return mError; }
+
 protected:
     struct ImageData
     {
@@ -99,6 +102,7 @@ private:
     QFileInfo imageDataFileInfo(const QFileInfo &imageFileInfo);
 
     QMap<QString,MapImage*> mMapImages;
+    QString mError;
 
     static MapImageManager *mInstance;
 };

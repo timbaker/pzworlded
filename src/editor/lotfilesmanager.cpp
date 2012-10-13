@@ -17,6 +17,7 @@
 
 #include "lotfilesmanager.h"
 
+#include "bmptotmx.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mapobject.h"
@@ -73,27 +74,22 @@ LotFilesManager::~LotFilesManager()
 
 bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
-    PROGRESS progress(QLatin1String("Generating .lot files"));
+    mWorldDoc = worldDoc;
 
-    // Choose an existing directory to save the .lot files if it hasn't
-    // been specified in the preferences or doesn't exist.
-    QString lotsDirectory = Preferences::instance()->lotsDirectory();
-    QDir dir(lotsDirectory);
-    if (!dir.exists()) {
-        QString f = QFileDialog::getExistingDirectory(0,
-            tr("Choose the Lots Folder"));
-        if (f.isEmpty())
-            return true;
-        Preferences::instance()->setLotsDirectory(f);
+    PROGRESS progress(QLatin1String("Reading BMP images"));
+
+    mImages.clear(); // FIXME: memory leak, images aren't freed
+    foreach (WorldBMP *bmp, mWorldDoc->world()->bmps()) {
+        // FIXME: I only need the spawn map!
+        BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(),
+                                                                 bmp->pos());
+        // In case the image files can't be found/loaded, we fail to
+        // generate a .lot file for those WorldCells.
+        // *** 'images' may be NULL
+        mImages += images;
     }
 
-    QString projectDir = QFileInfo(worldDoc->fileName()).absolutePath();
-    QString spawnMap = projectDir + QLatin1Char('/') + QLatin1String("ZombieSpawnMap.bmp");
-    if (!QFileInfo(spawnMap).exists()) {
-        mError = tr("Couldn't find ZombieSpawnMap.bmp in the project directory.");
-        return false;
-    }
-    ZombieSpawnMap = QImage(spawnMap);
+    progress.update(QLatin1String("Generating .lot files"));
 
     World *world = worldDoc->world();
 
@@ -138,6 +134,26 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return true;
     }
 #endif
+
+    int n = 0, bmpIndex = -1;
+    foreach (WorldBMP *bmp, cell->world()->bmps()) {
+        if (bmp->bounds().contains(cell->pos()))
+            bmpIndex = n;
+        n++;
+    }
+    if (bmpIndex == -1) {
+        mError = tr("No BMP image overlaps cell %1,%2!\nNeed a ZombieSpawnMap for the cell.")
+                .arg(cell->x()).arg(cell->y());
+        return false;
+    }
+
+    BMPToTMXImages *images = mImages[bmpIndex];
+    if (images == 0) {
+        mError = tr("The BMP image for cell %1,%2 wasn't loaded.")
+                .arg(cell->x()).arg(cell->y());
+        return false;
+    }
+    ZombieSpawnMap = images;
 
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
     if (!mapInfo)
@@ -200,7 +216,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             .arg(cell->x())
             .arg(cell->y());
 
-    QString lotsDirectory = Preferences::instance()->lotsDirectory();
+    QString lotsDirectory = mWorldDoc->world()->getGenerateLotsSettings().exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);
     if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
         mError = tr("Could not open file for writing.");
@@ -341,7 +357,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
             .arg(cell->x())
             .arg(cell->y());
 
-    QString lotsDirectory = Preferences::instance()->lotsDirectory();
+    QString lotsDirectory = mWorldDoc->world()->getGenerateLotsSettings().exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);
     if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
         mError = tr("Could not open file for writing.");
@@ -394,7 +410,9 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
 
     for (int x = 0; x < 30; x++) {
         for (int y = 0; y < 30; y++) {
-            QRgb pixel = ZombieSpawnMap.pixel(cell->x() * 30 + x, cell->y() * 30 + y);
+            QRgb pixel = ZombieSpawnMap->mBmpZombieSpawnMap.pixel(
+                        (cell->x() - ZombieSpawnMap->mBounds.x()) * 30 + x,
+                        (cell->y() - ZombieSpawnMap->mBounds.y()) * 30 + y);
             out << quint8(qRed(pixel));
         }
     }

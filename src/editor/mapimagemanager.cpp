@@ -232,8 +232,10 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
 MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpFilePath)
 {
     QSize imageSize = BMPToTMX::instance()->validateImages(bmpFilePath);
-    if (imageSize.isEmpty())
+    if (imageSize.isEmpty()) {
+        mError = BMPToTMX::instance()->errorString();
         return ImageData();
+    }
 
     // Transform the image to the isometric view
     QTransform xform;

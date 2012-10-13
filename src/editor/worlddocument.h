@@ -27,6 +27,7 @@
 #include <QSize>
 
 class BMPToTMXSettings;
+class GenerateLotsSettings;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -113,6 +114,8 @@ public:
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
     BMPToTMXSettings changeBMPToTMXSettings(const BMPToTMXSettings &settings);
+    GenerateLotsSettings changeGenerateLotsSettings(const GenerateLotsSettings &settings);
+
     QPoint moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);
     WorldBMP *removeBMP(int index);
@@ -219,6 +222,10 @@ public:
     void setSelectedRoads(const QList<Road *> &selectedRoads);
     const QList<Road*> &selectedRoads() const { return mSelectedRoads; }
     int selectedRoadCount() const { return mSelectedRoads.size(); }
+
+    void setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs);
+    const QList<WorldBMP*> &selectedBMPs() const { return mSelectedBMPs; }
+    int selectedBMPCount() const { return mSelectedBMPs.size(); }
 
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
@@ -328,6 +335,8 @@ public:
     void setPropertyValue(PropertyHolder *ph, Property *p, const QString &value);
 
     void changeBMPToTMXSettings(const BMPToTMXSettings &settings);
+    void changeGenerateLotsSettings(const GenerateLotsSettings &settings);
+
     void moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);
     void removeBMP(WorldBMP *bmp);
@@ -339,6 +348,7 @@ private:
     void removeTemplate(PropertyHolder *ph, PropertyTemplate *pt);
 
     void removeRoadFromSelection(Road *road);
+    void removeBMPFromSelection(WorldBMP *bmp);
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
@@ -360,6 +370,7 @@ signals:
     void selectedObjectsChanged();
     void selectedLotsChanged();
     void selectedRoadsChanged();
+    void selectedBMPsChanged();
 
     void propertyAdded(PropertyHolder *ph, int index);
     void propertyAboutToBeRemoved(PropertyHolder *ph, int index);
@@ -416,6 +427,7 @@ private:
     QList<WorldCellObject*> mSelectedObjects;
     QList<WorldCellLot*> mSelectedLots;
     QList<Road*> mSelectedRoads;
+    QList<WorldBMP*> mSelectedBMPs;
     QString mFileName;
 
     friend class WorldDocumentUndoRedo;

@@ -22,6 +22,7 @@
 
 #include <QObject>
 
+class BMPToTMXImages;
 class MapComposite;
 class Road;
 class World;
@@ -190,6 +191,7 @@ private:
 
     static LotFilesManager *mInstance;
 
+    WorldDocument *mWorldDoc;
     QList<LotFile::Zone*> ZoneList;
     QMap<const Tiled::Tileset*,uint> mTilesetToFirstGid;
     QMap<int,LotFile::Tile*> TileMap;
@@ -198,7 +200,8 @@ private:
     int Version;
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
-    QImage ZombieSpawnMap;
+    QList<BMPToTMXImages*> mImages;
+    BMPToTMXImages *ZombieSpawnMap;
 
     QString mError;
 };

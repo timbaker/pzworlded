@@ -254,6 +254,34 @@ void WorldDocument::setSelectedRoads(const QList<Road *> &selectedRoads)
     emit selectedRoadsChanged();
 }
 
+void WorldDocument::setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs)
+{
+    QList<WorldBMP*> selection;
+    foreach (WorldBMP *bmp, selectedBMPs) {
+        if (!selection.contains(bmp))
+            selection.append(bmp);
+        else
+            qWarning("duplicate BMPs passed to setSelectedBMPs");
+    }
+    mSelectedBMPs = selection;
+    emit selectedBMPsChanged();
+}
+
+void WorldDocument::removeRoadFromSelection(Road *road)
+{
+    if (mSelectedRoads.contains(road)) {
+        mSelectedRoads.removeAll(road);
+        emit selectedRoadsChanged();
+    }
+}
+
+void WorldDocument::removeBMPFromSelection(WorldBMP *bmp)
+{
+    if (mSelectedBMPs.contains(bmp)) {
+        mSelectedBMPs.removeAll(bmp);
+        emit selectedBMPsChanged();
+    }
+}
 
 void WorldDocument::editCell(WorldCell *cell)
 {
@@ -667,6 +695,11 @@ void WorldDocument::changeBMPToTMXSettings(const BMPToTMXSettings &settings)
     undoStack()->push(new ChangeBMPToTMXSettings(this, settings));
 }
 
+void WorldDocument::changeGenerateLotsSettings(const GenerateLotsSettings &settings)
+{
+    undoStack()->push(new ChangeGenerateLotsSettings(this, settings));
+}
+
 void WorldDocument::moveBMP(WorldBMP *bmp, const QPoint &topLeft)
 {
     undoStack()->push(new MoveBMP(this, bmp, topLeft));
@@ -701,14 +734,6 @@ void WorldDocument::removeTemplate(PropertyHolder *ph, PropertyTemplate *pt)
     int index = ph->templates().indexOf(pt);
     if (index != -1)
         undoStack()->push(new RemoveTemplateFromPH(this, ph, index, pt));
-}
-
-void WorldDocument::removeRoadFromSelection(Road *road)
-{
-    if (mSelectedRoads.contains(road)) {
-        mSelectedRoads.removeAll(road);
-        emit selectedRoadsChanged();
-    }
 }
 
 /////
@@ -1075,6 +1100,13 @@ BMPToTMXSettings WorldDocumentUndoRedo::changeBMPToTMXSettings(const BMPToTMXSet
     return old;
 }
 
+GenerateLotsSettings WorldDocumentUndoRedo::changeGenerateLotsSettings(const GenerateLotsSettings &settings)
+{
+    GenerateLotsSettings old = mWorld->getGenerateLotsSettings();
+    mWorld->setGenerateLotsSettings(settings);
+    return old;
+}
+
 QPoint WorldDocumentUndoRedo::moveBMP(WorldBMP *bmp, const QPoint &topLeft)
 {
     QPoint old = bmp->pos();
@@ -1093,6 +1125,9 @@ void WorldDocumentUndoRedo::insertBMP(int index, WorldBMP *bmp)
 WorldBMP *WorldDocumentUndoRedo::removeBMP(int index)
 {
     WorldBMP *bmp = mWorld->bmps().at(index);
+
+    mWorldDoc->removeBMPFromSelection(bmp);
+
     emit bmpAboutToBeRemoved(index);
     bmp = mWorld->removeBmp(index);
     // emit bmpRemoved(bmp)

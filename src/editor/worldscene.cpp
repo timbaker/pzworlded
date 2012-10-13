@@ -31,6 +31,7 @@
 #include "worlddocument.h"
 #include "zoomable.h"
 
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <QGraphicsSceneMouseEvent>
@@ -39,6 +40,15 @@
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 #include <QUrl>
+
+const int WorldScene::ZVALUE_CELLITEM = 1;
+const int WorldScene::ZVALUE_ROADITEM_UNSELECTED = 2;
+const int WorldScene::ZVALUE_ROADITEM_SELECTED = 3;
+const int WorldScene::ZVALUE_ROADITEM_CREATING = 4;
+const int WorldScene::ZVALUE_GRIDITEM = 5;
+const int WorldScene::ZVALUE_SELECTIONITEM = 6;
+const int WorldScene::ZVALUE_COORDITEM = 7;
+const int WorldScene::ZVALUE_DNDITEM = 100;
 
 WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     : BaseGraphicsScene(WorldSceneType, parent)
@@ -55,13 +65,13 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 {
     setBackgroundBrush(Qt::darkGray);
 
-    mGridItem->setZValue(2);
+    mGridItem->setZValue(ZVALUE_GRIDITEM);
     addItem(mGridItem);
 
-    mSelectionItem->setZValue(3);
+    mSelectionItem->setZValue(ZVALUE_SELECTIONITEM);
     addItem(mSelectionItem);
 
-    mCoordItem->setZValue(4);
+    mCoordItem->setZValue(ZVALUE_COORDITEM);
     addItem(mCoordItem);
 
     connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
@@ -88,6 +98,8 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(mWorldDoc, SIGNAL(roadWidthChanged(int)),
             SLOT(roadWidthChanged(int)));
 
+    connect(mWorldDoc, SIGNAL(selectedBMPsChanged()),
+            SLOT(selectedBMPsChanged()));
     connect(mWorldDoc, SIGNAL(bmpAdded(int)),
             SLOT(bmpAdded(int)));
     connect(mWorldDoc, SIGNAL(bmpCoordsChanged(int)),
@@ -105,7 +117,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
             WorldCell *cell = world()->cellAt(x, y);
             WorldCellItem *item = new WorldCellItem(cell, this);
             addItem(item);
-            item->setZValue(1); // below mGridItem
+            item->setZValue(ZVALUE_CELLITEM); // below mGridItem
             mCellItems[y * world()->width() + x] = item;
         }
     }
@@ -122,6 +134,8 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     mCoordItem->setVisible(prefs->showCoordinates());
     connect(prefs, SIGNAL(showWorldGridChanged(bool)), SLOT(setShowGrid(bool)));
     connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
+    connect(prefs, SIGNAL(showBMPsChanged(bool)),
+            SLOT(setShowBMPs(bool)));
 
     mPasteCellsTool = PasteCellsTool::instance();
 
@@ -156,11 +170,15 @@ void WorldScene::setTool(AbstractTool *tool)
     bool bmpToolActive = mActiveTool == WorldBMPTool::instance();
     if (bmpToolActive != mBMPToolActive) {
         if (bmpToolActive) {
+            worldDocument()->setSelectedCells(QList<WorldCell*>());
             foreach (WorldCellItem *item, mCellItems)
                 item->setOpacity(0.2);
+            setShowBMPs(true);
         } else {
+            worldDocument()->setSelectedBMPs(QList<WorldBMP*>());
             foreach (WorldCellItem *item, mCellItems)
                 item->setOpacity(1.0);
+            setShowBMPs(Preferences::instance()->showBMPs());
         }
         mBMPToolActive = bmpToolActive;
     }
@@ -226,6 +244,18 @@ QList<Road *> WorldScene::roadsInRect(const QRectF &bounds)
     foreach (QGraphicsItem *item, items(polygon)) {
         if (WorldRoadItem *roadItem = dynamic_cast<WorldRoadItem*>(item))
             result += roadItem->road();
+    }
+    return result;
+}
+
+QList<WorldBMP *> WorldScene::bmpsInRect(const QRectF &cellRect)
+{
+    QPolygonF polygon = cellRectToPolygon(cellRect);
+
+    QList<WorldBMP*> result;
+    foreach (QGraphicsItem *item, items(polygon)) {
+        if (WorldBMPItem *bmpItem = dynamic_cast<WorldBMPItem*>(item))
+            result += bmpItem->bmp();
     }
     return result;
 }
@@ -362,6 +392,12 @@ void WorldScene::setShowCoordinates(bool show)
     mCoordItem->setVisible(show);
 }
 
+void WorldScene::setShowBMPs(bool show)
+{
+    foreach (WorldBMPItem *bmpItem, mBMPItems)
+        bmpItem->setVisible(show);
+}
+
 void WorldScene::selectedRoadsChanged()
 {
     const QList<Road*> &selection = worldDocument()->selectedRoads();
@@ -425,6 +461,25 @@ void WorldScene::roadWidthChanged(int index)
     item->update();
 }
 
+void WorldScene::selectedBMPsChanged()
+{
+    const QList<WorldBMP*> &selection = worldDocument()->selectedBMPs();
+
+    QSet<WorldBMPItem*> items;
+    foreach (WorldBMP *bmp, selection)
+        items.insert(itemForBMP(bmp));
+
+    foreach (WorldBMPItem *item, mSelectedBMPItems - items) {
+        item->setSelected(false);
+    }
+
+    foreach (WorldBMPItem *item, items - mSelectedBMPItems) {
+        item->setSelected(true);
+    }
+
+    mSelectedBMPItems = items;
+}
+
 void WorldScene::bmpAdded(int index)
 {
     WorldBMP *bmp = world()->bmps().at(index);
@@ -440,6 +495,7 @@ void WorldScene::bmpAboutToBeRemoved(int index)
     WorldBMPItem *item = itemForBMP(bmp);
     Q_ASSERT(item);
     mBMPItems.removeAll(item);
+    mSelectedBMPItems.remove(item); // paranoia
     removeItem(item);
     delete item;
 }
@@ -549,6 +605,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
             int y = center.y() - height / 2;
             WorldBMP *bmp = new WorldBMP(world(), x, y, width, height, info.canonicalFilePath());
             mDragBMPItem = new WorldBMPItem(this, bmp);
+            mDragBMPItem->setZValue(ZVALUE_DNDITEM);
             addItem(mDragBMPItem);
             event->accept();
             return;
@@ -564,7 +621,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
             continue;
 
         mDragMapImageItem = new DragMapImageItem(mapInfo, this);
-        mDragMapImageItem->setZValue(1000);
+        mDragMapImageItem->setZValue(ZVALUE_DNDITEM);
         mDragMapImageItem->setScenePos(event->scenePos());
         addItem(mDragMapImageItem);
         event->accept();
@@ -1179,9 +1236,11 @@ WorldBMPItem::WorldBMPItem(WorldScene *scene, WorldBMP *bmp)
     : QGraphicsItem()
     , mScene(scene)
     , mBMP(bmp)
+    , mSelected(false)
     , mDragging(false)
 {
     mMapImage = MapImageManager::instance()->getMapImage(bmp->filePath());
+    if (!mMapImage) qDebug() << MapImageManager::instance()->errorString();
 
     synchWithBMP();
 }
@@ -1189,6 +1248,13 @@ WorldBMPItem::WorldBMPItem(WorldScene *scene, WorldBMP *bmp)
 QRectF WorldBMPItem::boundingRect() const
 {
     return mMapImageBounds;
+}
+
+QPainterPath WorldBMPItem::shape() const
+{
+    QPainterPath path;
+    path.addPolygon(this->polygon());
+    return path;
 }
 
 void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
@@ -1199,8 +1265,7 @@ void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
         QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
         painter->drawImage(target, mMapImage->image(), source);
     } else {
-        QPolygonF polygon = mScene->cellRectToPolygon(mBMP->bounds()
-                                                      .translated(mDragging ? mDragOffset : QPoint()));
+        QPolygonF polygon = this->polygon();
 
         painter->save();
 
@@ -1224,6 +1289,31 @@ void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 
         painter->restore();
     }
+
+    if (mSelected) {
+        QPolygonF polygon = this->polygon();
+
+        painter->save();
+
+        QPen pen(Qt::black);
+        pen.setJoinStyle(Qt::RoundJoin);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setWidth(2);
+        painter->setPen(pen);
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->drawPolygon(polygon);
+
+        QColor color = Qt::blue;
+        pen.setColor(color);
+        painter->setPen(pen);
+        QColor brushColor = QColor(0x33,0x99,0xff,255/8);
+        QBrush brush(brushColor);
+        painter->setBrush(brush);
+        polygon.translate(0, -1);
+        painter->drawPolygon(polygon);
+
+        painter->restore();
+    }
 }
 
 void WorldBMPItem::synchWithBMP()
@@ -1236,6 +1326,12 @@ void WorldBMPItem::synchWithBMP()
     }
 }
 
+void WorldBMPItem::setSelected(bool selected)
+{
+    mSelected = selected;
+    update();
+}
+
 void WorldBMPItem::setDragging(bool dragging)
 {
     mDragging = dragging;
@@ -1246,4 +1342,10 @@ void WorldBMPItem::setDragOffset(const QPoint &offset)
 {
     mDragOffset = offset;
     synchWithBMP();
+}
+
+QPolygonF WorldBMPItem::polygon() const
+{
+    return mScene->cellRectToPolygon(mBMP->bounds()
+                                     .translated(mDragging ? mDragOffset : QPoint()));
 }

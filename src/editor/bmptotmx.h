@@ -33,6 +33,7 @@ public:
     QString mPath;
     QImage mBmp;
     QImage mBmpVeg;
+    QImage mBmpZombieSpawnMap;
     QRect mBounds; // cells covered
 };
 

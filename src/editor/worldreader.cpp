@@ -108,6 +108,8 @@ private:
                 readCell();
             else if (xml.name() == "BMPToTMX")
                 readBMPToTMX();
+            else if (xml.name() == "GenerateLots")
+                readGenerateLots();
             else if (xml.name() == "bmp")
                 readBMP();
             else
@@ -437,6 +439,24 @@ private:
         }
 
         mWorld->setBMPToTMXSettings(settings);
+    }
+
+    void readGenerateLots()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "GenerateLots");
+
+        GenerateLotsSettings settings;
+
+        while (xml.readNextStartElement()) {
+            if (xml.name() == "exportdir") {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.exportDir = resolveReference(path, mPath);
+                xml.skipCurrentElement();
+            } else
+                readUnknownElement();
+        }
+
+        mWorld->setGenerateLotsSettings(settings);
     }
 
     void readBMP()

@@ -206,8 +206,8 @@
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
-    <addaction name="menuGenerate_Lots"/>
     <addaction name="menuBMP_To_TMX"/>
+    <addaction name="menuGenerate_Lots"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -238,6 +238,7 @@
     <addaction name="actionShowGrid"/>
     <addaction name="actionShowMiniMap"/>
     <addaction name="actionShowObjectNames"/>
+    <addaction name="actionShowBMP"/>
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
     <addaction name="actionLevelAbove"/>
@@ -261,6 +262,7 @@
     <addaction name="actionTemplates"/>
     <addaction name="separator"/>
     <addaction name="actionRemoveRoad"/>
+    <addaction name="actionRemoveBMP"/>
    </widget>
    <widget class="QMenu" name="menuCell">
     <property name="title">
@@ -624,6 +626,23 @@
   <action name="actionBMPToTMXSelected">
    <property name="text">
     <string>Selected Cells Only</string>
+   </property>
+  </action>
+  <action name="actionRemoveBMP">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove Selected BMP Images</string>
+   </property>
+  </action>
+  <action name="actionShowBMP">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show BMP Images</string>
    </property>
   </action>
  </widget>
