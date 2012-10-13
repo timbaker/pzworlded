@@ -23,6 +23,7 @@
 #include <QObject>
 #include <QStringList>
 
+class WorldBMP;
 class WorldCell;
 class WorldDocument;
 
@@ -54,6 +55,8 @@ public:
 
     BMPToTMXImages *getImages(const QString &path, const QPoint &origin);
     QSize validateImages(const QString &path);
+
+    void assignMapsToCells(WorldDocument *worldDoc, GenerateMode mode);
 
     class Tileset
     {
@@ -126,6 +129,10 @@ private:
 
     QString toCSV(int floor, QVector<QVector<QVector<QString> > > &Entries);
     int getGIDFromTileName(const QString &name);
+
+    void assignMapToCell(WorldCell *cell);
+
+    QString tmxNameForCell(WorldCell *cell, WorldBMP *bmp);
 
 private:
     Q_DISABLE_COPY(BMPToTMX)

@@ -55,13 +55,20 @@ public:
     QString rulesFile;
     QString blendsFile;
     QString mapbaseFile;
+    bool assignMapsToWorld;
+
+    BMPToTMXSettings() :
+        assignMapsToWorld(false)
+    {
+    }
 
     bool operator == (const BMPToTMXSettings &other)
     {
         return exportDir == other.exportDir &&
                 rulesFile == other.rulesFile &&
                 blendsFile == other.blendsFile &&
-                mapbaseFile == other.mapbaseFile;
+                mapbaseFile == other.mapbaseFile &&
+                assignMapsToWorld == other.assignMapsToWorld;
     }
 
     bool operator != (const BMPToTMXSettings &other)

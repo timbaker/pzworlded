@@ -29,6 +29,7 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QMessageBox>
+#include <QUndoStack>
 #include <QStringList>
 #include <QXmlStreamWriter>
 
@@ -73,13 +74,12 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
-    mImages.clear();
+    mImages.clear(); // FIXME: memory leak, images aren't freed
     foreach (WorldBMP *bmp, mWorldDoc->world()->bmps()) {
         BMPToTMXImages *images = getImages(bmp->filePath(), bmp->pos());
-        if (!images) {
-            mImages.clear();
-            return false;
-        }
+        // In case the image files can't be found/loaded, we just don't
+        // generate a map for those WorldCells.
+        // *** 'images' may be NULL
         mImages += images;
     }
 
@@ -102,6 +102,9 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     QMessageBox::information(0, tr("BMP To TMX"), tr("Finished!"));
 
+    if (worldDoc->world()->getBMPToTMXSettings().assignMapsToWorld)
+        assignMapsToCells(worldDoc, mode);
+
     return true;
 }
 
@@ -123,6 +126,8 @@ bool BMPToTMX::generateCell(WorldCell *cell)
         return true;
 
     BMPToTMXImages *images = mImages[bmpIndex];
+    if (images == 0)
+        return true; // silently ignore missing .bmp files
 
     QImage bmp = images->mBmp;
     QImage bmpVeg = images->mBmpVeg;
@@ -212,13 +217,16 @@ bool BMPToTMX::generateCell(WorldCell *cell)
         mapnode = mapnode.nextSibling();
     }
 
-    QString exportDir = mWorldDoc->world()->getBMPToTMXSettings().exportDir;
-    QFile file(exportDir + QLatin1Char('/') + QLatin1String("BMPToMap.tmx"));
+    QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
+    QFile file(filePath);
     if (file.open(QIODevice::WriteOnly)) {
         QTextStream textStream;
         textStream.setDevice(&file);
         doc.save(textStream, 1);
         file.close();
+    } else {
+        mError = tr("Error writing %1.").arg(filePath);
+        return false;
     }
 
     return true;
@@ -295,6 +303,61 @@ QSize BMPToTMX::validateImages(const QString &path)
     }
 
     return image.size();
+}
+
+void BMPToTMX::assignMapsToCells(WorldDocument *worldDoc, BMPToTMX::GenerateMode mode)
+{
+    mWorldDoc = worldDoc;
+
+    if (mode == GenerateSelected) {
+        foreach (WorldCell *cell, worldDoc->selectedCells())
+            assignMapToCell(cell);
+    } else {
+        World *world = worldDoc->world();
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                assignMapToCell(world->cellAt(x, y));
+            }
+        }
+    }
+}
+
+void BMPToTMX::assignMapToCell(WorldCell *cell)
+{
+    WorldBMP *bmp = 0;
+    foreach (WorldBMP *bmp2, cell->world()->bmps()) {
+        if (bmp2->bounds().contains(cell->pos())) {
+            if (bmp != 0) {
+                mError = tr("Multiple BMP images cover cell %1,%2")
+                        .arg(cell->x()).arg(cell->y());
+                return;
+            }
+            bmp = bmp2;
+        }
+    }
+    if (bmp == 0)
+        return;
+
+#if 1
+    if (cell->mapFilePath() != tmxNameForCell(cell, bmp))
+        mWorldDoc->setCellMapName(cell, tmxNameForCell(cell, bmp));
+#else
+    // QFileInfo::operator!= will fail if the files don't exist because it
+    // uses canonicalFilePath() comparison
+    QFileInfo infoCurrent(cell->mapFilePath());
+    QFileInfo infoDesired(tmxNameForCell(cell, bmp));
+    if (infoCurrent != infoDesired) {
+        mWorldDoc->setCellMapName(cell, infoDesired.absoluteFilePath());
+    }
+#endif
+}
+
+QString BMPToTMX::tmxNameForCell(WorldCell *cell, WorldBMP *bmp)
+{
+    QString exportDir = mWorldDoc->world()->getBMPToTMXSettings().exportDir;
+    QString filePath = exportDir + QLatin1Char('/')
+            + tr("%1_%2.tmx").arg(cell->x()).arg(cell->y());
+    return filePath;
 }
 
 QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)

@@ -33,8 +33,10 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
 {
     ui->setupUi(this);
 
+    const BMPToTMXSettings &settings = worldDoc->world()->getBMPToTMXSettings();
+
     // Export directory
-    mExportDir = worldDoc->world()->getBMPToTMXSettings().exportDir;
+    mExportDir = settings.exportDir;
     if (mExportDir.isEmpty() && !worldDoc->fileName().isEmpty()) {
         QFileInfo info(worldDoc->fileName());
         mExportDir = info.absolutePath() + QLatin1Char('/')
@@ -47,7 +49,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     connect(ui->exportBrowse, SIGNAL(clicked()), SLOT(exportBrowse()));
 
     // Rules.txt
-    mRulesFile = worldDoc->world()->getBMPToTMXSettings().rulesFile;
+    mRulesFile = settings.rulesFile;
     if (mRulesFile.isEmpty()) {
         mRulesFile = QCoreApplication::applicationDirPath() + QLatin1Char('/')
                 + QLatin1String("Rules.txt");
@@ -59,7 +61,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     connect(ui->rulesBrowse, SIGNAL(clicked()), SLOT(rulesBrowse()));
 
     // Blends.txt
-    mBlendsFile = worldDoc->world()->getBMPToTMXSettings().blendsFile;
+    mBlendsFile = settings.blendsFile;
     if (mBlendsFile.isEmpty()) {
         mBlendsFile = QCoreApplication::applicationDirPath() + QLatin1Char('/')
                 + QLatin1String("Blends.txt");
@@ -71,7 +73,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     connect(ui->blendsBrowse, SIGNAL(clicked()), SLOT(blendsBrowse()));
 
     // MapBaseXML.txt
-    mMapBaseFile = worldDoc->world()->getBMPToTMXSettings().mapbaseFile;
+    mMapBaseFile = settings.mapbaseFile;
     if (mMapBaseFile.isEmpty()) {
         mMapBaseFile = QCoreApplication::applicationDirPath() + QLatin1Char('/')
                 + QLatin1String("MapBaseXML.txt");
@@ -81,6 +83,8 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     }
     ui->mapbaseEdit->setText(mMapBaseFile);
     connect(ui->mapbaseBrowse, SIGNAL(clicked()), SLOT(mapbaseBrowse()));
+
+    ui->assignMapCheckBox->setChecked(settings.assignMapsToWorld);
 }
 
 BMPToTMXDialog::~BMPToTMXDialog()
@@ -152,6 +156,7 @@ void BMPToTMXDialog::accept()
     settings.rulesFile = mRulesFile;
     settings.blendsFile = mBlendsFile;
     settings.mapbaseFile = mMapBaseFile;
+    settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
     if (settings != mWorldDoc->world()->getBMPToTMXSettings())
         mWorldDoc->changeBMPToTMXSettings(settings);
 
