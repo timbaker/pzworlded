@@ -50,6 +50,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     , mActiveTool(0)
     , mDragMapImageItem(0)
     , mDragBMPItem(0)
+    , mBMPToolActive(false)
 
 {
     setBackgroundBrush(Qt::darkGray);
@@ -124,27 +125,11 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 
     mPasteCellsTool = PasteCellsTool::instance();
 
-#if 1
     foreach (WorldBMP *bmp, world()->bmps()) {
         WorldBMPItem *item = new WorldBMPItem(this, bmp);
         addItem(item);
         mBMPItems += item;
     }
-#else
-    QTransform xform;
-    xform.scale(1, 0.5);
-    xform.shear(-1, 1);
-    mBmpXformed = mBmp.transformed(xform);
-
-    qreal cellsInX = mBmp.width() / 300.0;
-    qreal cellsInY = mBmp.height() / 300.0;
-    QRectF r = boundingRect(QRect(0, 0, cellsInX, cellsInY));
-    mBmpXformed = mBmpXformed.scaled(r.width(), r.height());
-
-    QGraphicsItem *item = new QGraphicsPixmapItem(QPixmap::fromImage(mBmpXformed));
-    item->setPos(cellToPixelCoords(0, 0));
-    addItem(item);
-#endif
 }
 
 void WorldScene::setTool(AbstractTool *tool)
@@ -167,6 +152,18 @@ void WorldScene::setTool(AbstractTool *tool)
     if (mActiveTool != WorldEditRoadTool::instance())
         foreach (WorldRoadItem *item, mRoadItems)
             item->setEditable(false);
+
+    bool bmpToolActive = mActiveTool == WorldBMPTool::instance();
+    if (bmpToolActive != mBMPToolActive) {
+        if (bmpToolActive) {
+            foreach (WorldCellItem *item, mCellItems)
+                item->setOpacity(0.2);
+        } else {
+            foreach (WorldCellItem *item, mCellItems)
+                item->setOpacity(1.0);
+        }
+        mBMPToolActive = bmpToolActive;
+    }
 }
 
 World *WorldScene::world() const
@@ -540,7 +537,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         QFileInfo info(url.toLocalFile());
         if (!info.exists()) continue;
         if (!info.isFile()) continue;
-#if 1
+
         if (info.suffix() == QLatin1String("bmp")) {
             QSize size = BMPToTMX::instance()->validateImages(info.canonicalFilePath());
             if (size.isEmpty())
@@ -556,7 +553,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
             event->accept();
             return;
         }
-#endif
+
         if (info.suffix() != QLatin1String("tmx")) continue;
 
         MapInfo *mapInfo = MapManager::instance()->mapInfo(info.canonicalFilePath());
@@ -582,14 +579,13 @@ void WorldScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
     if (mDragMapImageItem) {
         mDragMapImageItem->setScenePos(event->scenePos());
     }
-#if 1
+
     if (mDragBMPItem) {
         QPoint center = pixelToCellCoordsInt(event->scenePos());
         mDragBMPItem->bmp()->setPos(center.x() - mDragBMPItem->bmp()->width() / 2,
                                     center.y() - mDragBMPItem->bmp()->height() / 2);
         mDragBMPItem->synchWithBMP();
     }
-#endif
 }
 
 void WorldScene::dragLeaveEvent(QGraphicsSceneDragDropEvent *event)
@@ -599,31 +595,29 @@ void WorldScene::dragLeaveEvent(QGraphicsSceneDragDropEvent *event)
         delete mDragMapImageItem;
         mDragMapImageItem = 0;
     }
-#if 1
+
     if (mDragBMPItem) {
         delete mDragBMPItem->bmp();
         delete mDragBMPItem;
         mDragBMPItem = 0;
     }
-#endif
 }
 
 void WorldScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
     if (mDragMapImageItem) {
         if (WorldCell *cell = world()->cellAt(mDragMapImageItem->dropPos()))
-            mWorldDoc->undoStack()->push(new SetCellMainMap(mWorldDoc, cell, mDragMapImageItem->mapFilePath()));
+            mWorldDoc->setCellMapName(cell, mDragMapImageItem->mapFilePath());
         delete mDragMapImageItem;
         mDragMapImageItem = 0;
         event->accept();
     }
-#if 1
+
     if (mDragBMPItem) {
         mWorldDoc->insertBMP(mWorldDoc->world()->bmps().count(), mDragBMPItem->bmp());
         delete mDragBMPItem;
         mDragBMPItem = 0;
     }
-#endif
 }
 
 ///// ///// ///// ///// /////
@@ -1187,22 +1181,7 @@ WorldBMPItem::WorldBMPItem(WorldScene *scene, WorldBMP *bmp)
     , mBMP(bmp)
     , mDragging(false)
 {
-#if 1
     mMapImage = MapImageManager::instance()->getMapImage(bmp->filePath());
-#else
-    for (int x = 0; x < images->mBmp.width(); x++) {
-        for (int y = 0; y < images->mBmp.height(); y++) {
-            if (images->mBmpVeg.pixel(x, y) == qRgb(255, 0, 0))
-                mBmpRecolored.setPixel(x, y, qRgb(47, 76, 64));
-        }
-    }
-
-    // Transform the image to the isometric view
-    QTransform xform;
-    xform.scale(1, 0.5);
-    xform.shear(-1, 1);
-    mBmpXformed = mBmpRecolored.transformed(xform);
-#endif
 
     synchWithBMP();
 }
@@ -1219,6 +1198,31 @@ void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
         QRectF target = mMapImageBounds;
         QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
         painter->drawImage(target, mMapImage->image(), source);
+    } else {
+        QPolygonF polygon = mScene->cellRectToPolygon(mBMP->bounds()
+                                                      .translated(mDragging ? mDragOffset : QPoint()));
+
+        painter->save();
+
+        QPen pen(Qt::black);
+        pen.setJoinStyle(Qt::RoundJoin);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setWidth(2);
+        painter->setPen(pen);
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->drawPolygon(polygon);
+
+        QColor color = Qt::red;
+        pen.setColor(color);
+        painter->setPen(pen);
+        QColor brushColor = color;
+        brushColor.setAlpha(50);
+        QBrush brush(brushColor);
+        painter->setBrush(brush);
+        polygon.translate(0, -1);
+        painter->drawPolygon(polygon);
+
+        painter->restore();
     }
 }
 

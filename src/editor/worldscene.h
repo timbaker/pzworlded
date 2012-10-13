@@ -430,6 +430,7 @@ private:
     QSet<WorldRoadItem*> mSelectedRoadItems;
     QList<WorldBMPItem*> mBMPItems;
     WorldBMPItem *mDragBMPItem;
+    bool mBMPToolActive;
 };
 
 #endif // WORLDSCENE_H
