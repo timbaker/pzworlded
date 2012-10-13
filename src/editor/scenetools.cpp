@@ -18,6 +18,7 @@
 #include "scenetools.h"
 
 #include "basegraphicsview.h"
+#include "bmptotmx.h"
 #include "celldocument.h"
 #include "cellscene.h"
 #include "clipboard.h"
@@ -1708,7 +1709,7 @@ void WorldCellTool::updateMovingItems(const QPointF &pos,
         pt = pos;
 #endif
     // Restrict the drop position so the cells stay in bounds
-    QVector<QPoint> cellPositions;(mDnDItems.size());
+    QVector<QPoint> cellPositions(mDnDItems.size());
     cellPositions.clear();
     foreach (DragCellItem *item, mDnDItems)
         cellPositions.append(item->cellPos());
@@ -2718,6 +2719,165 @@ WorldRoadItem *WorldSelectMoveRoadTool::topmostItemAt(const QPointF &scenePos)
             return roadItem;
     }
     return 0;
+}
+
+/////
+
+WorldBMPTool *WorldBMPTool::mInstance = 0;
+
+WorldBMPTool *WorldBMPTool::instance()
+{
+    if (!mInstance)
+        mInstance = new WorldBMPTool();
+    return mInstance;
+}
+
+void WorldBMPTool::deleteInstance()
+{
+    delete mInstance;
+}
+
+WorldBMPTool::WorldBMPTool()
+    : BaseWorldSceneTool(tr("Select and Move BMP Images"),
+                         QIcon(QLatin1String(":/images/24x24/insert-image.png")),
+                         QKeySequence())
+    , mMode(NoMode)
+    , mMousePressed(false)
+{
+}
+
+WorldBMPTool::~WorldBMPTool()
+{
+}
+
+void WorldBMPTool::keyPressEvent(QKeyEvent *event)
+{
+    if ((event->key() == Qt::Key_Escape) && (mMode == Moving)) {
+        cancelMoving();
+        event->accept();
+    }
+}
+
+void WorldBMPTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    switch (event->button()) {
+    case Qt::LeftButton:
+        if (mMode != NoMode) // Ignore additional presses during select/move
+            break;
+        mMousePressed = true;
+        mStartScenePos = event->scenePos();
+        mClickedItem = topmostItemAt(mStartScenePos);
+        break;
+    case Qt::RightButton:
+        if (mMode == Moving)
+            cancelMoving();
+        break;
+    default:
+        break;
+    }
+}
+
+void WorldBMPTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (mMode == NoMode && mMousePressed) {
+        const int dragDistance = (mStartScenePos - event->scenePos()).manhattanLength();
+        if (dragDistance >= QApplication::startDragDistance()) {
+            if (mClickedItem)
+                startMoving();
+        }
+    }
+
+    switch (mMode) {
+    case Moving:
+        updateMovingItems(event->scenePos(), event->modifiers());
+        break;
+    case NoMode:
+        break;
+    case CancelMoving:
+        break;
+    }
+}
+
+void WorldBMPTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() != Qt::LeftButton)
+        return;
+
+    switch (mMode) {
+    case NoMode:
+    {
+        break;
+    }
+    case Moving:
+        finishMoving(event->scenePos());
+        break;
+    case CancelMoving:
+        mMode = NoMode;
+        break;
+    }
+
+    mMousePressed = false;
+    mClickedItem = 0;
+}
+
+void WorldBMPTool::bmpAboutToBeRemoved(int index)
+{
+    if (mClickedItem == 0)
+        return;
+    WorldBMP *bmp = mScene->world()->bmps().at(index);
+    if (bmp == mClickedItem->bmp())
+        cancelMoving();
+}
+
+void WorldBMPTool::startMoving()
+{
+    mMode = Moving;
+}
+
+void WorldBMPTool::updateMovingItems(const QPointF &pos,
+                                      Qt::KeyboardModifiers modifiers)
+{
+    Q_UNUSED(modifiers)
+
+    // Restrict the drop position so the images stay in bounds
+    QVector<QPoint> cellPositions;
+    cellPositions.append(mClickedItem->bmp()->pos());
+    cellPositions.append(mClickedItem->bmp()->bounds().bottomRight());
+    QPointF pt = restrictDragging(cellPositions, mStartScenePos, pos);
+
+    QPoint startCellPos = mScene->pixelToCellCoordsInt(mStartScenePos);
+    QPoint dropCellPos = mScene->pixelToCellCoordsInt(pt);
+
+    mClickedItem->setDragging(true);
+    mClickedItem->setDragOffset(dropCellPos - startCellPos);
+}
+
+void WorldBMPTool::finishMoving(const QPointF &pos)
+{
+    Q_UNUSED(pos)
+    Q_ASSERT(mMode == Moving);
+    mMode = NoMode;
+
+    mClickedItem->setDragging(false);
+
+    if (!mClickedItem->dragOffset().isNull())
+        mScene->worldDocument()->moveBMP(mClickedItem->bmp(),
+                                         mClickedItem->bmp()->pos() + mClickedItem->dragOffset());
+}
+
+void WorldBMPTool::cancelMoving()
+{
+    if (mMode == Moving) {
+        mMode = CancelMoving;
+        mClickedItem->setDragging(false);
+        mClickedItem = 0;
+    }
+}
+
+WorldBMPItem *WorldBMPTool::topmostItemAt(const QPointF &scenePos)
+{
+    WorldBMP *bmp = mScene->pointToBMP(scenePos);
+    return bmp ? mScene->itemForBMP(bmp) : 0;
 }
 
 /////

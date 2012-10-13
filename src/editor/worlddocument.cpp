@@ -17,6 +17,7 @@
 
 #include "worlddocument.h"
 
+#include "bmptotmx.h"
 #include "celldocument.h"
 #include "documentmanager.h"
 #include "luawriter.h"
@@ -145,6 +146,13 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 
     connect(&mUndoRedo, SIGNAL(selectedCellsChanged()),
             SIGNAL(selectedCellsChanged()));
+
+    connect(&mUndoRedo, SIGNAL(bmpAdded(int)),
+            SIGNAL(bmpAdded(int)));
+    connect(&mUndoRedo, SIGNAL(bmpAboutToBeRemoved(int)),
+            SIGNAL(bmpAboutToBeRemoved(int)));
+    connect(&mUndoRedo, SIGNAL(bmpCoordsChanged(int)),
+            SIGNAL(bmpCoordsChanged(int)));
 }
 
 WorldDocument::~WorldDocument()
@@ -659,6 +667,23 @@ void WorldDocument::changeBMPToTMXSettings(const BMPToTMXSettings &settings)
     undoStack()->push(new ChangeBMPToTMXSettings(this, settings));
 }
 
+void WorldDocument::moveBMP(WorldBMP *bmp, const QPoint &topLeft)
+{
+    undoStack()->push(new MoveBMP(this, bmp, topLeft));
+}
+
+void WorldDocument::insertBMP(int index, WorldBMP *bmp)
+{
+    undoStack()->push(new AddBMP(this, index, bmp));
+}
+
+void WorldDocument::removeBMP(WorldBMP *bmp)
+{
+    int index = mWorld->bmps().indexOf(bmp);
+    Q_ASSERT(index >= 0);
+    undoStack()->push(new RemoveBMP(this, index));
+}
+
 void WorldDocument::removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd)
 {
     int index = 0;
@@ -1048,4 +1073,28 @@ BMPToTMXSettings WorldDocumentUndoRedo::changeBMPToTMXSettings(const BMPToTMXSet
     BMPToTMXSettings old = mWorld->getBMPToTMXSettings();
     mWorld->setBMPToTMXSettings(settings);
     return old;
+}
+
+QPoint WorldDocumentUndoRedo::moveBMP(WorldBMP *bmp, const QPoint &topLeft)
+{
+    QPoint old = bmp->pos();
+    bmp->setPos(topLeft);
+    emit bmpCoordsChanged(mWorld->bmps().indexOf(bmp));
+    return old;
+}
+
+void WorldDocumentUndoRedo::insertBMP(int index, WorldBMP *bmp)
+{
+    Q_ASSERT(!mWorld->bmps().contains(bmp));
+    mWorld->insertBmp(index, bmp);
+    emit bmpAdded(index);
+}
+
+WorldBMP *WorldDocumentUndoRedo::removeBMP(int index)
+{
+    WorldBMP *bmp = mWorld->bmps().at(index);
+    emit bmpAboutToBeRemoved(index);
+    bmp = mWorld->removeBmp(index);
+    // emit bmpRemoved(bmp)
+    return bmp;
 }

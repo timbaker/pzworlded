@@ -170,7 +170,9 @@ MapsView::MapsView(QWidget *parent)
     model->setRootPath(mapsDir.absolutePath());
 
     model->setFilter(QDir::AllDirs | QDir::NoDot | QDir::Files);
-    model->setNameFilters(QStringList(QLatin1String("*.tmx")));
+    model->setNameFilters(QStringList()
+                          << QLatin1String("*.tmx")
+                          << QLatin1String("*.bmp"));
     model->setNameFilterDisables(false); // hide filtered files
 
     setModel(model);

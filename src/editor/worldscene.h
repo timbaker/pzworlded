@@ -27,12 +27,12 @@
 #include <QPolygonF>
 
 class BaseWorldSceneTool;
-class BMPToTMXImages;
 class MapImage;
 class MapInfo;
 class PasteCellsTool;
 class Road;
 class World;
+class WorldBMP;
 class WorldCellTool;
 class WorldDocument;
 class WorldScene;
@@ -298,7 +298,7 @@ private:
 class WorldBMPItem : public QGraphicsItem
 {
 public:
-    WorldBMPItem(WorldScene *scene, BMPToTMXImages *images);
+    WorldBMPItem(WorldScene *scene, WorldBMP *bmp);
 
     QRectF boundingRect() const;
 
@@ -306,12 +306,24 @@ public:
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = 0);
 
+    WorldBMP *bmp() const
+    { return mBMP; }
+
+    void synchWithBMP();
+
+    void setDragging(bool dragging);
+    void setDragOffset(const QPoint &offset);
+
+    QPoint dragOffset() const
+    { return mDragOffset; }
+
 private:
     WorldScene *mScene;
-    BMPToTMXImages *mImages;
-    QImage mBmpRecolored;
-    QImage mBmpXformed;
+    WorldBMP *mBMP;
+    MapImage *mMapImage;
     QRectF mMapImageBounds;
+    bool mDragging;
+    QPoint mDragOffset;
 };
 
 class WorldScene : public BaseGraphicsScene
@@ -385,6 +397,13 @@ public slots:
     void roadCoordsChanged(int index);
     void roadWidthChanged(int index);
 
+    void bmpAdded(int index);
+    void bmpAboutToBeRemoved(int index);
+    void bmpCoordsChanged(int index);
+
+    WorldBMP *pointToBMP(const QPointF &scenePos);
+    WorldBMPItem *itemForBMP(WorldBMP *bmp);
+
 protected:
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
@@ -409,7 +428,8 @@ private:
     DragMapImageItem *mDragMapImageItem;
     QList<WorldRoadItem*> mRoadItems;
     QSet<WorldRoadItem*> mSelectedRoadItems;
-    QImage mBmp, mBmpXformed;
+    QList<WorldBMPItem*> mBMPItems;
+    WorldBMPItem *mDragBMPItem;
 };
 
 #endif // WORLDSCENE_H

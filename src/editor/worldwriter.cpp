@@ -73,6 +73,9 @@ public:
 
         writeBMPToMap(w);
 
+        foreach (WorldBMP *bmp, world->bmps())
+            writeBMP(w, bmp);
+
         foreach (PropertyDef *pd, world->propertyDefinitions()) {
             w.writeStartElement(QLatin1String("propertydef"));
             w.writeAttribute(QLatin1String("name"), pd->mName);
@@ -281,6 +284,20 @@ public:
         w.writeEndElement();
         w.writeEndElement(); // </BMPToTMX>
     }
+
+    void writeBMP(QXmlStreamWriter &w, WorldBMP *bmp)
+    {
+        w.writeStartElement(QLatin1String("bmp"));
+
+        w.writeAttribute(QLatin1String("path"), relativeFileName(bmp->filePath()));
+        w.writeAttribute(QLatin1String("x"), QString::number(bmp->x()));
+        w.writeAttribute(QLatin1String("y"), QString::number(bmp->y()));
+        w.writeAttribute(QLatin1String("width"), QString::number(bmp->width()));
+        w.writeAttribute(QLatin1String("height"), QString::number(bmp->height()));
+
+        w.writeEndElement();
+    }
+
 
     QString relativeFileName(const QString &path)
     {

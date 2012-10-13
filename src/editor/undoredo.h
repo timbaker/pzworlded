@@ -33,6 +33,7 @@ class PropertyHolder;
 class PropertyTemplate;
 class Road;
 class TrafficLines;
+class WorldBMP;
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
@@ -339,7 +340,7 @@ private:
 
 /////
 
-// Base class for AddCellObject/RemoveCellObject
+// Base class for AddRoad/RemoveRoad
 class AddRemoveRoad : public QUndoCommand
 {
 public:
@@ -358,8 +359,8 @@ protected:
 class AddRoad : public AddRemoveRoad
 {
 public:
-    AddRoad(WorldDocument *doc, int index, Road *obj)
-        : AddRemoveRoad(doc, index, obj)
+    AddRoad(WorldDocument *doc, int index, Road *road)
+        : AddRemoveRoad(doc, index, road)
     {
         setText(QCoreApplication::translate("Undo Commands", "Add Road"));
     }
@@ -952,5 +953,66 @@ private:
     BMPToTMXSettings *mSettings;
 };
 
+/////
+
+class MoveBMP : public QUndoCommand
+{
+public:
+    MoveBMP(WorldDocument *doc, WorldBMP *bmp,
+            const QPoint &topLeft);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldBMP *mBMP;
+    QPoint mTopLeft;
+};
+
+/////
+
+class AddRemoveBMP : public QUndoCommand
+{
+public:
+    AddRemoveBMP(WorldDocument *doc, int index, WorldBMP *bmp);
+    ~AddRemoveBMP();
+
+protected:
+    void add();
+    void remove();
+
+    WorldDocument *mDocument;
+    WorldBMP *mBMP;
+    int mIndex;
+};
+
+class AddBMP : public AddRemoveBMP
+{
+public:
+    AddBMP(WorldDocument *doc, int index, WorldBMP *bmp)
+        : AddRemoveBMP(doc, index, bmp)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Add BMP Image"));
+    }
+
+    void undo() { remove(); }
+    void redo() { add(); }
+};
+
+class RemoveBMP : public AddRemoveBMP
+{
+public:
+    RemoveBMP(WorldDocument *doc, int index)
+        : AddRemoveBMP(doc, index, 0)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Remove BMP Image"));
+    }
+
+    void undo() { add(); }
+    void redo() { remove(); }
+};
 
 #endif // UNDOREDO_H

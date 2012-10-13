@@ -84,6 +84,8 @@ protected:
     ImageData generateMapImage(const QString &mapFilePath);
     ImageData generateMapImage(MapComposite *mapComposite);
 
+    ImageData generateBMPImage(const QString &bmpFilePath);
+
     ImageData readImageData(const QFileInfo &imageDataFileInfo);
     void writeImageData(const QFileInfo &imageDataFileInfo, const ImageData &data);
 

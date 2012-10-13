@@ -27,6 +27,7 @@
 #include <QtXml/QDomDocument>
 #include <QDir>
 #include <QFileInfo>
+#include <QImageReader>
 #include <QMessageBox>
 #include <QStringList>
 #include <QXmlStreamWriter>
@@ -70,7 +71,19 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     if (!setupBlends())
         return false;
 
-    PROGRESS progress(QLatin1String("Generating TMX files"));
+    PROGRESS progress(QLatin1String("Reading BMP images"));
+
+    mImages.clear();
+    foreach (WorldBMP *bmp, mWorldDoc->world()->bmps()) {
+        BMPToTMXImages *images = getImages(bmp->filePath(), bmp->pos());
+        if (!images) {
+            mImages.clear();
+            return false;
+        }
+        mImages += images;
+    }
+
+    progress.update(QLatin1String("Generating TMX files"));
 
     World *world = worldDoc->world();
 
@@ -94,19 +107,22 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
 bool BMPToTMX::generateCell(WorldCell *cell)
 {
-    BMPToTMXImages *images = 0;
-    foreach (BMPToTMXImages *images2, cell->world()->bmpImages()) {
-        if (images2->mBounds.contains(cell->pos())) {
-            if (images) {
+    int n = 0, bmpIndex = -1;
+    foreach (WorldBMP *bmp, cell->world()->bmps()) {
+        if (bmp->bounds().contains(cell->pos())) {
+            if (bmpIndex != -1) {
                 mError = tr("Multiple BMP images cover cell %1,%2")
                         .arg(cell->x()).arg(cell->y());
                 return false;
             }
-            images = images2;
+            bmpIndex = n;
         }
+        n++;
     }
-    if (!images)
+    if (bmpIndex == -1)
         return true;
+
+    BMPToTMXImages *images = mImages[bmpIndex];
 
     QImage bmp = images->mBmp;
     QImage bmpVeg = images->mBmpVeg;
@@ -245,8 +261,40 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
     images->mPath = info.canonicalFilePath();
     images->mBounds = QRect(origin, QSize(image.width() / 300,
                                           image.height() / 300));
-    mImages += images;
     return images;
+}
+
+QSize BMPToTMX::validateImages(const QString &path)
+{
+    QFileInfo info(path);
+    if (!info.exists()) {
+        mError = tr("The image file can't be found.");
+        return QSize();
+    }
+
+    QFileInfo infoVeg(info.absolutePath() + QLatin1Char('/')
+                      + info.completeBaseName() + QLatin1String("_veg.bmp"));
+    if (!infoVeg.exists()) {
+        mError = tr("The image_veg file can't be found.");
+        return QSize();
+    }
+
+    QImageReader image(info.canonicalFilePath());
+    if (image.size().isEmpty()) {
+        return QSize();
+    }
+
+    QImageReader imageVeg(infoVeg.canonicalFilePath());
+    if (imageVeg.size().isEmpty()) {
+        return QSize();
+    }
+
+    if (image.size() != imageVeg.size()) {
+        mError = tr("The image size is different than the image_veg size.");
+        return QSize();
+    }
+
+    return image.size();
 }
 
 QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)

@@ -41,13 +41,6 @@ World::World(int width, int height)
 
     // The nameless default type for WorldCellObjects
     mObjectTypes.append(mNullObjectType);
-
-#if 1
-    QString bmpPath = QLatin1String("C:\\Programming\\ProjectZomboid\\Maps\\muldraugh.bmp");
-    BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmpPath, QPoint(10, 10));
-    if (images)
-        mBMPImages += images;
-#endif
 }
 
 World::~World()
@@ -56,6 +49,7 @@ World::~World()
     qDeleteAll(mPropertyTemplates);
     qDeleteAll(mPropertyDefs);
     qDeleteAll(mObjectTypes);
+    qDeleteAll(mBMPs);
 }
 
 PropertyDef *World::removePropertyDefinition(int index)
@@ -93,14 +87,14 @@ Road *World::removeRoad(int index)
     return mRoads.takeAt(index);
 }
 
-void World::insertBmp(int index, BMPToTMXImages *images)
+void World::insertBmp(int index, WorldBMP *bmp)
 {
-    mBMPImages.insert(index, images);
+    mBMPs.insert(index, bmp);
 }
 
-BMPToTMXImages *World::removeBmpImages(int index)
+WorldBMP *World::removeBmp(int index)
 {
-    return mBMPImages.takeAt(index);
+    return mBMPs.takeAt(index);
 }
 
 /////
@@ -159,4 +153,16 @@ QStringList ObjectTypeList::names() const
         ++it;
     }
     return result;
+}
+
+/////
+
+WorldBMP::WorldBMP(World *world, int x, int y, int width, int height, const QString &filePath) :
+    mWorld(world),
+    mX(x),
+    mY(y),
+    mWidth(width),
+    mHeight(height),
+    mFilePath(filePath)
+{
 }

@@ -17,6 +17,7 @@
 
 #include "undoredo.h"
 
+#include "bmptotmx.h"
 #include "road.h"
 #include "world.h"
 #include "worldcell.h"
@@ -717,4 +718,44 @@ ChangeBMPToTMXSettings::~ChangeBMPToTMXSettings()
 void ChangeBMPToTMXSettings::swap()
 {
     *mSettings = mDocument->undoRedo().changeBMPToTMXSettings(*mSettings);
+}
+
+/////
+
+MoveBMP::MoveBMP(WorldDocument *doc, WorldBMP *bmp, const QPoint &topLeft) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Move BMP Image")),
+    mDocument(doc),
+    mBMP(bmp),
+    mTopLeft(topLeft)
+{
+}
+
+void MoveBMP::swap()
+{
+    mTopLeft = mDocument->undoRedo().moveBMP(mBMP, mTopLeft);
+}
+
+/////
+
+AddRemoveBMP::AddRemoveBMP(WorldDocument *doc, int index, WorldBMP *bmp) :
+    mDocument(doc),
+    mBMP(bmp),
+    mIndex(index)
+{
+}
+
+AddRemoveBMP::~AddRemoveBMP()
+{
+    delete mBMP;
+}
+
+void AddRemoveBMP::add()
+{
+    mDocument->undoRedo().insertBMP(mIndex, mBMP);
+    mBMP = 0;
+}
+
+void AddRemoveBMP::remove()
+{
+    mBMP = mDocument->undoRedo().removeBMP(mIndex);
 }

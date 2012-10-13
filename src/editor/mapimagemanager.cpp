@@ -60,6 +60,25 @@ void MapImageManager::deleteInstance()
 
 MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &relativeTo)
 {
+#if 1
+    if (mapName.endsWith(QLatin1String(".bmp"))) {
+        QString keyName = QFileInfo(mapName).canonicalFilePath();
+        if (mMapImages.contains(keyName))
+            return mMapImages[keyName];
+        ImageData data = generateBMPImage(mapName);
+        if (!data.valid)
+            return 0;
+        // Abusing the MapInfo struct
+        MapInfo *mapInfo = new MapInfo(Map::Isometric,
+                                       data.levelZeroBounds.width(),
+                                       data.levelZeroBounds.height(), 1, 1);
+        MapImage *mapImage = new MapImage(data.image, data.scale,
+                                          data.levelZeroBounds, mapInfo);
+        mMapImages[keyName] = mapImage;
+        return mapImage;
+    }
+#endif
+
     QString mapFilePath = MapManager::instance()->pathForMap(mapName, relativeTo);
     if (mapFilePath.isEmpty())
         return 0;
@@ -204,6 +223,67 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
     data.valid = true;
 
     delete renderer;
+
+    return data;
+}
+
+// BMP To TMX image thumbnail
+#include "bmptotmx.h"
+MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpFilePath)
+{
+    QSize imageSize = BMPToTMX::instance()->validateImages(bmpFilePath);
+    if (imageSize.isEmpty())
+        return ImageData();
+
+    // Transform the image to the isometric view
+    QTransform xform;
+    xform.scale(1.0 / 2, 0.5 / 2);
+    xform.shear(-1, 1);
+    QRect skewedImageBounds = xform.mapRect(QRect(QPoint(0, 0), imageSize));
+
+    QFileInfo fileInfo(bmpFilePath);
+    QFileInfo imageInfo = imageFileInfo(bmpFilePath);
+    QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
+    if (imageInfo.exists() && imageDataInfo.exists() &&
+            (fileInfo.lastModified() < imageInfo.lastModified())) {
+        QImage image(imageInfo.absoluteFilePath());
+        if (image.isNull())
+            QMessageBox::warning(0, tr("Error Loading Image"),
+                                 tr("An error occurred trying to read a BMP thumbnail image.\n")
+                                 + imageInfo.absoluteFilePath());
+        if (image.size() == skewedImageBounds.size()) {
+            ImageData data = readImageData(imageDataInfo);
+            if (data.valid) {
+                data.image = image;
+                return data;
+            }
+        }
+    }
+
+    PROGRESS progress(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
+
+    BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmpFilePath, QPoint());
+    if (!images)
+        return ImageData();
+
+    QImage bmpRecolored(images->mBmp);
+    for (int x = 0; x < images->mBmp.width(); x++) {
+        for (int y = 0; y < images->mBmp.height(); y++) {
+            if (images->mBmpVeg.pixel(x, y) == qRgb(255, 0, 0))
+                bmpRecolored.setPixel(x, y, qRgb(47, 76, 64));
+        }
+    }
+
+    delete images; // ***** ***** *****
+
+    ImageData data;
+    data.image = bmpRecolored.transformed(xform);;
+    data.scale = 1.0f;
+    data.levelZeroBounds = QRectF(0, 0, imageSize.width() / 300, imageSize.height() / 300);
+    data.valid = true;
+
+    data.image.save(imageInfo.absoluteFilePath());
+    writeImageData(imageDataInfo, data);
 
     return data;
 }

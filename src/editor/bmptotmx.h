@@ -53,6 +53,7 @@ public:
     QString errorString() const { return mError; }
 
     BMPToTMXImages *getImages(const QString &path, const QPoint &origin);
+    QSize validateImages(const QString &path);
 
     class Tileset
     {

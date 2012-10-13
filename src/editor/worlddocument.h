@@ -35,6 +35,7 @@ class PropertyTemplate;
 class Road;
 class TrafficLines;
 class World;
+class WorldBMP;
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
@@ -112,6 +113,9 @@ public:
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
     BMPToTMXSettings changeBMPToTMXSettings(const BMPToTMXSettings &settings);
+    QPoint moveBMP(WorldBMP *bmp, const QPoint &topLeft);
+    void insertBMP(int index, WorldBMP *bmp);
+    WorldBMP *removeBMP(int index);
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
@@ -173,6 +177,10 @@ signals:
     void roadLinesChanged(int index);
 
     void selectedCellsChanged();
+
+    void bmpCoordsChanged(int index);
+    void bmpAdded(int index);
+    void bmpAboutToBeRemoved(int index);
 
 private:
     WorldDocument *mWorldDoc;
@@ -320,6 +328,9 @@ public:
     void setPropertyValue(PropertyHolder *ph, Property *p, const QString &value);
 
     void changeBMPToTMXSettings(const BMPToTMXSettings &settings);
+    void moveBMP(WorldBMP *bmp, const QPoint &topLeft);
+    void insertBMP(int index, WorldBMP *bmp);
+    void removeBMP(WorldBMP *bmp);
 
     WorldDocumentUndoRedo &undoRedo() { return mUndoRedo; }
 
@@ -394,6 +405,10 @@ signals:
     void cellContentsChanged(WorldCell *cell);
 
     void cellClipboardChanged();
+
+    void bmpAdded(int index);
+    void bmpAboutToBeRemoved(int index);
+    void bmpCoordsChanged(int index);
 
 private:
     World *mWorld;

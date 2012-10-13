@@ -68,6 +68,57 @@ public:
     { return !operator==(other); }
 };
 
+/**
+  * This class represents a single .bmp file used by BMP -> TMX conversion.
+  */
+class WorldBMP
+{
+public:
+    WorldBMP(World *world, int x, int y, int width, int height,
+             const QString &filePath);
+
+    World *world() const
+    { return mWorld; }
+
+    void setPos(int x, int y)
+    { mX = x, mY = y; }
+
+    void setPos(const QPoint &pos)
+    { setPos(pos.x(), pos.y()); }
+
+    QPoint pos() const
+    { return QPoint(mX, mY); }
+
+    int x() const { return mX; }
+    int y() const { return mY; }
+
+    void setFilePath(const QString &filePath)
+    { mFilePath = filePath; }
+
+    const QString &filePath() const
+    { return mFilePath; }
+
+    // The correct width and height is set when a BMP is first added to
+    // a World.  If the .bmp file cannot be located later on we can still
+    // display a placeholder of the correct size.
+    void setSize(const QSize &size)
+    { setSize(size.width(), size.height()); }
+    void setSize(int width, int height)
+    { mWidth = width, mHeight = height; }
+    QSize size() const { return QSize(mWidth, mHeight); }
+    int width() const { return mWidth; }
+    int height() const { return mHeight; }
+
+    QRect bounds() const
+    { return QRect(mX, mY, mWidth, mHeight); }
+
+private:
+    World *mWorld;
+    int mX, mY;
+    int mWidth, mHeight;
+    QString mFilePath;
+};
+
 class World
 {
 public:
@@ -111,8 +162,8 @@ public:
     Road *removeRoad(int index);
     RoadList roadsInRect(const QRect &bounds);
 
-    void insertBmp(int index, BMPToTMXImages *images);
-    BMPToTMXImages *removeBmpImages(int index);
+    void insertBmp(int index, WorldBMP *bmp);
+    WorldBMP *removeBmp(int index);
 
     const ObjectGroupList &objectGroups() const
     { return mObjectGroups; }
@@ -124,8 +175,8 @@ public:
     { return mPropertyTemplates; }
     const RoadList &roads() const
     { return mRoads; }
-    const QList<BMPToTMXImages*> bmpImages() const
-    { return mBMPImages; }
+    const QList<WorldBMP*> bmps() const
+    { return mBMPs; }
 
     void setBMPToTMXSettings(const BMPToTMXSettings &settings)
     { mBMPToTMXSettings = settings; }
@@ -147,7 +198,7 @@ private:
     PropertyDefList mPropertyDefs;
     PropertyTemplateList mPropertyTemplates;
     RoadList mRoads;
-    QList<BMPToTMXImages*> mBMPImages;
+    QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
 };
 

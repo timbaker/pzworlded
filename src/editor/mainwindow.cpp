@@ -239,6 +239,7 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(WorldSelectMoveRoadTool::instance());
     toolManager->registerTool(WorldCreateRoadTool::instance());
     toolManager->registerTool(WorldEditRoadTool::instance());
+    toolManager->registerTool(WorldBMPTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SubMapTool::instance());
     toolManager->registerTool(ObjectTool::instance());

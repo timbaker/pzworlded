@@ -39,6 +39,7 @@ class ObjectItem;
 class Road;
 class SubMapItem;
 class TrafficLines;
+class WorldBMPItem;
 class WorldCellObject;
 class WorldRoadItem;
 
@@ -817,6 +818,60 @@ private:
     QList<Road*> mMovingRoads;
     QGraphicsPolygonItem *mSelectionRectItem;
     static WorldSelectMoveRoadTool *mInstance;
+};
+
+/////
+
+/**
+  * This WorldScene tool selects and moves BMPToTMXImages.
+  */
+class WorldBMPTool : public BaseWorldSceneTool
+{
+    Q_OBJECT
+
+public:
+    static WorldBMPTool *instance();
+    static void deleteInstance();
+
+    explicit WorldBMPTool();
+    ~WorldBMPTool();
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Select and Move BMP Images"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private slots:
+    void bmpAboutToBeRemoved(int index);
+
+private:
+    Q_DISABLE_COPY(WorldBMPTool)
+
+    void startMoving();
+    void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
+    void finishMoving(const QPointF &pos);
+    void cancelMoving();
+
+    enum Mode {
+        NoMode,
+        Moving,
+        CancelMoving
+    };
+
+    WorldBMPItem *topmostItemAt(const QPointF &scenePos);
+
+    Mode mMode;
+    bool mMousePressed;
+    QPointF mStartScenePos;
+    QPoint mDropRoadPos;
+    WorldBMPItem *mClickedItem;
+    static WorldBMPTool *mInstance;
 };
 
 #endif // SCENETOOLS_H

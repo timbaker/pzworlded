@@ -108,6 +108,8 @@ private:
                 readCell();
             else if (xml.name() == "BMPToTMX")
                 readBMPToTMX();
+            else if (xml.name() == "bmp")
+                readBMP();
             else
                 readUnknownElement();
         }
@@ -435,6 +437,26 @@ private:
         }
 
         mWorld->setBMPToTMXSettings(settings);
+    }
+
+    void readBMP()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "bmp");
+
+        const QXmlStreamAttributes atts = xml.attributes();
+        QString path = atts.value(QLatin1String("path")).toString();
+        path = resolveReference(path, mPath);
+
+        const int x = atts.value(QLatin1String("x")).toString().toInt();
+        const int y = atts.value(QLatin1String("y")).toString().toInt();
+        const int width = atts.value(QLatin1String("width")).toString().toInt();
+        const int height = atts.value(QLatin1String("height")).toString().toInt();
+
+        // No check wanted/needed on BMP coordinates
+        WorldBMP *bmp = new WorldBMP(mWorld, x, y, width, height, path);
+        mWorld->insertBmp(mWorld->bmps().count(), bmp);
+
+        xml.skipCurrentElement();
     }
 
     void readUnknownElement()
