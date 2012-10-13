@@ -246,9 +246,9 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
     }
 
     QFileInfo infoZS(info.absolutePath() + QLatin1Char('/')
-                      + info.completeBaseName() + QLatin1String("_zs.bmp"));
+                      + info.completeBaseName() + QLatin1String("_zsm.bmp"));
     if (!infoZS.exists()) {
-        mError = tr("The image_zs file can't be found.\n%1").arg(path);
+        mError = tr("The image_zsm file can't be found.\n%1").arg(path);
         return 0;
     }
 
@@ -264,7 +264,7 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
     }
 
     QImage imageZS = loadImage(infoZS.canonicalFilePath(),
-                               QLatin1String("_zs"));
+                               QLatin1String("_zsm"));
     if (imageVeg.isNull()) {
         return 0;
     }
@@ -301,9 +301,9 @@ QSize BMPToTMX::validateImages(const QString &path)
     }
 
     QFileInfo infoZS(info.absolutePath() + QLatin1Char('/')
-                      + info.completeBaseName() + QLatin1String("_zs.bmp"));
+                      + info.completeBaseName() + QLatin1String("_zsm.bmp"));
     if (!infoZS.exists()) {
-        mError = tr("The image_zs file can't be found.\n%1").arg(path);
+        mError = tr("The image_zsm file can't be found.\n%1").arg(path);
         return QSize();
     }
 
