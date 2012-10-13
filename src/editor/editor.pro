@@ -90,7 +90,8 @@ SOURCES += main.cpp\
     simplefile.cpp \
     bmptotmx.cpp \
     bmptotmxdialog.cpp \
-    generatelotsdialog.cpp
+    generatelotsdialog.cpp \
+    filesystemwatcher.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -140,7 +141,8 @@ HEADERS  += mainwindow.h \
     simplefile.h \
     bmptotmx.h \
     bmptotmxdialog.h \
-    generatelotsdialog.h
+    generatelotsdialog.h \
+    filesystemwatcher.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

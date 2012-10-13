@@ -20,6 +20,7 @@
 #include "basegraphicsview.h"
 #include "cellscene.h"
 #include "mapcomposite.h"
+#include "mapmanager.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
@@ -53,6 +54,11 @@ CellDocument::CellDocument(WorldDocument *worldDoc, WorldCell *cell)
 
     connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
             SLOT(objectGroupAboutToBeRemoved(int)));
+
+    connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
+            SLOT(mapAboutToChange(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
+            SLOT(mapFileChanged(MapInfo*)));
 }
 
 void CellDocument::setFileName(const QString &fileName)
@@ -309,4 +315,18 @@ void CellDocument::objectGroupAboutToBeRemoved(int index)
     WorldObjectGroup *og = world()->objectGroups().at(index);
     if (og == mCurrentObjectGroup)
         setCurrentObjectGroup(world()->nullObjectGroup());
+}
+
+// Called by MapManager when an already-loaded TMX changes on disk
+void CellDocument::mapAboutToChange(MapInfo *mapInfo)
+{
+    if (scene()->mapAboutToChange(mapInfo))
+        emit cellMapFileAboutToChange();
+}
+
+// Called by MapManager when an already-loaded TMX changes on disk
+void CellDocument::mapFileChanged(MapInfo *mapInfo)
+{
+    if (scene()->mapFileChanged(mapInfo))
+        emit cellMapFileChanged();
 }

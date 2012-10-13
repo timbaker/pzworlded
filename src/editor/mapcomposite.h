@@ -180,12 +180,18 @@ public:
     typedef QList<ZOrderItem> ZOrderList;
     ZOrderList zOrder();
 
+    bool mapAboutToChange(MapInfo *mapInfo);
+    bool mapFileChanged(MapInfo *mapInfo);
+
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
     Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
     Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }
 
 signals:
     void layerGroupAdded(int level);
+
+private:
+    void recreate();
 
 private:
     MapInfo *mMapInfo;

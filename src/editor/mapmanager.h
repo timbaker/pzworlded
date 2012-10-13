@@ -19,8 +19,11 @@
 #define MAPMANAGER_H
 
 #include "map.h"
+#include "filesystemwatcher.h"
 
+#include <QDateTime>
 #include <QMap>
+#include <QTimer>
 
 class MapInfo
 {
@@ -34,7 +37,6 @@ public:
         , mTileWidth(tileWidth)
         , mTileHeight(tileHeight)
         , mMap(0)
-        , mConverted(0)
         , mPlaceholder(false)
         , mBeingEdited(false)
     {
@@ -55,8 +57,6 @@ public:
 
     Tiled::Map *map() const { return mMap; }
 
-    MapInfo *converted(Tiled::Map::Orientation orient);
-
     bool isBeingEdited() const { return mBeingEdited; }
 
 private:
@@ -67,7 +67,6 @@ private:
     int mTileHeight;
     QString mFilePath;
     Tiled::Map *mMap;
-    MapInfo *mConverted;
     bool mPlaceholder;
     bool mBeingEdited;
 
@@ -109,6 +108,14 @@ public:
       */
     MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
 
+signals:
+    void mapAboutToChange(MapInfo *mapInf);
+    void mapFileChanged(MapInfo *mapInfo);
+
+private slots:
+    void fileChanged(const QString &path);
+    void fileChangedTimeout();
+
 private:
 
     /**
@@ -121,6 +128,11 @@ private:
     ~MapManager();
 
     QMap<QString,MapInfo*> mMapInfo;
+
+    Tiled::Internal::FileSystemWatcher *mFileSystemWatcher;
+    QSet<QString> mChangedFiles;
+    QTimer mChangedFilesTimer;
+
     QString mError;
     static MapManager *mInstance;
 };

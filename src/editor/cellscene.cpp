@@ -1944,6 +1944,30 @@ bool CellScene::shouldObjectItemBeVisible(ObjectItem *item)
             mDocument->isObjectLevelVisible(obj->level());
 }
 
+bool CellScene::mapAboutToChange(MapInfo *mapInfo)
+{
+    if (mMapComposite->mapAboutToChange(mapInfo)) {
+    }
+
+    // If the cell's map changed, other classes (like LayersModel) need to know.
+    // If only a Lot map changed, other classes don't need to know.
+    return (mapInfo == mMapComposite->mapInfo());
+}
+
+bool CellScene::mapFileChanged(MapInfo *mapInfo)
+{
+    if (mMapComposite->mapFileChanged(mapInfo)) {
+        if (mapInfo != mMapComposite->mapInfo())
+            doLater(AllGroups | Bounds | Synch | Paint); // only a Lot map changed
+    }
+
+    if (mapInfo == mMapComposite->mapInfo()) {
+//        loadMap();
+        return true; // CellDocument::cellMapFileChanged -> CellScene::cellMapFileChanged
+    }
+    return false;
+}
+
 void CellScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsScene::mousePressEvent(event);

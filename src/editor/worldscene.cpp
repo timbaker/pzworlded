@@ -144,6 +144,9 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
         addItem(item);
         mBMPItems += item;
     }
+
+    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+            SLOT(mapImageChanged(MapImage*)));
 }
 
 void WorldScene::setTool(AbstractTool *tool)
@@ -527,6 +530,12 @@ WorldBMPItem *WorldScene::itemForBMP(WorldBMP *bmp)
     return 0;
 }
 
+void WorldScene::mapImageChanged(MapImage *mapImage)
+{
+    foreach (WorldCellItem *item, mCellItems)
+        item->mapImageChanged(mapImage);
+}
+
 void WorldScene::keyPressEvent(QKeyEvent *event)
 {
     QGraphicsScene::keyPressEvent(event);
@@ -741,6 +750,9 @@ void BaseCellItem::updateCellImage()
     if (!mapFilePath().isEmpty()) {
         mMapImage = MapImageManager::instance()->getMapImage(mapFilePath());
         if (mMapImage) {
+#if 1
+            calcMapImageBounds();
+#else
             QSizeF gridSize = mapSize(300, 300, 64, 32);
             QSizeF unscaledMapSize = mMapImage->bounds().size();
             const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
@@ -751,6 +763,7 @@ void BaseCellItem::updateCellImage()
             int scaledImageHeight = mMapImage->image().height() * scaleImageToCell;
             mMapImageBounds = QRectF(mScene->cellToPixelCoords(cellPos()) - offset,
                                     QSizeF(scaledImageWidth, scaledImageHeight));
+#endif
         }
     }
 }
@@ -760,6 +773,10 @@ void BaseCellItem::updateLotImage(int index)
     WorldCellLot *lot = lots().at(index);
     MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
     if (mapImage) {
+#if 1
+        mLotImages.insert(index, LotImage(QRectF(), mapImage));
+        calcLotImageBounds(index);
+#else
         QSizeF gridSize = mapSize(300, 300, 64, 32);
         QSizeF unscaledMapSize = mapImage->bounds().size();
         const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
@@ -775,6 +792,7 @@ void BaseCellItem::updateLotImage(int index)
         // Update lot with current width and height of the map
         lot->setWidth(mapImage->mapInfo()->width());
         lot->setHeight(mapImage->mapInfo()->height());
+#endif
     } else {
         mLotImages.insert(index, LotImage());
     }
@@ -816,6 +834,67 @@ void BaseCellItem::updateBoundingRect()
         prepareGeometryChange();
         mBoundingRect = bounds;
     }
+}
+
+void BaseCellItem::mapImageChanged(MapImage *mapImage)
+{
+    bool changed = false;
+    if (mapImage == mMapImage) {
+        calcMapImageBounds();
+        changed = true;
+    }
+
+    int index = 0;
+    foreach (LotImage lotImage, mLotImages) {
+        if (mapImage == lotImage.mMapImage) {
+            calcLotImageBounds(index);
+            changed = true;
+        }
+        ++index;
+    }
+
+    if (changed) {
+        updateBoundingRect();
+        update();
+    }
+}
+
+void BaseCellItem::calcMapImageBounds()
+{
+    if (mMapImage) {
+        QSizeF gridSize = mapSize(300, 300, 64, 32);
+        QSizeF unscaledMapSize = mMapImage->bounds().size();
+        const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
+        int scaledImageWidth = GRID_WIDTH * scaleMapToCell;
+
+        const qreal scaleImageToCell = qreal(scaledImageWidth) / mMapImage->image().width();
+        QPointF offset = mMapImage->tileToImageCoords(0, 0) * scaleImageToCell;
+        int scaledImageHeight = mMapImage->image().height() * scaleImageToCell;
+        mMapImageBounds = QRectF(mScene->cellToPixelCoords(cellPos()) - offset,
+                                QSizeF(scaledImageWidth, scaledImageHeight));
+    }
+}
+
+void BaseCellItem::calcLotImageBounds(int index)
+{
+    WorldCellLot *lot = lots().at(index);
+    LotImage &lotImage = mLotImages[index];
+    MapImage *mapImage = lotImage.mMapImage;
+
+    QSizeF gridSize = mapSize(300, 300, 64, 32);
+    QSizeF unscaledMapSize = mapImage->bounds().size();
+    const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
+    int scaledImageWidth = GRID_WIDTH * scaleMapToCell;
+    const qreal scaleImageToCell = qreal(scaledImageWidth) / mapImage->image().width();
+    int scaledImageHeight = mapImage->image().height() * scaleImageToCell;
+    QSizeF scaledImageSize(scaledImageWidth, scaledImageHeight);
+
+    lotImage.mBounds = QRectF(calcLotImagePosition(lot, scaledImageWidth, mapImage),
+                              scaledImageSize);
+
+    // Update lot with current width and height of the map
+    lot->setWidth(mapImage->mapInfo()->width());
+    lot->setHeight(mapImage->mapInfo()->height());
 }
 
 /////

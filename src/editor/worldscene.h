@@ -137,7 +137,11 @@ public:
     void updateLotImage(int index);
     void updateBoundingRect();
 
+    void mapImageChanged(MapImage *mapImage);
+
 protected:
+    void calcMapImageBounds();
+    void calcLotImageBounds(int index);
     QPointF calcLotImagePosition(WorldCellLot *lot, int scaledImageWidth, MapImage *mapImage);
 
     struct LotImage {
@@ -419,6 +423,8 @@ public slots:
 
     WorldBMP *pointToBMP(const QPointF &scenePos);
     WorldBMPItem *itemForBMP(WorldBMP *bmp);
+
+    void mapImageChanged(MapImage *mapImage);
 
 protected:
     void keyPressEvent(QKeyEvent *event);

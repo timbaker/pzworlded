@@ -392,6 +392,9 @@ protected:
     bool shouldObjectItemBeVisible(ObjectItem *item);
 
 public slots:
+    bool mapAboutToChange(MapInfo *mapInfo);
+    bool mapFileChanged(MapInfo *mapInfo);
+
     void cellMapFileChanged();
     void cellContentsChanged();
 

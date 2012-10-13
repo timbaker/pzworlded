@@ -51,6 +51,8 @@ public:
     QPointF tileToImageCoords(const QPoint &pos)
     { return tileToImageCoords(pos.x(), pos.y()); }
 
+    void mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds);
+
 private:
     QImage mImage;
     MapInfo *mInfo;
@@ -93,9 +95,11 @@ protected:
     void writeImageData(const QFileInfo &imageDataFileInfo, const ImageData &data);
 
 signals:
+    void mapImageChanged(MapImage *mapImage);
     
 public slots:
-    
+    void mapFileChanged(MapInfo *mapInfo);
+
 private:
     MapImageManager();
     QFileInfo imageFileInfo(const QString &mapFilePath);

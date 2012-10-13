@@ -44,6 +44,8 @@ MapImageManager *MapImageManager::mInstance = NULL;
 MapImageManager::MapImageManager()
     : QObject()
 {
+    connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
+            SLOT(mapFileChanged(MapInfo*)));
 }
 
 MapImageManager *MapImageManager::instance()
@@ -339,6 +341,25 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     out << r.x() << r.y() << r.width() << r.height();
 }
 
+void MapImageManager::mapFileChanged(MapInfo *mapInfo)
+{
+    QMap<QString,MapImage*>::iterator it_begin = mMapImages.begin();
+    QMap<QString,MapImage*>::iterator it_end = mMapImages.end();
+    QMap<QString,MapImage*>::iterator it;
+
+    for (it = it_begin; it != it_end; it++) {
+        MapImage *mapImage = it.value();
+        if (mapImage->mapInfo() == mapInfo) {
+            ImageData data = generateMapImage(mapInfo->path());
+            if (!data.valid)
+                return;
+            mapImage->mapFileChanged(data.image, data.scale,
+                                     data.levelZeroBounds);
+            emit mapImageChanged(mapImage);
+        }
+    }
+}
+
 QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
 {
     QFileInfo mapFileInfo(mapFilePath);
@@ -413,4 +434,11 @@ QPointF MapImage::tileToImageCoords(qreal x, qreal y)
     QPointF pos = tileToPixelCoords(x, y);
     pos += mLevelZeroBounds.topLeft();
     return pos * scale();
+}
+
+void MapImage::mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds)
+{
+    mImage = image;
+    mScale = scale;
+    mLevelZeroBounds = levelZeroBounds;
 }

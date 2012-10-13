@@ -736,6 +736,152 @@ MapComposite::ZOrderList MapComposite::zOrder()
     return result;
 }
 
+bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
+{
+    if (mapInfo == mMapInfo) {
+        return true;
+    }
+    bool affected = false;
+    foreach (MapComposite *subMap, mSubMaps) {
+        if (subMap->mapAboutToChange(mapInfo)) {
+            // See CompositeLayerGroupItem::paint() for why this stops drawing.
+            // FIXME: Not safe enough!
+            foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+                layerGroup->setNeedsSynch(true);
+            affected = true;
+        }
+    }
+    return affected;
+}
+
+bool MapComposite::mapFileChanged(MapInfo *mapInfo)
+{
+    if (mapInfo == mMapInfo) {
+        recreate();
+        return true;
+    }
+
+    bool changed = false;
+    foreach (MapComposite *subMap, mSubMaps) {
+        if (subMap->mapFileChanged(mapInfo)) {
+            if (!changed) {
+                foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+                    layerGroup->setNeedsSynch(true);
+                changed = true;
+            }
+        }
+    }
+
+    return changed;
+}
+
+void MapComposite::recreate()
+{
+    qDeleteAll(mSubMaps);
+    qDeleteAll(mLayerGroups);
+    mSubMaps.clear();
+    mLayerGroups.clear();
+    mSortedLayerGroups.clear();
+
+    delete mRoadLayer0;
+    delete mRoadLayer1;
+
+    mMap = mMapInfo->map();
+
+    ///// FIXME: everything below here is copied from our constructor
+
+    if (mMap->orientation() != mOrientRender) {
+        Map::Orientation orientSelf = mMap->orientation();
+        if (orientSelf == Map::Isometric && mOrientRender == Map::LevelIsometric)
+            mOrientAdjustPos = mOrientAdjustTiles = QPoint(3, 3);
+        if (orientSelf == Map::LevelIsometric && mOrientRender == Map::Isometric)
+            mOrientAdjustPos = mOrientAdjustTiles = QPoint(-3, -3);
+    }
+
+    int index = 0;
+    foreach (Layer *layer, mMap->layers()) {
+        int level;
+        if (levelForLayer(layer, &level)) {
+            // FIXME: no changing of mMap should happen after it is loaded!
+            layer->setLevel(level); // for ObjectGroup,ImageLayer as well
+
+            if (TileLayer *tl = layer->asTileLayer()) {
+                if (!mLayerGroups.contains(level))
+                    mLayerGroups[level] = new CompositeLayerGroup(this, level);
+                mLayerGroups[level]->addTileLayer(tl, index);
+                if (!mMapInfo->isBeingEdited())
+                    mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
+            }
+        }
+        ++index;
+    }
+
+#if 0
+    // FIXME: no changing of mMap should happen after it is loaded!
+    foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+        mMap->addTileLayerGroup(layerGroup);
+#endif
+
+    if (!mMapInfo->isBeingEdited()) {
+        foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
+            foreach (MapObject *object, objectGroup->objects()) {
+                if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
+                    // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
+                    // then any sub-maps of its own will lose their level offsets.
+                    // FIXME: look in the same directory as the parent map, then the maptools directory.
+                    MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
+                                                                          QFileInfo(mMapInfo->path()).absolutePath());
+                    if (!subMapInfo) {
+                        qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
+                        subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(),
+                                                                               32, 32); // FIXME: calculate map size
+                    }
+                    if (subMapInfo) {
+                        int levelOffset;
+                        (void) levelForLayer(objectGroup, &levelOffset);
+#if 1
+                        MapComposite *_subMap = new MapComposite(subMapInfo, mOrientRender,
+                                                                 this, object->position().toPoint()
+                                                                 + mOrientAdjustPos * levelOffset,
+                                                                 levelOffset);
+                        mSubMaps.append(_subMap);
+#else
+                        addMap(subMap, object->position().toPoint(), levelOffset);
+#endif
+                    }
+                }
+            }
+        }
+    }
+
+    mMinLevel = 10000;
+    mMaxLevel = 0;
+
+    foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
+        if (!mMapInfo->isBeingEdited())
+            layerGroup->synch();
+        if (layerGroup->level() < mMinLevel)
+            mMinLevel = layerGroup->level();
+        if (layerGroup->level() > mMaxLevel)
+            mMaxLevel = layerGroup->level();
+    }
+
+    if (mMinLevel == 10000)
+        mMinLevel = 0;
+
+    if (!mParent && !mMapInfo->isBeingEdited())
+        mMaxLevel = qMax(mMaxLevel, 10);
+
+    for (int level = mMinLevel; level <= mMaxLevel; ++level) {
+        if (!mLayerGroups.contains(level))
+            mLayerGroups[level] = new CompositeLayerGroup(this, level);
+        mSortedLayerGroups.append(mLayerGroups[level]);
+    }
+
+    mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+    mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+}
+
 #include "road.h"
 #include "tileset.h"
 #include <QRegion>
