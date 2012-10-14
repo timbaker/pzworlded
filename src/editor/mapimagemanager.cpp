@@ -94,6 +94,15 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
 
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
     MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
+#if 1
+    // Set up file modification tracking on each TMX that makes
+    // up this image.
+    QList<MapInfo*> sources;
+    foreach (QString source, data.sources)
+        if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
+            sources += sourceInfo;
+    mapImage->setSources(sources);
+#endif
     mMapImages.insert(mapFilePath, mapImage);
     return mapImage;
 }
@@ -121,6 +130,17 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
                                  tr("An error occurred trying to read a map thumbnail image.\n") + imageInfo.absoluteFilePath());
         if (image.width() == IMAGE_WIDTH) {
             ImageData data = readImageData(imageDataInfo);
+#if 1
+            if (data.valid) {
+                foreach (QString source, data.sources) {
+                    QFileInfo sourceInfo(source);
+                    if (sourceInfo.exists() && (sourceInfo.lastModified() > imageInfo.lastModified())) {
+                        data.valid = false;
+                        break;
+                    }
+                }
+            }
+#endif
             if (data.valid) {
                 data.image = image;
                 return data;
@@ -222,6 +242,7 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
     data.scale = scale;
     data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
     data.levelZeroBounds.translate(-sceneRect.topLeft());
+    data.sources = mapComposite->getMapFileNames();
     data.valid = true;
 
     delete renderer;
@@ -293,7 +314,7 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
 }
 
 #define IMAGE_DATA_MAGIC 0xB15B00B5
-#define IMAGE_DATA_VERSION 1
+#define IMAGE_DATA_VERSION 2
 
 MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &imageDataFileInfo)
 {
@@ -320,6 +341,14 @@ MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &image
     in >> x >> y >> w >> h;
     data.levelZeroBounds.setCoords(x, y, x + w, y + h);
 
+    qint32 count;
+    in >> count;
+    for (int i = 0; i < count; i++) {
+        QString source;
+        in >> source;
+        data.sources += source;
+    }
+
     // TODO: sanity-check the values
     data.valid = true;
 
@@ -339,6 +368,9 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     out << data.scale;
     QRectF r = data.levelZeroBounds;
     out << r.x() << r.y() << r.width() << r.height();
+    out << qint32(data.sources.length());
+    foreach (QString source, data.sources)
+        out << source;
 }
 
 void MapImageManager::mapFileChanged(MapInfo *mapInfo)
@@ -349,12 +381,26 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
 
     for (it = it_begin; it != it_end; it++) {
         MapImage *mapImage = it.value();
+#if 1
+        if (mapImage->sources().contains(mapInfo)) {
+            ImageData data = generateMapImage(mapImage->mapInfo()->path());
+#else
         if (mapImage->mapInfo() == mapInfo) {
             ImageData data = generateMapImage(mapInfo->path());
+#endif
             if (!data.valid)
                 return;
             mapImage->mapFileChanged(data.image, data.scale,
                                      data.levelZeroBounds);
+#if 1
+            // Set up file modification tracking on each TMX that makes
+            // up this image.
+            QList<MapInfo*> sources;
+            foreach (QString source, data.sources)
+                if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
+                    sources += sourceInfo;
+            mapImage->setSources(sources);
+#endif
             emit mapImageChanged(mapImage);
         }
     }

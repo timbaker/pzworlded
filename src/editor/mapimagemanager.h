@@ -22,6 +22,7 @@
 #include <QImage>
 #include <QMap>
 #include <QObject>
+#include <QStringList>
 
 class MapComposite;
 class MapInfo;
@@ -53,11 +54,18 @@ public:
 
     void mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds);
 
+    void setSources(const QList<MapInfo*> &sources)
+    { mSources = sources; }
+
+    QList<MapInfo*> sources() const
+    { return mSources; }
+
 private:
     QImage mImage;
     MapInfo *mInfo;
     QRectF mLevelZeroBounds;
     qreal mScale;
+    QList<MapInfo*> mSources;
 };
 
 class MapImageManager : public QObject
@@ -84,6 +92,7 @@ protected:
         QRectF levelZeroBounds;
         QImage image;
         bool valid;
+        QStringList sources;
     };
 
     ImageData generateMapImage(const QString &mapFilePath);

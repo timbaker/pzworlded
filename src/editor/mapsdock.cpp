@@ -36,6 +36,7 @@
 MapsDock::MapsDock(QWidget *parent)
     : QDockWidget(parent)
     , mPreviewLabel(new QLabel(this))
+    , mPreviewMapImage(0)
     , mMapsView(new MapsView(this))
 {
     setObjectName(QLatin1String("MapsDock"));
@@ -84,6 +85,9 @@ MapsDock::MapsDock(QWidget *parent)
     connect(mMapsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             SLOT(selectionChanged()));
 
+    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+            SLOT(onMapImageChanged(MapImage*)));
+
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
     connect(this, SIGNAL(visibilityChanged(bool)),
@@ -117,6 +121,7 @@ void MapsDock::selectionChanged()
     QModelIndexList selectedRows = mMapsView->selectionModel()->selectedRows();
     if (selectedRows.isEmpty()) {
         mPreviewLabel->setPixmap(QPixmap());
+        mPreviewMapImage = 0;
         return;
     }
     QModelIndex index = selectedRows.first();
@@ -128,6 +133,15 @@ void MapsDock::selectionChanged()
         mPreviewLabel->setPixmap(QPixmap::fromImage(mapImage->image().scaled(256, 123, Qt::KeepAspectRatio)));
     else
         mPreviewLabel->setPixmap(QPixmap());
+    mPreviewMapImage = mapImage;
+}
+
+void MapsDock::onMapImageChanged(MapImage *mapImage)
+{
+    if (mapImage == mPreviewMapImage) {
+        QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio);
+        mPreviewLabel->setPixmap(QPixmap::fromImage(image));
+    }
 }
 
 void MapsDock::changeEvent(QEvent *e)

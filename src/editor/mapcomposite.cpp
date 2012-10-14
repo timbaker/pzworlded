@@ -882,6 +882,20 @@ void MapComposite::recreate()
     mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
 }
 
+
+QStringList MapComposite::getMapFileNames() const
+{
+    QStringList result;
+
+    result += mMapInfo->path();
+    foreach (MapComposite *subMap, mSubMaps)
+        foreach (QString path, subMap->getMapFileNames())
+            if (!result.contains(path))
+                result += path;
+
+    return result;
+}
+
 #include "road.h"
 #include "tileset.h"
 #include <QRegion>

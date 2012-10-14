@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QMap>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 class MapInfo;
@@ -179,6 +180,8 @@ public:
     };
     typedef QList<ZOrderItem> ZOrderList;
     ZOrderList zOrder();
+
+    QStringList getMapFileNames() const;
 
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapFileChanged(MapInfo *mapInfo);
