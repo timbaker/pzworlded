@@ -146,15 +146,27 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos, QVector<const Cell *
         ++index;
 #if SPARSE_TILELAYER
         // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps
-        if (!mVisibleLayers[index] || mEmptyLayers[index] || tl->isEmpty())
+        bool empty = mEmptyLayers[index] || tl->isEmpty();
 #else
-        if (!mVisibleLayers[index] || mEmptyLayers[index])
+        bool empty = mEmptyLayers[index];
 #endif
+#if 1
+        const QString layerNameWP = MapComposite::layerNameWithoutPrefix(tl);
+        if (!level() && layerNameWP == QLatin1String("Floor")) {
+            if (!mOwner->roadLayer0()->isEmpty())
+                empty = false;
+        }
+        if (!level() && layerNameWP == QLatin1String("FloorOverlay")) {
+            if (!mOwner->roadLayer1()->isEmpty())
+                empty = false;
+        }
+#endif
+        if (!mVisibleLayers[index] || empty)
             continue;
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
 #if 1
-            if (!level() && MapComposite::layerNameWithoutPrefix(tl) == QLatin1String("Floor")) {
+            if (!level() && layerNameWP == QLatin1String("Floor")) {
                 const Cell *cell = &mOwner->roadLayer0()->cellAt(subPos);
                 if (!cell->isEmpty()) {
                     if (!cleared) {
@@ -165,7 +177,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos, QVector<const Cell *
                     continue;
                 }
             }
-            if (!level() && MapComposite::layerNameWithoutPrefix(tl) == QLatin1String("FloorOverlay")) {
+            if (!level() && layerNameWP == QLatin1String("FloorOverlay")) {
                 const Cell *cell = &mOwner->roadLayer1()->cellAt(subPos);
                 if (!cell->isEmpty()) {
                     if (!cleared) {
@@ -949,7 +961,7 @@ void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *>
             roadsInCell += road;
     }
 
-    mRoadLayer1->erase(QRegion(0, 0, mRoadLayer0->width(), mRoadLayer0->height()));
+    mRoadLayer1->erase(QRegion(0, 0, mRoadLayer1->width(), mRoadLayer1->height()));
     mRoadLayer0->erase(QRegion(0, 0, mRoadLayer0->width(), mRoadLayer0->height()));
 
     // Fill roads with road tile
