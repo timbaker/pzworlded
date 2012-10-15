@@ -598,12 +598,12 @@
   </action>
   <action name="actionGenerateLotsAll">
    <property name="text">
-    <string>All Cells</string>
+    <string>All Cells...</string>
    </property>
   </action>
   <action name="actionGenerateLotsSelected">
    <property name="text">
-    <string>Selected Cells Only</string>
+    <string>Selected Cells Only...</string>
    </property>
   </action>
   <action name="actionRemoveRoad">
@@ -620,12 +620,12 @@
   </action>
   <action name="actionBMPToTMXAll">
    <property name="text">
-    <string>All Cells</string>
+    <string>All Cells...</string>
    </property>
   </action>
   <action name="actionBMPToTMXSelected">
    <property name="text">
-    <string>Selected Cells Only</string>
+    <string>Selected Cells Only...</string>
    </property>
   </action>
   <action name="actionRemoveBMP">

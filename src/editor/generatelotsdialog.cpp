@@ -4,8 +4,12 @@
 #include "world.h"
 #include "worlddocument.h"
 
+#include <QDebug>
 #include <QDir>
 #include <QFileDialog>
+#include <QImageReader>
+#include <QMessageBox>
+#include <QPushButton>
 
 GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent) :
     QDialog(parent),
@@ -20,6 +24,14 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     mExportDir = settings.exportDir;
     ui->exportEdit->setText(mExportDir);
     connect(ui->exportBrowse, SIGNAL(clicked()), SLOT(exportBrowse()));
+
+    // Zombie Spawn Map
+    mZombieSpawnMap = settings.zombieSpawnMap;
+    ui->spawnEdit->setText(mZombieSpawnMap);
+    connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
+
+    connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
+            SLOT(apply()));
 }
 
 GenerateLotsDialog::~GenerateLotsDialog()
@@ -37,16 +49,69 @@ void GenerateLotsDialog::exportBrowse()
     }
 }
 
+void GenerateLotsDialog::spawnBrowse()
+{
+    QStringList formats;
+    foreach (QByteArray format, QImageReader::supportedImageFormats())
+        if (format.toLower() == format)
+            formats.append(QString::fromUtf8(QByteArray("*." + format)));
+    QString formatString = tr("Image files (%1)").arg(formats.join(QLatin1String(" ")));
+    formatString += tr(";;All files (*.*)");
+
+    QString initialDir = QFileInfo(mWorldDoc->fileName()).absolutePath();
+    if (QFileInfo(mZombieSpawnMap).exists())
+        initialDir = QFileInfo(mZombieSpawnMap).absolutePath();
+
+    QString f = QFileDialog::getOpenFileName(this, tr("Choose the Zombie Spawn Map image"),
+        initialDir, formatString);
+    if (!f.isEmpty()) {
+        mZombieSpawnMap = f;
+        ui->spawnEdit->setText(mZombieSpawnMap);
+    }
+}
+
 void GenerateLotsDialog::accept()
 {
-    QDir dir(mExportDir);
-    if (mExportDir.isEmpty() || !dir.exists()) {
+    if (!validate())
         return;
-    }
+
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
+    settings.zombieSpawnMap = mZombieSpawnMap;
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
     QDialog::accept();
+}
+
+void GenerateLotsDialog::apply()
+{
+    if (!validate())
+        return;
+
+    GenerateLotsSettings settings;
+    settings.exportDir = mExportDir;
+    settings.zombieSpawnMap = mZombieSpawnMap;
+    if (settings != mWorldDoc->world()->getGenerateLotsSettings())
+        mWorldDoc->changeGenerateLotsSettings(settings);
+
+    QDialog::reject();
+}
+
+bool GenerateLotsDialog::validate()
+{
+    QDir dir(mExportDir);
+    if (mExportDir.isEmpty() || !dir.exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose a valid directory to save the .lot files in."));
+        return false;
+    }
+    QFileInfo info(mZombieSpawnMap);
+    if (mZombieSpawnMap.isEmpty() || !info.exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose a Zombie Spawn Map image file."));
+        return false;
+    }
+
+    return true;
 }

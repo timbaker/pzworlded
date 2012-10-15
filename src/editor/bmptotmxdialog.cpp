@@ -18,6 +18,8 @@
 #include "bmptotmxdialog.h"
 #include "ui_bmptotmxdialog.h"
 
+#include "bmptotmx.h"
+#include "mainwindow.h"
 #include "world.h"
 #include "worlddocument.h"
 
@@ -25,6 +27,8 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QMessageBox>
+#include <QPushButton>
 
 BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     QDialog(parent),
@@ -51,8 +55,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     // Rules.txt
     mRulesFile = settings.rulesFile;
     if (mRulesFile.isEmpty()) {
-        mRulesFile = QCoreApplication::applicationDirPath() + QLatin1Char('/')
-                + QLatin1String("Rules.txt");
+        mRulesFile = BMPToTMX::instance()->defaultRulesFile();
         QFileInfo info(mRulesFile);
         if (info.exists())
             mRulesFile = info.canonicalFilePath();
@@ -63,8 +66,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     // Blends.txt
     mBlendsFile = settings.blendsFile;
     if (mBlendsFile.isEmpty()) {
-        mBlendsFile = QCoreApplication::applicationDirPath() + QLatin1Char('/')
-                + QLatin1String("Blends.txt");
+        mBlendsFile = BMPToTMX::instance()->defaultBlendsFile();
         QFileInfo info(mBlendsFile);
         if (info.exists())
             mBlendsFile = info.canonicalFilePath();
@@ -75,8 +77,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     // MapBaseXML.txt
     mMapBaseFile = settings.mapbaseFile;
     if (mMapBaseFile.isEmpty()) {
-        mMapBaseFile = QCoreApplication::applicationDirPath() + QLatin1Char('/')
-                + QLatin1String("MapBaseXML.txt");
+        mMapBaseFile = BMPToTMX::instance()->defaultMapBaseXMLFile();
         QFileInfo info(mMapBaseFile);
         if (info.exists())
             mMapBaseFile = info.canonicalFilePath();
@@ -85,6 +86,9 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     connect(ui->mapbaseBrowse, SIGNAL(clicked()), SLOT(mapbaseBrowse()));
 
     ui->assignMapCheckBox->setChecked(settings.assignMapsToWorld);
+
+    connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
+            SLOT(apply()));
 }
 
 BMPToTMXDialog::~BMPToTMXDialog()
@@ -134,22 +138,15 @@ void BMPToTMXDialog::mapbaseBrowse()
 
 void BMPToTMXDialog::accept()
 {
-    QDir dir(mExportDir);
-    if (!dir.exists()) {
+    if (!validate())
         return;
-    }
-    QFileInfo info(mRulesFile);
-    if (!info.exists()) {
-        return;
-    }
-    info.setFile(mBlendsFile);
-    if (!info.exists()) {
-        return;
-    }
-    info.setFile(mMapBaseFile);
-    if (!info.exists()) {
-        return;
-    }
+
+    if (QFileInfo(mRulesFile) == QFileInfo(BMPToTMX::instance()->defaultRulesFile()))
+        mRulesFile.clear();
+    if (QFileInfo(mBlendsFile) == QFileInfo(BMPToTMX::instance()->defaultBlendsFile()))
+        mBlendsFile.clear();
+    if (QFileInfo(mMapBaseFile) == QFileInfo(BMPToTMX::instance()->defaultMapBaseXMLFile()))
+        mMapBaseFile.clear();
 
     BMPToTMXSettings settings;
     settings.exportDir = mExportDir;
@@ -161,4 +158,61 @@ void BMPToTMXDialog::accept()
         mWorldDoc->changeBMPToTMXSettings(settings);
 
     QDialog::accept();
+}
+
+void BMPToTMXDialog::apply()
+{
+    if (!validate())
+        return;
+
+    if (QFileInfo(mRulesFile) == QFileInfo(BMPToTMX::instance()->defaultRulesFile()))
+        mRulesFile.clear();
+    if (QFileInfo(mBlendsFile) == QFileInfo(BMPToTMX::instance()->defaultBlendsFile()))
+        mBlendsFile.clear();
+    if (QFileInfo(mMapBaseFile) == QFileInfo(BMPToTMX::instance()->defaultMapBaseXMLFile()))
+        mMapBaseFile.clear();
+
+    BMPToTMXSettings settings;
+    settings.exportDir = mExportDir;
+    settings.rulesFile = mRulesFile;
+    settings.blendsFile = mBlendsFile;
+    settings.mapbaseFile = mMapBaseFile;
+    settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
+    if (settings != mWorldDoc->world()->getBMPToTMXSettings())
+        mWorldDoc->changeBMPToTMXSettings(settings);
+
+    QDialog::reject();
+}
+
+bool BMPToTMXDialog::validate()
+{
+    QDir dir(mExportDir);
+    if (mExportDir.isEmpty() || !dir.exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose a valid directory to save the .tmx files in."));
+        return false;
+    }
+
+    QFileInfo info(mRulesFile);
+    if (!info.exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose a rules file."));
+        return false;
+    }
+
+    info.setFile(mBlendsFile);
+    if (!info.exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose a blends file."));
+        return false;
+    }
+
+    info.setFile(mMapBaseFile);
+    if (!info.exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose a map template file."));
+        return false;
+    }
+
+    return true;
 }

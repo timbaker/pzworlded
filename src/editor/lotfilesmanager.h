@@ -201,7 +201,7 @@ private:
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
     QList<BMPToTMXImages*> mImages;
-    BMPToTMXImages *ZombieSpawnMap;
+    QImage ZombieSpawnMap;
 
     QString mError;
 };

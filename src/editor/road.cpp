@@ -17,6 +17,8 @@
 
 #include "road.h"
 
+#include "mainwindow.h"
+
 Road::Road(World *world, int x1, int y1, int x2, int y2, int width, int style)
     : mWorld(world)
     , mStart(x1, y1)
@@ -176,7 +178,8 @@ void RoadTemplates::parseRoadsDotTxt()
     QString filePath = appDirectory + QLatin1Char('/') + QLatin1String("Roads.txt");
     SimpleFile simpleFile;
     if (!simpleFile.read(filePath)) {
-        QMessageBox::warning(0, QLatin1String("Error reading Roads.txt"),
+        QMessageBox::warning(MainWindow::instance(),
+                             QLatin1String("Error reading Roads.txt"),
                              QString(QLatin1String("Failed to open %1")).arg(filePath));
         return;
     }
@@ -189,7 +192,8 @@ void RoadTemplates::parseRoadsDotTxt()
         else if (block.name == QLatin1String("lines"))
             handleLines(block);
         else {
-            QMessageBox::warning(0, QLatin1String("Error reading Roads.txt"),
+            QMessageBox::warning(MainWindow::instance(),
+                                 QLatin1String("Error reading Roads.txt"),
                                  QString(QLatin1String("Unknown block name '%1'.\nProbable syntax error in Roads.txt.\nDo not save the project file, road info is messed up!")).arg(block.name));
         }
     }

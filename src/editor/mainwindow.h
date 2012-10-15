@@ -47,6 +47,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
     
 public:
+    static MainWindow *instance();
+
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
@@ -160,6 +162,8 @@ private:
     QMenu *mObjectGroupMenu;
     Zoomable *mZoomable;
     QSettings mSettings;
+
+    static MainWindow *mInstance;
 };
 
 #endif // MAINWINDOW_H

@@ -33,7 +33,6 @@ public:
     QString mPath;
     QImage mBmp;
     QImage mBmpVeg;
-    QImage mBmpZombieSpawnMap;
     QRect mBounds; // cells covered
 };
 
@@ -58,6 +57,10 @@ public:
     QSize validateImages(const QString &path);
 
     void assignMapsToCells(WorldDocument *worldDoc, GenerateMode mode);
+
+    QString defaultRulesFile() const;
+    QString defaultBlendsFile() const;
+    QString defaultMapBaseXMLFile() const;
 
     class Tileset
     {
@@ -116,6 +119,8 @@ public:
 
 
 private:
+    bool shouldGenerateCell(WorldCell *cell, int &bmpIndex);
+
     QImage loadImage(const QString &path, const QString &suffix = QString());
     bool LoadBaseXML();
     bool LoadRules();

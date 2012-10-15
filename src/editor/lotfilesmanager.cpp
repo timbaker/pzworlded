@@ -17,7 +17,7 @@
 
 #include "lotfilesmanager.h"
 
-#include "bmptotmx.h"
+#include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mapobject.h"
@@ -76,17 +76,19 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
     mWorldDoc = worldDoc;
 
-    PROGRESS progress(QLatin1String("Reading BMP images"));
+    PROGRESS progress(QLatin1String("Reading Zombie Spawn Map"));
 
-    mImages.clear(); // FIXME: memory leak, images aren't freed
-    foreach (WorldBMP *bmp, mWorldDoc->world()->bmps()) {
-        // FIXME: I only need the spawn map!
-        BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(),
-                                                                 bmp->pos());
-        // In case the image files can't be found/loaded, we fail to
-        // generate a .lot file for those WorldCells.
-        // *** 'images' may be NULL
-        mImages += images;
+    QString spawnMap = mWorldDoc->world()->getGenerateLotsSettings().zombieSpawnMap;
+    if (!QFileInfo(spawnMap).exists()) {
+        mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
+                .arg(spawnMap);
+        return false;
+    }
+    ZombieSpawnMap = QImage(spawnMap);
+    if (ZombieSpawnMap.isNull()) {
+        mError = tr("Couldn't read the Zombie Spawn Map image.\n%1")
+                .arg(spawnMap);
+        return false;
     }
 
     progress.update(QLatin1String("Generating .lot files"));
@@ -106,7 +108,8 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
         }
     }
 
-    QMessageBox::information(0, tr("Generate Lot Files"), tr("Finished!"));
+    QMessageBox::information(MainWindow::instance(),
+                             tr("Generate Lot Files"), tr("Finished!"));
 
     return true;
 }
@@ -116,6 +119,13 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 //    if (cell->x() != 5 || cell->y() != 3) return true;
     if (cell->mapFilePath().isEmpty())
         return true;
+
+    if (cell->x() * 30 + 30 > ZombieSpawnMap.width() ||
+            cell->y() * 30 + 30 > ZombieSpawnMap.height()) {
+        mError = tr("The Zombie Spawn Map doesn't cover cell %1,%2.")
+                .arg(cell->x()).arg(cell->y());
+        return false;
+    }
 
 #if 0
     // Don't regenerate the .lot files unless the cell's map is newer than
@@ -134,26 +144,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return true;
     }
 #endif
-
-    int n = 0, bmpIndex = -1;
-    foreach (WorldBMP *bmp, cell->world()->bmps()) {
-        if (bmp->bounds().contains(cell->pos()))
-            bmpIndex = n;
-        n++;
-    }
-    if (bmpIndex == -1) {
-        mError = tr("No BMP image overlaps cell %1,%2!\nNeed a ZombieSpawnMap for the cell.")
-                .arg(cell->x()).arg(cell->y());
-        return false;
-    }
-
-    BMPToTMXImages *images = mImages[bmpIndex];
-    if (images == 0) {
-        mError = tr("The BMP image for cell %1,%2 wasn't loaded.")
-                .arg(cell->x()).arg(cell->y());
-        return false;
-    }
-    ZombieSpawnMap = images;
 
     PROGRESS progress(tr("Generating .lot files (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
@@ -413,9 +403,8 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
 
     for (int x = 0; x < 30; x++) {
         for (int y = 0; y < 30; y++) {
-            QRgb pixel = ZombieSpawnMap->mBmpZombieSpawnMap.pixel(
-                        (cell->x() - ZombieSpawnMap->mBounds.x()) * 30 + x,
-                        (cell->y() - ZombieSpawnMap->mBounds.y()) * 30 + y);
+            QRgb pixel = ZombieSpawnMap.pixel(cell->x() * 30 + x,
+                                              cell->y() * 30 + y);
             out << quint8(qRed(pixel));
         }
     }

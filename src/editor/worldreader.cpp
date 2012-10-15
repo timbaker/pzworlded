@@ -452,6 +452,10 @@ private:
                 QString path = xml.attributes().value(QLatin1String("path")).toString();
                 settings.exportDir = resolveReference(path, mPath);
                 xml.skipCurrentElement();
+            } else if (xml.name() == "ZombieSpawnMap") {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.zombieSpawnMap = resolveReference(path, mPath);
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }

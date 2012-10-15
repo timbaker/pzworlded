@@ -178,6 +178,7 @@ bool WorldDocument::save(const QString &filePath, QString &error)
         return false;
     }
 
+#if 0
     {
         QFileInfo fi(filePath);
         QString luaPath = fi.absolutePath() + QLatin1Char('/') + fi.completeBaseName() + QLatin1String(".lua");
@@ -186,6 +187,7 @@ bool WorldDocument::save(const QString &filePath, QString &error)
             error += writer.errorString();
         }
     }
+#endif
 
     undoStack()->setClean();
     setFileName(filePath);

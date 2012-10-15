@@ -23,7 +23,7 @@
       <item>
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>This is the directory .tmx files will be created in.  Be careful because this will overwrite existing files!</string>
+         <string>This is the directory .tmx files will be created in.  Be careful because files in this directory may be overwritten!</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -171,7 +171,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>

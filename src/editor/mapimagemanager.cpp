@@ -19,6 +19,7 @@
 
 #include "imagelayer.h"
 #include "isometricrenderer.h"
+#include "mainwindow.h"
 #include "map.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
@@ -126,7 +127,7 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     if (imageInfo.exists() && imageDataInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
         QImage image(imageInfo.absoluteFilePath());
         if (image.isNull())
-            QMessageBox::warning(0, tr("Error Loading Image"),
+            QMessageBox::warning(MainWindow::instance(), tr("Error Loading Image"),
                                  tr("An error occurred trying to read a map thumbnail image.\n") + imageInfo.absoluteFilePath());
         if (image.width() == IMAGE_WIDTH) {
             ImageData data = readImageData(imageDataInfo);
@@ -273,7 +274,7 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
             (fileInfo.lastModified() < imageInfo.lastModified())) {
         QImage image(imageInfo.absoluteFilePath());
         if (image.isNull())
-            QMessageBox::warning(0, tr("Error Loading Image"),
+            QMessageBox::warning(MainWindow::instance(), tr("Error Loading Image"),
                                  tr("An error occurred trying to read a BMP thumbnail image.\n")
                                  + imageInfo.absoluteFilePath());
         if (image.size() == skewedImageBounds.size()) {

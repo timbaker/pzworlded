@@ -18,13 +18,19 @@ public:
     ~GenerateLotsDialog();
 
 private slots:
-    void accept();
     void exportBrowse();
-    
+    void spawnBrowse();
+    void accept();
+    void apply();
+
+private:
+    bool validate();
+
 private:
     Ui::GenerateLotsDialog *ui;
     WorldDocument *mWorldDoc;
     QString mExportDir;
+    QString mZombieSpawnMap;
 };
 
 #endif // GENERATELOTSDIALOG_H

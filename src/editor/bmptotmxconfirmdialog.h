@@ -15,43 +15,31 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BMPTOTMXDIALOG_H
-#define BMPTOTMXDIALOG_H
+#ifndef BMPTOTMXCONFIRMDIALOG_H
+#define BMPTOTMXCONFIRMDIALOG_H
 
 #include <QDialog>
-
-class WorldDocument;
+#include <QStringList>
 
 namespace Ui {
-class BMPToTMXDialog;
+class BMPToTMXConfirmDialog;
 }
 
-class BMPToTMXDialog : public QDialog
+class QTreeWidgetItem;
+
+class BMPToTMXConfirmDialog : public QDialog
 {
     Q_OBJECT
     
 public:
-    explicit BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent = 0);
-    ~BMPToTMXDialog();
-
-private slots:
-    void exportBrowse();
-    void rulesBrowse();
-    void blendsBrowse();
-    void mapbaseBrowse();
-    void accept();
-    void apply();
+    explicit BMPToTMXConfirmDialog(const QStringList &fileNames, QWidget *parent = 0);
+    ~BMPToTMXConfirmDialog();
 
 private:
-    bool validate();
-
+    QTreeWidgetItem *itemForDirectory(const QString &path);
+    
 private:
-    Ui::BMPToTMXDialog *ui;
-    WorldDocument *mWorldDoc;
-    QString mExportDir;
-    QString mRulesFile;
-    QString mBlendsFile;
-    QString mMapBaseFile;
+    Ui::BMPToTMXConfirmDialog *ui;
 };
 
-#endif // BMPTOTMXDIALOG_H
+#endif // BMPTOTMXCONFIRMDIALOG_H

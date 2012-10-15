@@ -17,6 +17,7 @@
 
 #include "worldwriter.h"
 
+#include "bmptotmx.h"
 #include "world.h"
 #include "worldcell.h"
 
@@ -268,23 +269,37 @@ public:
     {
         const BMPToTMXSettings settings = mWorld->getBMPToTMXSettings();
 
+        QString path;
+
         w.writeStartElement(QLatin1String("BMPToTMX"));
+
         w.writeStartElement(QLatin1String("tmxexportdir"));
         w.writeAttribute(QLatin1String("path"),
                          relativeFileName(settings.exportDir));
         w.writeEndElement();
+
+        // If these paths are empty, it means the default file is used.
         w.writeStartElement(QLatin1String("rulesfile"));
-        w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(settings.rulesFile));
+        path.clear();
+        if (!settings.rulesFile.isEmpty())
+            path = relativeFileName(settings.rulesFile);
+        w.writeAttribute(QLatin1String("path"), path);
         w.writeEndElement();
+
         w.writeStartElement(QLatin1String("blendsfile"));
-        w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(settings.blendsFile));
+        path.clear();
+        if (!settings.blendsFile.isEmpty())
+            path = relativeFileName(settings.blendsFile);
+        w.writeAttribute(QLatin1String("path"), path);
         w.writeEndElement();
+
         w.writeStartElement(QLatin1String("mapbasefile"));
-        w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(settings.mapbaseFile));
+        path.clear();
+        if (settings.mapbaseFile.isEmpty())
+            path = relativeFileName(settings.mapbaseFile);
+        w.writeAttribute(QLatin1String("path"), path);
         w.writeEndElement();
+
         w.writeEndElement(); // </BMPToTMX>
     }
 
@@ -296,6 +311,10 @@ public:
         w.writeStartElement(QLatin1String("exportdir"));
         w.writeAttribute(QLatin1String("path"),
                          relativeFileName(settings.exportDir));
+        w.writeEndElement();
+        w.writeStartElement(QLatin1String("ZombieSpawnMap"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(settings.zombieSpawnMap));
         w.writeEndElement();
         w.writeEndElement(); // </GenerateLots>
     }

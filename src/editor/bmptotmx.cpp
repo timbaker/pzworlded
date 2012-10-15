@@ -17,6 +17,8 @@
 
 #include "bmptotmx.h"
 
+#include "bmptotmxconfirmdialog.h"
+#include "mainwindow.h"
 #include "preferences.h"
 #include "progress.h"
 #include "worldcell.h"
@@ -60,6 +62,40 @@ BMPToTMX::~BMPToTMX()
 bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mode)
 {
     mWorldDoc = worldDoc;
+    World *world = mWorldDoc->world();
+
+    // Figure out which files will be overwritten and give the user a chance to
+    // cancel.
+    QStringList fileNames;
+    int bmpIndex;
+    if (mode == GenerateSelected) {
+        foreach (WorldCell *cell, mWorldDoc->selectedCells())
+            if (shouldGenerateCell(cell, bmpIndex)) {
+                QString fileName = tmxNameForCell(cell, world->bmps().at(bmpIndex));
+                if (QFileInfo(fileName).exists()) {
+                    Q_ASSERT(!fileNames.contains(fileName));
+                    fileNames += fileName;
+                }
+            }
+    } else {
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                WorldCell *cell = world->cellAt(x, y);
+                if (shouldGenerateCell(cell, bmpIndex)) {
+                    QString fileName = tmxNameForCell(cell, world->bmps().at(bmpIndex));
+                    if (QFileInfo(fileName).exists()) {
+                        Q_ASSERT(!fileNames.contains(fileName));
+                        fileNames += fileName;
+                    }
+                }
+            }
+        }
+    }
+    if (!fileNames.isEmpty()) {
+        BMPToTMXConfirmDialog dialog(fileNames, MainWindow::instance());
+        if (dialog.exec() != QDialog::Accepted)
+            return true;
+    }
 
     if (!LoadBaseXML()) {
         mError = tr("Error reading MapBaseXML.txt");
@@ -75,17 +111,15 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
     mImages.clear(); // FIXME: memory leak, images aren't freed
-    foreach (WorldBMP *bmp, mWorldDoc->world()->bmps()) {
+    foreach (WorldBMP *bmp, world->bmps()) {
         BMPToTMXImages *images = getImages(bmp->filePath(), bmp->pos());
-        // In case the image files can't be found/loaded, we just don't
-        // generate a map for those WorldCells.
-        // *** 'images' may be NULL
+        if (!images) {
+            return false;
+        }
         mImages += images;
     }
 
     progress.update(QLatin1String("Generating TMX files"));
-
-    World *world = worldDoc->world();
 
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
@@ -100,9 +134,10 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         }
     }
 
-    QMessageBox::information(0, tr("BMP To TMX"), tr("Finished!"));
+    QMessageBox::information(MainWindow::instance(),
+                             tr("BMP To TMX"), tr("Finished!"));
 
-    if (worldDoc->world()->getBMPToTMXSettings().assignMapsToWorld)
+    if (world->getBMPToTMXSettings().assignMapsToWorld)
         assignMapsToCells(worldDoc, mode);
 
     return true;
@@ -110,19 +145,11 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
 bool BMPToTMX::generateCell(WorldCell *cell)
 {
-    // Get the top-most BMP covering the cell
-    int n = 0, bmpIndex = -1;
-    foreach (WorldBMP *bmp, cell->world()->bmps()) {
-        if (bmp->bounds().contains(cell->pos()))
-            bmpIndex = n;
-        n++;
-    }
-    if (bmpIndex == -1)
+    int bmpIndex;
+    if (!shouldGenerateCell(cell, bmpIndex))
         return true;
 
     BMPToTMXImages *images = mImages[bmpIndex];
-    if (images == 0)
-        return true; // silently ignore missing .bmp files
 
     QImage bmp = images->mBmp;
     QImage bmpVeg = images->mBmpVeg;
@@ -245,13 +272,6 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
         return 0;
     }
 
-    QFileInfo infoZS(info.absolutePath() + QLatin1Char('/')
-                      + info.completeBaseName() + QLatin1String("_zsm.bmp"));
-    if (!infoZS.exists()) {
-        mError = tr("The image_zsm file can't be found.\n%1").arg(path);
-        return 0;
-    }
-
     QImage image = loadImage(info.canonicalFilePath());
     if (image.isNull()) {
         return 0;
@@ -263,22 +283,16 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
         return 0;
     }
 
-    QImage imageZS = loadImage(infoZS.canonicalFilePath(),
-                               QLatin1String("_zsm"));
-    if (imageVeg.isNull()) {
-        return 0;
-    }
-
-    if ((image.size() != imageVeg.size()) ||
-            (imageZS.size() != image.size() / 10)) {
-        mError = tr("The images aren't the correct sizes.");
+    if (image.size() != imageVeg.size()) {
+        mError = tr("The images aren't the same size.\n%1\n%2")
+                .arg(info.canonicalFilePath())
+                .arg(infoVeg.canonicalFilePath());
         return 0;
     }
 
     BMPToTMXImages *images = new BMPToTMXImages;
     images->mBmp = image;
     images->mBmpVeg = imageVeg;
-    images->mBmpZombieSpawnMap = imageZS;
     images->mPath = info.canonicalFilePath();
     images->mBounds = QRect(origin, QSize(image.width() / 300,
                                           image.height() / 300));
@@ -300,13 +314,6 @@ QSize BMPToTMX::validateImages(const QString &path)
         return QSize();
     }
 
-    QFileInfo infoZS(info.absolutePath() + QLatin1Char('/')
-                      + info.completeBaseName() + QLatin1String("_zsm.bmp"));
-    if (!infoZS.exists()) {
-        mError = tr("The image_zsm file can't be found.\n%1").arg(path);
-        return QSize();
-    }
-
     QImageReader image(info.canonicalFilePath());
     if (image.size().isEmpty()) {
         return QSize();
@@ -317,14 +324,10 @@ QSize BMPToTMX::validateImages(const QString &path)
         return QSize();
     }
 
-    QImageReader imageZS(infoZS.canonicalFilePath());
-    if (imageZS.size().isEmpty()) {
-        return QSize();
-    }
-
-    if ((image.size() != imageVeg.size()) ||
-            (imageZS.size() != image.size() / 10)) {
-        mError = tr("The images aren't the correct sizes.");
+    if (image.size() != imageVeg.size()) {
+        mError = tr("The images aren't the same size.\n%1\n%2")
+                .arg(info.canonicalFilePath())
+                .arg(infoVeg.canonicalFilePath());
         return QSize();
     }
 
@@ -346,6 +349,40 @@ void BMPToTMX::assignMapsToCells(WorldDocument *worldDoc, BMPToTMX::GenerateMode
             }
         }
     }
+}
+
+QString BMPToTMX::defaultRulesFile() const
+{
+    return QCoreApplication::applicationDirPath() + QLatin1Char('/')
+            + QLatin1String("Rules.txt");
+}
+
+QString BMPToTMX::defaultBlendsFile() const
+{
+    return QCoreApplication::applicationDirPath() + QLatin1Char('/')
+            + QLatin1String("Blends.txt");
+}
+
+QString BMPToTMX::defaultMapBaseXMLFile() const
+{
+    return QCoreApplication::applicationDirPath() + QLatin1Char('/')
+            + QLatin1String("MapBaseXML.txt");
+}
+
+bool BMPToTMX::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
+{
+    // Get the top-most BMP covering the cell
+    int n = 0;
+    bmpIndex = -1;
+    foreach (WorldBMP *bmp, cell->world()->bmps()) {
+        if (bmp->bounds().contains(cell->pos()))
+            bmpIndex = n;
+        n++;
+    }
+    if (bmpIndex == -1)
+        return false;
+
+    return true;
 }
 
 void BMPToTMX::assignMapToCell(WorldCell *cell)
@@ -376,8 +413,9 @@ void BMPToTMX::assignMapToCell(WorldCell *cell)
 QString BMPToTMX::tmxNameForCell(WorldCell *cell, WorldBMP *bmp)
 {
     QString exportDir = mWorldDoc->world()->getBMPToTMXSettings().exportDir;
+    QString prefix = QFileInfo(bmp->filePath()).completeBaseName();
     QString filePath = exportDir + QLatin1Char('/')
-            + tr("%1_%2.tmx").arg(cell->x()).arg(cell->y());
+            + tr("%1_%2_%3.tmx").arg(prefix).arg(cell->x()).arg(cell->y());
     return filePath;
 }
 
@@ -400,6 +438,8 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)
 bool BMPToTMX::LoadBaseXML()
 {
     QString path = mWorldDoc->world()->getBMPToTMXSettings().mapbaseFile;
+    if (path.isEmpty())
+        path = defaultMapBaseXMLFile();
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
         return false;
@@ -436,6 +476,8 @@ bool BMPToTMX::LoadBaseXML()
 bool BMPToTMX::LoadRules()
 {
     QString path = mWorldDoc->world()->getBMPToTMXSettings().rulesFile;
+    if (path.isEmpty())
+        path = defaultRulesFile();
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
         return false;
@@ -487,10 +529,12 @@ bool BMPToTMX::setupBlends()
 {
     blendList.clear();
 
-    QString filePath = mWorldDoc->world()->getBMPToTMXSettings().blendsFile;
+    QString path = mWorldDoc->world()->getBMPToTMXSettings().blendsFile;
+    if (path.isEmpty())
+        path = defaultBlendsFile();
     SimpleFile simpleFile;
-    if (!simpleFile.read(filePath)) {
-        mError = tr("Failed to read %1").arg(filePath);
+    if (!simpleFile.read(path)) {
+        mError = tr("Failed to read %1").arg(path);
         return false;
     }
 

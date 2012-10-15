@@ -74,6 +74,13 @@
 // FIXME: add TilesetManager?
 Tiled::TilesetImageCache *gTilesetImageCache = NULL;
 
+MainWindow *MainWindow::mInstance = 0;
+
+MainWindow *MainWindow::instance()
+{
+    return mInstance;
+}
+
 using namespace Tiled;
 
 MainWindow::MainWindow(QWidget *parent)
@@ -91,6 +98,8 @@ MainWindow::MainWindow(QWidget *parent)
     , mZoomable(0)
 {
     ui->setupUi(this);
+
+    mInstance = this;
 
     Preferences *prefs = Preferences::instance();
 
@@ -391,8 +400,7 @@ void MainWindow::documentAdded(Document *doc)
             view->zoomable()->setScale(mViewHint.scale);
             view->centerOn(mViewHint.scrollX, mViewHint.scrollY);
         } else
-            view->centerOn(scene->cellToPixelCoords(worldDoc->world()->width() / 2.0,
-                                                    worldDoc->world()->height() / 2.0));
+            view->centerOn(scene->cellToPixelCoords(0, 0));
     }
 }
 

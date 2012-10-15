@@ -18,6 +18,7 @@
 #include "cellscene.h"
 
 #include "celldocument.h"
+#include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
@@ -1313,7 +1314,7 @@ void CellScene::loadMap()
         }
     }
     if (!mMapInfo) {
-        QMessageBox::warning(0, tr("Error Loading Map"),
+        QMessageBox::warning(MainWindow::instance(), tr("Error Loading Map"),
                              tr("%1\nCouldn't load the map for cell %2,%3.\nTry setting the maptools folder and try again.")
                              .arg(cell()->mapFilePath()).arg(cell()->x()).arg(cell()->y()));
         return; // TODO: Add error handling
@@ -1351,8 +1352,12 @@ void CellScene::loadMap()
 
     // FIXME: This creates a new CellRoadItem for every road in the world,
     // even if many are not visible in this cell.
-    for (int i = 0; i < world()->roads().count(); i++)
-        roadAdded(i);
+    foreach (Road *road, world()->roads()) {
+        CellRoadItem *item = new CellRoadItem(this, road);
+        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+        addItem(item);
+        mRoadItems += item;
+    }
 
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
     // all the items in the scene (without getting smaller, ever).
