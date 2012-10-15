@@ -156,6 +156,12 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
                                      cell->world()->roads());
 
+    foreach (WorldCellLot *lot, cell->lots()) {
+        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName())) {
+            mapComposite->addMap(info, lot->pos(), lot->level());
+        }
+    }
+
     generateHeader(cell, mapComposite);
 
     MaxLevel = 15;
