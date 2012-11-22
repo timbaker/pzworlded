@@ -91,6 +91,8 @@ public slots:
     void closeFile();
     void closeAllFiles();
 
+    void updateWindowTitle();
+
     void generateLotsAll();
     void generateLotsSelected();
 

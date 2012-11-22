@@ -143,7 +143,7 @@ MainWindow::MainWindow(QWidget *parent)
     undoAction->setShortcuts(QKeySequence::Undo);
     redoAction->setIconText(tr("Redo"));
     redoAction->setShortcuts(QKeySequence::Redo);
-//    connect(undoGroup, SIGNAL(cleanChanged(bool)), SLOT(updateWindowTitle()));
+    connect(undoGroup, SIGNAL(cleanChanged(bool)), SLOT(updateWindowTitle()));
     QAction *separator = ui->editMenu->actions().first();
     ui->editMenu->insertAction(separator, undoAction);
     ui->editMenu->insertAction(separator, redoAction);
@@ -486,6 +486,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
     ui->documentTabWidget->setCurrentIndex(docman()->indexOf(doc));
 
     updateActions();
+    updateWindowTitle();
 }
 
 void MainWindow::documentCloseRequested(int tabIndex)
@@ -761,6 +762,19 @@ void MainWindow::closeAllFiles()
 {
     if (confirmAllSave())
         docman()->closeAllDocuments();
+}
+
+void MainWindow::updateWindowTitle()
+{
+    QString fileName = mCurrentDocument ? mCurrentDocument->fileName() : QString();
+    if (fileName.isEmpty())
+        fileName = tr("Untitled");
+    else {
+        fileName = QDir::toNativeSeparators(fileName);
+    }
+    setWindowTitle(tr("[*]%1 - WorldEd").arg(fileName));
+    setWindowFilePath(fileName);
+    setWindowModified(mCurrentDocument ? mCurrentDocument->isModified() : false);
 }
 
 static void generateLots(MainWindow *mainWin, Document *doc,
@@ -1285,6 +1299,8 @@ bool MainWindow::saveFile(const QString &fileName)
         QMessageBox::critical(this, tr("Error Saving Map"), error);
         return false;
     }
+
+    updateWindowTitle();
 
     // Update tab tooltips
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
