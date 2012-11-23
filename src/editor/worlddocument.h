@@ -341,6 +341,9 @@ public:
     void insertBMP(int index, WorldBMP *bmp);
     void removeBMP(WorldBMP *bmp);
 
+    void emitCellMapFileAboutToChange(WorldCell *cell);
+    void emitCellMapFileChanged(WorldCell *cell);
+
     WorldDocumentUndoRedo &undoRedo() { return mUndoRedo; }
 
 private:

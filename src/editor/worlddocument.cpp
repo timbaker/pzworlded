@@ -719,6 +719,16 @@ void WorldDocument::removeBMP(WorldBMP *bmp)
     undoStack()->push(new RemoveBMP(this, index));
 }
 
+void WorldDocument::emitCellMapFileAboutToChange(WorldCell *cell)
+{
+    emit cellMapFileAboutToChange(cell);
+}
+
+void WorldDocument::emitCellMapFileChanged(WorldCell *cell)
+{
+    emit cellMapFileChanged(cell);
+}
+
 void WorldDocument::removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd)
 {
     int index = 0;
