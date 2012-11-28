@@ -321,6 +321,8 @@ void WorldScene::worldResized(const QSize &oldSize)
     mSelectionItem->updateBoundingRect();
     foreach (WorldBMPItem *item, mBMPItems)
         item->synchWithBMP();
+    foreach (WorldRoadItem *item, mRoadItems)
+        item->synchWithRoad();
 }
 
 QPointF WorldScene::pixelToCellCoords(qreal x, qreal y) const
