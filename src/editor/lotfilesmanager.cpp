@@ -188,10 +188,11 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             mGridData[x][y].resize(MaxLevel);
     }
 
+    QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
         for (int y = 0; y < mapHeight; y++) {
             for (int x = 0; x < mapWidth; x++) {
-                QVector<const Tiled::Cell *> cells;
+                cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
                 foreach (const Tiled::Cell *cell, cells) {
                     LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));

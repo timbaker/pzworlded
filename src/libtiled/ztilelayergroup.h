@@ -56,7 +56,8 @@ public:
 
     virtual QRectF boundingRect(const MapRenderer *renderer) const;
 
-    virtual bool orderedCellsAt(const QPoint &point, QVector<const Cell*>& cells) const = 0;
+    virtual bool orderedCellsAt(const QPoint &point, QVector<const Cell*>& cells,
+                                QVector<qreal> &opacities) const = 0;
     virtual void prepareDrawing(const MapRenderer *renderer, const QRect &rect) = 0;
 
     void setLevel(int level) { mLevel = level; }

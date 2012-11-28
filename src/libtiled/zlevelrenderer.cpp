@@ -367,8 +367,11 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
     QTransform baseTransform = painter->transform();
 
     static QVector<const Cell*> cells(40); // or QVarLengthArray
+    static QVector<qreal> opacities(40); // or QVarLengthArray
 
     layerGroup->prepareDrawing(this, rect);
+
+    qreal opacity = painter->opacity();
 
     for (int y = startPos.y(); y - tileHeight < rect.bottom();
          y += tileHeight / 2)
@@ -376,9 +379,10 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
         QPoint columnItr = rowItr;
 
         for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
-            cells.clear();
-            if (layerGroup->orderedCellsAt(columnItr, cells)) {
-                foreach (const Cell *cell, cells) {
+            cells.resize(0);
+            if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
+                for (int i = 0; i < cells.size(); i++) {
+                    const Cell *cell = cells[i];
                     if (!cell->isEmpty()) {
                         const QPixmap &img = cell->tile->image();
                         const QPoint offset = cell->tile->tileset()->tileOffset();
@@ -415,6 +419,8 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
 
                         const QTransform transform(m11, m12, m21, m22, dx, dy);
                         painter->setTransform(transform * baseTransform);
+
+                        painter->setOpacity(opacities[i] * opacity);
 
                         painter->drawPixmap(0, 0, img);
                     }
