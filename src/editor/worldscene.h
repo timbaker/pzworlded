@@ -357,11 +357,7 @@ public:
     inline QPointF pixelToCellCoords(const QPointF &point) const
     { return pixelToCellCoords(point.x(), point.y()); }
 
-    inline QPoint pixelToCellCoordsInt(const QPointF &point) const
-    {
-        QPointF pos = pixelToCellCoords(point.x(), point.y());
-        return QPoint(pos.x(), pos.y()); // Do not use toPoint(), it rounds up
-    }
+    QPoint pixelToCellCoordsInt(const QPointF &point) const;
 
     WorldCell *pointToCell(const QPointF &point);
 

@@ -33,6 +33,7 @@
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mapsdock.h"
+#include "newworlddialog.h"
 #include "objectsdock.h"
 #include "objectgroupsdialog.h"
 #include "objecttypesdialog.h"
@@ -333,9 +334,12 @@ void MainWindow::retranslateUi()
 
 void MainWindow::newWorld()
 {
-    // TODO: Let user specify the width/height of the new world
+    NewWorldDialog dialog(this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    QSize size = dialog.worldSize();
 
-    World *newWorld = new World(100, 100);
+    World *newWorld = new World(size.width(), size.height());
     WorldDocument *newDoc = new WorldDocument(newWorld);
     docman()->addDocument(newDoc);
 }

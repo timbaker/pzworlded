@@ -31,6 +31,7 @@
 #include "worlddocument.h"
 #include "zoomable.h"
 
+#include <qmath.h>
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
@@ -334,6 +335,17 @@ QPointF WorldScene::pixelToCellCoords(qreal x, qreal y) const
 
     return QPointF(mx / tileHeight,
                    my / tileHeight);
+}
+
+QPoint WorldScene::pixelToCellCoordsInt(const QPointF &point) const
+{
+    QPointF pos = pixelToCellCoords(point.x(), point.y());
+    qreal x = pos.x(), y = pos.y();
+    if (x < 0)
+        x = -qCeil(qAbs(x));
+    if (y < 0)
+        y = -qCeil(qAbs(y));
+    return QPoint(x, y); // Do not use toPoint(), it rounds up
 }
 
 WorldCell *WorldScene::pointToCell(const QPointF &point)

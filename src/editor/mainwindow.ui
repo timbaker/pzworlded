@@ -331,7 +331,7 @@
      <normaloff>:/images/16x16/document-open.png</normaloff>:/images/16x16/document-open.png</iconset>
    </property>
    <property name="text">
-    <string>Open</string>
+    <string>Open...</string>
    </property>
   </action>
   <action name="actionEditCell">
@@ -465,7 +465,7 @@
      <normaloff>:/images/16x16/document-new.png</normaloff>:/images/16x16/document-new.png</iconset>
    </property>
    <property name="text">
-    <string>New</string>
+    <string>New...</string>
    </property>
   </action>
   <action name="actionCreateObject">
