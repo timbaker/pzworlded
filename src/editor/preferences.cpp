@@ -95,6 +95,8 @@ Preferences::Preferences()
     mSettings->endGroup();
 
     mSearchPaths = mSettings->value(QLatin1String("SearchPaths"), QStringList()).toStringList();
+
+    mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
 }
 
 Preferences::~Preferences()
@@ -166,6 +168,19 @@ void Preferences::setUseOpenGL(bool useOpenGL)
     mSettings->setValue(QLatin1String("Interface/OpenGL"), mUseOpenGL);
 
     emit useOpenGLChanged(mUseOpenGL);
+}
+
+QString Preferences::openFileDirectory() const
+{
+    return mOpenFileDirectory;
+}
+
+void Preferences::setOpenFileDirectory(const QString &path)
+{
+    if (mOpenFileDirectory == path)
+        return;
+    mOpenFileDirectory = path;
+    mSettings->setValue(QLatin1String("OpenFileDirectory"), mOpenFileDirectory);
 }
 
 void Preferences::setShowObjectNames(bool show)

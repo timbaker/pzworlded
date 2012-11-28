@@ -551,11 +551,14 @@ void MainWindow::openFile()
     QString selectedFilter = tr("PZWorldEd world files (*.pzw)");
     filter += selectedFilter;
 
-    QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Open World"),
-                                                    QDir::currentPath()/*fileDialogStartLocation()*/,
-                                                    filter, &selectedFilter);
+    QStringList fileNames =
+            QFileDialog::getOpenFileNames(this, tr("Open World"),
+                                          Preferences::instance()->openFileDirectory(),
+                                          filter, &selectedFilter);
     if (fileNames.isEmpty())
         return;
+
+    Preferences::instance()->setOpenFileDirectory(QFileInfo(fileNames[0]).absolutePath());
 
     foreach (const QString &fileName, fileNames)
         openFile(fileName/*, mapReader*/);
@@ -741,7 +744,10 @@ bool MainWindow::saveFileAs()
         suggestedFileName += fileInfo.completeBaseName();
         suggestedFileName += QLatin1String(".pzw");
     } else {
-        suggestedFileName = QDir::currentPath();//fileDialogStartLocation();
+        QString path = Preferences::instance()->openFileDirectory();
+        if (path.isEmpty() || !QDir(path).exists())
+            path = QDir::currentPath();
+        suggestedFileName = path;
         suggestedFileName += QLatin1Char('/');
         suggestedFileName += tr("untitled.pzw");
     }
@@ -749,8 +755,10 @@ bool MainWindow::saveFileAs()
     const QString fileName =
             QFileDialog::getSaveFileName(this, QString(), suggestedFileName,
                                          tr("PZWorldEd world files (*.pzw)"));
-    if (!fileName.isEmpty())
+    if (!fileName.isEmpty()) {
+        Preferences::instance()->setOpenFileDirectory(QFileInfo(fileName).absolutePath());
         return saveFile(fileName);
+    }
     return false;
 }
 

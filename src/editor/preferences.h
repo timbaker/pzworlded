@@ -52,6 +52,9 @@ public:
     bool showObjectNames() const { return mShowObjectNames; }
     bool showBMPs() const { return mShowBMPs; }
 
+    QString openFileDirectory() const;
+    void setOpenFileDirectory(const QString &path);
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
@@ -103,6 +106,7 @@ private:
     bool mHighlightCurrentLevel;
     QString mMapsDirectory;
     QStringList mSearchPaths;
+    QString mOpenFileDirectory;
 
     static Preferences *mInstance;
 };
