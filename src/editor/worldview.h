@@ -33,6 +33,12 @@ public:
     void mouseMoveEvent(QMouseEvent *event);
 
     WorldScene *scene() const;
+
+private slots:
+    void worldResized();
+
+private:
+    QGraphicsPolygonItem *mMiniMapItem;
 };
 
 #endif // WORLDVIEW_H

@@ -18,6 +18,7 @@
 #include "worldview.h"
 
 #include "world.h"
+#include "worlddocument.h"
 #include "worldscene.h"
 #include "zoomable.h"
 
@@ -34,14 +35,23 @@ void WorldView::setScene(WorldScene *scene)
 {
     BaseGraphicsView::setScene(scene);
 
+    connect(scene->worldDocument(), SIGNAL(worldResized(QSize)),
+            SLOT(worldResized()));
+
     QPolygonF polygon = scene->cellRectToPolygon(scene->world()->bounds());
-    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(polygon);
-    addMiniMapItem(item);
+    mMiniMapItem = new QGraphicsPolygonItem(polygon);
+    addMiniMapItem(mMiniMapItem);
 }
 
 WorldScene *WorldView::scene() const
 {
     return static_cast<WorldScene*>(mScene);
+}
+
+void WorldView::worldResized()
+{
+    QPolygonF polygon = scene()->cellRectToPolygon(scene()->world()->bounds());
+    mMiniMapItem->setPolygon(polygon);
 }
 
 void WorldView::mouseMoveEvent(QMouseEvent *event)
