@@ -52,6 +52,17 @@ World::~World()
     qDeleteAll(mBMPs);
 }
 
+void World::swapCells(QVector<WorldCell *> &cells)
+{
+    mCells.swap(cells);
+}
+
+void World::setSize(const QSize &newSize)
+{
+    mWidth = newSize.width();
+    mHeight = newSize.height();
+}
+
 PropertyDef *World::removePropertyDefinition(int index)
 {
     return mPropertyDefs.takeAt(index);

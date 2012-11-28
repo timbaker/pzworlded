@@ -779,3 +779,49 @@ void AddRemoveBMP::remove()
 {
     mBMP = mDocument->undoRedo().removeBMP(mIndex);
 }
+
+/////
+
+ResizeWorld::ResizeWorld(WorldDocument *doc, const QSize &newSize) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Resize World")),
+    mDocument(doc),
+    mSize(newSize),
+    mWorldSize(doc->world()->size())
+{
+    mCells.resize(mSize.width() * mSize.height());
+
+    QRect oldBounds = mDocument->world()->bounds();
+    QRect newBounds = QRect(QPoint(0, 0), newSize);
+
+    for (int y = 0; y < mSize.height(); y++) {
+        for (int x = 0; x < mSize.width(); x++) {
+            if (!oldBounds.contains(x, y))
+                mCells[y * newBounds.width() + x] = new WorldCell(mDocument->world(), x, y);
+        }
+    }
+
+    QRect bounds = oldBounds & newBounds;
+    for (int y = 0; y < bounds.height(); y++) {
+        for (int x = 0; x < bounds.width(); x++) {
+            mCells[y * newBounds.width() + x] = mDocument->world()->cellAt(x, y);
+        }
+    }
+}
+
+ResizeWorld::~ResizeWorld()
+{
+#if 0 // FIXME: not sure with multiple undo/redo which cells we can delete
+    QRect bounds(0, 0, mWorldSize.width(), mWorldSize.height());
+    for (int y = 0; y < mSize.height(); y++)
+        for (int x = 0; x < mSize.width(); x++) {
+            if (!bounds.contains(x, y))
+                delete mCells[x + y * mSize.width()];
+        }
+#endif
+}
+
+void ResizeWorld::swap()
+{
+    mWorldSize = mSize;
+    mSize = mDocument->undoRedo().resizeWorld(mSize, mCells);
+}

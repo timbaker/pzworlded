@@ -254,6 +254,7 @@
      <string>World</string>
     </property>
     <addaction name="actionEditCell"/>
+    <addaction name="actionResizeWorld"/>
     <addaction name="separator"/>
     <addaction name="actionObjectGroups"/>
     <addaction name="actionObjectTypes"/>
@@ -643,6 +644,15 @@
    </property>
    <property name="text">
     <string>Show BMP Images</string>
+   </property>
+  </action>
+  <action name="actionResizeWorld">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-page-setup.png</normaloff>:/images/16x16/document-page-setup.png</iconset>
+   </property>
+   <property name="text">
+    <string>Resize World...</string>
    </property>
   </action>
  </widget>

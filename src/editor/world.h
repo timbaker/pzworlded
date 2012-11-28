@@ -153,6 +153,9 @@ public:
     QSize size() const { return QSize(mWidth, mHeight); }
     QRect bounds() const { return QRect(0, 0, mWidth, mHeight); }
 
+    void swapCells(QVector<WorldCell *> &cells);
+    void setSize(const QSize &newSize);
+
     const QVector<WorldCell*> &cells() const { return mCells; }
     WorldCell *cellAt(int x, int y)
     {

@@ -139,6 +139,8 @@ public:
 
     void mapImageChanged(MapImage *mapImage);
 
+    void worldResized();
+
 protected:
     void calcMapImageBounds();
     void calcLotImageBounds(int index);
@@ -400,6 +402,9 @@ public:
 signals:
     
 public slots:
+    void worldAboutToResize(const QSize &newSize);
+    void worldResized(const QSize &oldSize);
+
     void selectedCellsChanged();
     void cellMapFileChanged(WorldCell *cell);
     void cellLotAdded(WorldCell *cell, int index);

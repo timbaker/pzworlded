@@ -85,6 +85,8 @@ public:
     ObjectType *removeObjectType(int index);
     QString changeObjectTypeName(ObjectType *objType, const QString &name);
 
+    QSize resizeWorld(const QSize &newSize, QVector<WorldCell*> &cells);
+
     QString setCellMapName(WorldCell *cell, const QString &mapName);
     WorldCellContents *setCellContents(WorldCell *cell, WorldCellContents *contents);
 
@@ -147,6 +149,9 @@ signals:
     void templateAboutToBeRemoved(PropertyHolder *ph, int index);
 
     void propertyValueChanged(PropertyHolder *ph, int index);
+
+    void worldAboutToResize(const QSize &newSize);
+    void worldResized(const QSize &oldSize);
 
     void cellMapFileAboutToChange(WorldCell *cell);
     void cellMapFileChanged(WorldCell *cell);
@@ -229,6 +234,8 @@ public:
 
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
+
+    void resizeWorld(const QSize &newSize);
 
     void setCellMapName(WorldCell *cell, const QString &mapName);
     void addCellLot(WorldCell *cell, int index, WorldCellLot *lot);
@@ -379,6 +386,9 @@ signals:
     void propertyAboutToBeRemoved(PropertyHolder *ph, int index);
 
     void propertyValueChanged(PropertyHolder *ph, int index);
+
+    void worldAboutToResize(const QSize &newSize);
+    void worldResized(const QSize &oldSize);
 
     void cellMapFileAboutToChange(WorldCell *cell);
     void cellMapFileChanged(WorldCell *cell);

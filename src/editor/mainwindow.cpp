@@ -41,6 +41,7 @@
 #include "progress.h"
 #include "propertiesdock.h"
 #include "propertydefinitionsdialog.h"
+#include "resizeworlddialog.h"
 #include "roadsdock.h"
 #include "scenetools.h"
 #include "templatesdialog.h"
@@ -213,6 +214,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
 
+    connect(ui->actionResizeWorld, SIGNAL(triggered()), SLOT(resizeWorld()));
     connect(ui->actionObjectGroups, SIGNAL(triggered()), SLOT(objectGroupsDialog()));
     connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
@@ -829,6 +831,15 @@ void MainWindow::BMPToTMXSelected()
     _BMPToTMX(this, mCurrentDocument, BMPToTMX::GenerateSelected);
 }
 
+void MainWindow::resizeWorld()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        return;
+    ResizeWorldDialog dialog(worldDoc, this);
+    dialog.exec();
+}
+
 void MainWindow::preferencesDialog()
 {
     if (!mCurrentDocument)
@@ -1350,6 +1361,7 @@ void MainWindow::updateActions()
     ui->actionRemoveBMP->setEnabled(worldDoc && worldDoc->selectedBMPCount());
 
     ui->actionEditCell->setEnabled(false);
+    ui->actionResizeWorld->setEnabled(worldDoc);
     ui->actionObjectTypes->setEnabled(hasDoc);
     ui->actionProperties->setEnabled(hasDoc);
     ui->actionTemplates->setEnabled(hasDoc);

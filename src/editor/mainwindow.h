@@ -99,6 +99,8 @@ public slots:
     void BMPToTMXAll();
     void BMPToTMXSelected();
 
+    void resizeWorld();
+
     void preferencesDialog();
     void objectGroupsDialog();
     void objectTypesDialog();

@@ -24,6 +24,7 @@
 #include <QSize>
 #include <QString>
 #include <QUndoCommand>
+#include <QVector>
 
 class BMPToTMXSettings;
 class GenerateLotsSettings;
@@ -1032,6 +1033,26 @@ public:
 
     void undo() { add(); }
     void redo() { remove(); }
+};
+
+/////
+
+class ResizeWorld : public QUndoCommand
+{
+public:
+    ResizeWorld(WorldDocument *doc, const QSize &newSize);
+    ~ResizeWorld();
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    QSize mSize;
+    QVector<WorldCell*> mCells;
+    QSize mWorldSize;
 };
 
 #endif // UNDOREDO_H

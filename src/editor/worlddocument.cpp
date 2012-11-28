@@ -87,6 +87,11 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)),
             SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)));
 
+    connect(&mUndoRedo, SIGNAL(worldAboutToResize(QSize)),
+            SIGNAL(worldAboutToResize(QSize)));
+    connect(&mUndoRedo, SIGNAL(worldResized(QSize)),
+            SIGNAL(worldResized(QSize)));
+
     connect(&mUndoRedo, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
             SIGNAL(cellMapFileAboutToChange(WorldCell*)));
     connect(&mUndoRedo, SIGNAL(cellMapFileChanged(WorldCell*)),
@@ -157,6 +162,7 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 
 WorldDocument::~WorldDocument()
 {
+    delete mUndoStack; // before mWorld is deleted
     delete mWorld;
 }
 
@@ -300,6 +306,11 @@ void WorldDocument::editCell(int x, int y)
     }
     CellDocument *cellDoc = new CellDocument(this, cell);
     docman->addDocument(cellDoc);
+}
+
+void WorldDocument::resizeWorld(const QSize &newSize)
+{
+    mUndoStack->push(new ResizeWorld(this, newSize));
 }
 
 void WorldDocument::setCellMapName(WorldCell *cell, const QString &mapName)
@@ -898,6 +909,34 @@ QString WorldDocumentUndoRedo::changeObjectTypeName(ObjectType *objType, const Q
     objType->setName(name);
     emit objectTypeNameChanged(objType);
     return oldName;
+}
+
+QSize WorldDocumentUndoRedo::resizeWorld(const QSize &newSize, QVector<WorldCell *> &cells)
+{
+    DocumentManager *docMgr = DocumentManager::instance();
+    QList<WorldCell*> selection = mWorldDoc->selectedCells();
+    QRect newBounds(QPoint(0, 0), newSize);
+    for (int x = 0; x < mWorld->width(); x++) {
+        for (int y = 0; y < mWorld->height(); y++) {
+            if (!newBounds.contains(x, y)) {
+                WorldCell *cell = mWorld->cellAt(x, y);
+                // Deselect any cells that are getting chopped off.
+                selection.removeAll(cell);
+                // Close any cell documents for cells that are getting chopped off.
+                if (CellDocument *doc = docMgr->findDocument(cell))
+                    docMgr->closeDocument(doc);
+            }
+        }
+    }
+    if (selection != mWorldDoc->selectedCells())
+        setSelectedCells(selection);
+
+    emit worldAboutToResize(newSize);
+    QSize oldSize = mWorld->size();
+    mWorld->swapCells(cells);
+    mWorld->setSize(newSize);
+    emit worldResized(oldSize);
+    return oldSize;
 }
 
 QString WorldDocumentUndoRedo::setCellMapName(WorldCell *cell, const QString &mapName)

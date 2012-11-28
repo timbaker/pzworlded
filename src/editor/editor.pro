@@ -92,7 +92,8 @@ SOURCES += main.cpp\
     bmptotmxdialog.cpp \
     generatelotsdialog.cpp \
     filesystemwatcher.cpp \
-    bmptotmxconfirmdialog.cpp
+    bmptotmxconfirmdialog.cpp \
+    resizeworlddialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -144,7 +145,8 @@ HEADERS  += mainwindow.h \
     bmptotmxdialog.h \
     generatelotsdialog.h \
     filesystemwatcher.h \
-    bmptotmxconfirmdialog.h
+    bmptotmxconfirmdialog.h \
+    resizeworlddialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -156,7 +158,8 @@ FORMS    += mainwindow.ui \
     copypastedialog.ui \
     bmptotmxdialog.ui \
     generatelotsdialog.ui \
-    bmptotmxconfirmdialog.ui
+    bmptotmxconfirmdialog.ui \
+    resizeworlddialog.ui
 
 OTHER_FILES +=
 

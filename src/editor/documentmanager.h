@@ -42,6 +42,7 @@ public:
 
     void addDocument(Document *doc);
     void closeDocument(int index);
+    void closeDocument(Document *doc);
 
     void closeCurrentDocument();
     void closeAllDocuments();

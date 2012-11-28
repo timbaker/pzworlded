@@ -114,6 +114,11 @@ void DocumentManager::closeDocument(int index)
     delete doc;
 }
 
+void DocumentManager::closeDocument(Document *doc)
+{
+    closeDocument(mDocuments.indexOf(doc));
+}
+
 void DocumentManager::closeCurrentDocument()
 {
     if (mCurrent)

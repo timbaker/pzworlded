@@ -74,6 +74,11 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     mCoordItem->setZValue(ZVALUE_COORDITEM);
     addItem(mCoordItem);
 
+    connect(mWorldDoc, SIGNAL(worldAboutToResize(QSize)),
+            SLOT(worldAboutToResize(QSize)));
+    connect(mWorldDoc, SIGNAL(worldResized(QSize)),
+            SLOT(worldResized(QSize)));
+
     connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
             SLOT(selectedCellsChanged()));
     connect(mWorldDoc, SIGNAL(cellMapFileChanged(WorldCell*)),
@@ -266,7 +271,55 @@ QList<WorldBMP *> WorldScene::bmpsInRect(const QRectF &cellRect)
 void WorldScene::pasteCellsFromClipboard()
 {
     ToolManager::instance()->selectTool(mPasteCellsTool);
-//    mActiveTool = mPasteCellsTool;
+    //    mActiveTool = mPasteCellsTool;
+}
+
+void WorldScene::worldAboutToResize(const QSize &newSize)
+{
+    // Delete items for cells that are getting chopped off.
+    QRect newBounds = QRect(QPoint(0, 0), newSize);
+    for (int x = 0; x < world()->width(); x++)
+        for (int y = 0; y < world()->height(); y++) {
+            if (!newBounds.contains(x, y)) {
+                delete itemForCell(x, y);
+                mCellItems[x + y * world()->width()] = 0;
+            }
+        }
+}
+
+void WorldScene::worldResized(const QSize &oldSize)
+{
+    QVector<WorldCellItem*> items(world()->width() * world()->height());
+
+    // Reuse items still in bounds.
+    for (int x = 0; x < qMin(oldSize.width(), world()->width()); x++) {
+        for (int y = 0; y < qMin(oldSize.height(), world()->height()); y++) {
+            WorldCellItem *item = mCellItems[x + y * oldSize.width()];
+            item->worldResized();
+            items[x + y * world()->width()] = item;
+        }
+    }
+
+    // Create new items for new cells.
+    QRect oldBounds = QRect(QPoint(0, 0), oldSize);
+    for (int x = 0; x < world()->width(); x++) {
+        for (int y = 0; y < world()->height(); y++) {
+            if (!oldBounds.contains(x, y)) {
+                WorldCellItem *item = new WorldCellItem(world()->cellAt(x, y), this);
+                item->setZValue(ZVALUE_CELLITEM);
+                items[x + y * world()->width()] = item;
+                addItem(item);
+            }
+        }
+    }
+
+    mCellItems = items;
+    mGridItem->updateBoundingRect();
+    setSceneRect(mGridItem->boundingRect());
+    mCoordItem->updateBoundingRect();
+    mSelectionItem->updateBoundingRect();
+    foreach (WorldBMPItem *item, mBMPItems)
+        item->synchWithBMP();
 }
 
 QPointF WorldScene::pixelToCellCoords(qreal x, qreal y) const
@@ -857,6 +910,14 @@ void BaseCellItem::mapImageChanged(MapImage *mapImage)
         updateBoundingRect();
         update();
     }
+}
+
+void BaseCellItem::worldResized()
+{
+    calcMapImageBounds();
+    for (int i = 0; i < mLotImages.size(); i++)
+        calcLotImageBounds(i);
+    updateBoundingRect();
 }
 
 void BaseCellItem::calcMapImageBounds()
