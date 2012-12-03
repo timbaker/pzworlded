@@ -29,6 +29,10 @@ class World;
 class WorldDocument;
 class WorldCell;
 
+namespace Tiled {
+class ObjectGroup;
+}
+
 #define CELL_WIDTH 300
 #define CELL_HEIGHT 300
 
@@ -182,6 +186,8 @@ public slots:
     
 private:
     uint cellToGid(const Tiled::Cell *cell);
+    void processObjectGroups(MapComposite *mapComposite);
+    void processObjectGroup(Tiled::ObjectGroup *objectGroup, const QPoint &offset);
 
 private:
     Q_DISABLE_COPY(LotFilesManager)

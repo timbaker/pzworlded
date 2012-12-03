@@ -280,6 +280,9 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             return false;
     }
 
+#if 1
+    processObjectGroups(mapComposite);
+#else
     foreach (Layer *layer, map->layers()) {
         int level;
         if (!MapComposite::levelForLayer(layer, &level))
@@ -320,6 +323,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             }
         }
     }
+#endif
 
     foreach (LotFile::Room *r, roomList) {
         if (r->building == 0) {
@@ -546,4 +550,60 @@ uint LotFilesManager::cellToGid(const Cell *cell)
         return 0;
 
     return i.value() + cell->tile->id();
+}
+
+void LotFilesManager::processObjectGroups(MapComposite *mapComposite)
+{
+    foreach (Layer *layer, mapComposite->map()->layers()) {
+        if (ObjectGroup *og = layer->asObjectGroup())
+            processObjectGroup(og, mapComposite->originRecursive());
+    }
+
+    foreach (MapComposite *subMap, mapComposite->subMaps())
+        processObjectGroups(subMap);
+}
+
+void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup, const QPoint &offset)
+{
+    int level;
+    if (!MapComposite::levelForLayer(objectGroup, &level))
+        return;
+
+    foreach (const MapObject *mapObject, objectGroup->objects()) {
+#if 0
+        if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
+            continue;
+#endif
+        if (!mapObject->width() || !mapObject->height())
+            continue;
+
+        int x = qFloor(mapObject->x());
+        int y = qFloor(mapObject->y());
+        int w = qCeil(mapObject->x() + mapObject->width()) - x;
+        int h = qCeil(mapObject->y() + mapObject->height()) - y;
+
+        QString name = mapObject->name();
+        if (name.isEmpty())
+            name = QLatin1String("unnamed");
+
+        if (objectGroup->map()->orientation() == Map::Isometric) {
+            x += 3 * level;
+            y += 3 * level;
+        }
+
+        // Apply the MapComposite offset in the top-level map.
+        x += offset.x();
+        y += offset.y();
+
+        if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
+            LotFile::Room *room = new LotFile::Room(name, x, y, level, w, h);
+            room->ID = roomList.count();
+            roomList += room;
+        } else {
+            LotFile::Zone *z = new LotFile::Zone(name,
+                                                 mapObject->type(),
+                                                 x, y, level, w, h);
+            ZoneList.append(z);
+        }
+    }
 }
