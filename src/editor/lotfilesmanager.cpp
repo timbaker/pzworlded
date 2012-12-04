@@ -339,13 +339,20 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
             if (r->IsSameBuilding(comp)) {
                 if (comp->building != 0) {
-                    r->building->RoomList += comp->building->RoomList;
-                    buildingList.removeOne(comp->building);
-                    delete comp->building;
-                }
-                comp->building = r->building;
-                if (!r->building->RoomList.contains(comp))
+                    LotFile::Building *b = comp->building;
+                    foreach (LotFile::Room *r2, b->RoomList) {
+                        Q_ASSERT(r2->building == b);
+                        Q_ASSERT(!r->building->RoomList.contains(r2));
+                        r2->building = r->building;
+                    }
+                    r->building->RoomList += b->RoomList;
+                    buildingList.removeOne(b);
+                    delete b;
+                } else {
+                    comp->building = r->building;
                     r->building->RoomList += comp;
+                    Q_ASSERT(r->building->RoomList.count(comp) == 1);
+                }
             }
         }
     }
