@@ -295,7 +295,7 @@ public:
 
         w.writeStartElement(QLatin1String("mapbasefile"));
         path.clear();
-        if (settings.mapbaseFile.isEmpty())
+        if (!settings.mapbaseFile.isEmpty())
             path = relativeFileName(settings.mapbaseFile);
         w.writeAttribute(QLatin1String("path"), path);
         w.writeEndElement();
