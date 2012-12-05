@@ -197,7 +197,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                 foreach (const Tiled::Cell *cell, cells) {
                     LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));
                     int lx = x, ly = y;
-                    if (true/*mapInfo->orientation() == Map::Isometric*/) {
+                    if (mapInfo->orientation() == Map::Isometric) {
                         lx = x + lg->level() * 3;
                         ly = y + lg->level() * 3;
                     }
