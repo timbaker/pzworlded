@@ -20,6 +20,7 @@ public:
 private slots:
     void exportBrowse();
     void spawnBrowse();
+    void metaInfoBrowse();
     void accept();
     void apply();
 
@@ -31,6 +32,7 @@ private:
     WorldDocument *mWorldDoc;
     QString mExportDir;
     QString mZombieSpawnMap;
+    QString mMetaTxt;
 };
 
 #endif // GENERATELOTSDIALOG_H

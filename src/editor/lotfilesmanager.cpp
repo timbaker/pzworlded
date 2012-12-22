@@ -24,6 +24,7 @@
 #include "objectgroup.h"
 #include "preferences.h"
 #include "progress.h"
+#include "tilemetainfomgr.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
@@ -33,6 +34,7 @@
 
 #include <qmath.h>
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -78,7 +80,8 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 
     PROGRESS progress(QLatin1String("Reading Zombie Spawn Map"));
 
-    QString spawnMap = mWorldDoc->world()->getGenerateLotsSettings().zombieSpawnMap;
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+    QString spawnMap = lotSettings.zombieSpawnMap;
     if (!QFileInfo(spawnMap).exists()) {
         mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
@@ -88,6 +91,14 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
     if (ZombieSpawnMap.isNull()) {
         mError = tr("Couldn't read the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
+        return false;
+    }
+
+    TileMetaInfoMgr::instance()->setTilesDirectory(QFileInfo(lotSettings.tileMetaInfo).absolutePath());
+    if (!TileMetaInfoMgr::instance()->readTxt()) {
+        mError = tr("%1\n(while reading %2)")
+                .arg(TileMetaInfoMgr::instance()->errorString())
+                .arg(TileMetaInfoMgr::instance()->txtName());
         return false;
     }
 
@@ -208,6 +219,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         }
     }
 
+    generateBuildingObjects();
+
     generateHeaderAux(cell, mapComposite);
 
     /////
@@ -272,7 +285,9 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     foreach (MapComposite *subMap, mapComposite->subMaps())
         tilesets += subMap->map()->tilesets();
 
+    qDeleteAll(TileMap.values());
     TileMap.clear();
+
     mTilesetToFirstGid.clear();
     uint firstGid = 1;
     foreach (Tileset *tileset, tilesets) {
@@ -280,50 +295,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             return false;
     }
 
-#if 1
     processObjectGroups(mapComposite);
-#else
-    foreach (Layer *layer, map->layers()) {
-        int level;
-        if (!MapComposite::levelForLayer(layer, &level))
-            continue;
-        if (ObjectGroup *objectGroup = layer->asObjectGroup()) {
-            foreach (const MapObject *mapObject, objectGroup->objects()) {
-#if 0
-                if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
-                    continue;
-#endif
-                if (!mapObject->width() || !mapObject->height())
-                    continue;
-
-                int x = qFloor(mapObject->x());
-                int y = qFloor(mapObject->y());
-                int w = qCeil(mapObject->x() + mapObject->width()) - x;
-                int h = qCeil(mapObject->y() + mapObject->height()) - y;
-
-                QString name = mapObject->name();
-                if (name.isEmpty())
-                    name = QLatin1String("unnamed");
-
-                if (map->orientation() == Map::Isometric) {
-                    x += 3 * level;
-                    y += 3 * level;
-                }
-
-                if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
-                    LotFile::Room *room = new LotFile::Room(name, x, y, level, w, h);
-                    room->ID = roomList.count();
-                    roomList += room;
-                } else {
-                    LotFile::Zone *z = new LotFile::Zone(name,
-                                                         mapObject->type(),
-                                                         x, y, level, w, h);
-                    ZoneList.append(z);
-                }
-            }
-        }
-    }
-#endif
 
     foreach (LotFile::Room *r, roomList) {
         if (r->building == 0) {
@@ -409,6 +381,12 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         out << qint32(room->w);
         out << qint32(room->h);
         out << qint32(room->floor);
+        out << qint32(room->objects.size());
+        foreach (const LotFile::RoomObject &object, room->objects) {
+            out << qint32(object.metaEnum);
+            out << qint32(object.x);
+            out << qint32(object.y);
+        }
     }
 
     out << qint32(buildingList.count());
@@ -481,6 +459,33 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
         out << qint32(notdonecount);
     }
 
+    return true;
+}
+
+bool LotFilesManager::generateBuildingObjects()
+{
+    /* Examine every tile inside a room.  If the tile's metaEnum >= 0 then
+       create a new RoomObject for it. */
+    int count = 0;
+    foreach (LotFile::Room *room, roomList) {
+        for (int x = room->x; x < room->x + room->w; x++) {
+            for (int y = room->y; y < room->y + room->h; y++) {
+                foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+                    int metaEnum = TileMap[entry->gid]->metaEnum;
+                    if (metaEnum >= 0) {
+                        LotFile::RoomObject object;
+                        object.x = x;
+                        object.y = y;
+                        object.metaEnum = metaEnum;
+                        room->objects += object;
+                        ++count;
+                    }
+                }
+            }
+        }
+    }
+
+    qDebug() << "added" << count << "objects to rooms";
 
     return true;
 }
@@ -519,7 +524,9 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
     for (int i = 0; i < tileset->tileCount(); ++i) {
         int localID = i;
         int ID = firstGid + localID;
-        TileMap[ID] = new LotFile::Tile(name + QLatin1String("_") + QString::number(localID));
+        LotFile::Tile *tile = new LotFile::Tile(name + QLatin1String("_") + QString::number(localID));
+        tile->metaEnum = TileMetaInfoMgr::instance()->tileEnumValue(tileset->tileAt(i));
+        TileMap[ID] = tile;
     }
 
     mTilesetToFirstGid.insert(tileset, firstGid);

@@ -1,6 +1,7 @@
 #include "generatelotsdialog.h"
 #include "ui_generatelotsdialog.h"
 
+#include "preferences.h"
 #include "world.h"
 #include "worlddocument.h"
 
@@ -22,13 +23,27 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
 
     // Export directory
     mExportDir = settings.exportDir;
-    ui->exportEdit->setText(mExportDir);
+    ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
     connect(ui->exportBrowse, SIGNAL(clicked()), SLOT(exportBrowse()));
 
     // Zombie Spawn Map
     mZombieSpawnMap = settings.zombieSpawnMap;
-    ui->spawnEdit->setText(mZombieSpawnMap);
+    ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
     connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
+
+    // TileMetaInfo.txt
+    mMetaTxt = settings.tileMetaInfo;
+    if (mMetaTxt.isEmpty()) {
+        foreach (QString searchPath, Preferences::instance()->searchPaths()) {
+            QString fileName = searchPath + QLatin1Char('/') + QLatin1String("TileMetaInfo.txt");
+            if (QFileInfo(fileName).exists()) {
+                mMetaTxt = fileName;
+                break;
+            }
+        }
+    }
+    ui->metaInfoEdit->setText(QDir::toNativeSeparators(mMetaTxt));
+    connect(ui->metaInfoBrowse, SIGNAL(clicked()), SLOT(metaInfoBrowse()));
 
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
             SLOT(apply()));
@@ -66,7 +81,29 @@ void GenerateLotsDialog::spawnBrowse()
         initialDir, formatString);
     if (!f.isEmpty()) {
         mZombieSpawnMap = f;
-        ui->spawnEdit->setText(mZombieSpawnMap);
+        ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
+    }
+}
+
+void GenerateLotsDialog::metaInfoBrowse()
+{
+    QString formatString = tr("Text files (*.txt);;All files (*.*)");
+
+    QString initialDir = QFileInfo(mWorldDoc->fileName()).absolutePath();
+    foreach (QString searchPath, Preferences::instance()->searchPaths()) {
+        if (QFileInfo(searchPath + QLatin1Char('/') + QLatin1String("TileMetaInfo.txt")).exists()) {
+            initialDir = searchPath;
+            break;
+        }
+    }
+    if (QFileInfo(mMetaTxt).exists())
+        initialDir = QFileInfo(mMetaTxt).absolutePath();
+
+    QString f = QFileDialog::getOpenFileName(this, tr("Choose the TileMetaInfo.txt file"),
+        initialDir, formatString);
+    if (!f.isEmpty()) {
+        mMetaTxt = f;
+        ui->metaInfoEdit->setText(QDir::toNativeSeparators(mMetaTxt));
     }
 }
 
@@ -78,6 +115,7 @@ void GenerateLotsDialog::accept()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
+    settings.tileMetaInfo = mMetaTxt;
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
@@ -92,6 +130,7 @@ void GenerateLotsDialog::apply()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
+    settings.tileMetaInfo = mMetaTxt;
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
@@ -111,6 +150,15 @@ bool GenerateLotsDialog::validate()
         QMessageBox::warning(this, tr("It's no good, Jim!"),
                              tr("Please choose a Zombie Spawn Map image file."));
         return false;
+    }
+
+    {
+        QFileInfo info(mMetaTxt);
+        if (mMetaTxt.isEmpty() || !info.exists()) {
+            QMessageBox::warning(this, tr("It's no good, Jim!"),
+                                 tr("Please choose the TileMetaInfo.txt file."));
+            return false;
+        }
     }
 
     return true;

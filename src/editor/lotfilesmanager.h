@@ -44,15 +44,17 @@ namespace LotFile
 class Tile
 {
 public:
-    Tile(const QString& name)
+    Tile(const QString &name)
     {
         this->name = name;
         this->used = false;
         this->id = -1;
+        this->metaEnum = -1;
     }
     QString name;
     bool used;
-    int id;
+    int id; // index into .lotheader's list of used tiles
+    int metaEnum; // TileMetaInfo.txt enumeration
 };
 
 class Lot
@@ -114,6 +116,14 @@ public:
 
 class Building;
 
+class RoomObject
+{
+public:
+    int metaEnum; // TileMetaInfo.txt enumeration
+    int x; // Cell coord
+    int y; // Cell coord
+};
+
 class Room
 {
 public:
@@ -145,6 +155,7 @@ public:
     int floor;
     QString name;
     Building *building;
+    QList<RoomObject> objects;
 };
 
 class Building
@@ -153,7 +164,7 @@ public:
     QList<Room*> RoomList;
 };
 
-}
+} // namespace LotFile
 
 class LotFilesManager : public QObject
 {
@@ -173,6 +184,7 @@ public:
     bool generateHeader(WorldCell *cell, MapComposite *mapComposite);
     bool generateHeaderAux(WorldCell *cell, MapComposite *mapComposite);
     bool generateChunk(QDataStream &out, WorldCell *cell, MapComposite *mapComposite, int cx, int cy);
+    bool generateBuildingObjects();
 
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
 

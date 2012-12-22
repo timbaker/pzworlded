@@ -46,6 +46,7 @@
 #include "roadsdock.h"
 #include "scenetools.h"
 #include "templatesdialog.h"
+#include "tilemetainfomgr.h"
 #include "toolmanager.h"
 #include "undodock.h"
 #include "world.h"
@@ -806,6 +807,7 @@ static void generateLots(MainWindow *mainWin, Document *doc,
         QMessageBox::warning(mainWin, mainWin->tr("Lot Generation Failed!"),
                              LotFilesManager::instance()->errorString());
     }
+    TileMetaInfoMgr::deleteInstance();
 }
 
 void MainWindow::generateLotsAll()

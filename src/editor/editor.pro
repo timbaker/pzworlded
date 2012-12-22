@@ -94,7 +94,9 @@ SOURCES += main.cpp\
     filesystemwatcher.cpp \
     bmptotmxconfirmdialog.cpp \
     resizeworlddialog.cpp \
-    newworlddialog.cpp
+    newworlddialog.cpp \
+    tilemetainfomgr.cpp \
+    tilesetmanager.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -148,7 +150,9 @@ HEADERS  += mainwindow.h \
     filesystemwatcher.h \
     bmptotmxconfirmdialog.h \
     resizeworlddialog.h \
-    newworlddialog.h
+    newworlddialog.h \
+    tilemetainfomgr.h \
+    tilesetmanager.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
