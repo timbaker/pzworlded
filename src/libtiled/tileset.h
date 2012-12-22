@@ -84,6 +84,9 @@ public:
         mImageWidth(0),
         mImageHeight(0),
         mColumnCount(0)
+  #ifdef ZOMBOID
+        , mMissing(false)
+  #endif
     {
         Q_ASSERT(tileSpacing >= 0);
         Q_ASSERT(margin >= 0);
@@ -231,6 +234,19 @@ public:
      */
     int columnCountForWidth(int width) const;
 
+#ifdef ZOMBOID
+    void setMissing(bool missing)
+    { mMissing = missing; }
+
+    /**
+      * Returns true if the source image wasn't successfully loaded.
+      * Instead of failing to load a map, we just display a special
+      * "missing" tile.
+      */
+    bool isMissing() const
+    { return mMissing; }
+#endif
+
 private:
     QString mName;
     QString mFileName;
@@ -245,6 +261,9 @@ private:
     int mImageHeight;
     int mColumnCount;
     QList<Tile*> mTiles;
+#ifdef ZOMBOID
+    bool mMissing;
+#endif
 };
 
 } // namespace Tiled
