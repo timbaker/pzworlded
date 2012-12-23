@@ -200,6 +200,25 @@ bool Map::isTilesetUsed(Tileset *tileset) const
 }
 
 #ifdef ZOMBOID
+QList<Tileset *> Map::missingTilesets() const
+{
+    QList<Tileset*> tilesets;
+    foreach (Tileset *tileset, mTilesets) {
+        if (tileset->isMissing())
+            tilesets += tileset;
+    }
+    return tilesets;
+}
+
+bool Map::hasMissingTilesets() const
+{
+    foreach (Tileset *tileset, mTilesets) {
+        if (tileset->isMissing())
+            return true;
+    }
+    return false;
+}
+
 void Map::addTileLayerGroup(ZTileLayerGroup *tileLayerGroup)
 {
     int arrayIndex = 0;

@@ -265,6 +265,11 @@ public:
     bool isTilesetUsed(Tileset *tileset) const;
 
 #ifdef ZOMBOID
+    QList<Tileset*> missingTilesets() const;
+    bool hasMissingTilesets() const;
+#endif
+
+#ifdef ZOMBOID
     void addTileLayerGroup(ZTileLayerGroup *tileLayerGroup);
     const QList<ZTileLayerGroup*> tileLayerGroups() const { return mTileLayerGroups; }
     int tileLayerGroupCount() const { return mTileLayerGroups.size(); }

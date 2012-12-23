@@ -20,12 +20,15 @@
 #include "mapcomposite.h"
 #include "preferences.h"
 #include "progress.h"
+#include "tilesetmanager.h"
 
 #include "map.h"
 #include "mapreader.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 #include "tilelayer.h"
+#include "tile.h"
+#include "tileset.h"
 
 #include <QDebug>
 #include <QDir>
@@ -190,6 +193,15 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
     if (!map) {
         mError = reader.errorString();
         return 0; // TODO: Add error handling
+    }
+
+    Tile *missingTile = TilesetManager::instance()->missingTile();
+    foreach (Tileset *tileset, map->missingTilesets()) {
+        if (tileset->tileHeight() == 128 && tileset->tileWidth() == 64) {
+            // Replace the all-red image with something nicer.
+            for (int i = 0; i < tileset->tileCount(); i++)
+                tileset->tileAt(i)->setImage(missingTile->image());
+        }
     }
 
     if (!mMapInfo.contains(mapFilePath)) {

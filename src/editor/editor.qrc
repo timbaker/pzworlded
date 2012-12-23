@@ -73,5 +73,6 @@
         <file>images/22x22/road-tool-edit.png</file>
         <file>images/22x22/road-tool-select.png</file>
         <file>images/22x22/bmp-tool-select.png</file>
+        <file>images/missing-tile.png</file>
     </qresource>
 </RCC>

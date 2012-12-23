@@ -41,7 +41,7 @@ TilesetManager::TilesetManager():
 #ifdef ZOMBOID
     mMissingTileset = new Tileset(QLatin1String("missing"), 64, 128);
     mMissingTileset->setTransparentColor(Qt::white);
-    QString fileName = QLatin1String(":/BuildingEditor/icons/missing-tile.png");
+    QString fileName = QLatin1String(":/images/missing-tile.png");
     if (!mMissingTileset->loadFromImage(QImage(fileName), fileName)) {
         QImage image(64, 128, QImage::Format_ARGB32);
         image.fill(Qt::red);
