@@ -35,8 +35,6 @@
 using namespace Tiled;
 using namespace Internal;
 
-extern TilesetImageCache *gTilesetImageCache;
-
 MapManager *MapManager::mInstance = NULL;
 
 MapManager *MapManager::instance()
@@ -186,7 +184,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
     Map *map = thread.mMap;
 #else
     EditorMapReader reader;
-    reader.setTilesetImageCache(gTilesetImageCache);
+    reader.setTilesetImageCache(TilesetManager::instance()->imageCache());
     Map *map = reader.readMap(mapFilePath);
 #endif
     if (!map) {

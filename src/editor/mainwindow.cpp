@@ -47,6 +47,7 @@
 #include "scenetools.h"
 #include "templatesdialog.h"
 #include "tilemetainfomgr.h"
+#include "tilesetmanager.h"
 #include "toolmanager.h"
 #include "undodock.h"
 #include "world.h"
@@ -74,8 +75,8 @@
 #include <QUndoGroup>
 #include <QUndoStack>
 
-// FIXME: add TilesetManager?
-Tiled::TilesetImageCache *gTilesetImageCache = NULL;
+using namespace Tiled;
+using namespace Tiled::Internal;
 
 MainWindow *MainWindow::mInstance = 0;
 
@@ -83,8 +84,6 @@ MainWindow *MainWindow::instance()
 {
     return mInstance;
 }
-
-using namespace Tiled;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -285,8 +284,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->documentTabWidget, SIGNAL(tabCloseRequested(int)),
             SLOT(documentCloseRequested(int)));
 
-    gTilesetImageCache = new Tiled::TilesetImageCache();
-
     Progress::instance()->setMainWindow(this);
 
     mViewHint.valid = false;
@@ -300,8 +297,8 @@ MainWindow::~MainWindow()
 {
     DocumentManager::deleteInstance();
     ToolManager::deleteInstance();
-    Preferences::instance()->deleteInstance();
-    delete gTilesetImageCache;
+    Preferences::deleteInstance();
+    TilesetManager::deleteInstance();
     delete ui;
 }
 

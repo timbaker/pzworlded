@@ -52,9 +52,6 @@
 
 using namespace Tiled;
 
-class TilesetImageCache;
-extern TilesetImageCache *gTilesetImageCache;
-
 ///// ///// ///// ///// /////
 
 class CellGridItem : public QGraphicsItem
