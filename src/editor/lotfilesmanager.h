@@ -88,7 +88,18 @@ public:
 class Square
 {
 public:
+    Square() :
+        roomID(-1)
+    {
+
+    }
+    ~Square()
+    {
+        qDeleteAll(Entries);
+    }
+
     QList<Entry*> Entries;
+    int roomID;
 };
 
 class Zone
@@ -164,6 +175,21 @@ public:
     QList<Room*> RoomList;
 };
 
+class Stats
+{
+public:
+    Stats() :
+        numBuildings(0),
+        numRooms(0),
+        numRoomObjects(0)
+    {
+    }
+
+    int numBuildings;
+    int numRooms;
+    int numRoomObjects;
+};
+
 } // namespace LotFile
 
 class LotFilesManager : public QObject
@@ -220,6 +246,7 @@ private:
     QList<LotFile::Building*> buildingList;
     QList<BMPToTMXImages*> mImages;
     QImage ZombieSpawnMap;
+    LotFile::Stats mStats;
 
     QString mError;
 };

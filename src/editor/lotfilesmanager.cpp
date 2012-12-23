@@ -119,8 +119,12 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
         }
     }
 
+    QString stats = tr("Finished!\n\nBuildings: %1\nRoom rects: %2\nRoom objects: %3")
+            .arg(mStats.numBuildings)
+            .arg(mStats.numRooms)
+            .arg(mStats.numRoomObjects);
     QMessageBox::information(MainWindow::instance(),
-                             tr("Generate Lot Files"), tr("Finished!"));
+                             tr("Generate Lot Files"), stats);
 
     return true;
 }
@@ -160,16 +164,31 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                       .arg(cell->x()).arg(cell->y()));
 
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
-    if (!mapInfo)
+    if (!mapInfo) {
+        mError = MapManager::instance()->errorString();
         return false;
+    }
 
-    MapComposite *mapComposite = new MapComposite(mapInfo);
+    MapComposite staticMapComposite(mapInfo);
+    MapComposite *mapComposite = &staticMapComposite;
     mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
                                      cell->world()->roads());
 
     foreach (WorldCellLot *lot, cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName())) {
             mapComposite->addMap(info, lot->pos(), lot->level());
+        } else {
+            mError = MapManager::instance()->errorString();
+            return false;
+        }
+    }
+
+    // Check for missing tilesets.
+    foreach (MapComposite *mc, mapComposite->maps()) {
+        if (mc->map()->hasMissingTilesets()) {
+            mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
+                    .arg(cell->x()).arg(cell->y()).arg(mc->mapInfo()->path());
+            return false;
         }
     }
 
@@ -180,16 +199,20 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     int mapWidth = mapInfo->width();
     int mapHeight = mapInfo->height();
 
-    // Cleanup last call
-    for (int x = 0; x < mGridData.size(); x++) {
-        for (int y = 0; y < mGridData[x].size(); y++) {
-            for (int z = 0; z < mGridData[x][y].size(); z++)  {
-                const QList<LotFile::Entry*> &entries = mGridData[x][y][z].Entries;
-                foreach (LotFile::Entry *entry, entries)
-                    delete entry;
-            }
-        }
+#if 1
+    // Resize the grid and cleanup data from the previous cell.
+    mGridData.resize(mapWidth);
+    for (int x = 0; x < mapWidth; x++) {
+        mGridData[x].resize(mapHeight);
+        for (int y = 0; y < mapHeight; y++)
+            mGridData[x][y].fill(LotFile::Square(), MaxLevel);
     }
+#else
+    // Cleanup last call
+    for (int x = 0; x < mGridData.size(); x++)
+        for (int y = 0; y < mGridData[x].size(); y++)
+            for (int z = 0; z < mGridData[x][y].size(); z++)
+                qDeleteAll(mGridData[x][y][z].Entries);
     mGridData.clear();
 
     mGridData.resize(mapWidth);
@@ -198,6 +221,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         for (int y = 0; y < mapHeight; y++)
             mGridData[x][y].resize(MaxLevel);
     }
+#endif
 
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
@@ -328,6 +352,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             }
         }
     }
+    mStats.numBuildings += buildingList.size();
 
     return true;
 }
@@ -381,12 +406,14 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         out << qint32(room->w);
         out << qint32(room->h);
         out << qint32(room->floor);
+#if 1
         out << qint32(room->objects.size());
         foreach (const LotFile::RoomObject &object, room->objects) {
             out << qint32(object.metaEnum);
             out << qint32(object.x);
             out << qint32(object.y);
         }
+#endif
     }
 
     out << qint32(buildingList.count());
@@ -464,12 +491,15 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
 
 bool LotFilesManager::generateBuildingObjects()
 {
-    /* Examine every tile inside a room.  If the tile's metaEnum >= 0 then
-       create a new RoomObject for it. */
-    int count = 0;
     foreach (LotFile::Room *room, roomList) {
         for (int x = room->x; x < room->x + room->w; x++) {
             for (int y = room->y; y < room->y + room->h; y++) {
+
+                // Remember the room at each position in the map.
+                mGridData[x][y][room->floor].roomID = room->ID;
+
+                /* Examine every tile inside the room.  If the tile's metaEnum >= 0
+                   then create a new RoomObject for it. */
                 foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
                     int metaEnum = TileMap[entry->gid]->metaEnum;
                     if (metaEnum >= 0) {
@@ -478,14 +508,12 @@ bool LotFilesManager::generateBuildingObjects()
                         object.y = y;
                         object.metaEnum = metaEnum;
                         room->objects += object;
-                        ++count;
+                        ++mStats.numRoomObjects;
                     }
                 }
             }
         }
     }
-
-    qDebug() << "added" << count << "objects to rooms";
 
     return true;
 }
@@ -537,6 +565,8 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
 
 int LotFilesManager::getRoomID(int x, int y, int z)
 {
+    return mGridData[x][y][z].roomID;
+#if 0
     int n = 0;
     foreach (LotFile::Room *room, roomList) {
         if (room->floor != z)
@@ -550,6 +580,7 @@ int LotFilesManager::getRoomID(int x, int y, int z)
     }
 
     return -1;
+#endif
 }
 
 uint LotFilesManager::cellToGid(const Cell *cell)
@@ -613,6 +644,7 @@ void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup, const QPoint 
             LotFile::Room *room = new LotFile::Room(name, x, y, level, w, h);
             room->ID = roomList.count();
             roomList += room;
+            mStats.numRooms++;
         } else {
             LotFile::Zone *z = new LotFile::Zone(name,
                                                  mapObject->type(),
