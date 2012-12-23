@@ -17,7 +17,6 @@
 
 #include "mapcomposite.h"
 
-#include "preferences.h"
 #include "mapmanager.h"
 #include "mapobject.h"
 #include "maprenderer.h"
@@ -526,7 +525,6 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
-                    // FIXME: look in the same directory as the parent map, then the maptools directory.
                     MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
                                                                           QFileInfo(mMapInfo->path()).absolutePath());
                     if (!subMapInfo) {
@@ -650,6 +648,15 @@ CompositeLayerGroup *MapComposite::tileLayersForLevel(int level) const
 CompositeLayerGroup *MapComposite::layerGroupForLayer(TileLayer *tl) const
 {
     return tileLayersForLevel(tl->level());
+}
+
+const QList<MapComposite *> MapComposite::maps()
+{
+    QList<MapComposite*> ret;
+    ret += this;
+    foreach (MapComposite *subMap, mSubMaps)
+        ret += subMap->maps();
+    return ret;
 }
 
 void MapComposite::setOrigin(const QPoint &origin)

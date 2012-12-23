@@ -60,6 +60,9 @@ public:
     QList<MapInfo*> sources() const
     { return mSources; }
 
+    QRectF levelZeroBounds() const
+    { return mLevelZeroBounds; }
+
 private:
     QImage mImage;
     MapInfo *mInfo;
@@ -84,15 +87,17 @@ public:
 protected:
     struct ImageData
     {
-        ImageData()
-            : scale(0)
-            , valid(false)
+        ImageData() :
+            scale(0),
+            valid(false),
+            missingTilesets(false)
         {}
         qreal scale;
         QRectF levelZeroBounds;
         QImage image;
         bool valid;
         QStringList sources;
+        bool missingTilesets;
     };
 
     ImageData generateMapImage(const QString &mapFilePath);

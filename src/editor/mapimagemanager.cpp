@@ -131,7 +131,11 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
                                  tr("An error occurred trying to read a map thumbnail image.\n") + imageInfo.absoluteFilePath());
         if (image.width() == IMAGE_WIDTH) {
             ImageData data = readImageData(imageDataInfo);
-#if 1
+            // If the image was originally created with some tilesets missing,
+            // try to recreate the image in case those tileset issues were
+            // resolved.
+            if (data.missingTilesets)
+                data.valid = false;
             if (data.valid) {
                 foreach (QString source, data.sources) {
                     QFileInfo sourceInfo(source);
@@ -141,7 +145,6 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
                     }
                 }
             }
-#endif
             if (data.valid) {
                 data.image = image;
                 return data;
@@ -152,13 +155,22 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     PROGRESS progress(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
 
     MapInfo *mapInfo = MapManager::instance()->loadMap(mapFilePath);
-    if (!mapInfo)
+    if (!mapInfo) {
+        mError = MapManager::instance()->errorString();
         return ImageData(); // TODO: Add error handling
+    }
 
     progress.update(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
 
     MapComposite mapComposite(mapInfo);
     ImageData data = generateMapImage(&mapComposite);
+
+    foreach (MapComposite *mc, mapComposite.maps()) {
+        if (mc->map()->hasMissingTilesets()) {
+            data.missingTilesets = true;
+            break;
+        }
+    }
 
     data.image.save(imageInfo.absoluteFilePath());
     writeImageData(imageDataInfo, data);
@@ -315,7 +327,7 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
 }
 
 #define IMAGE_DATA_MAGIC 0xB15B00B5
-#define IMAGE_DATA_VERSION 2
+#define IMAGE_DATA_VERSION 3
 
 MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &imageDataFileInfo)
 {
@@ -350,6 +362,8 @@ MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &image
         data.sources += source;
     }
 
+    in >> data.missingTilesets;
+
     // TODO: sanity-check the values
     data.valid = true;
 
@@ -372,6 +386,7 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     out << qint32(data.sources.length());
     foreach (QString source, data.sources)
         out << source;
+    out << data.missingTilesets;
 }
 
 void MapImageManager::mapFileChanged(MapInfo *mapInfo)
@@ -382,18 +397,20 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
 
     for (it = it_begin; it != it_end; it++) {
         MapImage *mapImage = it.value();
-#if 1
         if (mapImage->sources().contains(mapInfo)) {
             ImageData data = generateMapImage(mapImage->mapInfo()->path());
-#else
-        if (mapImage->mapInfo() == mapInfo) {
-            ImageData data = generateMapImage(mapInfo->path());
-#endif
-            if (!data.valid)
-                return;
+            if (!data.valid) {
+                // We had a valid image, but now it's bogus, so blank it out.
+                data.image = QImage();
+                data.scale = mapImage->scale();
+                data.levelZeroBounds = mapImage->levelZeroBounds();
+                data.sources.clear();
+                foreach (MapInfo *sourceInfo, mapImage->sources())
+                    data.sources += sourceInfo->path();
+            }
             mapImage->mapFileChanged(data.image, data.scale,
                                      data.levelZeroBounds);
-#if 1
+
             // Set up file modification tracking on each TMX that makes
             // up this image.
             QList<MapInfo*> sources;
@@ -401,7 +418,7 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
                 if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
                     sources += sourceInfo;
             mapImage->setSources(sources);
-#endif
+
             emit mapImageChanged(mapImage);
         }
     }

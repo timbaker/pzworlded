@@ -168,8 +168,10 @@ public:
 MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
 {
     QString mapFilePath = pathForMap(mapName, relativeTo);
-    if (mapFilePath.isEmpty())
+    if (mapFilePath.isEmpty()) {
+        mError = tr("A map file couldn't be found!\n%1").arg(mapName);
         return 0;
+    }
 
     if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->map())
         return mMapInfo[mapFilePath];

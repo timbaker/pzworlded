@@ -140,6 +140,7 @@ public:
     CompositeLayerGroup *layerGroupForLayer(Tiled::TileLayer *tl) const;
 
     const QVector<MapComposite*>& subMaps() const { return mSubMaps; }
+    const QList<MapComposite*> maps();
 
     MapComposite *parent() const { return mParent; }
 

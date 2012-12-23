@@ -108,6 +108,9 @@ public:
       */
     MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
 
+    QString errorString() const
+    { return mError; }
+
 signals:
     void mapAboutToChange(MapInfo *mapInf);
     void mapFileChanged(MapInfo *mapInfo);
