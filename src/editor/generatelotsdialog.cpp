@@ -31,16 +31,13 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
     connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
 
-    // TileMetaInfo.txt
+    // Tilesets.txt
     mMetaTxt = settings.tileMetaInfo;
     if (mMetaTxt.isEmpty()) {
-        foreach (QString searchPath, Preferences::instance()->searchPaths()) {
-            QString fileName = searchPath + QLatin1Char('/') + QLatin1String("TileMetaInfo.txt");
-            if (QFileInfo(fileName).exists()) {
-                mMetaTxt = fileName;
-                break;
-            }
-        }
+        QString configPath = QDir::homePath() + QLatin1String("/.TileZed");
+        QString fileName = configPath + QLatin1String("/Tilesets.txt");
+        if (QFileInfo(fileName).exists())
+            mMetaTxt = fileName;
     }
     ui->metaInfoEdit->setText(QDir::toNativeSeparators(mMetaTxt));
     connect(ui->metaInfoBrowse, SIGNAL(clicked()), SLOT(metaInfoBrowse()));
@@ -89,17 +86,11 @@ void GenerateLotsDialog::metaInfoBrowse()
 {
     QString formatString = tr("Text files (*.txt);;All files (*.*)");
 
-    QString initialDir = QFileInfo(mWorldDoc->fileName()).absolutePath();
-    foreach (QString searchPath, Preferences::instance()->searchPaths()) {
-        if (QFileInfo(searchPath + QLatin1Char('/') + QLatin1String("TileMetaInfo.txt")).exists()) {
-            initialDir = searchPath;
-            break;
-        }
-    }
-    if (QFileInfo(mMetaTxt).exists())
+    QString initialDir = QDir::homePath() + QLatin1String("/.TileZed");
+    if (!mMetaTxt.isEmpty() && QFileInfo(mMetaTxt).exists())
         initialDir = QFileInfo(mMetaTxt).absolutePath();
 
-    QString f = QFileDialog::getOpenFileName(this, tr("Choose the TileMetaInfo.txt file"),
+    QString f = QFileDialog::getOpenFileName(this, tr("Choose the Tilesets.txt file"),
         initialDir, formatString);
     if (!f.isEmpty()) {
         mMetaTxt = f;
@@ -156,7 +147,7 @@ bool GenerateLotsDialog::validate()
         QFileInfo info(mMetaTxt);
         if (mMetaTxt.isEmpty() || !info.exists()) {
             QMessageBox::warning(this, tr("It's no good, Jim!"),
-                                 tr("Please choose the TileMetaInfo.txt file."));
+                                 tr("Please choose the Tilesets.txt file."));
             return false;
         }
     }

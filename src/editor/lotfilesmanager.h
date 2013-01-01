@@ -54,7 +54,7 @@ public:
     QString name;
     bool used;
     int id; // index into .lotheader's list of used tiles
-    int metaEnum; // TileMetaInfo.txt enumeration
+    int metaEnum; // Tilesets.txt enumeration
 };
 
 class Lot
@@ -130,7 +130,7 @@ class Building;
 class RoomObject
 {
 public:
-    int metaEnum; // TileMetaInfo.txt enumeration
+    int metaEnum; // Tilesets.txt enumeration
     int x; // Cell coord
     int y; // Cell coord
 };
