@@ -406,6 +406,18 @@ int TileMetaInfoMgr::tileEnumValue(Tile *tile)
     return -1;
 }
 
+bool TileMetaInfoMgr::isEnumWest(int enumValue) const
+{
+    Q_ASSERT(mEnums.values().contains(enumValue));
+    return mEnums.key(enumValue).endsWith(QLatin1Char('W'));
+}
+
+bool TileMetaInfoMgr::isEnumNorth(int enumValue) const
+{
+    Q_ASSERT(mEnums.values().contains(enumValue));
+    return mEnums.key(enumValue).endsWith(QLatin1Char('N'));
+}
+
 bool TileMetaInfoMgr::parse2Ints(const QString &s, int *pa, int *pb)
 {
     QStringList coords = s.split(QLatin1Char(','), QString::SkipEmptyParts);

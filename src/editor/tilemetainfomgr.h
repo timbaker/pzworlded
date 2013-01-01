@@ -102,6 +102,8 @@ public:
     void setTileEnum(Tile *tile, const QString &enumName);
     QString tileEnum(Tile *tile);
     int tileEnumValue(Tile *tile);
+    bool isEnumWest(int enumValue) const;
+    bool isEnumNorth(int enumValue) const;
 
 signals:
     void tilesetAdded(Tiled::Tileset *ts);

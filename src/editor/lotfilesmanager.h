@@ -210,7 +210,7 @@ public:
     bool generateHeader(WorldCell *cell, MapComposite *mapComposite);
     bool generateHeaderAux(WorldCell *cell, MapComposite *mapComposite);
     bool generateChunk(QDataStream &out, WorldCell *cell, MapComposite *mapComposite, int cx, int cy);
-    bool generateBuildingObjects();
+    bool generateBuildingObjects(int mapWidth, int mapHeight);
 
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
 

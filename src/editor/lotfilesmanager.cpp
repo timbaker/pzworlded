@@ -243,7 +243,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         }
     }
 
-    generateBuildingObjects();
+    generateBuildingObjects(mapWidth, mapHeight);
 
     generateHeaderAux(cell, mapComposite);
 
@@ -489,7 +489,7 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
     return true;
 }
 
-bool LotFilesManager::generateBuildingObjects()
+bool LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
 {
     foreach (LotFile::Room *room, roomList) {
         for (int x = room->x; x < room->x + room->w; x++) {
@@ -505,6 +505,42 @@ bool LotFilesManager::generateBuildingObjects()
                     if (metaEnum >= 0) {
                         LotFile::RoomObject object;
                         object.x = x;
+                        object.y = y;
+                        object.metaEnum = metaEnum;
+                        room->objects += object;
+                        ++mStats.numRoomObjects;
+                    }
+                }
+            }
+        }
+
+        // Check south of the room for doors.
+        int y = room->y + room->h;
+        if (y < mapHeight) {
+            for (int x = room->x; x < room->x + room->w; x++) {
+                foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+                    int metaEnum = TileMap[entry->gid]->metaEnum;
+                    if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumNorth(metaEnum)) {
+                        LotFile::RoomObject object;
+                        object.x = x;
+                        object.y = y - 1;
+                        object.metaEnum = metaEnum;
+                        room->objects += object;
+                        ++mStats.numRoomObjects;
+                    }
+                }
+            }
+        }
+
+        // Check east of the room for doors.
+        int x = room->x + room->w;
+        if (x < mapWidth) {
+            for (int y = room->y; y < room->y + room->h; y++) {
+                foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+                    int metaEnum = TileMap[entry->gid]->metaEnum;
+                    if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumWest(metaEnum)) {
+                        LotFile::RoomObject object;
+                        object.x = x - 1;
                         object.y = y;
                         object.metaEnum = metaEnum;
                         room->objects += object;
