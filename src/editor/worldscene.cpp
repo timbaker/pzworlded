@@ -911,11 +911,24 @@ void BaseCellItem::mapImageChanged(MapImage *mapImage)
         changed = true;
     }
 
+    // Perhaps the image now exists and didn't before.
+    if (!mMapImage) {
+        updateCellImage();
+        if (mMapImage)
+            changed = true;
+    }
+
     int index = 0;
     foreach (LotImage lotImage, mLotImages) {
         if (mapImage == lotImage.mMapImage) {
             calcLotImageBounds(index);
             changed = true;
+        }
+        // Perhaps the image now exists and didn't before.
+        if (!lotImage.mMapImage) {
+            updateLotImage(index);
+            if (mLotImages[index].mMapImage)
+                changed = true;
         }
         ++index;
     }
