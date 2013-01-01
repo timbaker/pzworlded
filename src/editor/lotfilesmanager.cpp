@@ -102,6 +102,8 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
         return false;
     }
 
+    mStats = LotFile::Stats();
+
     progress.update(QLatin1String("Generating .lot files"));
 
     World *world = worldDoc->world();
