@@ -408,14 +408,12 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         out << qint32(room->w);
         out << qint32(room->h);
         out << qint32(room->floor);
-#if 1
         out << qint32(room->objects.size());
         foreach (const LotFile::RoomObject &object, room->objects) {
             out << qint32(object.metaEnum);
             out << qint32(object.x);
             out << qint32(object.y);
         }
-#endif
     }
 
     out << qint32(buildingList.count());
@@ -526,7 +524,7 @@ bool LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
                         LotFile::RoomObject object;
                         object.x = x;
                         object.y = y - 1;
-                        object.metaEnum = metaEnum;
+                        object.metaEnum = metaEnum + 1;
                         room->objects += object;
                         ++mStats.numRoomObjects;
                     }
@@ -544,7 +542,7 @@ bool LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
                         LotFile::RoomObject object;
                         object.x = x - 1;
                         object.y = y;
-                        object.metaEnum = metaEnum;
+                        object.metaEnum = metaEnum + 1;
                         room->objects += object;
                         ++mStats.numRoomObjects;
                     }

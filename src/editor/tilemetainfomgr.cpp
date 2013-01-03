@@ -225,6 +225,23 @@ bool TileMetaInfoMgr::readTxt()
             return false;
         }
     }
+
+    foreach (QString enumName, mEnumNames) {
+        if (isEnumWest(enumName) || isEnumNorth(enumName)) {
+            if (mEnums.values().contains(mEnums[enumName] + 1)) {
+                QString enumImplicit = enumName;
+                enumImplicit.replace(
+                            QLatin1Char(isEnumWest(enumName) ? 'W' : 'N'),
+                            QLatin1String(isEnumWest(enumName) ? "E" : "S"));
+                mError = tr("Meta-enum %1=%2 requires an implicit %3=%4 but that value is used by %5=%6.")
+                        .arg(enumName).arg(mEnums[enumName])
+                        .arg(enumImplicit).arg(mEnums[enumName]+1)
+                        .arg(mEnums.key(mEnums[enumName] + 1)).arg(mEnums[enumName] + 1);
+                return false;
+            }
+        }
+    }
+
 #if 0
     if (missingTilesets.size()) {
         BuildingEditor::ListOfStringsDialog dialog(tr("The following tileset files were not found."),
@@ -416,6 +433,16 @@ bool TileMetaInfoMgr::isEnumNorth(int enumValue) const
 {
     Q_ASSERT(mEnums.values().contains(enumValue));
     return mEnums.key(enumValue).endsWith(QLatin1Char('N'));
+}
+
+bool TileMetaInfoMgr::isEnumWest(const QString &enumName) const
+{
+    return enumName.endsWith(QLatin1Char('W'));
+}
+
+bool TileMetaInfoMgr::isEnumNorth(const QString &enumName) const
+{
+    return enumName.endsWith(QLatin1Char('N'));
 }
 
 bool TileMetaInfoMgr::parse2Ints(const QString &s, int *pa, int *pb)

@@ -104,6 +104,8 @@ public:
     int tileEnumValue(Tile *tile);
     bool isEnumWest(int enumValue) const;
     bool isEnumNorth(int enumValue) const;
+    bool isEnumWest(const QString &enumName) const;
+    bool isEnumNorth(const QString &enumName) const;
 
 signals:
     void tilesetAdded(Tiled::Tileset *ts);
