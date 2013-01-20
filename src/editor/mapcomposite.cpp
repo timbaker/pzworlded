@@ -1080,8 +1080,8 @@ void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *>
             roadsInCell += road;
     }
 
-    mRoadLayer1->erase(QRegion(0, 0, mRoadLayer1->width(), mRoadLayer1->height()));
-    mRoadLayer0->erase(QRegion(0, 0, mRoadLayer0->width(), mRoadLayer0->height()));
+    mRoadLayer1->erase();
+    mRoadLayer0->erase();
 
     // Fill roads with road tile
 

@@ -156,6 +156,14 @@ public:
     bool isEmpty() const
     { return !mUseVector && mCells.isEmpty(); }
 
+    void clear()
+    {
+        if (mUseVector)
+            mCellsVector.fill(mEmptyCell);
+        else
+            mCells.clear();
+    }
+
 private:
     void swapToVector()
     {
@@ -273,6 +281,10 @@ public:
      * Removes all cells in the specified region.
      */
     void erase(const QRegion &region);
+
+#ifdef ZOMBOID
+    void erase();
+#endif
 
     /**
      * Sets the cells starting at the given position to the cells in the given
