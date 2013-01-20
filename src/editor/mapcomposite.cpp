@@ -836,19 +836,23 @@ MapComposite::ZOrderList MapComposite::zOrder()
 // be redrawn before the MapComposites have been updated.
 bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
 {
-    if (mapInfo == mMapInfo) {
-        return true;
-    }
     bool affected = false;
+    if (mapInfo == mMapInfo) {
+        affected = true;
+    }
     foreach (MapComposite *subMap, mSubMaps) {
         if (subMap->mapAboutToChange(mapInfo)) {
-            // See CompositeLayerGroupItem::paint() for why this stops drawing.
-            // FIXME: Not safe enough!
-            foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
-                layerGroup->setNeedsSynch(true);
             affected = true;
         }
     }
+
+    if (affected) {
+        // See CompositeLayerGroupItem::paint() for why this stops drawing.
+        // FIXME: Not safe enough!
+        foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+            layerGroup->setNeedsSynch(true);
+    }
+
     return affected;
 }
 
