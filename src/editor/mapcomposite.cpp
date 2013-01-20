@@ -162,24 +162,15 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                                          QVector<const Cell *> &cells,
                                          QVector<qreal> &opacities) const
 {
+    static bool FirstCellIs0Floor = false;
+    if (!mOwner->parent())
+        FirstCellIs0Floor = false;
+
     bool cleared = false;
-    int index = -1;
-    foreach (TileLayer *tl, mLayers) {
-        ++index;
-#if SPARSE_TILELAYER
-        // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps
-        bool empty = mEmptyLayers[index] || tl->isEmpty();
-#else
-        bool empty = mEmptyLayers[index];
-#endif
-#if 1 // ROAD_CRUD
-        if (tl == mRoadLayer0 && !mOwner->roadLayer0()->isEmpty())
-            empty = false;
-        if (tl == mRoadLayer1 && !mOwner->roadLayer1()->isEmpty())
-            empty = false;
-#endif
-        if (!mVisibleLayers[index] || empty)
+    for (int index = 0; index < mLayers.size(); index++) {
+        if (isLayerEmpty(index))
             continue;
+        TileLayer *tl = mLayers[index];
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
 #if 1 // ROAD_CRUD
@@ -189,9 +180,12 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                         : &mOwner->roadLayer1()->cellAt(subPos);
                 if (!cell->isEmpty()) {
                     if (!cleared) {
-                        cells.resize(0);
-                        opacities.resize(0);
+                        bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                        cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
+                        opacities.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
                         cleared = true;
+                        if (isFloor && !mOwner->parent())
+                            FirstCellIs0Floor = true;
                     }
                     cells.append(cell);
                     opacities.append(mLayerOpacity[index]);
@@ -202,9 +196,12 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             const Cell *cell = &tl->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
-                    cells.resize(0);
-                    opacities.resize(0);
+                    bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                    cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
+                    opacities.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
                     cleared = true;
+                    if (isFloor && !mOwner->parent())
+                        FirstCellIs0Floor = true;
                 }
                 cells.append(cell);
                 opacities.append(mLayerOpacity[index]);
@@ -224,6 +221,10 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
 // layers (so NoRender layers are included) and visibility of sub-maps.
 bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell *> &cells) const
 {
+    static bool FirstCellIs0Floor = false;
+    if (!mOwner->parent())
+        FirstCellIs0Floor = false;
+
     bool cleared = false;
     int index = -1;
     foreach (TileLayer *tl, mLayers) {
@@ -237,8 +238,11 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                         : &mOwner->roadLayer1()->cellAt(subPos);
                 if (!cell->isEmpty()) {
                     if (!cleared) {
-                        cells.resize(0);
+                        bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                        cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
                         cleared = true;
+                        if (isFloor && !mOwner->parent())
+                            FirstCellIs0Floor = true;
                     }
                     cells.append(cell);
                     continue;
@@ -248,8 +252,11 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
             const Cell *cell = &tl->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
-                    cells.resize(0);
+                    bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                    cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
                     cleared = true;
+                    if (isFloor && !mOwner->parent())
+                        FirstCellIs0Floor = true;
                 }
                 cells.append(cell);
             }
@@ -267,6 +274,29 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
     return !cells.isEmpty();
 }
 
+bool CompositeLayerGroup::isLayerEmpty(int index) const
+{
+    if (!mVisibleLayers[index])
+        return true;
+
+#if 1 // ROAD_CRUD
+    if (mLayers[index] == mRoadLayer0 && !mOwner->roadLayer0()->isEmpty())
+        return false;
+    if (mLayers[index] == mRoadLayer1 && !mOwner->roadLayer1()->isEmpty())
+        return false;
+#endif
+
+#if SPARSE_TILELAYER
+    // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps.
+    return mEmptyLayers[index] || mLayers[index]->isEmpty();
+#else
+    // TileLayer::isEmpty() is very slow.
+    // Checking mEmptyLayers only catches hidden NoRender layers.
+    // The actual tile layer might be empty.
+    return mEmptyLayers[index]);
+#endif
+}
+
 void CompositeLayerGroup::synch()
 {
     QRect r;
@@ -277,12 +307,7 @@ void CompositeLayerGroup::synch()
 
     int index = 0;
     foreach (TileLayer *tl, mLayers) {
-#if SPARSE_TILELAYER
-        // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps
-        if (mVisibleLayers[index] && !mEmptyLayers[index] && !tl->isEmpty()) {
-#else
-        if (mVisibleLayers[index] && !mEmptyLayers[index]) {
-#endif
+        if (!isLayerEmpty(index)) {
             unionTileRects(r, tl->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
             maxMargins(m, tl->drawMargins(), m);
             mAnyVisibleLayers = true;
@@ -513,6 +538,11 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         ++index;
     }
 
+#if 1 // ROAD_CRUD
+    mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+    mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+#endif
+
 #if 0
     // FIXME: no changing of mMap should happen after it is loaded!
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
@@ -573,9 +603,6 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
         mSortedLayerGroups.append(mLayerGroups[level]);
     }
-
-    mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
-    mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
 }
 
 MapComposite::~MapComposite()
@@ -920,6 +947,9 @@ void MapComposite::recreate()
         ++index;
     }
 
+    mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+    mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+
 #if 0
     // FIXME: no changing of mMap should happen after it is loaded!
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
@@ -981,9 +1011,6 @@ void MapComposite::recreate()
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
         mSortedLayerGroups.append(mLayerGroups[level]);
     }
-
-    mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
-    mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
 }
 
 

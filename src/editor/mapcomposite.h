@@ -67,6 +67,7 @@ public:
 
     void setNeedsSynch(bool synch) { mNeedsSynch = synch; }
     bool needsSynch() const { return mNeedsSynch; }
+    bool isLayerEmpty(int index) const;
     void synch();
 
     void saveVisibility();
