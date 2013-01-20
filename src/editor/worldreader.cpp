@@ -434,6 +434,14 @@ private:
                 QString path = xml.attributes().value(QLatin1String("path")).toString();
                 settings.mapbaseFile = resolveReference(path, mPath);
                 xml.skipCurrentElement();
+            } else if (xml.name() == "assign-maps-to-world") {
+                QString value = xml.attributes().value(QLatin1String("checked")).toString();
+                settings.assignMapsToWorld = value == QLatin1String("true");
+                xml.skipCurrentElement();
+            } else if (xml.name() == "warn-unknown-colors") {
+                QString value = xml.attributes().value(QLatin1String("checked")).toString();
+                settings.assignMapsToWorld = value == QLatin1String("true");
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }

@@ -26,6 +26,7 @@
 #include "world.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QtXml/QDomDocument>
 #include <QDir>
 #include <QFileInfo>
@@ -121,6 +122,9 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     progress.update(QLatin1String("Generating TMX files"));
 
+    mUnknownColors.clear();
+    mUnknownVegColors.clear();
+
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
             if (!generateCell(cell))
@@ -133,6 +137,8 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
             }
         }
     }
+
+    reportUnknownColors();
 
     QMessageBox::information(MainWindow::instance(),
                              tr("BMP To TMX"), tr("Finished!"));
@@ -190,6 +196,11 @@ bool BMPToTMX::generateCell(WorldCell *cell)
                     Entries[x - sx][y - sy][index] =
                             entry.tileChoices[qrand() % entry.tileChoices.count()];
                 }
+            } else {
+                if (!mUnknownColors[images->mPath].contains(col)) {
+                    mUnknownColors[images->mPath][col].rgb = col;
+                    mUnknownColors[images->mPath][col].xy = QPoint(x, y);
+                }
             }
 
             if (col2 != qRgb(0, 0, 0) && Conversions.contains(col2)) {
@@ -210,6 +221,11 @@ bool BMPToTMX::generateCell(WorldCell *cell)
 
                     Entries[x - sx][y - sy][index] =
                             entry.tileChoices[qrand() % entry.tileChoices.count()];
+                }
+            } else {
+                if (col2 != qRgb(0, 0, 0) && !mUnknownVegColors[images->mPath].contains(col2)) {
+                    mUnknownVegColors[images->mPath][col2].rgb = col2;
+                    mUnknownVegColors[images->mPath][col2].xy = QPoint(x, y);
                 }
             }
         }
@@ -417,6 +433,55 @@ QString BMPToTMX::tmxNameForCell(WorldCell *cell, WorldBMP *bmp)
     QString filePath = exportDir + QLatin1Char('/')
             + tr("%1_%2_%3.tmx").arg(prefix).arg(cell->x()).arg(cell->y());
     return filePath;
+}
+
+void BMPToTMX::reportUnknownColors()
+{
+    if (!mWorldDoc->world()->getBMPToTMXSettings().warnUnknownColors)
+        return;
+
+    foreach (BMPToTMXImages *images, mImages) {
+        QMap<QRgb,UnknownColor> &map = mUnknownColors[images->mPath];
+        if (map.size()) {
+            QString msg = tr("Some unknown colors were found in %1:\n")
+                    .arg(QFileInfo(images->mPath).fileName());
+            int i = 0;
+            foreach (QRgb rgb, map.keys()) {
+                msg += tr("RGB=%1,%2,%3 at x,y=%4,%5\n")
+                        .arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb))
+                        .arg(map[rgb].xy.x())
+                        .arg(map[rgb].xy.y());
+                if (++i == 5) {
+                    if (map.size() > i)
+                        msg += tr("...plus %1 more").arg(map.size() - i);
+                    break;
+                }
+            }
+            QMessageBox::warning(MainWindow::instance(), tr("Unknown colors used"),
+                                 msg);
+        }
+        QMap<QRgb,UnknownColor> &mapVeg = mUnknownVegColors[images->mPath];
+        if (mapVeg.size()) {
+            QString msg = tr("Some unknown colors were found in %1:\n")
+                    .arg(QFileInfo(images->mPath).completeBaseName() + QLatin1String("_veg.bmp"));
+            int i = 0;
+            foreach (QRgb rgb, mapVeg.keys()) {
+                msg += tr("RGB=%1,%2,%3 at x,y=%4,%5\n")
+                        .arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb))
+                        .arg(mapVeg[rgb].xy.x())
+                        .arg(mapVeg[rgb].xy.y());
+                if (++i == 5) {
+                    if (mapVeg.size() > i)
+                        msg += tr("...plus %1 more").arg(mapVeg.size() - i);
+                    break;
+                }
+            }
+            QMessageBox::warning(MainWindow::instance(), tr("Unknown colors used"),
+                                 msg);
+            if (i == 5)
+                break;
+        }
+    }
 }
 
 QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)

@@ -140,6 +140,8 @@ private:
 
     QString tmxNameForCell(WorldCell *cell, WorldBMP *bmp);
 
+    void reportUnknownColors();
+
 private:
     Q_DISABLE_COPY(BMPToTMX)
 
@@ -158,6 +160,13 @@ private:
     QList<Blend> blendList;
     QList<QString> blendLayers;
     QString mError;
+
+    struct UnknownColor {
+        QRgb rgb;
+        QPoint xy;
+    };
+    QMap<QString,QMap<QRgb,UnknownColor> > mUnknownColors;
+    QMap<QString,QMap<QRgb,UnknownColor> > mUnknownVegColors;
 };
 
 #endif // BMPTOTMX_H

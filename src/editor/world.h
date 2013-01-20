@@ -56,9 +56,11 @@ public:
     QString blendsFile;
     QString mapbaseFile;
     bool assignMapsToWorld;
+    bool warnUnknownColors;
 
     BMPToTMXSettings() :
-        assignMapsToWorld(false)
+        assignMapsToWorld(false),
+        warnUnknownColors(true)
     {
     }
 
@@ -68,7 +70,8 @@ public:
                 rulesFile == other.rulesFile &&
                 blendsFile == other.blendsFile &&
                 mapbaseFile == other.mapbaseFile &&
-                assignMapsToWorld == other.assignMapsToWorld;
+                assignMapsToWorld == other.assignMapsToWorld &&
+                warnUnknownColors == other.warnUnknownColors;
     }
 
     bool operator != (const BMPToTMXSettings &other)

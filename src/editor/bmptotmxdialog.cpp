@@ -86,6 +86,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     connect(ui->mapbaseBrowse, SIGNAL(clicked()), SLOT(mapbaseBrowse()));
 
     ui->assignMapCheckBox->setChecked(settings.assignMapsToWorld);
+    ui->warnUnknownColors->setChecked(settings.warnUnknownColors);
 
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
             SLOT(apply()));
@@ -154,6 +155,7 @@ void BMPToTMXDialog::accept()
     settings.blendsFile = mBlendsFile;
     settings.mapbaseFile = mMapBaseFile;
     settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
+    settings.warnUnknownColors = ui->warnUnknownColors->isChecked();
     if (settings != mWorldDoc->world()->getBMPToTMXSettings())
         mWorldDoc->changeBMPToTMXSettings(settings);
 
@@ -178,6 +180,7 @@ void BMPToTMXDialog::apply()
     settings.blendsFile = mBlendsFile;
     settings.mapbaseFile = mMapBaseFile;
     settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
+    settings.warnUnknownColors = ui->warnUnknownColors->isChecked();
     if (settings != mWorldDoc->world()->getBMPToTMXSettings())
         mWorldDoc->changeBMPToTMXSettings(settings);
 

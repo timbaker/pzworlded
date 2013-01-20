@@ -300,6 +300,16 @@ public:
         w.writeAttribute(QLatin1String("path"), path);
         w.writeEndElement();
 
+        w.writeStartElement(QLatin1String("assign-maps-to-world"));
+        w.writeAttribute(QLatin1String("checked"),
+                         QLatin1String(settings.assignMapsToWorld ? "true" : "false"));
+        w.writeEndElement();
+
+        w.writeStartElement(QLatin1String("warn-unknown-colors"));
+        w.writeAttribute(QLatin1String("checked"),
+                         QLatin1String(settings.warnUnknownColors ? "true" : "false"));
+        w.writeEndElement();
+
         w.writeEndElement(); // </BMPToTMX>
     }
 
