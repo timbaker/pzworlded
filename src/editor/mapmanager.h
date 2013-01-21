@@ -39,6 +39,8 @@ public:
         , mMap(0)
         , mPlaceholder(false)
         , mBeingEdited(false)
+        , mMapRefCount(0)
+        , mReferenceEpoch(0)
     {
 
     }
@@ -69,6 +71,8 @@ private:
     Tiled::Map *mMap;
     bool mPlaceholder;
     bool mBeingEdited;
+    int mMapRefCount;
+    int mReferenceEpoch;
 
     friend class MapManager;
 };
@@ -108,6 +112,10 @@ public:
       */
     MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
 
+    void addReferenceToMap(MapInfo *mapInfo);
+    void removeReferenceToMap(MapInfo *mapInfo);
+    void purgeUnreferencedMaps();
+
     QString errorString() const
     { return mError; }
 
@@ -135,6 +143,8 @@ private:
     Tiled::Internal::FileSystemWatcher *mFileSystemWatcher;
     QSet<QString> mChangedFiles;
     QTimer mChangedFilesTimer;
+
+    int mReferenceEpoch;
 
     QString mError;
     static MapManager *mInstance;

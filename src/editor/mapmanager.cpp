@@ -53,8 +53,10 @@ void MapManager::deleteInstance()
     mInstance = 0;
 }
 
-MapManager::MapManager()
-    : mFileSystemWatcher(new FileSystemWatcher(this))
+MapManager::MapManager() :
+    mFileSystemWatcher(new FileSystemWatcher(this)),
+    mReferenceEpoch(0)
+
 {
     connect(mFileSystemWatcher, SIGNAL(fileChanged(QString)),
             SLOT(fileChanged(QString)));
@@ -216,6 +218,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
     }
 
     mMapInfo[mapFilePath]->mMap = map;
+    mMapInfo[mapFilePath]->mPlaceholder = false;
 
     return mMapInfo[mapFilePath];
 }
@@ -361,18 +364,23 @@ MapInfo *MapManager::getEmptyMap()
     mapInfo->setFilePath(mapFilePath);
     mMapInfo[mapFilePath] = mapInfo;
 
+    addReferenceToMap(mapInfo);
+
     return mapInfo;
 }
 
 MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int height)
 {
     QString mapFilePath(mapName);
-    if (mMapInfo.contains(mapFilePath))
+    if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->mMap) {
         return mMapInfo[mapFilePath];
+    }
 
     if (width <= 0) width = 32;
     if (height <= 0) height = 32;
-    MapInfo *mapInfo = new MapInfo(Map::LevelIsometric, width, height, 64, 32);
+    MapInfo *mapInfo = mMapInfo[mapFilePath];
+    if (!mapInfo)
+        mapInfo = new MapInfo(Map::LevelIsometric, width, height, 64, 32);
     Map *map = new Map(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
                        mapInfo->tileWidth(), mapInfo->tileHeight());
 
@@ -382,6 +390,45 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int he
     mMapInfo[mapFilePath] = mapInfo;
 
     return mapInfo;
+}
+
+void MapManager::addReferenceToMap(MapInfo *mapInfo)
+{
+    Q_ASSERT(mapInfo->mMap != 0);
+    if (mapInfo->mMap) {
+        mapInfo->mMapRefCount++;
+        mapInfo->mReferenceEpoch = ++mReferenceEpoch;
+        qDebug() << "MapManager refCount++ =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
+    }
+}
+
+void MapManager::removeReferenceToMap(MapInfo *mapInfo)
+{
+    Q_ASSERT(mapInfo->mMap != 0);
+    if (mapInfo->mMap) {
+        Q_ASSERT(mapInfo->mMapRefCount > 0);
+        mapInfo->mMapRefCount--;
+        qDebug() << "MapManager refCount-- =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
+        purgeUnreferencedMaps();
+    }
+}
+
+void MapManager::purgeUnreferencedMaps()
+{
+    int unpurged = 0;
+    foreach (MapInfo *mapInfo, mMapInfo) {
+        if (mapInfo->mMap && mapInfo->mMapRefCount <= 0 &&
+                (mapInfo->mReferenceEpoch < mReferenceEpoch - 50)) {
+            qDebug() << "MapManager purging" << mapInfo->mFilePath;
+            TilesetManager *tilesetMgr = TilesetManager::instance();
+            tilesetMgr->removeReferences(mapInfo->mMap->tilesets());
+            delete mapInfo->mMap;
+            mapInfo->mMap = 0;
+        }
+        else if (mapInfo->mMap && mapInfo->mMapRefCount <= 0)
+            unpurged++;
+    }
+    if (unpurged) qDebug() << "MapManager unpurged=" << unpurged;
 }
 
 Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)

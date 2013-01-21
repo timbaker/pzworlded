@@ -510,6 +510,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
 {
+    MapManager::instance()->addReferenceToMap(mMapInfo);
+
     if (mOrientRender == Map::Unknown)
         mOrientRender = mMap->orientation();
     if (mMap->orientation() != mOrientRender) {
@@ -607,8 +609,12 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 
 MapComposite::~MapComposite()
 {
+    delete mRoadLayer1;
+    delete mRoadLayer0;
     qDeleteAll(mSubMaps);
     qDeleteAll(mLayerGroups);
+    if (mMapInfo)
+        MapManager::instance()->removeReferenceToMap(mMapInfo);
 }
 
 bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
