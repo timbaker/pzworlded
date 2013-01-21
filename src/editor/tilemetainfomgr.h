@@ -53,7 +53,6 @@ public:
     static void deleteInstance();
 
     QString tilesDirectory() const;
-    void setTilesDirectory(const QString &path);
 
     QList<Tileset*> tilesets() const
     { return mTilesetByName.values(); }
@@ -120,7 +119,6 @@ private:
     TileMetaInfoMgr(QObject *parent = 0);
     ~TileMetaInfoMgr();
 
-    QString mTilesDirectory;
     QMap<QString,Tileset*> mTilesetByName;
     QList<Tiled::Tileset*> mRemovedTilesets;
 

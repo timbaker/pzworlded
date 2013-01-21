@@ -21,9 +21,18 @@
 #include "mainwindow.h"
 #include "preferences.h"
 #include "progress.h"
+#include "simplefile.h"
+#include "tilemetainfomgr.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 #include "world.h"
+
+#include "map.h"
+#include "mapwriter.h"
+#include "objectgroup.h"
+#include "tile.h"
+#include "tilelayer.h"
+#include "tileset.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -35,6 +44,8 @@
 #include <QUndoStack>
 #include <QStringList>
 #include <QXmlStreamWriter>
+
+using namespace Tiled;
 
 BMPToTMX *BMPToTMX::mInstance = 0;
 
@@ -64,6 +75,23 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 {
     mWorldDoc = worldDoc;
     World *world = mWorldDoc->world();
+
+    QString tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
+    if (tilesDirectory.isEmpty() || !QFileInfo(tilesDirectory).exists()) {
+        mError = tr("The Tiles Directory could not be found.  Please set it in the Tilesets Dialog in TileZed.");
+        return false;
+    }
+    if (!TileMetaInfoMgr::instance()->readTxt()) {
+        mError = tr("%1\n(while reading %2)")
+                .arg(TileMetaInfoMgr::instance()->errorString())
+                .arg(TileMetaInfoMgr::instance()->txtName());
+        return false;
+    }
+    // At this point, TileMetaInfoMgr's tilesets are all marked missing and
+    // have imageSource() paths relative to the Tiles Directory.  This call
+    // will actually read in the tilesets and set the imageSource() paths.
+    // FIXME: I don't need to load the tileset images, I just need the imageSource() paths.
+    TileMetaInfoMgr::instance()->loadTilesets();
 
     // Figure out which files will be overwritten and give the user a chance to
     // cancel.
@@ -99,7 +127,7 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     }
 
     if (!LoadBaseXML()) {
-        mError = tr("Error reading MapBaseXML.txt");
+        mError += tr("\n(while reading MapBaseXML.txt)");
         return false;
     }
     if (!LoadRules()) {
@@ -233,44 +261,7 @@ bool BMPToTMX::generateCell(WorldCell *cell)
 
     BlendMap();
 
-    QDomDocument doc;
-    doc.setContent(baseXML);
-
-    QDomElement root = doc.documentElement();
-    QDomNode mapnode = root.firstChild();
-    while (!mapnode.isNull()) {
-        if (mapnode.nodeName() == QLatin1String("layer")) {
-            QDomNode att = mapnode.attributes().namedItem(QLatin1String("name"));
-            int floor = -1;
-            if (!att.isNull() && att.nodeValue() == QLatin1String("0_Floor"))
-                floor = 0;
-            if (!att.isNull() && att.nodeValue() == QLatin1String("0_Vegetation"))
-                floor = 1;
-            if (!att.isNull() && blendLayers.contains(att.nodeValue()))
-                floor = 2 + blendLayers.indexOf(att.nodeValue());
-
-            if (floor != -1) {
-                QDomNode dataNode = mapnode.firstChild();
-                QDomText textNode = doc.createTextNode(toCSV(floor, Entries));
-                dataNode.appendChild(textNode);
-            }
-        }
-        mapnode = mapnode.nextSibling();
-    }
-
-    QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
-    QFile file(filePath);
-    if (file.open(QIODevice::WriteOnly)) {
-        QTextStream textStream;
-        textStream.setDevice(&file);
-        doc.save(textStream, 1);
-        file.close();
-    } else {
-        mError = tr("Error writing %1.").arg(filePath);
-        return false;
-    }
-
-    return true;
+    return WriteMap(cell, bmpIndex);
 }
 
 QStringList BMPToTMX::supportedImageFormats()
@@ -391,6 +382,11 @@ QString BMPToTMX::defaultMapBaseXMLFile() const
 {
     return QCoreApplication::applicationDirPath() + QLatin1Char('/')
             + QLatin1String("MapBaseXML.txt");
+}
+
+QString BMPToTMX::defaultTilesetsDotTxtFile() const
+{
+    return QDir::homePath() + QLatin1String("/.TileZed/Tilesets.txt");
 }
 
 bool BMPToTMX::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
@@ -519,34 +515,32 @@ bool BMPToTMX::LoadBaseXML()
     QString path = mWorldDoc->world()->getBMPToTMXSettings().mapbaseFile;
     if (path.isEmpty())
         path = defaultMapBaseXMLFile();
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
+    SimpleFile simple;
+    if (!simple.read(path)) {
+        mError = simple.errorString();
         return false;
+    }
 
-    baseXML = file.readAll();
-    file.seek(0);
-
-    QXmlStreamReader xml;
-    xml.setDevice(&file);
-
-    if (xml.readNextStartElement() && xml.name() == "map") {
-        while (xml.readNextStartElement()) {
-            if (xml.name() == "tileset") {
-                const QXmlStreamAttributes atts = xml.attributes();
-                const int firstGID =
-                        atts.value(QLatin1String("firstgid")).toString().toInt();
-                const QString name = atts.value(QLatin1String("name")).toString();
-                Tileset *set = new Tileset();
-                set->firstGID = firstGID;
-                set->name = name;
-                Tilesets[name] = set;
-                TilesetList += set;
+    foreach (SimpleFileBlock block, simple.blocks) {
+        if (block.name == QLatin1String("layers")) {
+            foreach (SimpleFileKeyValue kv, block.values) {
+                if (kv.name == QLatin1String("tile")) {
+                    mLayers += LayerInfo(kv.value, LayerInfo::Tile);
+                } else if (kv.name == QLatin1String("object")) {
+                    mLayers += LayerInfo(kv.value, LayerInfo::Object);
+                } else {
+                    mError = tr("Unknown layer type '%1'.\n%2")
+                            .arg(kv.name)
+                            .arg(path);
+                    return false;
+                }
             }
-            xml.skipCurrentElement();
+        } else {
+            mError = tr("Unknown block name '%1'.\n%2")
+                    .arg(block.name)
+                    .arg(path);
+            return false;
         }
-    } else {
-        xml.raiseError(tr("Not a map file."));
-        return false;
     }
 
     return true;
@@ -598,6 +592,19 @@ bool BMPToTMX::LoadRules()
             AddConversion(bmp, col, choices, layer, con);
         } else {
             AddConversion(bmp, col, choices, layer);
+        }
+    }
+
+    // Verify all the listed tiles exist.
+    foreach (QList<ConversionEntry> convs, Conversions) {
+        foreach (ConversionEntry conv, convs) {
+            foreach (QString tileName, conv.tileChoices) {
+                if (getTileFromTileName(tileName) == 0) {
+                    mError = tr("A tile listed in Rules.txt could not be found.\n");
+                    mError += tr("The missing tile is called '%1'.\n").arg(tileName);
+                    mError += tr("Please fix the invalid tile index or add the missing tileset using the Tilesets dialog in TileZed.");
+                }
+            }
         }
     }
 
@@ -756,31 +763,55 @@ BMPToTMX::Blend BMPToTMX::getBlendRule(int x, int y, const QString &texture, con
     return lastBlend;
 }
 
-QString BMPToTMX::toCSV(int floor, QVector<QVector<QVector<QString> > > &Entries)
+bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
 {
-    QString b;
-    b.reserve(300*300*4);
-    b.append(QLatin1Char('\n'));
-    for (int y = 0; y < 300; y++) {
-        for (int x = 0; x < 300; x++) {
-            QString tile = Entries[x][y][floor];
-
-            if (tile.isEmpty())
-                b.append(QLatin1Char('0'));
-            else
-                b.append(QString::number(getGIDFromTileName(tile)));
-
-            if (y < 299 || x < 299)
-                b.append(QLatin1Char(','));
-        }
-       b.append(QLatin1Char('\n'));
+    Map map(Map::Isometric, 300, 300, 64, 32);
+    foreach (Tiled::Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
+        map.addTileset(ts);
     }
-    return b;
+    foreach (LayerInfo layer, mLayers) {
+        if (layer.mType == LayerInfo::Tile) {
+            TileLayer *tl = new TileLayer(layer.mName, 0, 0,
+                                          map.width(), map.height());
+            map.addLayer(tl);
+            int index = -1;
+            if (layer.mName == QLatin1String("0_Floor"))
+                index = 0;
+            else if (layer.mName == QLatin1String("0_Vegetation"))
+                index = 1;
+            else if (blendLayers.contains(layer.mName))
+                index = 2 + blendLayers.indexOf(layer.mName);
+            else
+                continue;
+            for (int y = 0; y < map.width(); y++) {
+                for (int x = 0; x < map.height(); x++) {
+                    QString tileName = Entries[x][y][index];
+                    if (Tile *tile = getTileFromTileName(tileName))
+                        tl->setCell(x, y, Cell(tile));
+                }
+            }
+        } else if (layer.mType == LayerInfo::Object) {
+            ObjectGroup *og = new ObjectGroup(layer.mName, 0, 0,
+                                              map.width(), map.height());
+            map.addLayer(og);
+        }
+    }
+    MapWriter writer;
+    writer.setLayerDataFormat(MapWriter::CSV);
+    writer.setDtdEnabled(false);
+    QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
+    if (!writer.writeMap(&map, filePath)) {
+        mError = writer.errorString();
+        return false;
+    }
+    return true;
 }
 
-int BMPToTMX::getGIDFromTileName(const QString &name)
+Tile *BMPToTMX::getTileFromTileName(const QString &tileName)
 {
-    QString tileset = name.mid(0, name.lastIndexOf(QLatin1Char('_')));
-    int index = name.mid(name.lastIndexOf(QLatin1Char('_')) + 1).toInt();
-    return Tilesets[tileset]->firstGID + index;
+    QString tilesetName = tileName.mid(0, tileName.lastIndexOf(QLatin1Char('_')));
+    int index = tileName.mid(tileName.lastIndexOf(QLatin1Char('_')) + 1).toInt();
+    if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName))
+        return ts->tileAt(index);
+    return 0;
 }

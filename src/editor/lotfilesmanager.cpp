@@ -94,7 +94,11 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
         return false;
     }
 
-    TileMetaInfoMgr::instance()->setTilesDirectory(QFileInfo(lotSettings.tileMetaInfo).absolutePath());
+    QString tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
+    if (tilesDirectory.isEmpty() || !QFileInfo(tilesDirectory).exists()) {
+        mError = tr("The Tiles Directory could not be found.  Please set it in the Tilesets Dialog in TileZed.");
+        return false;
+    }
     if (!TileMetaInfoMgr::instance()->readTxt()) {
         mError = tr("%1\n(while reading %2)")
                 .arg(TileMetaInfoMgr::instance()->errorString())
@@ -404,12 +408,14 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         out << qint32(room->w);
         out << qint32(room->h);
         out << qint32(room->floor);
+#if 1
         out << qint32(room->objects.size());
         foreach (const LotFile::RoomObject &object, room->objects) {
             out << qint32(object.metaEnum);
             out << qint32(object.x);
             out << qint32(object.y);
         }
+#endif
     }
 
     out << qint32(buildingList.count());

@@ -27,6 +27,7 @@
 
 #include <QDir>
 #include <QImage>
+#include <QSettings>
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -60,19 +61,14 @@ TileMetaInfoMgr::~TileMetaInfoMgr()
 {
     TilesetManager::instance()->removeReferences(tilesets());
     TilesetManager::instance()->removeReferences(mRemovedTilesets);
+    qDeleteAll(mTilesetInfo);
 }
 
 QString TileMetaInfoMgr::tilesDirectory() const
 {
-    return mTilesDirectory;
-}
-
-void TileMetaInfoMgr::setTilesDirectory(const QString &path)
-{
-    mTilesDirectory = path;
-
-    // Try to load any tilesets that weren't found.
-    loadTilesets();
+    // Get the Tiles Directory from TileZed's settings.
+    QSettings settings(QLatin1String("mapeditor.org"), QLatin1String("Tiled"));
+    return settings.value(QLatin1String("Tilesets/TilesDirectory")).toString();
 }
 
 QString TileMetaInfoMgr::txtName()
@@ -82,7 +78,7 @@ QString TileMetaInfoMgr::txtName()
 
 QString TileMetaInfoMgr::txtPath()
 {
-    return tilesDirectory() + QLatin1String("/") + txtName();
+    return QDir::homePath() + QLatin1String("/.TileZed/") + txtName();
 }
 
 #define VERSION0 0
@@ -93,7 +89,7 @@ bool TileMetaInfoMgr::readTxt()
     // Make sure the user has chosen the Tiles directory.
     QString tilesDirectory = this->tilesDirectory();
     QDir dir(tilesDirectory);
-    if (!dir.exists()) {
+    if (tilesDirectory.isEmpty() || !dir.exists()) {
         mError = tr("The Tiles directory specified in the preferences doesn't exist!\n%1")
                 .arg(tilesDirectory);
         return false;
@@ -126,8 +122,6 @@ bool TileMetaInfoMgr::readTxt()
 
     mRevision = simple.value("revision").toInt();
     mSourceRevision = simple.value("source_revision").toInt();
-
-    QStringList missingTilesets;
 
     foreach (SimpleFileBlock block, simple.blocks) {
         if (block.name == QLatin1String("meta-enums")) {
@@ -242,15 +236,6 @@ bool TileMetaInfoMgr::readTxt()
         }
     }
 
-#if 0
-    if (missingTilesets.size()) {
-        BuildingEditor::ListOfStringsDialog dialog(tr("The following tileset files were not found."),
-                                                   missingTilesets,
-                                                   0/*MainWindow::instance()*/);
-        dialog.setWindowTitle(tr("Missing Tilesets"));
-        dialog.exec();
-    }
-#endif
     mHasReadTxt = true;
 
     return true;

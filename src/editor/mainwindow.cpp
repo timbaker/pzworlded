@@ -831,6 +831,7 @@ static void _BMPToTMX(MainWindow *mainWin, Document *doc,
         QMessageBox::warning(mainWin, mainWin->tr("BMP To TMX Failed!"),
                              BMPToTMX::instance()->errorString());
     }
+    TileMetaInfoMgr::deleteInstance();
 }
 
 void MainWindow::BMPToTMXAll()

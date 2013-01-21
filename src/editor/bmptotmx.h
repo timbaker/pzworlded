@@ -23,6 +23,10 @@
 #include <QObject>
 #include <QStringList>
 
+namespace Tiled {
+class Tile;
+}
+
 class WorldBMP;
 class WorldCell;
 class WorldDocument;
@@ -63,13 +67,7 @@ public:
     QString defaultRulesFile() const;
     QString defaultBlendsFile() const;
     QString defaultMapBaseXMLFile() const;
-
-    class Tileset
-    {
-    public:
-        int firstGID;
-        QString name;
-    };
+    QString defaultTilesetsDotTxtFile() const;
 
     class ConversionEntry
     {
@@ -135,8 +133,9 @@ private:
     QString getNeighbouringTile(int x, int y);
     Blend getBlendRule(int x, int y, const QString &floorTile, const QString &layer);
 
-    QString toCSV(int floor, QVector<QVector<QVector<QString> > > &Entries);
-    int getGIDFromTileName(const QString &name);
+    bool WriteMap(WorldCell *cell, int bmpIndex);
+
+    Tiled::Tile *getTileFromTileName(const QString &tileName);
 
     void assignMapToCell(WorldCell *cell);
 
@@ -156,9 +155,25 @@ private:
     QList<BMPToTMXImages*> mImages;
     QMap<QRgb,QList<ConversionEntry> > Conversions;
     QVector<QVector<QVector<QString> > > Entries;
-    QByteArray baseXML;
-    QMap<QString,Tileset*> Tilesets;
-    QList<Tileset*> TilesetList;
+
+    class LayerInfo
+    {
+    public:
+        enum Type {
+            Tile,
+            Object
+        };
+
+        LayerInfo(const QString &name, Type type) :
+            mName(name),
+            mType(type)
+        {}
+
+        QString mName;
+        Type mType;
+    };
+    QList<LayerInfo> mLayers;
+
     QList<Blend> blendList;
     QList<QString> blendLayers;
     QString mError;

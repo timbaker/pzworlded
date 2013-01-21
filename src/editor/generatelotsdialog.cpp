@@ -31,17 +31,6 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
     connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
 
-    // Tilesets.txt
-    mMetaTxt = settings.tileMetaInfo;
-    if (mMetaTxt.isEmpty()) {
-        QString configPath = QDir::homePath() + QLatin1String("/.TileZed");
-        QString fileName = configPath + QLatin1String("/Tilesets.txt");
-        if (QFileInfo(fileName).exists())
-            mMetaTxt = fileName;
-    }
-    ui->metaInfoEdit->setText(QDir::toNativeSeparators(mMetaTxt));
-    connect(ui->metaInfoBrowse, SIGNAL(clicked()), SLOT(metaInfoBrowse()));
-
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
             SLOT(apply()));
 }
@@ -82,22 +71,6 @@ void GenerateLotsDialog::spawnBrowse()
     }
 }
 
-void GenerateLotsDialog::metaInfoBrowse()
-{
-    QString formatString = tr("Text files (*.txt);;All files (*.*)");
-
-    QString initialDir = QDir::homePath() + QLatin1String("/.TileZed");
-    if (!mMetaTxt.isEmpty() && QFileInfo(mMetaTxt).exists())
-        initialDir = QFileInfo(mMetaTxt).absolutePath();
-
-    QString f = QFileDialog::getOpenFileName(this, tr("Choose the Tilesets.txt file"),
-        initialDir, formatString);
-    if (!f.isEmpty()) {
-        mMetaTxt = f;
-        ui->metaInfoEdit->setText(QDir::toNativeSeparators(mMetaTxt));
-    }
-}
-
 void GenerateLotsDialog::accept()
 {
     if (!validate())
@@ -106,7 +79,6 @@ void GenerateLotsDialog::accept()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
-    settings.tileMetaInfo = mMetaTxt;
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
@@ -121,7 +93,6 @@ void GenerateLotsDialog::apply()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
-    settings.tileMetaInfo = mMetaTxt;
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
@@ -141,15 +112,6 @@ bool GenerateLotsDialog::validate()
         QMessageBox::warning(this, tr("It's no good, Jim!"),
                              tr("Please choose a Zombie Spawn Map image file."));
         return false;
-    }
-
-    {
-        QFileInfo info(mMetaTxt);
-        if (mMetaTxt.isEmpty() || !info.exists()) {
-            QMessageBox::warning(this, tr("It's no good, Jim!"),
-                                 tr("Please choose the Tilesets.txt file."));
-            return false;
-        }
     }
 
     return true;
