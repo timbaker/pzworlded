@@ -181,12 +181,12 @@ void WorldScene::setTool(AbstractTool *tool)
         if (bmpToolActive) {
             worldDocument()->setSelectedCells(QList<WorldCell*>());
             foreach (WorldCellItem *item, mCellItems)
-                item->setOpacity(0.2);
+                item->setVisible(false); //item->setOpacity(0.2);
             setShowBMPs(true);
         } else {
             worldDocument()->setSelectedBMPs(QList<WorldBMP*>());
             foreach (WorldCellItem *item, mCellItems)
-                item->setOpacity(1.0);
+                item->setVisible(true); //item->setOpacity(1.0);
             setShowBMPs(Preferences::instance()->showBMPs());
         }
         mBMPToolActive = bmpToolActive;
@@ -786,6 +786,13 @@ QRectF BaseCellItem::boundingRect() const
     return mBoundingRect;
 }
 
+QPainterPath BaseCellItem::shape() const
+{
+    QPainterPath path;
+    path.addPolygon(mScene->cellRectToPolygon(QRect(cellPos(), QSize(1, 1))).translated(mDrawOffset));
+    return path;
+}
+
 void BaseCellItem::paint(QPainter *painter,
                          const QStyleOptionGraphicsItem *option,
                          QWidget *)
@@ -833,6 +840,8 @@ void BaseCellItem::updateCellImage()
 #endif
         }
     }
+
+    setToolTip(QDir::toNativeSeparators(mapFilePath()));
 }
 
 void BaseCellItem::updateLotImage(int index)
@@ -1408,6 +1417,8 @@ WorldBMPItem::WorldBMPItem(WorldScene *scene, WorldBMP *bmp)
 {
     mMapImage = MapImageManager::instance()->getMapImage(bmp->filePath());
     if (!mMapImage) qDebug() << MapImageManager::instance()->errorString();
+
+    setToolTip(QDir::toNativeSeparators(bmp->filePath()));
 
     synchWithBMP();
 }
