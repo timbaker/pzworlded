@@ -451,10 +451,15 @@ Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)
             }
         }
         if (orient0 == Map::LevelIsometric && orient1 == Map::Isometric) {
+            int level, maxLevel = 0;
+            foreach (Layer *layer, map->layers())
+                if (MapComposite::levelForLayer(layer, &level))
+                    maxLevel = qMax(maxLevel, level);
+            newMap->setWidth(map->width() + maxLevel * 3);
+            newMap->setHeight(map->height() + maxLevel * 3);
             foreach (Layer *layer, newMap->layers()) {
-                int level;
-                if (MapComposite::levelForLayer(layer, &level) && level > 0)
-                    layer->setPosition(-offset * level);
+                MapComposite::levelForLayer(layer, &level);
+                layer->resize(newMap->size(), offset * (maxLevel - level));
             }
         }
         map = newMap;
