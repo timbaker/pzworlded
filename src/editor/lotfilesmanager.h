@@ -244,7 +244,6 @@ private:
     int Version;
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
-    QList<BMPToTMXImages*> mImages;
     QImage ZombieSpawnMap;
     LotFile::Stats mStats;
 

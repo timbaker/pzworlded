@@ -294,8 +294,6 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 {
     Q_UNUSED(cell)
 
-    Map *map = mapComposite->map();
-
     qDeleteAll(roomList);
     qDeleteAll(buildingList);
     qDeleteAll(ZoneList);
@@ -305,11 +303,9 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     ZoneList.clear();
 
     // Create the set of all tilesets used by the map and its sub-maps.
-    // FIXME: should be recursive.
     QList<Tileset*> tilesets;
-    tilesets += map->tilesets();
-    foreach (MapComposite *subMap, mapComposite->subMaps())
-        tilesets += subMap->map()->tilesets();
+    foreach (MapComposite *mc, mapComposite->maps())
+        tilesets += mc->map()->tilesets();
 
     qDeleteAll(TileMap.values());
     TileMap.clear();
