@@ -53,6 +53,8 @@ public:
 
     QString errorString() const { return mError; }
 
+    static QStringList supportedImageFormats();
+
     BMPToTMXImages *getImages(const QString &path, const QPoint &origin);
     QSize validateImages(const QString &path);
 

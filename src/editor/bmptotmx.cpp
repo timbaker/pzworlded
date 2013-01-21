@@ -273,6 +273,14 @@ bool BMPToTMX::generateCell(WorldCell *cell)
     return true;
 }
 
+QStringList BMPToTMX::supportedImageFormats()
+{
+    QStringList ret;
+    foreach (QByteArray format, QImageReader::supportedImageFormats())
+        ret += QString::fromAscii(format);
+    return ret;
+}
+
 BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
 {
     QFileInfo info(path);
@@ -282,7 +290,7 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
     }
 
     QFileInfo infoVeg(info.absolutePath() + QLatin1Char('/')
-                      + info.completeBaseName() + QLatin1String("_veg.bmp"));
+                      + info.completeBaseName() + QLatin1String("_veg.") + info.suffix());
     if (!infoVeg.exists()) {
         mError = tr("The image_veg file can't be found.\n%1").arg(path);
         return 0;
@@ -324,7 +332,7 @@ QSize BMPToTMX::validateImages(const QString &path)
     }
 
     QFileInfo infoVeg(info.absolutePath() + QLatin1Char('/')
-                      + info.completeBaseName() + QLatin1String("_veg.bmp"));
+                      + info.completeBaseName() + QLatin1String("_veg.") + info.suffix());
     if (!infoVeg.exists()) {
         mError = tr("The image_veg file can't be found.\n%1").arg(path);
         return QSize();
@@ -462,8 +470,10 @@ void BMPToTMX::reportUnknownColors()
         }
         QMap<QRgb,UnknownColor> &mapVeg = mUnknownVegColors[images->mPath];
         if (mapVeg.size()) {
+            QString suffix = QFileInfo(images->mPath).suffix();
             QString msg = tr("Some unknown colors were found in %1:\n")
-                    .arg(QFileInfo(images->mPath).completeBaseName() + QLatin1String("_veg.bmp"));
+                    .arg(QFileInfo(images->mPath).completeBaseName()
+                         + QLatin1String("_veg.") + suffix);
             int i = 0;
             foreach (QRgb rgb, mapVeg.keys()) {
                 msg += tr("RGB=%1,%2,%3 at x,y=%4,%5\n")

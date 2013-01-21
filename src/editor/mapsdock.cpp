@@ -17,6 +17,7 @@
 
 #include "mapsdock.h"
 
+#include "bmptotmx.h"
 #include "mapimagemanager.h"
 #include "mainwindow.h"
 #include "preferences.h"
@@ -184,9 +185,11 @@ MapsView::MapsView(QWidget *parent)
     model->setRootPath(mapsDir.absolutePath());
 
     model->setFilter(QDir::AllDirs | QDir::NoDot | QDir::Files);
-    model->setNameFilters(QStringList()
-                          << QLatin1String("*.tmx")
-                          << QLatin1String("*.bmp"));
+    QStringList filters;
+    filters <<  QLatin1String("*.tmx");
+    foreach (QString format, BMPToTMX::supportedImageFormats())
+        filters << QLatin1String("*.") + format;
+    model->setNameFilters(filters);
     model->setNameFilterDisables(false); // hide filtered files
 
     setModel(model);

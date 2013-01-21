@@ -670,7 +670,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!info.exists()) continue;
         if (!info.isFile()) continue;
 
-        if (info.suffix() == QLatin1String("bmp")) {
+        if (BMPToTMX::supportedImageFormats().contains(info.suffix())) {
             QSize size = BMPToTMX::instance()->validateImages(info.canonicalFilePath());
             if (size.isEmpty())
                 continue;

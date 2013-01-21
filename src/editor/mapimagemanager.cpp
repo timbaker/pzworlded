@@ -17,6 +17,7 @@
 
 #include "mapimagemanager.h"
 
+#include "bmptotmx.h"
 #include "imagelayer.h"
 #include "isometricrenderer.h"
 #include "mainwindow.h"
@@ -34,6 +35,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
+#include <QImageReader>
 #include <QMessageBox>
 
 using namespace Tiled;
@@ -64,7 +66,8 @@ void MapImageManager::deleteInstance()
 MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &relativeTo)
 {
 #if 1
-    if (mapName.endsWith(QLatin1String(".bmp"))) {
+    QString suffix = QFileInfo(mapName).suffix();
+    if (BMPToTMX::supportedImageFormats().contains(suffix)) {
         QString keyName = QFileInfo(mapName).canonicalFilePath();
         if (mMapImages.contains(keyName))
             return mMapImages[keyName];
@@ -264,7 +267,6 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
 }
 
 // BMP To TMX image thumbnail
-#include "bmptotmx.h"
 MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpFilePath)
 {
     QSize imageSize = BMPToTMX::instance()->validateImages(bmpFilePath);
@@ -435,8 +437,15 @@ QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
         if (!mapDir.mkdir(QLatin1String(".pzeditor")))
             return QFileInfo();
     }
+
+    // Need to distinguish BMPToTMX image formats, so include .png or .bmp
+    // in the file name.
+    QString suffix;
+    if (mapFileInfo.suffix() != QLatin1String("tmx"))
+        suffix = QLatin1String("_") + mapFileInfo.suffix();
+
     return QFileInfo(imagesDirInfo.absoluteFilePath() + QLatin1Char('/') +
-                     mapFileInfo.completeBaseName() + QLatin1String(".png"));
+                     mapFileInfo.completeBaseName() + suffix + QLatin1String(".png"));
 }
 
 QFileInfo MapImageManager::imageDataFileInfo(const QFileInfo &imageFileInfo)
