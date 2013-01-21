@@ -298,6 +298,7 @@ MainWindow::~MainWindow()
     DocumentManager::deleteInstance();
     ToolManager::deleteInstance();
     Preferences::deleteInstance();
+    MapManager::deleteInstance();
     TilesetManager::deleteInstance();
     delete ui;
 }

@@ -74,6 +74,8 @@ MapManager::~MapManager()
     while (it != end) {
         MapInfo *mapInfo = it.value();
         if (Map *map = mapInfo->map()) {
+            TilesetManager *tilesetMgr = TilesetManager::instance();
+            tilesetMgr->removeReferences(map->tilesets());
             delete map;
         }
         ++it;
@@ -207,6 +209,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
                 tileset->tileAt(i)->setImage(missingTile->image());
         }
     }
+    TilesetManager::instance()->addReferences(map->tilesets());
 
     if (!mMapInfo.contains(mapFilePath)) {
         MapInfo *info = new MapInfo(map->orientation(),
@@ -480,6 +483,8 @@ void MapManager::fileChangedTimeout()
                     mapInfo->mMap = 0;
                     MapInfo *sameInfo = loadMap(path);
                     if (sameInfo && sameInfo->map()) {
+                        TilesetManager *tilesetMgr = TilesetManager::instance();
+                        tilesetMgr->removeReferences(oldMap->tilesets());
                         delete oldMap;
                     } else {
                         qDebug() << "MapManager::fileChangedTimeout: FAILED to load the changed map";
