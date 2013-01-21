@@ -235,6 +235,8 @@ public:
     int columnCountForWidth(int width) const;
 
 #ifdef ZOMBOID
+    Tileset *clone() const;
+
     void setMissing(bool missing)
     { mMissing = missing; }
 

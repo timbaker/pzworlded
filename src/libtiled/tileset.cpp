@@ -151,6 +151,18 @@ int Tileset::columnCountForWidth(int width) const
 }
 
 #ifdef ZOMBOID
+Tileset *Tileset::clone() const
+{
+    Tileset *clone = new Tileset(*this);
+
+    for (int i = 0; i < clone->mTiles.size(); i++) {
+        clone->mTiles[i] = new Tile(mTiles[i]->image(), i, clone);
+        clone->mTiles[i]->mergeProperties(mTiles[i]->properties());
+    }
+
+    return clone;
+}
+
 TilesetImageCache::~TilesetImageCache()
 {
     qDeleteAll(mTilesets);
