@@ -191,6 +191,8 @@ public:
     void lotMoved(WorldCellLot *lot);
     void cellContentsChanged();
 
+    void mapFileCreated(const QString &path);
+
 protected:
     WorldCell *mCell;
 };
@@ -427,6 +429,7 @@ public slots:
     WorldBMP *pointToBMP(const QPointF &scenePos);
     WorldBMPItem *itemForBMP(WorldBMP *bmp);
 
+    void mapFileCreated(const QString &path);
     void mapImageChanged(MapImage *mapImage);
 
 protected:

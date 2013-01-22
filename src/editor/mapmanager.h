@@ -116,12 +116,15 @@ public:
     void removeReferenceToMap(MapInfo *mapInfo);
     void purgeUnreferencedMaps();
 
+    void newMapFileCreated(const QString &path);
+
     QString errorString() const
     { return mError; }
 
 signals:
     void mapAboutToChange(MapInfo *mapInf);
     void mapFileChanged(MapInfo *mapInfo);
+    void mapFileCreated(const QString &path);
 
 private slots:
     void fileChanged(const QString &path);

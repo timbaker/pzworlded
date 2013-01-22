@@ -19,6 +19,7 @@
 
 #include "bmptotmxconfirmdialog.h"
 #include "mainwindow.h"
+#include "mapmanager.h"
 #include "preferences.h"
 #include "progress.h"
 #include "simplefile.h"
@@ -152,6 +153,7 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     mUnknownColors.clear();
     mUnknownVegColors.clear();
+    mNewFiles.clear();
 
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
@@ -173,6 +175,9 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     if (world->getBMPToTMXSettings().assignMapsToWorld)
         assignMapsToCells(worldDoc, mode);
+
+    foreach (QString path, mNewFiles)
+        MapManager::instance()->newMapFileCreated(path);
 
     return true;
 }
@@ -796,10 +801,14 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
             map.addLayer(og);
         }
     }
+
+    QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
+    if (!QFileInfo(filePath).exists())
+        mNewFiles += filePath;
+
     MapWriter writer;
     writer.setLayerDataFormat(MapWriter::CSV);
     writer.setDtdEnabled(false);
-    QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
     if (!writer.writeMap(&map, filePath)) {
         mError = writer.errorString();
         return false;

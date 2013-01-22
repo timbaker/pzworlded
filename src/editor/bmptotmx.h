@@ -184,6 +184,8 @@ private:
     };
     QMap<QString,QMap<QRgb,UnknownColor> > mUnknownColors;
     QMap<QString,QMap<QRgb,UnknownColor> > mUnknownVegColors;
+
+    QStringList mNewFiles;
 };
 
 #endif // BMPTOTMX_H

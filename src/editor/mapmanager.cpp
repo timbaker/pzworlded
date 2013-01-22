@@ -434,6 +434,38 @@ void MapManager::purgeUnreferencedMaps()
     if (unpurged) qDebug() << "MapManager unpurged=" << unpurged;
 }
 
+void MapManager::newMapFileCreated(const QString &path)
+{
+    // If a cell view is open with a placeholder map and that map now exists,
+    // read the new map and allow the cell-scene to update itself.
+    // This code is 90% the same as fileChangedTimeout().
+    foreach (MapInfo *mapInfo, mMapInfo) {
+        if (!mapInfo->mPlaceholder || !mapInfo->mMap)
+            continue;
+        if (QFileInfo(mapInfo->path()) != QFileInfo(path))
+            continue;
+
+        Map *oldMap = mapInfo->map();
+        Q_ASSERT(!mapInfo->isBeingEdited());
+        emit mapAboutToChange(mapInfo);
+        mapInfo->mMap = 0;
+        MapInfo *sameInfo = loadMap(path);
+        if (sameInfo && sameInfo->map()) {
+            TilesetManager *tilesetMgr = TilesetManager::instance();
+            tilesetMgr->removeReferences(oldMap->tilesets());
+            delete oldMap;
+            mapInfo->mPlaceholder = false;
+        } else {
+            qDebug() << "MapManager::emitMapFileCreated: FAILED to load the new map";
+            // Error loading the new map, keep the old one.
+            mapInfo->mMap = oldMap;
+        }
+        emit mapFileChanged(mapInfo);
+    }
+
+    emit mapFileCreated(path);
+}
+
 Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)
 {
     Map::Orientation orient0 = map->orientation();

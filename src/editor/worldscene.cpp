@@ -151,6 +151,9 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
         mBMPItems += item;
     }
 
+    connect(MapManager::instance(), SIGNAL(mapFileCreated(QString)),
+            SLOT(mapFileCreated(QString)));
+
     connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(mapImageChanged(MapImage*)));
 }
@@ -597,6 +600,12 @@ WorldBMPItem *WorldScene::itemForBMP(WorldBMP *bmp)
     return 0;
 }
 
+void WorldScene::mapFileCreated(const QString &path)
+{
+    foreach (WorldCellItem *item, mCellItems)
+        item->mapFileCreated(path);
+}
+
 void WorldScene::mapImageChanged(MapImage *mapImage)
 {
     foreach (WorldCellItem *item, mCellItems)
@@ -1033,6 +1042,16 @@ void WorldCellItem::cellContentsChanged()
     for (int i = 0; i < mCell->lots().size(); i++)
         updateLotImage(i);
     updateBoundingRect();
+}
+
+void WorldCellItem::mapFileCreated(const QString &path)
+{
+    // If BMPtoTMX creates our cell's .tmx file and that .tmx file didn't exist
+    // before, we need to create the cell/lot images.
+    if (mapFilePath().isEmpty() || mMapImage)
+        return;
+    if (QFileInfo(path) == QFileInfo(mapFilePath()))
+        cellContentsChanged();
 }
 
 /////
