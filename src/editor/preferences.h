@@ -43,8 +43,8 @@ public:
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
 
-    QStringList searchPaths() const;
-    void setSearchPaths(const QStringList &paths);
+    QString tilesDirectory() const;
+    void setTilesDirectory(const QString &path);
 
     bool useOpenGL() const { return mUseOpenGL; }
     void setUseOpenGL(bool useOpenGL);
@@ -74,6 +74,7 @@ signals:
 
     void highlightCurrentLevelChanged(bool highlight);
     void mapsDirectoryChanged();
+    void tilesDirectoryChanged();
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -105,7 +106,7 @@ private:
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;
     QString mMapsDirectory;
-    QStringList mSearchPaths;
+    QString mTilesDirectory;
     QString mOpenFileDirectory;
 
     static Preferences *mInstance;

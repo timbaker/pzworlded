@@ -68,12 +68,10 @@ public:
             return mTilesets[name];
 
         Preferences *prefs = Preferences::instance();
-        foreach (QString dir, prefs->searchPaths()) {
-            QFileInfo info(dir + QLatin1Char('/') + name + QLatin1String(".png"));
-            if (info.exists()) {
-                mTilesets[name] = loadTileset(info.absoluteFilePath());
-                return mTilesets[name];
-            }
+        QFileInfo info(prefs->tilesDirectory() + QLatin1Char('/') + name + QLatin1String(".png"));
+        if (info.exists()) {
+            mTilesets[name] = loadTileset(info.absoluteFilePath());
+            return mTilesets[name];
         }
         return 0;
     }

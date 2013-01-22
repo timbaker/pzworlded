@@ -30,53 +30,27 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->pathsList, SIGNAL(itemSelectionChanged()), SLOT(pathSelectionChanged()));
-    connect(ui->addPathButton, SIGNAL(clicked()), SLOT(addPath()));
-    connect(ui->removePathButton, SIGNAL(clicked()), SLOT(removePath()));
-    connect(ui->pathUpButton, SIGNAL(clicked()), SLOT(movePathUp()));
-    connect(ui->pathDownButton, SIGNAL(clicked()), SLOT(movePathDown()));
-
-    connect(this, SIGNAL(accepted()), SLOT(dialogAccepted()));
-
     Preferences *prefs = Preferences::instance();
-    mSearchPaths = prefs->searchPaths();
+
+    mTilesDirectory = prefs->tilesDirectory();
+    ui->tilesDirectory->setText(QDir::toNativeSeparators(mTilesDirectory));
+    connect(ui->browseTilesDirectory, SIGNAL(clicked()),
+            SLOT(browseTilesDirectory()));
 
     mGridColor = prefs->gridColor();
     ui->gridColor->setColor(mGridColor);
     connect(ui->gridColor, SIGNAL(colorChanged(QColor)),
             SLOT(gridColorChanged(QColor)));
 
-    setPathsList();
     ui->openGL->setChecked(prefs->useOpenGL());
 }
 
-void PreferencesDialog::setPathsList()
+void PreferencesDialog::browseTilesDirectory()
 {
-    ui->pathsList->clear();
-    ui->pathsList->addItems(mSearchPaths);
-    synchPathsButtons();
-}
-
-void PreferencesDialog::synchPathsButtons()
-{
-    if (int row = selectedPath()) {
-        ui->removePathButton->setEnabled(true);
-        ui->pathUpButton->setEnabled(row > 1);
-        ui->pathDownButton->setEnabled(row < mSearchPaths.size());
-    } else {
-        ui->removePathButton->setEnabled(false);
-        ui->pathUpButton->setEnabled(false);
-        ui->pathDownButton->setEnabled(false);
-    }
-}
-
-int PreferencesDialog::selectedPath()
-{
-    QListWidget *view = ui->pathsList;
-    QList<QListWidgetItem*> selection = view->selectedItems();
-    if (selection.size() == 1)
-        return view->row(selection.first()) + 1; // view->currentRow()
-    return 0;
+    QString f = QFileDialog::getExistingDirectory(this, tr("Tiles Directory"),
+                                                  ui->tilesDirectory->text());
+    if (!f.isEmpty())
+        mTilesDirectory = f;
 }
 
 void PreferencesDialog::gridColorChanged(const QColor &gridColor)
@@ -84,53 +58,12 @@ void PreferencesDialog::gridColorChanged(const QColor &gridColor)
     mGridColor = gridColor;
 }
 
-void PreferencesDialog::addPath()
-{
-    QString f = QFileDialog::getExistingDirectory(this);
-    if (!f.isEmpty()) {
-        mSearchPaths += f;
-        setPathsList();
-    }
-}
-
-void PreferencesDialog::removePath()
-{
-    if (int index = selectedPath()) {
-        --index;
-        mSearchPaths.removeAt(index);
-        setPathsList();
-    }
-}
-
-void PreferencesDialog::movePathUp()
-{
-    if (int index = selectedPath()) {
-        --index;
-        QString path = mSearchPaths.takeAt(index);
-        mSearchPaths.insert(index - 1, path);
-        setPathsList();
-    }
-}
-
-void PreferencesDialog::movePathDown()
-{
-    if (int index = selectedPath()) {
-        --index;
-        QString path = mSearchPaths.takeAt(index);
-        mSearchPaths.insert(index + 1, path);
-        setPathsList();
-    }
-}
-
-void PreferencesDialog::pathSelectionChanged()
-{
-    synchPathsButtons();
-}
-
-void PreferencesDialog::dialogAccepted()
+void PreferencesDialog::accept()
 {
     Preferences *prefs = Preferences::instance();
-    prefs->setSearchPaths(mSearchPaths);
+    prefs->setTilesDirectory(mTilesDirectory);
     prefs->setUseOpenGL(ui->openGL->isChecked());
     prefs->setGridColor(mGridColor);
+
+    QDialog::accept();
 }

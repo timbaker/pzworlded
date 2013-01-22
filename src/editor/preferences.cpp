@@ -94,7 +94,15 @@ Preferences::Preferences()
     mMapsDirectory = mSettings->value(QLatin1String("Current"), QString()).toString();
     mSettings->endGroup();
 
-    mSearchPaths = mSettings->value(QLatin1String("SearchPaths"), QStringList()).toStringList();
+#ifdef Q_WS_WIN
+    // Set the default location of the Tiles Directory to the same value set
+    // in TileZed's Tilesets Dialog.
+    QSettings settings(QLatin1String("mapeditor.org"), QLatin1String("Tiled"));
+    mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
+                                       settings.value(QLatin1String("Tilesets/TilesDirectory"))).toString();
+#else
+    mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory")).toString();
+#endif
 
     mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
 }
@@ -251,17 +259,16 @@ void Preferences::setMapsDirectory(const QString &path)
     emit mapsDirectoryChanged();
 }
 
-QStringList Preferences::searchPaths() const
+QString Preferences::tilesDirectory() const
 {
-    return mSearchPaths;
+    return mTilesDirectory;
 }
 
-void Preferences::setSearchPaths(const QStringList &paths)
+void Preferences::setTilesDirectory(const QString &path)
 {
-    if (mSearchPaths == paths)
+    if (mTilesDirectory == path)
         return;
-    mSearchPaths = paths;
-    mSettings->setValue(QLatin1String("SearchPaths"), paths);
-
-//    emit mapsDirectoryChanged();
+    mTilesDirectory = path;
+    mSettings->setValue(QLatin1String("TilesDirectory"), path);
+    emit tilesDirectoryChanged();
 }

@@ -85,35 +85,21 @@ MapManager::~MapManager()
 // mapName could be "Lot_Foo", "../Lot_Foo", "C:/maptools/Lot_Foo" with/without ".tmx"
 QString MapManager::pathForMap(const QString &mapName, const QString &relativeTo)
 {
-    if (!QDir::isRelativePath(mapName)) {
-        QString mapFilePath = mapName;
-        if (!mapFilePath.endsWith(QLatin1String(".tmx")))
-            mapFilePath += QLatin1String(".tmx");
-        QFileInfo fileInfo(mapFilePath);
-        if (fileInfo.exists())
-            return fileInfo.canonicalFilePath();
-        return QString();
+    QString mapFilePath = mapName;
+
+    if (QDir::isRelativePath(mapName)) {
+        Q_ASSERT(!relativeTo.isEmpty());
+        Q_ASSERT(!QDir::isRelativePath(relativeTo));
+        mapFilePath = relativeTo + QLatin1Char('/') + mapName;
     }
 
-    Preferences *prefs = Preferences::instance();
-    QStringList searchPaths = prefs->searchPaths();
-    if (!relativeTo.isEmpty())
-        searchPaths.insert(0, relativeTo);
+    if (!mapFilePath.endsWith(QLatin1String(".tmx")) &&
+            !mapFilePath.endsWith(QLatin1String(".tbx")))
+        mapFilePath += QLatin1String(".tmx");
 
-    foreach (QString searchPath, searchPaths) {
-        QString mapFilePath = mapName;
-
-        Q_ASSERT(!searchPath.isEmpty());
-        Q_ASSERT(!QDir::isRelativePath(searchPath));
-        mapFilePath = searchPath + QLatin1Char('/') + mapName;
-
-        if (!mapFilePath.endsWith(QLatin1String(".tmx")))
-            mapFilePath += QLatin1String(".tmx");
-
-        QFileInfo fileInfo(mapFilePath);
-        if (fileInfo.exists())
-            return fileInfo.canonicalFilePath();
-    }
+    QFileInfo fileInfo(mapFilePath);
+    if (fileInfo.exists())
+        return fileInfo.canonicalFilePath();
 
     return QString();
 }
@@ -127,21 +113,17 @@ protected:
      */
     QString resolveReference(const QString &reference, const QString &mapPath)
     {
+        QString resolved = MapReader::resolveReference(reference, mapPath);
+        QString canonical = QFileInfo(resolved).canonicalFilePath();
+
         // Hack to keep the app responsive.
         // TODO: Move map reading to a worker thread. Only issue is tileset images
         // cannot be accessed outside the GUI thread.
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-        Preferences *prefs = Preferences::instance();
-        QStringList paths(mapPath);
-        paths += prefs->searchPaths();
-        foreach (QString path, paths) {
-            QString resolved = MapReader::resolveReference(reference, path);
-            QFileInfo info(resolved);
-            if (info.exists())
-                return info.canonicalFilePath();
-        }
-        return MapReader::resolveReference(reference, mapPath);
+        // Make sure that we're not returning an empty string when the file is
+        // not found.
+        return canonical.isEmpty() ? resolved : canonical;
     }
 };
 

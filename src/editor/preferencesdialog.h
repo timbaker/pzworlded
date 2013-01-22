@@ -33,29 +33,18 @@ class PreferencesDialog : public QDialog
     Q_OBJECT
 public:
     explicit PreferencesDialog(WorldDocument *worldDoc, QWidget *parent = 0);
-    
-private:
-    void setPathsList();
-    void synchPathsButtons();
 
-    int selectedPath();
-    
 private slots:
+    void browseTilesDirectory();
+
     void gridColorChanged(const QColor &gridColor);
 
-    void addPath();
-    void removePath();
-    void movePathUp();
-    void movePathDown();
-
-    void pathSelectionChanged();
-
-    void dialogAccepted();
+    void accept();
     
 private:
     Ui::PreferencesDialog *ui;
     WorldDocument *mWorldDoc;
-    QStringList mSearchPaths;
+    QString mTilesDirectory;
     QColor mGridColor;
 };
 

@@ -791,11 +791,26 @@ MapObject *MapReaderPrivate::readObject()
     const int y = atts.value(QLatin1String("y")).toString().toInt();
     const int width = atts.value(QLatin1String("width")).toString().toInt();
     const int height = atts.value(QLatin1String("height")).toString().toInt();
+#ifdef ZOMBOID
+    QString type = atts.value(QLatin1String("type")).toString();
+#else
     const QString type = atts.value(QLatin1String("type")).toString();
+#endif
     const QStringRef visibleRef = atts.value(QLatin1String("visible"));
 
     const QPointF pos = pixelToTileCoordinates(mMap, x, y);
     const QPointF size = pixelToTileCoordinates(mMap, width, height);
+
+#ifdef ZOMBOID
+    if (name == QLatin1String("lot") && !type.isEmpty()) {
+        // Handle old files that don't include the extension.
+        if (!type.endsWith(QLatin1String(".tmx")) &&
+                !type.endsWith(QLatin1String(".tbx")))
+            type += QLatin1String(".tmx");
+        // Convert relative paths to absolute paths.
+        type = p->resolveReference(type, mPath);
+    }
+#endif
 
     MapObject *object = new MapObject(name, type, pos, QSizeF(size.x(),
                                                               size.y()));

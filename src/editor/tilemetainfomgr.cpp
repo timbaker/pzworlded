@@ -17,9 +17,9 @@
 
 #include "tilemetainfomgr.h"
 
-#include "simplefile.h"
-
 #include "mainwindow.h"
+#include "preferences.h"
+#include "simplefile.h"
 #include "tilesetmanager.h"
 
 #include "tile.h"
@@ -27,7 +27,6 @@
 
 #include <QDir>
 #include <QImage>
-#include <QSettings>
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -66,9 +65,7 @@ TileMetaInfoMgr::~TileMetaInfoMgr()
 
 QString TileMetaInfoMgr::tilesDirectory() const
 {
-    // Get the Tiles Directory from TileZed's settings.
-    QSettings settings(QLatin1String("mapeditor.org"), QLatin1String("Tiled"));
-    return settings.value(QLatin1String("Tilesets/TilesDirectory")).toString();
+    return Preferences::instance()->tilesDirectory();
 }
 
 QString TileMetaInfoMgr::txtName()

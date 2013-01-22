@@ -427,9 +427,23 @@ void MapWriterPrivate::writeObject(QXmlStreamWriter &w,
 {
     w.writeStartElement(QLatin1String("object"));
     const QString &name = mapObject->name();
+#ifdef ZOMBOID
+    QString type = mapObject->type();
+#else
     const QString &type = mapObject->type();
+#endif
     if (!name.isEmpty())
         w.writeAttribute(QLatin1String("name"), name);
+#ifdef ZOMBOID
+    if (name == QLatin1String("lot") && !type.isEmpty()) {
+        if (!type.endsWith(QLatin1String(".tmx")) &&
+                !type.endsWith(QLatin1String(".tbx")))
+            type += QLatin1String(".tmx");
+        Q_ASSERT(QDir::isAbsolutePath(type));
+        if (QDir::isAbsolutePath(type))
+            type = mMapDir.relativeFilePath(type);
+    }
+#endif
     if (!type.isEmpty())
         w.writeAttribute(QLatin1String("type"), type);
 
