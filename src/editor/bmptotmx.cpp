@@ -527,6 +527,8 @@ bool BMPToTMX::LoadBaseXML()
         return false;
     }
 
+    mLayers.clear();
+
     foreach (SimpleFileBlock block, simple.blocks) {
         if (block.name == QLatin1String("layers")) {
             foreach (SimpleFileKeyValue kv, block.values) {
@@ -560,6 +562,8 @@ bool BMPToTMX::LoadRules()
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
         return false;
+
+    Conversions.clear();
 
     QTextStream sr(&file);
     while (!sr.atEnd()) {
