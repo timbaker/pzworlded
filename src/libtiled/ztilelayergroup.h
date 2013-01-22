@@ -44,6 +44,7 @@ class TILEDSHARED_EXPORT ZTileLayerGroup
 public:
 
     ZTileLayerGroup(Map *map, int level);
+    virtual ~ZTileLayerGroup() {};
 
     virtual void addTileLayer(TileLayer *layer, int index);
     virtual void removeTileLayer(TileLayer *layer);

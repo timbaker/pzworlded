@@ -78,10 +78,11 @@ public:
 class Entry
 {
 public:
-    Entry(int gid)
+    Entry(int gid) :
+        gid(gid)
     {
-        this->gid = gid;
     }
+
     int gid;
 };
 
@@ -96,6 +97,12 @@ public:
     ~Square()
     {
         qDeleteAll(Entries);
+    }
+    Square &operator=(const Square &other)
+    {
+        qDeleteAll(Entries);
+        Entries = other.Entries;
+        return *this;
     }
 
     QList<Entry*> Entries;

@@ -383,7 +383,9 @@ void MapManager::addReferenceToMap(MapInfo *mapInfo)
     if (mapInfo->mMap) {
         mapInfo->mMapRefCount++;
         mapInfo->mReferenceEpoch = ++mReferenceEpoch;
+#ifndef QT_NO_DEBUG
         qDebug() << "MapManager refCount++ =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
+#endif
     }
 }
 
@@ -393,7 +395,9 @@ void MapManager::removeReferenceToMap(MapInfo *mapInfo)
     if (mapInfo->mMap) {
         Q_ASSERT(mapInfo->mMapRefCount > 0);
         mapInfo->mMapRefCount--;
+#ifndef QT_NO_DEBUG
         qDebug() << "MapManager refCount-- =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
+#endif
         purgeUnreferencedMaps();
     }
 }
@@ -403,7 +407,7 @@ void MapManager::purgeUnreferencedMaps()
     int unpurged = 0;
     foreach (MapInfo *mapInfo, mMapInfo) {
         if (mapInfo->mMap && mapInfo->mMapRefCount <= 0 &&
-                (mapInfo->mReferenceEpoch < mReferenceEpoch - 50)) {
+                (mapInfo->mReferenceEpoch <= mReferenceEpoch - 50)) {
             qDebug() << "MapManager purging" << mapInfo->mFilePath;
             TilesetManager *tilesetMgr = TilesetManager::instance();
             tilesetMgr->removeReferences(mapInfo->mMap->tilesets());

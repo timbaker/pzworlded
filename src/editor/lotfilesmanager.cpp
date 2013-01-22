@@ -205,7 +205,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     int mapWidth = mapInfo->width();
     int mapHeight = mapInfo->height();
 
-#if 1
     // Resize the grid and cleanup data from the previous cell.
     mGridData.resize(mapWidth);
     for (int x = 0; x < mapWidth; x++) {
@@ -213,21 +212,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         for (int y = 0; y < mapHeight; y++)
             mGridData[x][y].fill(LotFile::Square(), MaxLevel);
     }
-#else
-    // Cleanup last call
-    for (int x = 0; x < mGridData.size(); x++)
-        for (int y = 0; y < mGridData[x].size(); y++)
-            for (int z = 0; z < mGridData[x][y].size(); z++)
-                qDeleteAll(mGridData[x][y][z].Entries);
-    mGridData.clear();
-
-    mGridData.resize(mapWidth);
-    for (int x = 0; x < mapWidth; x++) {
-        mGridData[x].resize(mapHeight);
-        for (int y = 0; y < mapHeight; y++)
-            mGridData[x][y].resize(MaxLevel);
-    }
-#endif
 
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
