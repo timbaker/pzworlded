@@ -140,7 +140,8 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
-    mImages.clear(); // FIXME: memory leak, images aren't freed
+    qDeleteAll(mImages);
+    mImages.clear();
     foreach (WorldBMP *bmp, world->bmps()) {
         BMPToTMXImages *images = getImages(bmp->filePath(), bmp->pos());
         if (!images) {
