@@ -571,8 +571,10 @@ void MapManager::fileChangedTimeout()
     foreach (const QString &path, mChangedFiles) {
         if (mMapInfo.contains(path)) {
             qDebug() << "MapManager::fileChanged" << path;
+            mFileSystemWatcher->removePath(path);
             QFileInfo info(path);
             if (info.exists()) {
+                mFileSystemWatcher->addPath(path);
                 MapInfo *mapInfo = mMapInfo[path];
                 if (Map *oldMap = mapInfo->map()) {
                     Q_ASSERT(!mapInfo->isBeingEdited());
