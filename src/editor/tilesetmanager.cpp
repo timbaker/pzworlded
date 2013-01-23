@@ -131,7 +131,7 @@ void TilesetManager::addReference(Tileset *tileset)
             mWatcher->addPath(tileset->imageSource());
     }
 #ifdef ZOMBOID_TILE_LAYER_NAMES
-    if (!tileset->imageSource().isEmpty())
+    if (!tileset->imageSource().isEmpty() && !tileset->isMissing())
         readTileLayerNames(tileset);
 #endif
 }
@@ -235,10 +235,35 @@ void TilesetManager::fileChangedTimeout()
 }
 
 #ifdef ZOMBOID
-void TilesetManager::tilesetSourceChanged(Tileset *tileset)
+void TilesetManager::tilesetSourceChanged(Tileset *tileset,
+                                          const QString &oldSource,
+                                          bool wasMissing)
 {
-    if (!tileset->imageSource().isEmpty() && !tileset->isMissing())
+    if (!wasMissing && !oldSource.isEmpty())
+        mWatcher->removePath(oldSource);
+    if (!tileset->isMissing() && !tileset->imageSource().isEmpty()) {
         mWatcher->addPath(tileset->imageSource());
+#ifdef ZOMBOID_TILE_LAYER_NAMES
+        readTileLayerNames(tileset);
+#endif
+    }
+    emit tilesetChanged(tileset);
+}
+
+void TilesetManager::changeTilesetSource(Tileset *tileset, const QString &source,
+                                         bool missing)
+{
+    if (!tileset->isMissing())
+        mWatcher->removePath(tileset->imageSource());
+    tileset->setImageSource(source);
+    tileset->setMissing(missing);
+    if (!tileset->imageSource().isEmpty() && !tileset->isMissing()) {
+        mWatcher->addPath(tileset->imageSource());
+#ifdef ZOMBOID_TILE_LAYER_NAMES
+        readTileLayerNames(tileset);
+#endif
+    }
+    emit tilesetChanged(tileset);
 }
 #endif
 

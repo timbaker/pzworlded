@@ -358,6 +358,7 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
 
     foreach (Tileset *ts, _tilesets) {
         if (ts->isMissing()) {
+            QString oldSource = ts->imageSource();
             QString source = tilesDirectory() + QLatin1Char('/')
                     // This is the name that was saved in Tilesets.txt,
                     // relative to Tiles directory, plus .png.
@@ -367,7 +368,7 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
                 source = info.canonicalFilePath();
                 if (loadTilesetImage(ts, source)) {
                     ts->setMissing(false); // Yay!
-                    TilesetManager::instance()->tilesetSourceChanged(ts);
+                    TilesetManager::instance()->tilesetSourceChanged(ts, oldSource, true);
                 }
             }
         }

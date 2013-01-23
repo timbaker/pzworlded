@@ -247,6 +247,9 @@ public:
       */
     bool isMissing() const
     { return mMissing; }
+
+    void setImageSource(const QString &source)
+    { mImageSource = source; }
 #endif
 
 private:

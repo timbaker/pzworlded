@@ -133,11 +133,9 @@ public:
     { return mReloadTilesetsOnChange; }
 
 #ifdef ZOMBOID
-    /**
-      * Call this when a previously missing referenced tileset is no longer
-      * missing.  It adds the path to the file system watcher.
-      */
-    void tilesetSourceChanged(Tileset *tileset);
+    void tilesetSourceChanged(Tileset *tileset, const QString &oldSource,
+                              bool wasMissing);
+    void changeTilesetSource(Tileset *tileset, const QString &source, bool missing);
 
     Tile *missingTile() const
     { return mMissingTile; }
