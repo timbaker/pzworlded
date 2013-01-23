@@ -219,6 +219,19 @@ bool Map::hasMissingTilesets() const
     return false;
 }
 
+bool Map::hasUsedMissingTilesets() const
+{
+    QSet<Tileset*> usedTilesets;
+    foreach (TileLayer *tl, tileLayers())
+        usedTilesets += tl->usedTilesets();
+
+    foreach (Tileset *ts, mTilesets) {
+        if (ts->isMissing() && usedTilesets.contains(ts))
+            return true;
+    }
+    return false;
+}
+
 void Map::addTileLayerGroup(ZTileLayerGroup *tileLayerGroup)
 {
     int arrayIndex = 0;

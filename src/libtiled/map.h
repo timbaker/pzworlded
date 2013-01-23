@@ -267,6 +267,7 @@ public:
 #ifdef ZOMBOID
     QList<Tileset*> missingTilesets() const;
     bool hasMissingTilesets() const;
+    bool hasUsedMissingTilesets() const;
 #endif
 
 #ifdef ZOMBOID

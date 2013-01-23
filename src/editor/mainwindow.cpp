@@ -299,6 +299,7 @@ MainWindow::~MainWindow()
     ToolManager::deleteInstance();
     Preferences::deleteInstance();
     MapManager::deleteInstance();
+    TileMetaInfoMgr::deleteInstance();
     TilesetManager::deleteInstance();
     delete ui;
 }
@@ -655,6 +656,61 @@ void MainWindow::openLastFiles()
     mSettings.endGroup();
 }
 
+#include "BuildingEditor/buildingtiles.h"
+#include "BuildingEditor/buildingtemplates.h"
+#include "BuildingEditor/buildingtmx.h"
+#include "BuildingEditor/furnituregroups.h"
+using namespace BuildingEditor;
+
+// All this is needed for .tbx lots.
+bool MainWindow::InitConfigFiles()
+{
+    // Refresh the ui before blocking while loading tilesets etc
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    if (!TileMetaInfoMgr::instance()->readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("%1\n(while reading %2)")
+                              .arg(TileMetaInfoMgr::instance()->errorString())
+                              .arg(TileMetaInfoMgr::instance()->txtName()));
+        return false;
+    }
+
+    if (!BuildingTMX::instance()->readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(BuildingTMX::instance()->txtName())
+                              .arg(BuildingTMX::instance()->errorString()));
+        return false;
+    }
+
+    if (!BuildingTilesMgr::instance()->readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(BuildingTilesMgr::instance()->txtName())
+                              .arg(BuildingTilesMgr::instance()->errorString()));
+        return false;
+    }
+
+    if (!FurnitureGroups::instance()->readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(FurnitureGroups::instance()->txtName())
+                              .arg(FurnitureGroups::instance()->errorString()));
+        return false;
+    }
+
+    if (!BuildingTemplates::instance()->readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(BuildingTemplates::instance()->txtName())
+                              .arg(BuildingTemplates::instance()->errorString()));
+        return false;
+    }
+
+    return true;
+}
+
 void MainWindow::setStatusBarCoords(int x, int y)
 {
     ui->coordinatesLabel->setText(QString(QLatin1String("%1,%2")).arg(x).arg(y));
@@ -805,7 +861,9 @@ static void generateLots(MainWindow *mainWin, Document *doc,
         QMessageBox::warning(mainWin, mainWin->tr("Lot Generation Failed!"),
                              LotFilesManager::instance()->errorString());
     }
+#if 0
     TileMetaInfoMgr::deleteInstance();
+#endif
 }
 
 void MainWindow::generateLotsAll()
@@ -831,7 +889,9 @@ static void _BMPToTMX(MainWindow *mainWin, Document *doc,
         QMessageBox::warning(mainWin, mainWin->tr("BMP To TMX Failed!"),
                              BMPToTMX::instance()->errorString());
     }
+#if 0
     TileMetaInfoMgr::deleteInstance();
+#endif
 }
 
 void MainWindow::BMPToTMXAll()

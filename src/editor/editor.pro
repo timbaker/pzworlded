@@ -96,7 +96,17 @@ SOURCES += main.cpp\
     resizeworlddialog.cpp \
     newworlddialog.cpp \
     tilemetainfomgr.cpp \
-    tilesetmanager.cpp
+    tilesetmanager.cpp \
+    BuildingEditor/furnituregroups.cpp \
+    BuildingEditor/buildingtmx.cpp \
+    BuildingEditor/buildingtiles.cpp \
+    BuildingEditor/buildingobjects.cpp \
+    BuildingEditor/buildingmap.cpp \
+    BuildingEditor/buildingfloor.cpp \
+    BuildingEditor/building.cpp \
+    BuildingEditor/buildingwriter.cpp \
+    BuildingEditor/buildingreader.cpp \
+    BuildingEditor/buildingtemplates.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -152,7 +162,17 @@ HEADERS  += mainwindow.h \
     resizeworlddialog.h \
     newworlddialog.h \
     tilemetainfomgr.h \
-    tilesetmanager.h
+    tilesetmanager.h \
+    BuildingEditor/furnituregroups.h \
+    BuildingEditor/buildingtmx.h \
+    BuildingEditor/buildingtiles.h \
+    BuildingEditor/buildingobjects.h \
+    BuildingEditor/buildingmap.h \
+    BuildingEditor/buildingfloor.h \
+    BuildingEditor/building.h \
+    BuildingEditor/buildingwriter.h \
+    BuildingEditor/buildingreader.h \
+    BuildingEditor/buildingtemplates.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

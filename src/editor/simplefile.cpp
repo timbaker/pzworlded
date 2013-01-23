@@ -172,6 +172,32 @@ void SimpleFile::writeBlock(QTextStream &ts, const SimpleFileBlock &block)
 
 /////
 
+int SimpleFileBlock::findBlock(const QString &key) const
+{
+    for (int i = 0; i < blocks.size(); i++) {
+        if (blocks[i].name == key)
+            return i;
+    }
+    return -1;
+}
+
+int SimpleFileBlock::findValue(const QString &key) const
+{
+    for (int i = 0; i < values.size(); i++) {
+        if (values[i].name == key)
+            return i;
+    }
+    return -1;
+}
+
+SimpleFileKeyValue SimpleFileBlock::keyValue(const QString &name)
+{
+    int i = findValue(name);
+    if (i >= 0)
+        return values[i];
+    return SimpleFileKeyValue();
+}
+
 QString SimpleFileBlock::value(const QString &key)
 {
     foreach (SimpleFileKeyValue kv, values) {
@@ -211,10 +237,9 @@ void SimpleFileBlock::replaceValue(const QString &key, const QString &value,
 
 SimpleFileBlock SimpleFileBlock::block(const QString &name)
 {
-    foreach (SimpleFileBlock block, blocks) {
-        if (block.name == name)
-            return block;
-    }
+    int i = findBlock(name);
+    if (i >= 0)
+        return blocks[i];
     return SimpleFileBlock();
 }
 

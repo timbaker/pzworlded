@@ -350,9 +350,13 @@ void TileMetaInfoMgr::removeTileset(Tileset *tileset)
     //    TilesetManager::instance()->removeReference(tileset);
 }
 
-void TileMetaInfoMgr::loadTilesets()
+void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
 {
-    foreach (Tileset *ts, tilesets()) {
+    QList<Tileset *> _tilesets = tilesets;
+    if (_tilesets.isEmpty())
+        _tilesets = this->tilesets();
+
+    foreach (Tileset *ts, _tilesets) {
         if (ts->isMissing()) {
             QString source = tilesDirectory() + QLatin1Char('/')
                     // This is the name that was saved in Tilesets.txt,

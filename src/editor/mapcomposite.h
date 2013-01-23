@@ -65,6 +65,8 @@ public:
 
     MapComposite *owner() const { return mOwner; }
 
+    bool regionAltered(Tiled::TileLayer *tl);
+
     void setNeedsSynch(bool synch) { mNeedsSynch = synch; }
     bool needsSynch() const { return mNeedsSynch; }
     bool isLayerEmpty(int index) const;
@@ -108,6 +110,10 @@ private:
     QVector<SubMapLayers> mPreparedSubMapLayers;
     QVector<SubMapLayers> mVisibleSubMapLayers;
 
+#define BUILDINGED
+#ifdef BUILDINGED
+    QVector<Tiled::TileLayer*> mBlendLayers;
+#endif
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer0; // 0_Floor
     Tiled::TileLayer *mRoadLayer1; // 0_FloorOverlay
@@ -123,6 +129,7 @@ public:
                  int levelOffset = 0);
     ~MapComposite();
 
+    static bool levelForLayer(const QString &layerName, int *levelPtr = 0);
     static bool levelForLayer(Tiled::Layer *layer, int *levelPtr = 0);
     static QString layerNameWithoutPrefix(const QString &name);
     static QString layerNameWithoutPrefix(Tiled::Layer *layer);
@@ -137,6 +144,7 @@ public:
     int layerGroupCount() const { return mLayerGroups.size(); }
     const QMap<int,CompositeLayerGroup*>& layerGroups() const { return mLayerGroups; }
     CompositeLayerGroup *tileLayersForLevel(int level) const;
+    CompositeLayerGroup *layerGroupForLevel(int level) const;
     const QList<CompositeLayerGroup*> &sortedLayerGroups() const { return mSortedLayerGroups; }
     CompositeLayerGroup *layerGroupForLayer(Tiled::TileLayer *tl) const;
 
@@ -204,6 +212,15 @@ public:
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapFileChanged(MapInfo *mapInfo);
 
+#ifdef BUILDINGED
+    void setBlendOverMap(MapComposite *mapComposite)
+    { mBlendOverMap = mapComposite; }
+
+    MapComposite *blendOverMap() const
+    { return mBlendOverMap; }
+
+    MapComposite *mBlendOverMap;
+#endif
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
     Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
     Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }

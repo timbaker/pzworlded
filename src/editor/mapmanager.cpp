@@ -151,6 +151,10 @@ public:
 };
 #endif
 
+#include "BuildingEditor/buildingreader.h"
+#include "BuildingEditor/buildingmap.h"
+#include "tilemetainfomgr.h"
+
 MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
 {
     QString mapFilePath = pathForMap(mapName, relativeTo);
@@ -159,28 +163,58 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
         return 0;
     }
 
-    if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->map())
+    if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->map()) {
         return mMapInfo[mapFilePath];
+    }
 
     QFileInfo fileInfoMap(mapFilePath);
 
     PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
 
-#ifdef THREADIT
-    MapReaderThread thread(mapFilePath);
-    thread.start();
-    while (thread.isRunning()) {
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-    }
-    Map *map = thread.mMap;
-#else
-    EditorMapReader reader;
-    reader.setTilesetImageCache(TilesetManager::instance()->imageCache());
-    Map *map = reader.readMap(mapFilePath);
+    Map *map = 0;
+    if (fileInfoMap.suffix() == QLatin1String("tbx")) {
+        BuildingEditor::BuildingReader reader;
+        BuildingEditor::Building *building = reader.read(mapFilePath);
+        if (!building) {
+            mError = reader.errorString();
+            return 0;
+        }
+        BuildingEditor::BuildingMap bmap(building);
+        map = bmap.mergedMap();
+        QSet<Tileset*> usedTilesets;
+        foreach (TileLayer *tl, map->tileLayers())
+            usedTilesets += tl->usedTilesets();
+#if 0
+        QList<Tileset*> remove;
+        foreach (Tileset *ts, map->tilesets()) {
+            if (!usedTilesets.contains(ts))
+                remove += ts;
+        }
+        foreach (Tileset *ts, remove)
+            map->removeTilesetAt(map->indexOfTileset(ts));
+        TilesetManager::instance()->removeReferences(remove);
 #endif
-    if (!map) {
-        mError = reader.errorString();
-        return 0; // TODO: Add error handling
+        TileMetaInfoMgr::instance()->loadTilesets(usedTilesets.toList());
+        // The map references TileMetaInfoMgr's tilesets, but we add a reference
+        // to them ourself below.
+        TilesetManager::instance()->removeReferences(map->tilesets());
+    } else {
+#ifdef THREADIT
+        MapReaderThread thread(mapFilePath);
+        thread.start();
+        while (thread.isRunning()) {
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+        Map *map = thread.mMap;
+#else
+        EditorMapReader reader;
+        reader.setTilesetImageCache(TilesetManager::instance()->imageCache());
+        map = reader.readMap(mapFilePath);
+#endif
+        if (!map) {
+            mError = reader.errorString();
+            return 0; // TODO: Add error handling
+        }
     }
 
     Tile *missingTile = TilesetManager::instance()->missingTile();
@@ -254,6 +288,9 @@ public:
         if (!openFile(&file))
             return NULL;
 
+        if (mapFilePath.endsWith(QLatin1String(".tbx")))
+            return readBuilding(&file, QFileInfo(mapFilePath).absolutePath());
+
         return readMap(&file, QFileInfo(mapFilePath).absolutePath());
     }
 
@@ -298,9 +335,46 @@ public:
                            .arg(orientationString));
         }
 
-       mMapInfo = new MapInfo(orientation, mapWidth, mapHeight, tileWidth, tileHeight);
+        mMapInfo = new MapInfo(orientation, mapWidth, mapHeight, tileWidth, tileHeight);
 
-       return mMapInfo;
+        return mMapInfo;
+    }
+
+    MapInfo *readBuilding(QIODevice *device, const QString &path)
+    {
+        Q_UNUSED(path)
+
+        mError.clear();
+        mMapInfo = NULL;
+
+        xml.setDevice(device);
+
+        if (xml.readNextStartElement() && xml.name() == "building") {
+            mMapInfo = readBuilding();
+        } else {
+            xml.raiseError(tr("Not a building file."));
+        }
+
+        return mMapInfo;
+    }
+
+    MapInfo *readBuilding()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "building");
+
+        const QXmlStreamAttributes atts = xml.attributes();
+        const int mapWidth =
+                atts.value(QLatin1String("width")).toString().toInt();
+        const int mapHeight =
+                atts.value(QLatin1String("height")).toString().toInt();
+        const int tileWidth = 64;
+        const int tileHeight = 32;
+
+        const Map::Orientation orientation = static_cast<Map::Orientation>(BuildingEditor::BuildingMap::defaultOrientation());
+
+        mMapInfo = new MapInfo(orientation, mapWidth, mapHeight, tileWidth, tileHeight);
+
+        return mMapInfo;
     }
 
     QXmlStreamReader xml;

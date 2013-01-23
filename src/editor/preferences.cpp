@@ -17,6 +17,7 @@
 
 #include "preferences.h"
 
+#include <QDir>
 #include <QSettings>
 
 Preferences *Preferences::mInstance = 0;
@@ -110,6 +111,16 @@ Preferences::Preferences()
 Preferences::~Preferences()
 {
     delete mSettings;
+}
+
+QString Preferences::configPath() const
+{
+    return QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
+}
+
+QString Preferences::configPath(const QString &fileName) const
+{
+    return configPath() + QLatin1Char('/') + fileName;
 }
 
 QString Preferences::mapsDirectory() const

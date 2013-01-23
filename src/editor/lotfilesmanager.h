@@ -44,7 +44,7 @@ namespace LotFile
 class Tile
 {
 public:
-    Tile(const QString &name)
+    Tile(const QString &name = QString())
     {
         this->name = name;
         this->used = false;

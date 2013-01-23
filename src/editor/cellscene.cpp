@@ -2014,7 +2014,10 @@ void CellScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         QFileInfo info(url.toLocalFile());
         if (!info.exists()) continue;
         if (!info.isFile()) continue;
-        if (info.suffix() != QLatin1String("tmx")) continue;
+        if (info.suffix() != QLatin1String("tmx") &&
+                info.suffix() != QLatin1String("tbx")) continue;
+        if (!MapManager::instance()->mapInfo(info.canonicalFilePath()))
+            continue;
 
         QString path = info.canonicalFilePath();
         mDnDItem = new DnDItem(path, mRenderer, level);

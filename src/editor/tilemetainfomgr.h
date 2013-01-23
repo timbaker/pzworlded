@@ -96,7 +96,7 @@ public:
     void addTileset(Tileset *ts);
     void removeTileset(Tileset *ts);
 
-    void loadTilesets(); // this shouldn't be public
+    void loadTilesets(const QList<Tileset*> &tilesets = QList<Tileset*>()); // this shouldn't be public
 
     void setTileEnum(Tile *tile, const QString &enumName);
     QString tileEnum(Tile *tile);

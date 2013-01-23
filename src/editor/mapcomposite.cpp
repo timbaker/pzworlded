@@ -112,6 +112,9 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
             : layer->isEmpty() || layer->name().contains(QLatin1String("NoRender"));
     mEmptyLayers.insert(index, empty);
 
+#ifdef BUILDINGED
+    mBlendLayers.insert(index, 0);
+#endif
 #if 1 // ROAD_CRUD
     if (layer->name() == QLatin1String("0_Floor"))
         mRoadLayer0 = layer;
@@ -126,6 +129,9 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
     mVisibleLayers.remove(index);
     mLayerOpacity.remove(index);
     mEmptyLayers.remove(index);
+#ifdef BUILDINGED
+    mBlendLayers.remove(index);
+#endif
 
     ZTileLayerGroup::removeTileLayer(layer);
 
@@ -278,6 +284,10 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
 {
     if (!mVisibleLayers[index])
         return true;
+#ifdef BUILDINGED
+    if (mBlendLayers[index] && !mBlendLayers[index]->isEmpty())
+    	return false;
+#endif
 
 #if 1 // ROAD_CRUD
     if (mLayers[index] == mRoadLayer0 && !mOwner->roadLayer0()->isEmpty())
@@ -304,6 +314,31 @@ void CompositeLayerGroup::synch()
     QMargins m(0, mOwner->map()->tileHeight(), mOwner->map()->tileWidth(), 0);
 
     mAnyVisibleLayers = false;
+
+#ifdef BUILDINGED
+    // Do this before the isLayerEmpty() call below.
+    mBlendLayers.fill(0);
+    if (MapComposite *blendOverMap = mOwner->blendOverMap()) {
+        if (CompositeLayerGroup *layerGroup = blendOverMap->tileLayersForLevel(mLevel)) {
+            for (int i = 0; i < mLayers.size(); i++) {
+                if (!mVisibleLayers[i])
+                    continue;
+                for (int j = 0; j < layerGroup->mLayers.size(); j++) {
+                    TileLayer *blendLayer = layerGroup->mLayers[j];
+                    if (blendLayer->name() == mLayers[i]->name()) {
+                        mBlendLayers[i] = blendLayer;
+                        if (!blendLayer->isEmpty()) {
+                            unionTileRects(r, blendLayer->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
+                            maxMargins(m, blendLayer->drawMargins(), m);
+                            mAnyVisibleLayers = true;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+#endif
 
     int index = 0;
     foreach (TileLayer *tl, mLayers) {
@@ -466,6 +501,31 @@ void CompositeLayerGroup::synchSubMapLayerOpacity(const QString &layerName, qrea
     }
 }
 
+bool CompositeLayerGroup::regionAltered(Tiled::TileLayer *tl)
+{
+    QMargins m;
+    maxMargins(mDrawMargins, tl->drawMargins(), m);
+    if (m != mDrawMargins) {
+        setNeedsSynch(true);
+        return true;
+    }
+#ifdef BUILDINGED
+    int index = mLayers.indexOf(tl);
+    if (mTileBounds.isEmpty() && mBlendLayers[index] && !mBlendLayers[index]->isEmpty()) {
+        setNeedsSynch(true);
+        return true;
+    }
+#endif
+#if SPARSE_TILELAYER
+    if (mTileBounds.isEmpty() && !tl->isEmpty()) {
+        int index = mLayers.indexOf(tl);
+        mEmptyLayers[index] = false;
+        setNeedsSynch(true);
+        return true;
+    }
+#endif
+    return false;
+}
 
 QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer)
 {
@@ -509,6 +569,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mVisible(true)
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
+    #ifdef BUILDINGED
+    , mBlendOverMap(0)
+    #endif
 {
     MapManager::instance()->addReferenceToMap(mMapInfo);
 
@@ -617,13 +680,12 @@ MapComposite::~MapComposite()
         MapManager::instance()->removeReferenceToMap(mMapInfo);
 }
 
-bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
+bool MapComposite::levelForLayer(const QString &layerName, int *levelPtr)
 {
     if (levelPtr) (*levelPtr) = 0;
 
     // See if the layer name matches "0_foo" or "1_bar" etc.
-    const QString& name = layer->name();
-    QStringList sl = name.trimmed().split(QLatin1Char('_'));
+    QStringList sl = layerName.trimmed().split(QLatin1Char('_'));
     if (sl.count() > 1 && !sl[1].isEmpty()) {
         bool conversionOK;
         uint level = sl[0].toUInt(&conversionOK);
@@ -631,6 +693,11 @@ bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
         return conversionOK;
     }
     return false;
+}
+
+bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
+{
+    return levelForLayer(layer->name(), levelPtr);
 }
 
 MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset)
@@ -672,6 +739,13 @@ void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
 }
 
 CompositeLayerGroup *MapComposite::tileLayersForLevel(int level) const
+{
+    if (mLayerGroups.contains(level))
+        return mLayerGroups[level];
+    return 0;
+}
+
+CompositeLayerGroup *MapComposite::layerGroupForLevel(int level) const
 {
     if (mLayerGroups.contains(level))
         return mLayerGroups[level];

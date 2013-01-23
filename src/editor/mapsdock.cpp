@@ -186,7 +186,7 @@ MapsView::MapsView(QWidget *parent)
 
     model->setFilter(QDir::AllDirs | QDir::NoDot | QDir::Files);
     QStringList filters;
-    filters <<  QLatin1String("*.tmx");
+    filters << QLatin1String("*.tmx") << QLatin1String("*.tbx");
     foreach (QString format, BMPToTMX::supportedImageFormats())
         filters << QLatin1String("*.") + format;
     model->setNameFilters(filters);

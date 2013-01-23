@@ -59,6 +59,8 @@ public:
 
     void openLastFiles();
 
+    bool InitConfigFiles();
+
 protected:
     void closeEvent(QCloseEvent *event);
     void changeEvent(QEvent *event);

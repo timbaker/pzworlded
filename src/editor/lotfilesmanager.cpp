@@ -99,12 +99,14 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
         mError = tr("The Tiles Directory could not be found.  Please set it in the Tilesets Dialog in TileZed.");
         return false;
     }
+#if 0
     if (!TileMetaInfoMgr::instance()->readTxt()) {
         mError = tr("%1\n(while reading %2)")
                 .arg(TileMetaInfoMgr::instance()->errorString())
                 .arg(TileMetaInfoMgr::instance()->txtName());
         return false;
     }
+#endif
 
     mStats = LotFile::Stats();
 
@@ -166,14 +168,14 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
 #endif
 
-    PROGRESS progress(tr("Generating .lot files (%1,%2)")
-                      .arg(cell->x()).arg(cell->y()));
-
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
     if (!mapInfo) {
         mError = MapManager::instance()->errorString();
         return false;
     }
+
+    PROGRESS progress(tr("Generating .lot files (%1,%2)")
+                      .arg(cell->x()).arg(cell->y()));
 
     MapComposite staticMapComposite(mapInfo);
     MapComposite *mapComposite = &staticMapComposite;
@@ -191,7 +193,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     // Check for missing tilesets.
     foreach (MapComposite *mc, mapComposite->maps()) {
-        if (mc->map()->hasMissingTilesets()) {
+        if (mc->map()->hasUsedMissingTilesets()) {
             mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
                     .arg(cell->x()).arg(cell->y()).arg(mc->mapInfo()->path());
             return false;
@@ -297,6 +299,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
     qDeleteAll(TileMap.values());
     TileMap.clear();
+    TileMap[0] = new LotFile::Tile;
 
     mTilesetToFirstGid.clear();
     uint firstGid = 1;
@@ -461,6 +464,7 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
                     out << qint32(getRoomID(gx, gy, z));
                 }
                 foreach (LotFile::Entry *entry, entries) {
+                    Q_ASSERT(TileMap[entry->gid]);
                     Q_ASSERT(TileMap[entry->gid]->id != -1);
                     out << qint32(TileMap[entry->gid]->id);
                 }

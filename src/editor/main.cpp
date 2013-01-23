@@ -37,6 +37,9 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.show();
 
+    if (!w.InitConfigFiles())
+        return 0;
+
 #if 0
     QObject::connect(&a, SIGNAL(fileOpenRequest(QString)),
                      &w, SLOT(openFile(QString)));

@@ -79,15 +79,17 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     QString tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
     if (tilesDirectory.isEmpty() || !QFileInfo(tilesDirectory).exists()) {
-        mError = tr("The Tiles Directory could not be found.  Please set it in the Tilesets Dialog in TileZed.");
+        mError = tr("The Tiles Directory could not be found.  Please set it in the Preferences.");
         return false;
     }
+#if 0
     if (!TileMetaInfoMgr::instance()->readTxt()) {
         mError = tr("%1\n(while reading %2)")
                 .arg(TileMetaInfoMgr::instance()->errorString())
                 .arg(TileMetaInfoMgr::instance()->txtName());
         return false;
     }
+#endif
     // At this point, TileMetaInfoMgr's tilesets are all marked missing and
     // have imageSource() paths relative to the Tiles Directory.  This call
     // will actually read in the tilesets and set the imageSource() paths.

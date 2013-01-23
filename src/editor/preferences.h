@@ -31,6 +31,9 @@ public:
     static Preferences *instance();
     static void deleteInstance();
 
+    QString configPath() const;
+    QString configPath(const QString &fileName) const;
+
     bool snapToGrid() const;
     bool showCoordinates() const;
     bool showWorldGrid() const;
