@@ -47,6 +47,9 @@ MapImageManager *MapImageManager::mInstance = NULL;
 MapImageManager::MapImageManager()
     : QObject()
 {
+    connect(&mImageReaderThread, SIGNAL(imageLoaded(QImage*,MapImage*)),
+            SLOT(imageLoaded(QImage*,MapImage*)));
+
     connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
             SLOT(mapFileChanged(MapInfo*)));
 }
@@ -96,9 +99,34 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     if (!data.valid)
         return 0;
 
+
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
+
+    bool threaded = false;
+    if (data.image.isNull()) {
+        data.image = QImage(data.size, QImage::Format_ARGB32);
+//        data.image.setColorTable(QVector<QRgb>() << qRgb(255,255,255));
+        QPainter p(&data.image);
+        QPolygonF poly;
+        MapImage mapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
+        poly += mapImage.tileToImageCoords(0, 0);
+        poly += mapImage.tileToImageCoords(mapInfo->width(), 0);
+        poly += mapImage.tileToImageCoords(mapInfo->width(), mapInfo->height());
+        poly += mapImage.tileToImageCoords(0, mapInfo->height());
+        poly += poly.first();
+        QPainterPath path;
+        path.addPolygon(poly);
+        data.image.fill(QColor(0,0,0,0));
+        p.fillPath(path, QColor(100,100,100));
+        threaded = true;
+    }
+
     MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
-#if 1
+
+    if (threaded) {
+        mImageReaderThread.addJob(imageFileInfo(mapFilePath).canonicalFilePath(), mapImage);
+    }
+
     // Set up file modification tracking on each TMX that makes
     // up this image.
     QList<MapInfo*> sources;
@@ -106,7 +134,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
         if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
             sources += sourceInfo;
     mapImage->setSources(sources);
-#endif
+
     mMapImages.insert(mapFilePath, mapImage);
     return mapImage;
 }
@@ -128,11 +156,11 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     QFileInfo imageInfo = imageFileInfo(mapFilePath);
     QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
     if (imageInfo.exists() && imageDataInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
-        QImage image(imageInfo.absoluteFilePath());
-        if (image.isNull())
+        QImageReader reader(imageInfo.absoluteFilePath());
+        if (!reader.size().isValid())
             QMessageBox::warning(MainWindow::instance(), tr("Error Loading Image"),
                                  tr("An error occurred trying to read a map thumbnail image.\n") + imageInfo.absoluteFilePath());
-        if (image.width() == IMAGE_WIDTH) {
+        if (reader.size().width() == IMAGE_WIDTH) {
             ImageData data = readImageData(imageDataInfo);
             // If the image was originally created with some tilesets missing,
             // try to recreate the image in case those tileset issues were
@@ -149,7 +177,8 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
                 }
             }
             if (data.valid) {
-                data.image = image;
+                data.image = QImage();
+                data.size = reader.size();
                 return data;
             }
         }
@@ -426,6 +455,13 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
     }
 }
 
+void MapImageManager::imageLoaded(QImage *image, MapImage *mapImage)
+{
+    mapImage->setImage(*image);
+    delete image;
+    emit mapImageChanged(mapImage);
+}
+
 QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
 {
     QFileInfo mapFileInfo(mapFilePath);
@@ -514,4 +550,59 @@ void MapImage::mapFileChanged(QImage image, qreal scale, const QRectF &levelZero
     mImage = image;
     mScale = scale;
     mLevelZeroBounds = levelZeroBounds;
+}
+
+/////
+
+MapImageReaderThread::MapImageReaderThread() :
+    mQuit(false)
+{
+}
+
+MapImageReaderThread::~MapImageReaderThread()
+{
+    mMutex.lock();
+    mQuit = true;
+    mWaitCondition.wakeOne();
+    mMutex.unlock();
+    wait();
+}
+
+void MapImageReaderThread::run()
+{
+    forever {
+        if (mQuit) // mutex protect it?
+            break;
+
+        mMutex.lock();
+        Job job = mJobs.takeAt(0);
+        mMutex.unlock();
+
+        //            qDebug() << "MapImageReaderThread" << job.imageFileName;
+
+        QImage *image = new QImage(job.imageFileName);
+#ifndef QT_NO_DEBUG
+        msleep(250);
+#endif
+        emit imageLoaded(image, job.mapImage);
+
+        if (!mJobs.size()) {
+            //                qDebug() << "MapImageReaderThread paused";
+            mMutex.lock();
+            mWaitCondition.wait(&mMutex);
+            mMutex.unlock();
+        }
+    }
+}
+
+void MapImageReaderThread::addJob(const QString &imageFileName, MapImage *mapImage)
+{
+    QMutexLocker locker(&mMutex);
+    mJobs += Job(imageFileName, mapImage);
+
+    if (!isRunning())
+        start();
+    else {
+        mWaitCondition.wakeOne();
+    }
 }
