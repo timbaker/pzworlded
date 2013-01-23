@@ -69,13 +69,14 @@ MapManager::MapManager() :
 
 MapManager::~MapManager()
 {
+    TilesetManager *tilesetManager = TilesetManager::instance();
+
     const QMap<QString,MapInfo*>::const_iterator end = mMapInfo.constEnd();
     QMap<QString,MapInfo*>::const_iterator it = mMapInfo.constBegin();
     while (it != end) {
         MapInfo *mapInfo = it.value();
         if (Map *map = mapInfo->map()) {
-            TilesetManager *tilesetMgr = TilesetManager::instance();
-            tilesetMgr->removeReferences(map->tilesets());
+            tilesetManager->removeReferences(map->tilesets());
             delete map;
         }
         ++it;
@@ -184,6 +185,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
         QSet<Tileset*> usedTilesets;
         foreach (TileLayer *tl, map->tileLayers())
             usedTilesets += tl->usedTilesets();
+        usedTilesets.remove(TilesetManager::instance()->missingTile()->tileset());
 #if 0
         QList<Tileset*> remove;
         foreach (Tileset *ts, map->tilesets()) {
