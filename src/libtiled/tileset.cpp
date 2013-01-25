@@ -88,6 +88,9 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
     mImageWidth = image.width();
     mImageHeight = image.height();
     mColumnCount = columnCountForWidth(mImageWidth);
+#ifdef ZOMBOID
+    mLoaded = true;
+#endif
     mImageSource = fileName;
     return true;
 }
@@ -125,6 +128,48 @@ bool Tileset::loadFromCache(Tileset *cached)
     mImageHeight = cached->imageHeight();
     mColumnCount = columnCountForWidth(mImageWidth);
     mImageSource = cached->imageSource();
+    mLoaded = true;
+    return true;
+}
+
+bool Tileset::loadFromNothing(const QSize &imageSize, const QString &fileName)
+{
+    Q_ASSERT(mTileWidth > 0 && mTileHeight > 0);
+
+    if (imageSize.isEmpty())
+        return false;
+
+    const int stopWidth = imageSize.width() - mTileWidth;
+    const int stopHeight = imageSize.height() - mTileHeight;
+
+    int oldTilesetSize = mTiles.size();
+    int tileNum = 0;
+
+    QPixmap tilePixmap = QPixmap(mTileWidth, mTileHeight);
+    tilePixmap.fill();
+
+    for (int y = mMargin; y <= stopHeight; y += mTileHeight + mTileSpacing) {
+        for (int x = mMargin; x <= stopWidth; x += mTileWidth + mTileSpacing) {
+            if (tileNum < oldTilesetSize) {
+                mTiles.at(tileNum)->setImage(tilePixmap);
+            } else {
+                mTiles.append(new Tile(tilePixmap, tileNum, this));
+            }
+            ++tileNum;
+        }
+    }
+
+    // Blank out any remaining tiles to avoid confusion
+    while (tileNum < oldTilesetSize) {
+        mTiles.at(tileNum)->setImage(tilePixmap);
+        ++tileNum;
+    }
+
+    mImageWidth = imageSize.width();
+    mImageHeight = imageSize.height();
+    mColumnCount = columnCountForWidth(mImageWidth);
+    mImageSource = fileName;
+//    mLoaded = true;
     return true;
 }
 #endif // ZOMBOID
@@ -170,7 +215,7 @@ TilesetImageCache::~TilesetImageCache()
 
 #include <QDebug>
 
-void TilesetImageCache::addTileset(Tileset *ts)
+Tileset *TilesetImageCache::addTileset(Tileset *ts)
 {
     Tileset *cached = new Tileset(QLatin1String("cached"), ts->tileWidth(), ts->tileHeight(), ts->tileSpacing(), ts->margin());
     cached->mTransparentColor = ts->transparentColor();
@@ -188,6 +233,8 @@ void TilesetImageCache::addTileset(Tileset *ts)
     mTilesets.append(cached);
 
 //    qDebug() << "added tileset image " << ts->imageSource() << " to cache";
+
+    return cached;
 }
 
 Tileset *TilesetImageCache::findMatch(Tileset *ts, const QString &imageSource)

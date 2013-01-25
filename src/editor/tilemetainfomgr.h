@@ -70,6 +70,13 @@ public:
     int indexOf(Tileset *ts)
     { return tilesets().indexOf(ts); }
 
+    int indexOf(const QString &tilesetName)
+    {
+        if (mTilesetByName.contains(tilesetName))
+            return tilesets().indexOf(mTilesetByName[tilesetName]);
+        return -1;
+    }
+
     QStringList enumNames() const
     { return mEnumNames; }
 
@@ -90,7 +97,6 @@ public:
     QString errorString() const
     { return mError; }
 
-    void addOrReplaceTileset(Tileset *ts);
     Tileset *loadTileset(const QString &source);
     bool loadTilesetImage(Tileset *ts, const QString &source);
     void addTileset(Tileset *ts);
@@ -110,6 +116,9 @@ signals:
     void tilesetAdded(Tiled::Tileset *ts);
     void tilesetAboutToBeRemoved(Tiled::Tileset *ts);
     void tilesetRemoved(Tiled::Tileset *ts);
+
+private slots:
+    void tilesetChanged(Tileset *ts);
 
 private:
     bool parse2Ints(const QString &s, int *pa, int *pb);

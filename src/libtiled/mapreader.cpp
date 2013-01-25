@@ -44,6 +44,9 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#ifdef ZOMBOID
+#include <QImageReader>
+#endif
 #include <QXmlStreamReader>
 
 using namespace Tiled;
@@ -353,6 +356,19 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
     mGidMapper.setTilesetWidth(tileset, width);
 
 #ifdef ZOMBOID
+#if 1
+    QImageReader reader(source);
+    if (reader.size().isValid() && tileset->loadFromNothing(reader.size(), source)) {
+        // The tileset image is not read yet.  Just quickly create each Tile with
+        // an all-white pixmap.
+    } else {
+        const int height = atts.value(QLatin1String("height")).toString().toInt();
+        QImage image(width, height, QImage::Format_ARGB32);
+        image.fill(Qt::red);
+        tileset->loadFromImage(image, source);
+        tileset->setMissing(true);
+    }
+#else
     if (p->tilesetImageCache()) {
         Tileset *cached = p->tilesetImageCache()->findMatch(tileset, source);
         if (!cached || !tileset->loadFromCache(cached)) {
@@ -379,6 +395,7 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
             tileset->setMissing(true);
         }
     }
+#endif
 #else
     const QImage tilesetImage = p->readExternalImage(source);
     if (!tileset->loadFromImage(tilesetImage, source))

@@ -35,6 +35,9 @@
 #include <QColor>
 #include <QList>
 #include <QPoint>
+#ifdef ZOMBOID
+#include <QSize>
+#endif
 #include <QString>
 
 class QImage;
@@ -49,7 +52,7 @@ class TILEDSHARED_EXPORT TilesetImageCache
 {
 public:
     ~TilesetImageCache();
-    void addTileset(Tileset *ts);
+    Tileset *addTileset(Tileset *ts);
     Tileset *findMatch(Tileset *ts, const QString &imageSource);
     QList<Tileset*> mTilesets;
 };
@@ -85,7 +88,8 @@ public:
         mImageHeight(0),
         mColumnCount(0)
   #ifdef ZOMBOID
-        , mMissing(false)
+        , mMissing(false),
+        mLoaded(false)
   #endif
     {
         Q_ASSERT(tileSpacing >= 0);
@@ -214,6 +218,10 @@ public:
     friend class TilesetImageCache;
 #endif
 
+#ifdef ZOMBOID
+    bool loadFromNothing(const QSize &imageSize, const QString &fileName);
+#endif
+
     /**
      * This checks if there is a similar tileset in the given list.
      * It is needed for replacing this tileset by its similar copy.
@@ -250,6 +258,12 @@ public:
 
     void setImageSource(const QString &source)
     { mImageSource = source; }
+
+    void setLoaded(bool loaded)
+    { mLoaded = loaded; }
+
+    bool isLoaded() const
+    { return mLoaded; }
 #endif
 
 private:
@@ -268,6 +282,7 @@ private:
     QList<Tile*> mTiles;
 #ifdef ZOMBOID
     bool mMissing;
+    bool mLoaded;
 #endif
 };
 

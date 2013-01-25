@@ -28,6 +28,7 @@
 #include "orthogonalrenderer.h"
 #include "staggeredrenderer.h"
 #include "tilelayer.h"
+#include "tilesetmanager.h"
 #include "progress.h"
 #include "zlevelrenderer.h"
 
@@ -195,6 +196,16 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     progress.update(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
 
     MapComposite mapComposite(mapInfo);
+
+    // Wait for TilesetManager's threads to finish loading the tilesets.
+    QSet<Tileset*> usedTilesets;
+    foreach (MapComposite *mc, mapComposite.maps()) {
+        foreach (TileLayer *tl, mc->map()->tileLayers())
+            usedTilesets += tl->usedTilesets();
+    }
+    usedTilesets.remove(Tiled::Internal::TilesetManager::instance()->missingTileset());
+    Tiled::Internal::TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
+
     ImageData data = generateMapImage(&mapComposite);
 
     foreach (MapComposite *mc, mapComposite.maps()) {
