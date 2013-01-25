@@ -52,6 +52,8 @@ public:
     static TileMetaInfoMgr *instance();
     static void deleteInstance();
 
+    void changeTilesDirectory(const QString &path);
+
     QString tilesDirectory() const;
 
     QList<Tileset*> tilesets() const

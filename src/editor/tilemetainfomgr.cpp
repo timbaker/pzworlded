@@ -27,6 +27,7 @@
 
 #include <QDir>
 #include <QImage>
+#include <QImageReader>
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -48,12 +49,58 @@ void TileMetaInfoMgr::deleteInstance()
     mInstance = 0;
 }
 
+/**
+  * Change the directory to look for tileset images in.
+  * Any tilesets that were already found relative to the old directory
+  * are searched for again relative to the new directory.
+  */
+void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
+{
+    QDir tilesDir(tilesDirectory());
+    foreach (Tileset *ts, tilesets()) {
+        if (ts->isMissing())
+            continue; // keep the relative path
+        QString relativePath = tilesDir.relativeFilePath(ts->imageSource());
+        if (!QDir::isRelativePath(relativePath))
+            continue;
+        QString source = path + QLatin1Char('/') + relativePath;
+        QFileInfo finfo(source);
+        QString oldSource = ts->imageSource();
+#if 1
+        QImageReader reader(source);
+        if (reader.size().isValid()) {
+            TilesetManager::instance()->changeTilesetSource(ts, finfo.canonicalFilePath(), false);
+            TilesetManager::instance()->loadTileset(ts, ts->imageSource());
+        } else {
+            // There was a valid image in the old directory, but not in the new one.
+            Tile *missingTile = TilesetManager::instance()->missingTile();
+            for (int i = 0; i < ts->tileCount(); i++)
+                ts->tileAt(i)->setImage(missingTile->image());
+            TilesetManager::instance()->changeTilesetSource(ts, relativePath, true);
+        }
+#else
+        if (finfo.exists() && loadTilesetImage(ts, finfo.canonicalFilePath())) {
+            TilesetManager::instance()->tilesetSourceChanged(ts, oldSource, false);
+        } else {
+            Tile *missingTile = TilesetManager::instance()->missingTile();
+            for (int i = 0; i < ts->tileCount(); i++)
+                ts->tileAt(i)->setImage(missingTile->image());
+            TilesetManager::instance()->changeTilesetSource(ts, relativePath, true);
+        }
+#endif
+    }
+    Preferences::instance()->setTilesDirectory(path);
+    loadTilesets();
+}
+
 TileMetaInfoMgr::TileMetaInfoMgr(QObject *parent) :
     QObject(parent),
     mRevision(0),
     mSourceRevision(0),
     mHasReadTxt(false)
 {
+    connect(TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
+            SLOT(tilesetChanged(Tileset*)));
 }
 
 TileMetaInfoMgr::~TileMetaInfoMgr()
@@ -170,9 +217,13 @@ bool TileMetaInfoMgr::readTxt()
                 // chosen the Tiles directory. The tilesets will be loaded when
                 // other code asks for them or when the Tiles directory is changed.
                 int width = columns * 64, height = rows * 128;
+#if 1
+                tileset->loadFromNothing(QSize(width, height), tilesetFileName);
+#else
                 QImage image(width, height, QImage::Format_ARGB32);
                 image.fill(Qt::red);
                 tileset->loadFromImage(image, tilesetFileName);
+#endif
                 Tile *missingTile = TilesetManager::instance()->missingTile();
                 for (int i = 0; i < tileset->tileCount(); i++)
                     tileset->tileAt(i)->setImage(missingTile->image());
@@ -363,6 +414,14 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
                     // This is the name that was saved in Tilesets.txt,
                     // relative to Tiles directory, plus .png.
                     + ts->imageSource();
+#if 1
+            QImageReader reader(source);
+            if (reader.size().isValid()) {
+                ts->loadFromNothing(reader.size(), ts->imageSource()); // update the size now
+                QFileInfo info(source);
+                TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
+            }
+#else
             QFileInfo info(source);
             if (info.exists()) {
                 source = info.canonicalFilePath();
@@ -371,7 +430,14 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
                     TilesetManager::instance()->tilesetSourceChanged(ts, oldSource, true);
                 }
             }
+#endif
         }
+    }
+}
+
+void TileMetaInfoMgr::tilesetChanged(Tileset *ts)
+{
+    if (tilesets().contains(ts)) {
     }
 }
 
