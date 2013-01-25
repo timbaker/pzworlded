@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -17,6 +17,7 @@
 
 #include "preferences.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QSettings>
 
@@ -99,11 +100,24 @@ Preferences::Preferences()
     // Set the default location of the Tiles Directory to the same value set
     // in TileZed's Tilesets Dialog.
     QSettings settings(QLatin1String("mapeditor.org"), QLatin1String("Tiled"));
-    mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
-                                       settings.value(QLatin1String("Tilesets/TilesDirectory"))).toString();
+    QString KEY_TILES_DIR = QLatin1String("Tilesets/TilesDirectory");
+    QString tilesDirectory = settings.value(KEY_TILES_DIR).toString();
 #else
-    mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory")).toString();
+    QString tilesDirectory;
 #endif
+    if (tilesDirectory.isEmpty() || !QDir(tilesDirectory).exists()) {
+        tilesDirectory = QCoreApplication::applicationDirPath() +
+                QLatin1Char('/') + QLatin1String("../Tiles");
+        if (!QDir(tilesDirectory).exists())
+            tilesDirectory = QCoreApplication::applicationDirPath() +
+                    QLatin1Char('/') + QLatin1String("../../Tiles");
+    }
+    if (tilesDirectory.length())
+        tilesDirectory = QDir::cleanPath(tilesDirectory);
+    if (!QDir(tilesDirectory).exists())
+        tilesDirectory.clear();
+    mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
+                                       tilesDirectory).toString();
 
     mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
 }
