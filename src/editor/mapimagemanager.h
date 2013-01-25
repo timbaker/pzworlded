@@ -161,7 +161,10 @@ public slots:
     void imageLoaded(QImage *image, MapImage *mapImage);
 
 private:
+    Q_DISABLE_COPY(MapImageManager)
     MapImageManager();
+    ~MapImageManager();
+
     QFileInfo imageFileInfo(const QString &mapFilePath);
     QFileInfo imageDataFileInfo(const QFileInfo &imageFileInfo);
 

@@ -60,6 +60,11 @@ MapImageManager::MapImageManager()
             SLOT(mapFileChanged(MapInfo*)));
 }
 
+MapImageManager::~MapImageManager()
+{
+    qDeleteAll(mImageReaderThread);
+}
+
 MapImageManager *MapImageManager::instance()
 {
     if (mInstance == NULL)
