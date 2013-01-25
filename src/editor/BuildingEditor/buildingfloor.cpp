@@ -390,9 +390,9 @@ static void ReplaceWindow(Window *window, QVector<QVector<BuildingFloor::Square>
     int x = window->x(), y = window->y();
     QRect bounds(0, 0, squares.size(), squares[0].size());
     if (bounds.contains(x, y)) {
-        squares[x][y].ReplaceFrame(window->tile(),
-                                   window->isW() ? BTC_Windows::West
-                                                 : BTC_Windows::North);
+        squares[x][y].ReplaceWindow(window->tile(),
+                                    window->isW() ? BTC_Windows::West
+                                                  : BTC_Windows::North);
 
         // Window curtains on exterior walls must be *inside* the
         // room.
@@ -1781,9 +1781,39 @@ void BuildingFloor::Square::ReplaceDoor(BuildingTileEntry *tile, int offset)
     // Must put a non-zero tile here.  See getWallOffset().
     mEntries[SectionDoor] = tile ? tile : BuildingTilesMgr::instance()->noneTileEntry();
     mEntryEnum[SectionDoor] = offset;
-    // FIXME: if this is a NW corner with 2 different wall tiles, this will
-    // choose the wrong wall tile.  Fix it by only changing West->WestDoor or
-    // North->NorthDoor in SectionWall or SectionWall2.  Same for ReplaceFrame.
+
+    if (mWallOrientation == WallOrientNW) {
+        BuildingTileEntry *entry1 = mEntries[SectionWall];
+        BuildingTileEntry *entry2 = mEntries[SectionWall2];
+        if (!entry1) entry1 = BuildingTilesMgr::instance()->noneTileEntry();
+        if (!entry2) entry2 = BuildingTilesMgr::instance()->noneTileEntry();
+        if (!entry1->isNone() && !entry2->isNone()) {
+            // 2 different walls
+            if (offset == BTC_Doors::West) {
+                if (mEntryEnum[SectionWall] == BTC_Walls::West || mEntryEnum[SectionWall] == BTC_Walls::WestWindow)
+                    mEntryEnum[SectionWall] = BTC_Walls::WestDoor;
+                else if (mEntryEnum[SectionWall2] == BTC_Walls::West || mEntryEnum[SectionWall2] == BTC_Walls::WestWindow)
+                    mEntryEnum[SectionWall2] = BTC_Walls::WestDoor;
+            } else if (offset == BTC_Doors::North) {
+                if (mEntryEnum[SectionWall] == BTC_Walls::North || mEntryEnum[SectionWall] == BTC_Walls::NorthWindow)
+                    mEntryEnum[SectionWall] = BTC_Walls::NorthDoor;
+                else if (mEntryEnum[SectionWall2] == BTC_Walls::North || mEntryEnum[SectionWall] == BTC_Walls::NorthWindow)
+                    mEntryEnum[SectionWall2] = BTC_Walls::NorthDoor;
+            }
+        } else {
+            // Single NW tile -> split into 2.
+            mEntries[SectionWall2] = entry1;
+            if (offset == BTC_Doors::West) {
+                mEntryEnum[SectionWall] = BTC_Walls::North;
+                mEntryEnum[SectionWall2] = BTC_Walls::WestDoor;
+            } else {
+                mEntryEnum[SectionWall] = BTC_Walls::West;
+                mEntryEnum[SectionWall2] = BTC_Walls::NorthDoor;
+            }
+        }
+        return;
+    }
+
     mEntryEnum[SectionWall] = getWallOffset();
 }
 
@@ -1792,6 +1822,46 @@ void BuildingFloor::Square::ReplaceFrame(BuildingTileEntry *tile, int offset)
     // Must put a non-zero tile here.  See getWallOffset().
     mEntries[SectionFrame] = tile ? tile : BuildingTilesMgr::instance()->noneTileEntry();
     mEntryEnum[SectionFrame] = offset;
+}
+
+void BuildingFloor::Square::ReplaceWindow(BuildingTileEntry *tile, int offset)
+{
+    // Must put a non-zero tile here.  See getWallOffset().
+    mEntries[SectionWindow] = tile ? tile : BuildingTilesMgr::instance()->noneTileEntry();
+    mEntryEnum[SectionWindow] = offset;
+
+    if (mWallOrientation == WallOrientNW) {
+        BuildingTileEntry *entry1 = mEntries[SectionWall];
+        BuildingTileEntry *entry2 = mEntries[SectionWall2];
+        if (!entry1) entry1 = BuildingTilesMgr::instance()->noneTileEntry();
+        if (!entry2) entry2 = BuildingTilesMgr::instance()->noneTileEntry();
+        if (!entry1->isNone() && !entry2->isNone()) {
+            // 2 different walls
+            if (offset == BTC_Windows::West) {
+                if (mEntryEnum[SectionWall] == BTC_Walls::West)
+                    mEntryEnum[SectionWall] = BTC_Walls::WestWindow;
+                else if (mEntryEnum[SectionWall2] == BTC_Walls::West)
+                    mEntryEnum[SectionWall2] = BTC_Walls::WestWindow;
+            } else if (offset == BTC_Windows::North) {
+                if (mEntryEnum[SectionWall] == BTC_Walls::North)
+                    mEntryEnum[SectionWall] = BTC_Walls::NorthWindow;
+                else if (mEntryEnum[SectionWall2] == BTC_Walls::North)
+                    mEntryEnum[SectionWall2] = BTC_Walls::NorthWindow;
+            }
+        } else {
+            // Single NW tile -> split into 2.
+            mEntries[SectionWall2] = entry1;
+            if (offset == BTC_Windows::West) {
+                mEntryEnum[SectionWall] = BTC_Walls::North;
+                mEntryEnum[SectionWall2] = BTC_Walls::WestWindow;
+            } else {
+                mEntryEnum[SectionWall] = BTC_Walls::West;
+                mEntryEnum[SectionWall2] = BTC_Walls::NorthWindow;
+            }
+        }
+        return;
+    }
+
     mEntryEnum[SectionWall] = getWallOffset();
 }
 
@@ -1872,7 +1942,7 @@ int BuildingFloor::Square::getWallOffset()
     case WallOrientN:
         if (mEntries[SectionDoor] != 0)
             offset = BTC_Walls::NorthDoor;
-        else if (mEntries[SectionFrame] != 0)
+        else if (mEntries[SectionWindow] != 0)
             offset = BTC_Walls::NorthWindow;
         else
             offset = BTC_Walls::North;
@@ -1883,7 +1953,7 @@ int BuildingFloor::Square::getWallOffset()
     case WallOrientW:
         if (mEntries[SectionDoor] != 0)
             offset = BTC_Walls::WestDoor;
-        else if (mEntries[SectionFrame] != 0)
+        else if (mEntries[SectionWindow] != 0)
             offset = BTC_Walls::WestWindow;
         break;
     case WallOrientSE:

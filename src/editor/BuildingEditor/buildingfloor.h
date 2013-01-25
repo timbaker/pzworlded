@@ -116,6 +116,7 @@ public:
             SectionWallFurniture2,
             SectionFrame,
             SectionDoor,
+            SectionWindow,
             SectionCurtains, // West, North windows
             SectionFurniture,
             SectionFurniture2,
@@ -156,6 +157,7 @@ public:
         void ReplaceWall(BuildingTileEntry *tile, WallOrientation orient, bool exterior = true);
         void ReplaceDoor(BuildingTileEntry *tile, int offset);
         void ReplaceFrame(BuildingTileEntry *tile, int offset);
+        void ReplaceWindow(BuildingTileEntry *tile, int offset);
         void ReplaceCurtains(Window *window, bool exterior);
         void ReplaceFurniture(BuildingTileEntry *tile, int offset = 0);
         void ReplaceFurniture(BuildingTile *tile, SquareSection section,
