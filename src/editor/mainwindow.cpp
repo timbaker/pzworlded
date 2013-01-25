@@ -915,11 +915,12 @@ void MainWindow::resizeWorld()
 
 void MainWindow::preferencesDialog()
 {
-    if (!mCurrentDocument)
-        return;
-    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
-        worldDoc = cellDoc->worldDocument();
+    WorldDocument *worldDoc = 0;
+    if (mCurrentDocument) {
+        worldDoc = mCurrentDocument->asWorldDocument();
+        if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+            worldDoc = cellDoc->worldDocument();
+    }
     PreferencesDialog dialog(worldDoc, this);
     dialog.exec();
 }
