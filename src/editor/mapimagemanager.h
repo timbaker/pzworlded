@@ -102,12 +102,17 @@ public:
     QRectF levelZeroBounds() const
     { return mLevelZeroBounds; }
 
+    bool isLoaded() const { return mLoaded; }
+
 private:
     QImage mImage;
     MapInfo *mInfo;
     QRectF mLevelZeroBounds;
     qreal mScale;
     QList<MapInfo*> mSources;
+    bool mLoaded;
+
+    friend class MapImageManager;
 };
 
 class MapImageManager : public QObject

@@ -130,9 +130,12 @@ void MapsDock::selectionChanged()
     if (QFileInfo(path).isDir())
         return;
     MapImage *mapImage = MapImageManager::instance()->getMapImage(path);
-    if (mapImage)
-        mPreviewLabel->setPixmap(QPixmap::fromImage(mapImage->image().scaled(256, 123, Qt::KeepAspectRatio)));
-    else
+    if (mapImage) {
+        if (mapImage->isLoaded()) {
+            QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio);
+            mPreviewLabel->setPixmap(QPixmap::fromImage(image));
+        }
+    } else
         mPreviewLabel->setPixmap(QPixmap());
     mPreviewMapImage = mapImage;
 }
