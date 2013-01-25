@@ -30,6 +30,7 @@
 #include "tilelayer.h"
 
 #include <QDebug>
+#include <QDir>
 #include <QEvent>
 #include <QFileInfo>
 #include <QHeaderView>
@@ -453,7 +454,7 @@ QVariant LotsModel::data(const QModelIndex &index, int role) const
             break;
         }
         case Qt::DisplayRole:
-            return QFileInfo(lot->mapName()).completeBaseName();
+            return QFileInfo(lot->mapName()).fileName();
         case Qt::EditRole:
             return QVariant();
         case Qt::DecorationRole:
