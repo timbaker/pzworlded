@@ -553,6 +553,11 @@ bool BMPToTMX::LoadBaseXML()
         }
     }
 
+    if (!mLayers.size()) {
+        mError = tr("Failed to read any layers from MapBaseXML.txt");
+        return false;
+    }
+
     return true;
 }
 
@@ -781,6 +786,7 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
     foreach (Tiled::Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
         map.addTileset(ts);
     }
+
     foreach (LayerInfo layer, mLayers) {
         if (layer.mType == LayerInfo::Tile) {
             TileLayer *tl = new TileLayer(layer.mName, 0, 0,
