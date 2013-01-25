@@ -383,9 +383,23 @@ public:
         const int tileWidth = 64;
         const int tileHeight = 32;
 
-        const Map::Orientation orientation = static_cast<Map::Orientation>(BuildingEditor::BuildingMap::defaultOrientation());
+        const Map::Orientation orient = static_cast<Map::Orientation>(BuildingEditor::BuildingMap::defaultOrientation());
 
-        mMapInfo = new MapInfo(orientation, mapWidth, mapHeight, tileWidth, tileHeight);
+#if 1
+        // FIXME: If Map::Isometric orientation is used then we must know the number
+        // of floors to determine the correct map size.  That would require parsing
+        // the whole .tbx file.
+        Q_ASSERT(orient == Map::LevelIsometric);
+        int extra = 1;
+#else
+        int maxLevel = building->floorCount() - 1;
+        int extraForWalls = 1;
+        int extra = (orient == Map::LevelIsometric)
+                ? extraForWalls : maxLevel * 3 + extraForWalls;
+#endif
+
+        mMapInfo = new MapInfo(orient, mapWidth + extra, mapHeight + extra,
+                               tileWidth, tileHeight);
 
         return mMapInfo;
     }
