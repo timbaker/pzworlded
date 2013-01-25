@@ -442,6 +442,10 @@ private:
                 QString value = xml.attributes().value(QLatin1String("checked")).toString();
                 settings.assignMapsToWorld = value == QLatin1String("true");
                 xml.skipCurrentElement();
+            } else if (xml.name() == "compress") {
+                QString value = xml.attributes().value(QLatin1String("checked")).toString();
+                settings.compress = value == QLatin1String("true");
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }

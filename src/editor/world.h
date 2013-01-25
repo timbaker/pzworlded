@@ -57,10 +57,12 @@ public:
     QString mapbaseFile;
     bool assignMapsToWorld;
     bool warnUnknownColors;
+    bool compress;
 
     BMPToTMXSettings() :
         assignMapsToWorld(false),
-        warnUnknownColors(true)
+        warnUnknownColors(true),
+        compress(true)
     {
     }
 
@@ -71,7 +73,8 @@ public:
                 blendsFile == other.blendsFile &&
                 mapbaseFile == other.mapbaseFile &&
                 assignMapsToWorld == other.assignMapsToWorld &&
-                warnUnknownColors == other.warnUnknownColors;
+                warnUnknownColors == other.warnUnknownColors &&
+                compress == other.compress;
     }
 
     bool operator != (const BMPToTMXSettings &other)

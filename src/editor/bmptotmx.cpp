@@ -831,7 +831,10 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         mNewFiles += filePath;
 
     MapWriter writer;
-    writer.setLayerDataFormat(MapWriter::CSV);
+    MapWriter::LayerDataFormat format = MapWriter::CSV;
+    if (mWorldDoc->world()->getBMPToTMXSettings().compress)
+        format = MapWriter::Base64Zlib;
+    writer.setLayerDataFormat(format);
     writer.setDtdEnabled(false);
     if (!writer.writeMap(&map, filePath)) {
         mError = writer.errorString();

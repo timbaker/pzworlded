@@ -310,6 +310,11 @@ public:
                          QLatin1String(settings.warnUnknownColors ? "true" : "false"));
         w.writeEndElement();
 
+        w.writeStartElement(QLatin1String("compress"));
+        w.writeAttribute(QLatin1String("checked"),
+                         QLatin1String(settings.compress ? "true" : "false"));
+        w.writeEndElement();
+
         w.writeEndElement(); // </BMPToTMX>
     }
 
