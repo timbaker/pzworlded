@@ -440,7 +440,7 @@ private:
                 xml.skipCurrentElement();
             } else if (xml.name() == "warn-unknown-colors") {
                 QString value = xml.attributes().value(QLatin1String("checked")).toString();
-                settings.assignMapsToWorld = value == QLatin1String("true");
+                settings.warnUnknownColors = value == QLatin1String("true");
                 xml.skipCurrentElement();
             } else if (xml.name() == "compress") {
                 QString value = xml.attributes().value(QLatin1String("checked")).toString();
