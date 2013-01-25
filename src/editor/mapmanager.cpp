@@ -20,14 +20,15 @@
 #include "mapcomposite.h"
 #include "preferences.h"
 #include "progress.h"
+#include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 
 #include "map.h"
 #include "mapreader.h"
 #include "mapobject.h"
 #include "objectgroup.h"
-#include "tilelayer.h"
 #include "tile.h"
+#include "tilelayer.h"
 #include "tileset.h"
 
 #include <QDebug>
@@ -36,7 +37,7 @@
 #include <QFileInfo>
 
 using namespace Tiled;
-using namespace Internal;
+using namespace Tiled::Internal;
 
 MapManager *MapManager::mInstance = NULL;
 
@@ -65,6 +66,11 @@ MapManager::MapManager() :
     mChangedFilesTimer.setSingleShot(true);
     connect(&mChangedFilesTimer, SIGNAL(timeout()),
             SLOT(fileChangedTimeout()));
+
+    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetAdded(Tiled::Tileset*)),
+            SLOT(metaTilesetAdded(Tiled::Tileset*)));
+    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetRemoved(Tiled::Tileset*)),
+            SLOT(metaTilesetRemoved(Tiled::Tileset*)));
 }
 
 MapManager::~MapManager()
@@ -143,18 +149,19 @@ public:
     void run()
     {
         EditorMapReader reader;
-        reader.setTilesetImageCache(gTilesetImageCache);
+        reader.setTilesetImageCache(TilesetManager::instance()->imageCache()); // not thread-safe class
         mMap = reader.readMap(mMapFilePath);
+        mError = reader.errorString();
     }
 
     QString mMapFilePath;
+    QString mError;
     Map *mMap;
 };
 #endif
 
 #include "BuildingEditor/buildingreader.h"
 #include "BuildingEditor/buildingmap.h"
-#include "tilemetainfomgr.h"
 
 MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
 {
@@ -185,7 +192,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
         QSet<Tileset*> usedTilesets;
         foreach (TileLayer *tl, map->tileLayers())
             usedTilesets += tl->usedTilesets();
-        usedTilesets.remove(TilesetManager::instance()->missingTile()->tileset());
+        usedTilesets.remove(TilesetManager::instance()->missingTileset());
 #if 0
         QList<Tileset*> remove;
         foreach (Tileset *ts, map->tilesets()) {
@@ -207,16 +214,20 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
         while (thread.isRunning()) {
             qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         }
-        Map *map = thread.mMap;
+        map = thread.mMap;
+        if (!map) {
+            mError = thread.mError;
+            return 0; // TODO: Add error handling
+        }
 #else
         EditorMapReader reader;
         reader.setTilesetImageCache(TilesetManager::instance()->imageCache());
         map = reader.readMap(mapFilePath);
-#endif
         if (!map) {
             mError = reader.errorString();
             return 0; // TODO: Add error handling
         }
+#endif
     }
 
     Tile *missingTile = TilesetManager::instance()->missingTile();
@@ -453,6 +464,17 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int he
     return mapInfo;
 }
 
+
+void MapManager::mapChanged(MapInfo *mapInfo)
+{
+    Map *map = mapInfo->map();
+    Q_ASSERT(map);
+    mapInfo->mHeight = map->height();
+    mapInfo->mWidth = map->width();
+    mapInfo->mTileWidth = map->tileWidth();
+    mapInfo->mTileHeight = map->tileHeight();
+}
+
 void MapManager::addReferenceToMap(MapInfo *mapInfo)
 {
     Q_ASSERT(mapInfo->mMap != 0);
@@ -556,6 +578,8 @@ Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)
                 layer->resize(newMap->size(), offset * (maxLevel - level));
             }
         }
+        TilesetManager *tilesetManager = TilesetManager::instance();
+        tilesetManager->addReferences(newMap->tilesets());
         map = newMap;
     }
 
@@ -570,6 +594,8 @@ void MapManager::fileChanged(const QString &path)
 
 void MapManager::fileChangedTimeout()
 {
+    PROGRESS progress(tr("Examining changed maps..."));
+
     foreach (const QString &path, mChangedFiles) {
         if (mMapInfo.contains(path)) {
             qDebug() << "MapManager::fileChanged" << path;
@@ -599,4 +625,22 @@ void MapManager::fileChangedTimeout()
     }
 
     mChangedFiles.clear();
+}
+
+void MapManager::metaTilesetAdded(Tileset *tileset)
+{
+    Q_UNUSED(tileset)
+    foreach (MapInfo *mapInfo, mMapInfo) {
+        if (mapInfo->map() && mapInfo->path().endsWith(QLatin1String(".tbx")))
+            fileChanged(mapInfo->path());
+    }
+}
+
+void MapManager::metaTilesetRemoved(Tileset *tileset)
+{
+    Q_UNUSED(tileset)
+    foreach (MapInfo *mapInfo, mMapInfo) {
+        if (mapInfo->map() && mapInfo->path().endsWith(QLatin1String(".tbx")))
+            fileChanged(mapInfo->path());
+    }
 }

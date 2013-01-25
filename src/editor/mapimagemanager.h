@@ -140,7 +140,7 @@ protected:
         QSize size;
     };
 
-    ImageData generateMapImage(const QString &mapFilePath);
+    ImageData generateMapImage(const QString &mapFilePath, bool force = false);
     ImageData generateMapImage(MapComposite *mapComposite);
 
     ImageData generateBMPImage(const QString &bmpFilePath);

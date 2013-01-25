@@ -59,6 +59,7 @@ public:
 
     Tiled::Map *map() const { return mMap; }
 
+    void setBeingEdited(bool edited) { mBeingEdited = edited; }
     bool isBeingEdited() const { return mBeingEdited; }
 
 private:
@@ -112,6 +113,17 @@ public:
       */
     MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
 
+    /**
+     * Converts a map to Isometric or LevelIsometric.
+     * A new map is returned if conversion occurred.
+     */
+    Tiled::Map *convertOrientation(Tiled::Map *map, Tiled::Map::Orientation orient);
+
+    /**
+      * Call this when the map's size or tile size changes.
+      */
+    void mapChanged(MapInfo *mapInfo);
+
     void addReferenceToMap(MapInfo *mapInfo);
     void removeReferenceToMap(MapInfo *mapInfo);
     void purgeUnreferencedMaps();
@@ -122,7 +134,7 @@ public:
     { return mError; }
 
 signals:
-    void mapAboutToChange(MapInfo *mapInf);
+    void mapAboutToChange(MapInfo *mapInfo);
     void mapFileChanged(MapInfo *mapInfo);
     void mapFileCreated(const QString &path);
 
@@ -130,13 +142,10 @@ private slots:
     void fileChanged(const QString &path);
     void fileChangedTimeout();
 
-private:
+    void metaTilesetAdded(Tiled::Tileset *tileset);
+    void metaTilesetRemoved(Tiled::Tileset *tileset);
 
-    /**
-     * Converts a map to Isometric or LevelIsometric.
-     * A new map is returned if conversion occurred.
-     */
-    Tiled::Map *convertOrientation(Tiled::Map *map, Tiled::Map::Orientation orient);
+private:
 
     MapManager();
     ~MapManager();

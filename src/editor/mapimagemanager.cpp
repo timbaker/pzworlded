@@ -146,7 +146,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     return mapImage;
 }
 
-MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapFilePath)
+MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapFilePath, bool force)
 {
 #if 0
     if (mapFilePath == QLatin1String("<fail>")) {
@@ -162,7 +162,7 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     QFileInfo fileInfo(mapFilePath);
     QFileInfo imageInfo = imageFileInfo(mapFilePath);
     QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
-    if (imageInfo.exists() && imageDataInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
+    if (!force && imageInfo.exists() && imageDataInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
         QImageReader reader(imageInfo.absoluteFilePath());
         if (!reader.size().isValid())
             QMessageBox::warning(MainWindow::instance(), tr("Error Loading Image"),
@@ -446,10 +446,18 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
     for (it = it_begin; it != it_end; it++) {
         MapImage *mapImage = it.value();
         if (mapImage->sources().contains(mapInfo)) {
-            ImageData data = generateMapImage(mapImage->mapInfo()->path());
+            // When tilesets are added or removed from TileMetaInfoMgr,
+            // MapManager generates the mapFileChanged signal for .tbx lots.
+            // The generateMapImage() call below would then return the same
+            // data for the image that was already loaded with image.size=0
+            // to indicate we should load the image in a worker thread.
+            // So force the image to be recreated in every case.
+            bool force = true;
+            ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
             if (!data.valid) {
                 // We had a valid image, but now it's bogus, so blank it out.
-                data.image = QImage();
+                data.image = mapImage->image();
+                data.image.fill(Qt::white);
                 data.scale = mapImage->scale();
                 data.levelZeroBounds = mapImage->levelZeroBounds();
                 data.sources.clear();
