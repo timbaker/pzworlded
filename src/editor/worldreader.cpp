@@ -506,6 +506,8 @@ private:
 //        qDebug() << "resolveReference" << fileName << "relative to" << relativeTo;
         if (fileName.isEmpty())
             return fileName;
+        if (fileName == QLatin1String("."))
+            return relativeTo;
         if (QDir::isRelativePath(fileName)) {
             QString path = relativeTo + QLatin1Char('/') + fileName;
             QFileInfo info(path);

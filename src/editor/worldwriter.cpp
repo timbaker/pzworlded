@@ -274,8 +274,10 @@ public:
         w.writeStartElement(QLatin1String("BMPToTMX"));
 
         w.writeStartElement(QLatin1String("tmxexportdir"));
-        w.writeAttribute(QLatin1String("path"),
-                         relativeFileName(settings.exportDir));
+        path = relativeFileName(settings.exportDir);
+        if (path.isEmpty() && !settings.exportDir.isEmpty())
+            path = QLatin1String(".");
+        w.writeAttribute(QLatin1String("path"), path);
         w.writeEndElement();
 
         // If these paths are empty, it means the default file is used.
