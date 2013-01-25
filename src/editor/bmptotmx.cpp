@@ -637,6 +637,7 @@ bool BMPToTMX::LoadRules()
 bool BMPToTMX::setupBlends()
 {
     blendList.clear();
+    mBlendsByLayer.clear();
 
     QString path = mWorldDoc->world()->getBMPToTMXSettings().blendsFile;
     if (path.isEmpty())
@@ -683,10 +684,12 @@ bool BMPToTMX::setupBlends()
             foreach (QString exclude, block.value("exclude").split(QLatin1String(" "), QString::SkipEmptyParts))
                 excludes += exclude;
 
-            blendList += Blend(block.value("layer"),
-                               block.value("mainTile"),
-                               block.value("blendTile"),
-                               dir, excludes);
+            Blend blend(block.value("layer"),
+                        block.value("mainTile"),
+                        block.value("blendTile"),
+                        dir, excludes);
+            blendList += blend;
+            mBlendsByLayer[blend.targetLayer] += blendList.count() - 1;
         } else {
             mError = tr("Unknown block name '%1'.\nProbable syntax error in Blends.txt.").arg(block.name);
             return false;
@@ -739,7 +742,9 @@ BMPToTMX::Blend BMPToTMX::getBlendRule(int x, int y, const QString &texture, con
     Blend lastBlend;
     if (texture.isEmpty())
         return lastBlend;
-    foreach (Blend blend, blendList) {
+    foreach (int index, mBlendsByLayer[layer]) {
+        Blend &blend = blendList[index];
+        Q_ASSERT(blend.targetLayer == layer);
         if (blend.targetLayer != layer)
             continue;
 

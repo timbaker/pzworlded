@@ -176,6 +176,7 @@ private:
 
     QList<Blend> blendList;
     QList<QString> blendLayers;
+    QMap<QString,QList<int> > mBlendsByLayer;
     QString mError;
 
     struct UnknownColor {
