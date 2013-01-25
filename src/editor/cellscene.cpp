@@ -693,7 +693,14 @@ SubMapItem::SubMapItem(MapComposite *map, WorldCellLot *lot, MapRenderer *render
     setAcceptHoverEvents(true);
     mBoundingRect = mMap->boundingRect(mRenderer);
 
-    QString toolTip = QFileInfo(mMap->mapInfo()->path()).completeBaseName();
+    QString mapFileName = mMap->mapInfo()->path();
+#if 0
+    if (!lot->cell()->mapFilePath().isEmpty()) {
+        QDir mapDir = QFileInfo(lot->cell()->mapFilePath()).absoluteDir();
+        mapFileName = mapDir.relativeFilePath(mapFileName);
+    }
+#endif
+    QString toolTip = QDir::toNativeSeparators(mapFileName);
     toolTip += QLatin1String(" (lot)");
     setToolTip(toolTip);
 }
