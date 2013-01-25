@@ -46,7 +46,7 @@ void GenerateLotsDialog::exportBrowse()
         ui->exportEdit->text());
     if (!f.isEmpty()) {
         mExportDir = f;
-        ui->exportEdit->setText(mExportDir);
+        ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
     }
 }
 

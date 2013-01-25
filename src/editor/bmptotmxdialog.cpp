@@ -49,7 +49,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
         if (info.exists())
             mExportDir = info.canonicalFilePath();
     }
-    ui->exportEdit->setText(mExportDir);
+    ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
     connect(ui->exportBrowse, SIGNAL(clicked()), SLOT(exportBrowse()));
 
     // Rules.txt
@@ -60,7 +60,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
         if (info.exists())
             mRulesFile = info.canonicalFilePath();
     }
-    ui->rulesEdit->setText(mRulesFile);
+    ui->rulesEdit->setText(QDir::toNativeSeparators(mRulesFile));
     connect(ui->rulesBrowse, SIGNAL(clicked()), SLOT(rulesBrowse()));
 
     // Blends.txt
@@ -71,7 +71,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
         if (info.exists())
             mBlendsFile = info.canonicalFilePath();
     }
-    ui->blendsEdit->setText(mBlendsFile);
+    ui->blendsEdit->setText(QDir::toNativeSeparators(mBlendsFile));
     connect(ui->blendsBrowse, SIGNAL(clicked()), SLOT(blendsBrowse()));
 
     // MapBaseXML.txt
@@ -82,7 +82,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
         if (info.exists())
             mMapBaseFile = info.canonicalFilePath();
     }
-    ui->mapbaseEdit->setText(mMapBaseFile);
+    ui->mapbaseEdit->setText(QDir::toNativeSeparators(mMapBaseFile));
     connect(ui->mapbaseBrowse, SIGNAL(clicked()), SLOT(mapbaseBrowse()));
 
     ui->assignMapCheckBox->setChecked(settings.assignMapsToWorld);
@@ -104,7 +104,7 @@ void BMPToTMXDialog::exportBrowse()
         ui->exportEdit->text());
     if (!f.isEmpty()) {
         mExportDir = f;
-        ui->exportEdit->setText(mExportDir);
+        ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
     }
 }
 
@@ -114,7 +114,7 @@ void BMPToTMXDialog::rulesBrowse()
         ui->rulesEdit->text());
     if (!f.isEmpty()) {
         mRulesFile = f;
-        ui->rulesEdit->setText(mRulesFile);
+        ui->rulesEdit->setText(QDir::toNativeSeparators(mRulesFile));
     }
 }
 
@@ -124,7 +124,7 @@ void BMPToTMXDialog::blendsBrowse()
         ui->blendsEdit->text());
     if (!f.isEmpty()) {
         mBlendsFile = f;
-        ui->blendsEdit->setText(mBlendsFile);
+        ui->blendsEdit->setText(QDir::toNativeSeparators(mBlendsFile));
     }
 }
 
@@ -134,7 +134,7 @@ void BMPToTMXDialog::mapbaseBrowse()
         ui->mapbaseEdit->text());
     if (!f.isEmpty()) {
         mMapBaseFile = f;
-        ui->mapbaseEdit->setText(mMapBaseFile);
+        ui->mapbaseEdit->setText(QDir::toNativeSeparators(mMapBaseFile));
     }
 }
 
