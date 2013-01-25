@@ -80,7 +80,7 @@ MapsDock::MapsDock(QWidget *parent)
 
     Preferences *prefs = Preferences::instance();
     connect(prefs, SIGNAL(mapsDirectoryChanged()), this, SLOT(onMapsDirectoryChanged()));
-    edit->setText(prefs->mapsDirectory());
+    edit->setText(QDir::toNativeSeparators(prefs->mapsDirectory()));
     connect(edit, SIGNAL(returnPressed()), this, SLOT(editedMapsDirectory()));
 
     connect(mMapsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
@@ -114,7 +114,7 @@ void MapsDock::editedMapsDirectory()
 void MapsDock::onMapsDirectoryChanged()
 {
     Preferences *prefs = Preferences::instance();
-    mDirectoryEdit->setText(prefs->mapsDirectory());
+    mDirectoryEdit->setText(QDir::toNativeSeparators(prefs->mapsDirectory()));
 }
 
 void MapsDock::selectionChanged()
