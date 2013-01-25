@@ -26,10 +26,10 @@
 #include "mapmanager.h"
 #include "objectgroup.h"
 #include "orthogonalrenderer.h"
+#include "progress.h"
 #include "staggeredrenderer.h"
 #include "tilelayer.h"
 #include "tilesetmanager.h"
-#include "progress.h"
 #include "zlevelrenderer.h"
 
 #include <QDataStream>
@@ -48,8 +48,13 @@ MapImageManager *MapImageManager::mInstance = NULL;
 MapImageManager::MapImageManager()
     : QObject()
 {
-    connect(&mImageReaderThread, SIGNAL(imageLoaded(QImage*,MapImage*)),
-            SLOT(imageLoaded(QImage*,MapImage*)));
+    mImageReaderThread.resize(10);
+    mNextThreadForJob = 0;
+    for (int i = 0; i < mImageReaderThread.size(); i++) {
+        mImageReaderThread[i] = new MapImageReaderThread;
+        connect(mImageReaderThread[i], SIGNAL(imageLoaded(QImage*,MapImage*)),
+                SLOT(imageLoaded(QImage*,MapImage*)));
+    }
 
     connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
             SLOT(mapFileChanged(MapInfo*)));
@@ -100,7 +105,6 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     if (!data.valid)
         return 0;
 
-
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
 
     bool threaded = false;
@@ -125,7 +129,9 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
 
     if (threaded) {
-        mImageReaderThread.addJob(imageFileInfo(mapFilePath).canonicalFilePath(), mapImage);
+        QString imageFileName = imageFileInfo(mapFilePath).canonicalFilePath();
+        mImageReaderThread[mNextThreadForJob]->addJob(imageFileName, mapImage);
+        mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderThread.size();
     }
 
     // Set up file modification tracking on each TMX that makes
