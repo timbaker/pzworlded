@@ -24,6 +24,7 @@
 #include "progress.h"
 #include "simplefile.h"
 #include "tilemetainfomgr.h"
+#include "undoredo.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 #include "world.h"
@@ -361,6 +362,8 @@ void BMPToTMX::assignMapsToCells(WorldDocument *worldDoc, BMPToTMX::GenerateMode
 {
     mWorldDoc = worldDoc;
 
+    mWorldDoc->undoStack()->beginMacro(tr("Assign Maps to Cells"));
+
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
             assignMapToCell(cell);
@@ -372,6 +375,8 @@ void BMPToTMX::assignMapsToCells(WorldDocument *worldDoc, BMPToTMX::GenerateMode
             }
         }
     }
+
+    mWorldDoc->undoStack()->endMacro();
 }
 
 QString BMPToTMX::defaultRulesFile() const
@@ -425,8 +430,9 @@ void BMPToTMX::assignMapToCell(WorldCell *cell)
         return;
 
 #if 1
-    if (cell->mapFilePath() != tmxNameForCell(cell, bmp))
-        mWorldDoc->setCellMapName(cell, tmxNameForCell(cell, bmp));
+    QString fileName = tmxNameForCell(cell, bmp);
+    if (cell->mapFilePath() != fileName)
+        mWorldDoc->undoStack()->push(new SetCellMainMap(mWorldDoc, cell, fileName));
 #else
     // QFileInfo::operator!= will fail if the files don't exist because it
     // uses canonicalFilePath() comparison
