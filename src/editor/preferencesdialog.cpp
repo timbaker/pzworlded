@@ -19,6 +19,7 @@
 #include "ui_preferencesdialog.h"
 
 #include "preferences.h"
+#include "tilemetainfomgr.h"
 
 #include <QFileDialog>
 #include <QStringList>
@@ -61,7 +62,7 @@ void PreferencesDialog::gridColorChanged(const QColor &gridColor)
 void PreferencesDialog::accept()
 {
     Preferences *prefs = Preferences::instance();
-    prefs->setTilesDirectory(mTilesDirectory);
+    Tiled::TileMetaInfoMgr::instance()->changeTilesDirectory(mTilesDirectory);
     prefs->setUseOpenGL(ui->openGL->isChecked());
     prefs->setGridColor(mGridColor);
 
