@@ -191,6 +191,19 @@ QString BuildingTilesMgr::adjustTileNameIndex(const QString &tileName, int offse
     QString tilesetName;
     int index;
     parseTileName(tileName, tilesetName, index);
+
+    // Currently, the only place this gets called with offset > 0 is by the
+    // createEntryFromSingleTile() method.  Those methods assume the tilesets
+    // are 8 tiles wide.  Remap the offset onto the tileset's actual number of
+    // columns.
+    if (offset > 0) {
+        if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName)) {
+            TileMetaInfoMgr::instance()->loadTilesets(QList<Tileset*>() << ts);
+            int rows = offset / 8;
+            offset = rows * ts->columnCount() + offset % 8;
+        }
+    }
+
     index += offset;
     return nameForTile(tilesetName, index);
 }
