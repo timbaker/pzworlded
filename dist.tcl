@@ -1,35 +1,55 @@
 console show
 
-set SOURCE1 C:/Programming/Tiled/PZWorldEd/build-msvc-release
-set SOURCE2 C:/Programming/Tiled/PZWorldEd/PZWorldEd
+set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
+set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
 set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
 set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
-set DEST C:/Programming/Tiled/PZWorldEd/PZWorldEd-Win32
+set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\Tools\WorldEd}
 
-proc copyFile {SOURCE DEST name} {
+proc copyFile {SOURCE DEST name {name2 ""}} {
+    if {$name2 == ""} { set name2 $name }
     set src [file join $SOURCE $name]
-    set dst [file join $DEST $name]
+    set dst [file join $DEST $name2]
     if {![file exists $src]} {
-	error "no such file \"$src\""
+        error "no such file \"$src\""
+    }
+    set relative $name
+    foreach var {BIN SRC QT_BINARY_DIR QT_PLUGINS_DIR} {
+        if {[string match [set ::$var]* $src]} {
+            set relative [string range $src [string length [set ::$var]] end]
+        }
     }
     if {![file exists $dst] || ([file mtime $src] > [file mtime $dst])} {
-	file mkdir [file dirname $dst]
-	file copy -force $src $dst
-	puts "copied $name"
+        file mkdir [file dirname $dst]
+        if {[file extension $name2] == ".txt"} {
+            set chan [open $src r]
+            set text [read $chan]
+            close $chan
+            set chan [open $dst w]
+            fconfigure $chan -translation crlf
+            puts -nonewline $chan $text
+            close $chan
+            puts "copied $relative (crlf)"
+        } else {
+            file copy -force $src $dst
+            puts "copied $relative"
+        }
     } else {
-	puts "skipped $name"
+        puts "skipped $relative"
     }
     return
 }
 
-copyFile $SOURCE1 $DEST PZWorldEd.exe
-copyFile $SOURCE1 $DEST tiled.dll
+copyFile {C:\Programming\Tiled} $DEST vcredist_x86.exe
 
-copyFile $SOURCE2 $DEST Blends.txt
-copyFile $SOURCE2 $DEST MapBaseXML.txt
-copyFile $SOURCE2 $DEST Roads.txt
-copyFile $SOURCE2 $DEST Rules.txt
-copyFile $SOURCE2 $DEST qt.conf
+copyFile $BIN $DEST PZWorldEd.exe
+copyFile $BIN $DEST tiled.dll
+
+copyFile $SRC $DEST Blends.txt
+copyFile $SRC $DEST MapBaseXML.txt
+copyFile $SRC $DEST Roads.txt
+copyFile $SRC $DEST Rules.txt
+copyFile $SRC $DEST qt.conf
 
 copyFile $QT_BINARY_DIR $DEST QtCore4.dll
 copyFile $QT_BINARY_DIR $DEST QtGui4.dll
