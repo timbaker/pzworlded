@@ -15,7 +15,8 @@
 # Finally there is an optional extra colour at the end. This means the rule only fires if the 0, layer has the specified colour.
 
 1,		255, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 vegetation_trees_01_10 vegetation_trees_01_11,	0_Vegetation
-1,		128, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 vegetation_trees_01_10 vegetation_trees_01_11 null null null null,	0_Vegetation
-1,		64, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 null null null null,	0_Vegetation
+1,		127, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 vegetation_trees_01_10 vegetation_trees_01_11 vegetation_groundcover_01_0 vegetation_groundcover_01_0 vegetation_groundcover_01_1 vegetation_groundcover_01_2,	0_Vegetation
+1,		64, 0, 0,		vegetation_trees_01_8 vegetation_trees_01_9 vegetation_groundcover_01_0 vegetation_groundcover_01_0 vegetation_groundcover_01_1 vegetation_groundcover_01_2 vegetation_groundcover_01_1 vegetation_groundcover_01_2,	0_Vegetation
 1,		0, 255, 0,		vegetation_groundcover_01_0 vegetation_groundcover_01_1 vegetation_groundcover_01_2, 0_Vegetation,	90, 100, 35
 1,		0, 255, 0,		vegetation_groundcover_01_4 null null null, 0_Vegetation,	145, 135, 60
+1,		0, 128, 0,		vegetation_trees_01_8 vegetation_trees_01_10 vegetation_groundcover_01_0 vegetation_groundcover_01_0 vegetation_groundcover_01_1 vegetation_groundcover_01_2 vegetation_groundcover_01_0 vegetation_groundcover_01_0 vegetation_groundcover_01_0 vegetation_groundcover_01_1 vegetation_groundcover_01_1 vegetation_groundcover_01_2 vegetation_groundcover_01_1 vegetation_groundcover_01_2,	0_Vegetation
