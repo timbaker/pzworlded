@@ -170,6 +170,9 @@ protected:
     QRectF mMapImageBounds;
     QVector<LotImage> mLotImages;
     QPointF mDrawOffset;
+#ifndef QT_NO_DEBUG
+    bool mUpdatingImage;
+#endif
 };
 
 /**

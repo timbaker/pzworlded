@@ -778,6 +778,9 @@ BaseCellItem::BaseCellItem(WorldScene *scene, QGraphicsItem *parent)
     , mMapImage(0)
 {
     setAcceptedMouseButtons(0);
+#ifndef QT_NO_DEBUG
+    mUpdatingImage = false;
+#endif
 }
 
 void BaseCellItem::initialize()
@@ -831,7 +834,14 @@ void BaseCellItem::updateCellImage()
     mMapImage = 0;
     mMapImageBounds = QRect();
     if (!mapFilePath().isEmpty()) {
+#ifndef QT_NO_DEBUG
+        Q_ASSERT(!mUpdatingImage);
+        mUpdatingImage = true;
+#endif
         mMapImage = MapImageManager::instance()->getMapImage(mapFilePath());
+#ifndef QT_NO_DEBUG
+        mUpdatingImage = false;
+#endif
         if (mMapImage) {
 #if 1
             calcMapImageBounds();
@@ -928,26 +938,28 @@ void BaseCellItem::mapImageChanged(MapImage *mapImage)
         calcMapImageBounds();
         changed = true;
     }
-
+#if 0
     // Perhaps the image now exists and didn't before.
     if (!mMapImage) {
         updateCellImage();
         if (mMapImage)
             changed = true;
     }
-
+#endif
     int index = 0;
     foreach (LotImage lotImage, mLotImages) {
         if (mapImage == lotImage.mMapImage) {
             calcLotImageBounds(index);
             changed = true;
         }
+#if 0
         // Perhaps the image now exists and didn't before.
         if (!lotImage.mMapImage) {
             updateLotImage(index);
             if (mLotImages[index].mMapImage)
                 changed = true;
         }
+#endif
         ++index;
     }
 
