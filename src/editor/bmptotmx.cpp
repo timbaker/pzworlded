@@ -135,7 +135,7 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         return false;
     }
     if (!LoadRules()) {
-        mError = tr("Error reading Rules.txt");
+        mError += tr("\n(while reading Rules.txt)");
         return false;
     }
     if (!setupBlends())
@@ -573,8 +573,10 @@ bool BMPToTMX::LoadRules()
     if (path.isEmpty())
         path = defaultRulesFile();
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
+    if (!file.open(QIODevice::ReadOnly)) {
+        mError = file.errorString();
         return false;
+    }
 
     Conversions.clear();
 
@@ -622,10 +624,11 @@ bool BMPToTMX::LoadRules()
     foreach (QList<ConversionEntry> convs, Conversions) {
         foreach (ConversionEntry conv, convs) {
             foreach (QString tileName, conv.tileChoices) {
-                if (getTileFromTileName(tileName) == 0) {
+                if (!tileName.isEmpty() && getTileFromTileName(tileName) == 0) {
                     mError = tr("A tile listed in Rules.txt could not be found.\n");
-                    mError += tr("The missing tile is called '%1'.\n").arg(tileName);
-                    mError += tr("Please fix the invalid tile index or add the missing tileset using the Tilesets dialog in TileZed.");
+                    mError += tr("The missing tile is called '%1'.\n\n").arg(tileName);
+                    mError += tr("Please fix the invalid tile index or add the tileset\nif it is missing using the Tilesets dialog in TileZed.\n");
+                    return false;
                 }
             }
         }
