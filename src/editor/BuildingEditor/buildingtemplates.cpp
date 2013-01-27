@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -31,6 +31,464 @@
 using namespace BuildingEditor;
 
 static const char *TXT_FILE = "BuildingTemplates.txt";
+
+/////
+
+namespace BuildingEditor {
+
+class TemplatesFile
+{
+    Q_DECLARE_TR_FUNCTIONS(TemplatesFile)
+
+public:
+    TemplatesFile();
+    ~TemplatesFile();
+
+    bool read(const QString &fileName);
+    bool write(const QString &fileName);
+    bool write(const QString &fileName, const QList<BuildingTemplate*> &templates);
+
+    void setRevision(int revision, int sourceRevision)
+    { mRevision = revision, mSourceRevision = sourceRevision; }
+
+    int revision() const { return mRevision; }
+    int sourceRevision() const { return mSourceRevision; }
+
+    const QList<BuildingTemplate*> &templates() const
+    { return mTemplates; }
+
+    void addTemplate(BuildingTemplate *btemplate)
+    { mTemplates += btemplate; }
+
+    QString errorString() const
+    { return mError; }
+
+private:
+    QString nameForEntry(BuildingTileEntry *entry);
+    void addEntry(BuildingTileEntry *entry, bool sort = true);
+    QString entryIndex(BuildingTileEntry *entry);
+    BuildingTileEntry *getEntry(const QString &s, bool orNone = true);
+
+    BuildingTileEntry *convertOldEntry(BuildingTileCategory *category,
+                                       const QString &tileName);
+//    QString entryIndex(BuildingTileCategory *category, const QString &tileName);
+
+    void addFurniture(FurnitureTiles *ftiles);
+    QString furnitureIndex(FurnitureTiles *ftiles);
+    FurnitureTiles *getFurnitureTiles(const QString &s);
+
+    BuildingTileEntry *readTileEntry(SimpleFileBlock &block, QString &error);
+    FurnitureTiles *readFurnitureTiles(SimpleFileBlock &block, QString &error);
+
+    void writeTileEntry(SimpleFileBlock &parentBlock, BuildingTileEntry *entry);
+    void writeFurnitureTiles(SimpleFileBlock &block, FurnitureTiles *ftiles);
+
+private:
+    QList<BuildingTemplate*> mTemplates;
+
+    int mVersion;
+    int mRevision;
+    int mSourceRevision;
+    QString mError;
+
+    // Used during readTxt()/writeTxt()
+    QList<BuildingTileEntry*> mEntries;
+    QMap<QString,BuildingTileEntry*> mEntriesByCategoryName;
+    QMap<QPair<BuildingTileCategory*,QString>,BuildingTileEntry*> mEntryMap;
+    QList<FurnitureTiles*> mFurnitureTiles;
+};
+
+} // namespace BuildingEditor
+
+
+#define VERSION0 0
+
+// VERSION1
+// Massive rewrite -> BuildingTileEntry
+#define VERSION1 1
+
+// VERSION2
+// Renamed Room.Wall -> Room.InteriorWall
+#define VERSION2 2
+#define VERSION_LATEST VERSION2
+
+TemplatesFile::TemplatesFile() :
+    mVersion(0),
+    mRevision(0),
+    mSourceRevision(0)
+{
+}
+
+TemplatesFile::~TemplatesFile()
+{
+    qDeleteAll(mTemplates);
+    // Some of mEntries and mFurnitureTiles will leak
+}
+
+bool TemplatesFile::read(const QString &fileName)
+{
+    QFileInfo info(fileName);
+    if (!info.exists()) {
+        mError = tr("The %1 file doesn't exist.").arg(fileName);
+        return false;
+    }
+
+    QString path = info.absoluteFilePath();
+    SimpleFile simple;
+    if (!simple.read(path)) {
+        mError = tr("Error reading %1.\n%2").arg(path).arg(simple.errorString());
+        return false;
+    }
+
+    mVersion = simple.version();
+    mRevision = simple.value("revision").toInt();
+    mSourceRevision = simple.value("source_revision").toInt();
+
+    mTemplates.clear();
+
+    mEntries.clear(); // delete?
+    mEntriesByCategoryName.clear();
+    mEntryMap.clear();
+    mFurnitureTiles.clear(); // delete?
+
+    BuildingTilesMgr *btiles = BuildingTilesMgr::instance();
+
+    foreach (SimpleFileBlock block, simple.blocks) {
+        if (block.name == QLatin1String("TileEntry")) {
+            if (BuildingTileEntry *entry = readTileEntry(block, mError))
+                addEntry(entry, false);
+            else
+                return false;
+            continue;
+        }
+        if (block.name == QLatin1String("furniture")) {
+            if (FurnitureTiles *ftiles = readFurnitureTiles(block, mError))
+                addFurniture(ftiles);
+            else
+                return false;
+            continue;
+        }
+        if (block.name == QLatin1String("Template")) {
+            BuildingTemplate *def = new BuildingTemplate;
+            def->setName(block.value("Name"));
+
+            if (mVersion < VERSION1) {
+                def->setTile(BuildingTemplate::ExteriorWall,
+                             convertOldEntry(btiles->catEWalls(), block.value("Wall")));
+                def->setTile(BuildingTemplate::Door,
+                             convertOldEntry(btiles->catDoors(), block.value("Door")));
+                def->setTile(BuildingTemplate::DoorFrame,
+                             convertOldEntry(btiles->catDoorFrames(), block.value("DoorFrame")));
+                def->setTile(BuildingTemplate::Window,
+                             convertOldEntry(btiles->catWindows(), block.value("Window")));
+                def->setTile(BuildingTemplate::Curtains,
+                             convertOldEntry(btiles->catCurtains(), block.value("Curtains")));
+                def->setTile(BuildingTemplate::Stairs,
+                             convertOldEntry(btiles->catStairs(), block.value("Stairs")));
+            } else {
+                for (int i = 0; i < BuildingTemplate::TileCount; i++)
+                    def->setTile(i, getEntry(block.value(def->enumToString(i))));
+            }
+
+            QList<BuildingTileEntry*> usedTiles;
+            foreach (QString s, block.value("UsedTiles").split(QLatin1Char(' '),
+                                                               QString::SkipEmptyParts)) {
+                if (BuildingTileEntry *entry = getEntry(s, false))
+                    usedTiles += entry;
+            }
+            def->setUsedTiles(usedTiles);
+
+            QList<FurnitureTiles*> usedFurniture;
+            foreach (QString s, block.value("UsedFurniture").split(QLatin1Char(' '),
+                                                                   QString::SkipEmptyParts)) {
+                if (FurnitureTiles *ftiles = getFurnitureTiles(s))
+                    usedFurniture += ftiles;
+            }
+            def->setUsedFurniture(usedFurniture);
+
+            foreach (SimpleFileBlock roomBlock, block.blocks) {
+                if (roomBlock.name == QLatin1String("Room")) {
+                    Room *room = new Room;
+                    room->Name = roomBlock.value("Name");
+                    QStringList rgb = roomBlock.value("Color").split(QLatin1String(" "),
+                                                                     QString::SkipEmptyParts);
+                    room->Color = qRgb(rgb.at(0).toInt(),
+                                       rgb.at(1).toInt(),
+                                       rgb.at(2).toInt());
+
+                    if (mVersion < VERSION1) {
+                        room->setTile(Room::InteriorWall,
+                                      convertOldEntry(btiles->catIWalls(), roomBlock.value("Wall")));
+                        room->setTile(Room::Floor,
+                                      convertOldEntry(btiles->catFloors(), roomBlock.value("Floor")));
+                    } else {
+                        if (mVersion < VERSION2) {
+                            roomBlock.renameValue("Wall", QLatin1String("InteriorWall"));
+                        }
+                        for (int i = 0; i < Room::TileCount; i++)
+                            room->setTile(i, getEntry(roomBlock.value(room->enumToString(i))));
+                    }
+
+                    room->internalName = roomBlock.value("InternalName");
+                    def->addRoom(room);
+                } else {
+                    mError = tr("Unknown block name '%1': expected 'Room'.\n%2")
+                            .arg(roomBlock.name)
+                            .arg(path);
+                    return false;
+                }
+            }
+            mTemplates += def;
+        } else {
+            mError = tr("Unknown block name '%1': expected 'Template'.\n%2")
+                    .arg(block.name)
+                    .arg(path);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool TemplatesFile::write(const QString &fileName)
+{
+    return write(fileName, mTemplates);
+}
+
+bool TemplatesFile::write(const QString &fileName,
+                          const QList<BuildingTemplate *> &templates)
+{
+    mEntries.clear();
+    mEntriesByCategoryName.clear();
+    mFurnitureTiles.clear();
+
+    foreach (BuildingTemplate *btemplate, templates) {
+        foreach (BuildingTileEntry *entry, btemplate->tiles())
+            addEntry(entry);
+        foreach (Room *room, btemplate->rooms()) {
+            foreach (BuildingTileEntry *entry, room->tiles())
+                addEntry(entry);
+        }
+        foreach (BuildingTileEntry *entry, btemplate->usedTiles())
+            addEntry(entry);
+        foreach (FurnitureTiles *ftiles, btemplate->usedFurniture())
+            addFurniture(ftiles);
+    }
+
+    SimpleFile simpleFile;
+    foreach (BuildingTileEntry *entry, mEntries)
+        writeTileEntry(simpleFile, entry);
+    foreach (FurnitureTiles *ftiles, mFurnitureTiles)
+        writeFurnitureTiles(simpleFile, ftiles);
+
+    foreach (BuildingTemplate *btemplate, templates) {
+        SimpleFileBlock templateBlock;
+        templateBlock.name = QLatin1String("Template");
+        templateBlock.addValue("Name", btemplate->name());
+        for (int i = 0; i < BuildingTemplate::TileCount; i++)
+            templateBlock.addValue(btemplate->enumToString(i), entryIndex(btemplate->tile(i)));
+        foreach (Room *room, btemplate->rooms()) {
+            SimpleFileBlock roomBlock;
+            roomBlock.name = QLatin1String("Room");
+            roomBlock.addValue("Name", room->Name);
+            QString colorString = QString(QLatin1String("%1 %2 %3"))
+                    .arg(qRed(room->Color))
+                    .arg(qGreen(room->Color))
+                    .arg(qBlue(room->Color));
+            roomBlock.addValue("Color", colorString);
+            roomBlock.addValue("InternalName", room->internalName);
+            for (int i = 0; i < Room::TileCount; i++)
+                roomBlock.addValue(room->enumToString(i), entryIndex(room->tile(i)));
+            templateBlock.blocks += roomBlock;
+        }
+
+        QStringList usedTiles;
+        foreach (BuildingTileEntry *entry, btemplate->usedTiles())
+            usedTiles += entryIndex(entry);
+        templateBlock.addValue("UsedTiles", usedTiles.join(QLatin1String(" ")));
+
+        QStringList usedFurniture;
+        foreach (FurnitureTiles *ftiles, btemplate->usedFurniture())
+            usedFurniture += furnitureIndex(ftiles);
+        templateBlock.addValue("UsedFurniture", usedFurniture.join(QLatin1String(" ")));
+
+        simpleFile.blocks += templateBlock;
+    }
+
+    simpleFile.setVersion(VERSION_LATEST);
+    simpleFile.replaceValue("revision", QString::number(mRevision));
+    simpleFile.replaceValue("source_revision", QString::number(mSourceRevision));
+    if (!simpleFile.write(fileName)) {
+        mError = simpleFile.errorString();
+        return false;
+    }
+
+    return true;
+}
+
+// this code is almost the same as BuildingTilesMgr::readTileEntry
+BuildingTileEntry *TemplatesFile::readTileEntry(SimpleFileBlock &block, QString &error)
+{
+    QString categoryName = block.value("category");
+    if (BuildingTileCategory *category = BuildingTilesMgr::instance()->category(categoryName)) {
+        BuildingTileEntry *entry = new BuildingTileEntry(category);
+        foreach (SimpleFileKeyValue kv, block.values) {
+            if (kv.name == QLatin1String("category"))
+                continue;
+            if (kv.name == QLatin1String("offset")) {
+                QStringList split = kv.value.split(QLatin1Char(' '), QString::SkipEmptyParts);
+                if (split.size() != 3) {
+                    error = tr("Expected 'offset = name x y', got '%1'").arg(kv.value);
+                    delete entry;
+                    return false;
+                }
+                int e = category->enumFromString(split[0]);
+                if (e == BuildingTileCategory::Invalid) {
+                    error = tr("Unknown %1 enum '%2'").arg(categoryName).arg(split[0]);
+                    delete entry;
+                    return 0;
+                }
+                entry->mOffsets[e] = QPoint(split[1].toInt(), split[2].toInt());
+                continue;
+            }
+            int e = category->enumFromString(kv.name);
+            if (e == BuildingTileCategory::Invalid) {
+                error = tr("Unknown %1 enum %2").arg(categoryName).arg(kv.name);
+                return 0;
+            }
+            entry->mTiles[e] = BuildingTilesMgr::instance()->get(kv.value);
+        }
+
+        if (BuildingTileEntry *match = category->findMatch(entry)) {
+            delete entry;
+            entry = match;
+        }
+
+        return entry;
+    }
+
+    error = tr("Unknown tile category '%1'").arg(categoryName);
+    return 0;
+}
+
+FurnitureTiles *TemplatesFile::readFurnitureTiles(SimpleFileBlock &block, QString &error)
+{
+    extern FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &block, QString &error);
+    if (FurnitureTiles *result = furnitureTilesFromSFB(block, error)) {
+        FurnitureTiles *match = FurnitureGroups::instance()->findMatch(result);
+        if (match) {
+            delete result;
+            result = match;
+        }
+        return result;
+    }
+    return 0;
+}
+
+// this code is almost the same as BuildingTilesMgr::writeTileEntry
+void TemplatesFile::writeTileEntry(SimpleFileBlock &parentBlock, BuildingTileEntry *entry)
+{
+    BuildingTileCategory *category = entry->category();
+    SimpleFileBlock block;
+    block.name = QLatin1String("TileEntry");
+    block.addValue("category", category->name());
+    for (int i = 0; i < category->enumCount(); i++) {
+        block.addValue(category->enumToString(i), entry->tile(i)->name());
+    }
+    for (int i = 0; i < category->enumCount(); i++) {
+        QPoint p = entry->offset(i);
+        if (p.isNull())
+            continue;
+        block.addValue("offset", QString(QLatin1String("%1 %2 %3"))
+                       .arg(category->enumToString(i)).arg(p.x()).arg(p.y()));
+    }
+    parentBlock.blocks += block;
+}
+
+void TemplatesFile::writeFurnitureTiles(SimpleFileBlock &block, FurnitureTiles *ftiles)
+{
+    extern SimpleFileBlock furnitureTilesToSFB(FurnitureTiles *ftiles);
+    block.blocks += furnitureTilesToSFB(ftiles);
+}
+
+QString TemplatesFile::nameForEntry(BuildingTileEntry *entry)
+{
+    QString name = entry->category()->name();
+    for (int i = 0; i < entry->category()->enumCount(); i++)
+        name += entry->category()->enumToString(i)
+                + entry->tile(i)->name();
+
+    QString key = name + QLatin1Char('#');
+    int n = 1;
+    while (mEntriesByCategoryName.contains(key + QString::number(n)))
+        n++;
+
+    return name;
+}
+
+void TemplatesFile::addEntry(BuildingTileEntry *entry, bool sort)
+{
+    if (entry && !entry->isNone() && !mEntries.contains(entry)) {
+        mEntriesByCategoryName[nameForEntry(entry)] = entry;
+        if (sort)
+            mEntries = mEntriesByCategoryName.values();
+        else
+            mEntries += entry;
+    }
+}
+
+QString TemplatesFile::entryIndex(BuildingTileEntry *entry)
+{
+    if (!entry || entry->isNone())
+        return QString::number(0);
+    return QString::number(mEntries.indexOf(entry) + 1);
+}
+
+BuildingTileEntry *TemplatesFile::getEntry(const QString &s, bool orNone)
+{
+    int index = s.toInt();
+    if (index >= 1 && index <= mEntries.size())
+        return mEntries[index - 1];
+    return orNone ? BuildingTilesMgr::instance()->noneTileEntry() : 0;
+}
+
+BuildingTileEntry *TemplatesFile::convertOldEntry(BuildingTileCategory *category,
+                                                  const QString &tileName)
+{
+    if (tileName.isEmpty())
+        return 0;
+    QPair<BuildingTileCategory*,QString> p = qMakePair(category, tileName);
+    if (mEntryMap.contains(p))
+        return mEntryMap[p];
+
+    BuildingTileEntry *entry = category->createEntryFromSingleTile(tileName);
+//    mEntriesByCategoryName[category->name() + tileName] = entry;
+//    mEntries = mEntriesByCategoryName.values(); // sorted
+    mEntryMap[p] = entry;
+    return entry;
+}
+
+void TemplatesFile::addFurniture(FurnitureTiles *ftiles)
+{
+    if (!ftiles)
+        return;
+    if (!mFurnitureTiles.contains(ftiles))
+        mFurnitureTiles += ftiles;
+}
+
+QString TemplatesFile::furnitureIndex(FurnitureTiles *ftiles)
+{
+    int index = mFurnitureTiles.indexOf(ftiles);
+    return QString::number(index + 1);
+}
+
+FurnitureTiles *TemplatesFile::getFurnitureTiles(const QString &s)
+{
+    int index = s.toInt();
+    if (index >= 1 && index <= mFurnitureTiles.size())
+        return mFurnitureTiles[index - 1];
+    return 0;
+}
 
 /////
 
@@ -168,17 +626,6 @@ static void writeFurnitureTiles(SimpleFileBlock &block, FurnitureTiles *ftiles)
     block.blocks += furnitureTilesToSFB(ftiles);
 }
 
-#define VERSION0 0
-
-// VERSION1
-// Massive rewrite -> BuildingTileEntry
-#define VERSION1 1
-
-// VERSION2
-// Renamed Room.Wall -> Room.InteriorWall
-#define VERSION2 2
-#define VERSION_LATEST VERSION2
-
 bool BuildingTemplates::readTxt()
 {
     QFileInfo info(txtPath());
@@ -187,12 +634,25 @@ bool BuildingTemplates::readTxt()
         return false;
     }
 #if 0
-    if (!upgradeTxt())
-        return false;
-
     if (!mergeTxt())
         return false;
 #endif
+
+#if 1
+    TemplatesFile file;
+    if (!file.read(txtPath())) {
+        mError = file.errorString();
+        return false;
+    }
+
+    mRevision = file.revision();
+    mSourceRevision = file.sourceRevision();
+
+    foreach (BuildingTemplate *btemplate, file.templates())
+        addTemplate(new BuildingTemplate(btemplate));
+
+    return true;
+#else
     QString path = info.absoluteFilePath();
     SimpleFile simple;
     if (!simple.read(path)) {
@@ -280,12 +740,20 @@ bool BuildingTemplates::readTxt()
     }
 
     return true;
+#endif
 }
 
 void BuildingTemplates::writeTxt(QWidget *parent)
 {
-    return;
-
+#if 1
+    TemplatesFile file;
+    file.setRevision(++mRevision, mSourceRevision);
+    if (!file.write(txtPath(), templates())) {
+        mError = file.errorString();
+        QMessageBox::warning(parent, tr("It's no good, Jim!"), mError);
+        return;
+    }
+#else
     mEntries.clear();
     mEntriesByCategoryName.clear();
     mFurnitureTiles.clear();
@@ -348,8 +816,10 @@ void BuildingTemplates::writeTxt(QWidget *parent)
         QMessageBox::warning(parent, tr("It's no good, Jim!"),
                              simpleFile.errorString());
     }
+#endif
 }
 
+#if 0
 QString BuildingTemplates::entryIndex(BuildingTileCategory *category,
                                       const QString &tileName)
 {
@@ -501,6 +971,7 @@ bool BuildingTemplates::upgradeTxt()
     }
     return true;
 }
+#endif
 
 bool BuildingTemplates::mergeTxt()
 {
@@ -530,6 +1001,37 @@ bool BuildingTemplates::mergeTxt()
 
     // MERGE HERE
 
+#if 1
+    TemplatesFile sourceFileX;
+    if (!sourceFileX.read(sourcePath)) {
+        mError = sourceFileX.errorString();
+        return false;
+    }
+
+    TemplatesFile userFileX;
+    if (!userFileX.read(userPath)) {
+        mError = userFileX.errorString();
+        return false;
+    }
+
+    QStringList userTemplateNames;
+    foreach (BuildingTemplate *btemplate, userFileX.templates())
+        userTemplateNames += btemplate->name();
+
+    foreach (BuildingTemplate *btemplate, sourceFileX.templates()) {
+        if (!userTemplateNames.contains(btemplate->name())) {
+            userFileX.addTemplate(new BuildingTemplate(btemplate));
+        }
+    }
+
+    userFileX.setRevision(sourceRevision + 1, sourceRevision);
+    if (!userFileX.write(userPath)) {
+        mError = userFileX.errorString();
+        return false;
+    }
+
+    return true;
+#else
     QStringList userEntries;
     QMap<QString,int> userEntryIndexMap;
     QList<SimpleFileBlock> userTemplates;
@@ -615,8 +1117,10 @@ bool BuildingTemplates::mergeTxt()
         return false;
     }
     return true;
+#endif
 }
 
+#if 0
 QString BuildingTemplates::nameForEntry(BuildingTileEntry *entry)
 {
     QString name = entry->category()->name();
@@ -672,6 +1176,8 @@ BuildingTileEntry *BuildingTemplates::getEntry(const QString &s, bool orNone)
         return mEntries[index - 1];
     return orNone ? BuildingTilesMgr::instance()->noneTileEntry() : 0;
 }
+
+#endif
 
 /////
 

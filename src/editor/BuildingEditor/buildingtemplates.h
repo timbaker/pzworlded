@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -198,24 +198,16 @@ public:
     bool readTxt();
     void writeTxt(QWidget *parent = 0);
 
+    bool importTemplates(const QString &fileName,
+                         QList<BuildingTemplate*> &templates);
+    bool exportTemplates(const QString &fileName,
+                         const QList<BuildingTemplate*> &templates);
+
     QString errorString() const
     { return mError; }
 
 private:
-    bool upgradeTxt();
     bool mergeTxt();
-
-    QString nameForEntry(BuildingTileEntry *entry);
-    void addEntry(BuildingTileEntry *entry, bool sort = true);
-    QString entryIndex(BuildingTileEntry *entry);
-    BuildingTileEntry *getEntry(const QString &s, bool orNone = true);
-
-    void addEntry(BuildingTileCategory *category, const QString &tileName);
-    QString entryIndex(BuildingTileCategory *category, const QString &tileName);
-
-    void addFurniture(FurnitureTiles *ftiles);
-    QString furnitureIndex(FurnitureTiles *ftiles);
-    FurnitureTiles *getFurnitureTiles(const QString &s);
 
 private:
     static BuildingTemplates *mInstance;
@@ -223,11 +215,6 @@ private:
     int mRevision;
     int mSourceRevision;
     QString mError;
-
-    QList<BuildingTileEntry*> mEntries; // Used during readTxt()/writeTxt()
-    QMap<QString,BuildingTileEntry*> mEntriesByCategoryName;
-    QMap<QPair<BuildingTileCategory*,QString>,BuildingTileEntry*> mEntryMap;
-    QList<FurnitureTiles*> mFurnitureTiles;
 };
 
 } // namespace BuildingEditor
