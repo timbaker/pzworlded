@@ -174,14 +174,17 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
 
     reportUnknownColors();
 
-    QMessageBox::information(MainWindow::instance(),
-                             tr("BMP To TMX"), tr("Finished!"));
-
     if (world->getBMPToTMXSettings().assignMapsToWorld)
         assignMapsToCells(worldDoc, mode);
 
     foreach (QString path, mNewFiles)
         MapManager::instance()->newMapFileCreated(path);
+
+    // While displaying this, the MapManager's FileSystemWatcher might see some
+    // changed .tmx files, which results in thumbnails being recreated.  It's
+    // a bit odd to see the PROGRESS dialog blocked behind this messagebox.
+    QMessageBox::information(MainWindow::instance(),
+                             tr("BMP To TMX"), tr("Finished!"));
 
     return true;
 }
