@@ -144,6 +144,7 @@ bool TemplatesFile::read(const QString &fileName)
     mRevision = simple.value("revision").toInt();
     mSourceRevision = simple.value("source_revision").toInt();
 
+    qDeleteAll(mTemplates);
     mTemplates.clear();
 
     mEntries.clear(); // delete?
@@ -546,10 +547,9 @@ bool BuildingTemplates::readTxt()
         mError = tr("The %1 file doesn't exist.").arg(txtName());
         return false;
     }
-#if 0
+
     if (!mergeTxt())
         return false;
-#endif
 
     TemplatesFile file;
     if (!file.read(txtPath())) {
@@ -577,10 +577,26 @@ void BuildingTemplates::writeTxt(QWidget *parent)
     }
 }
 
+bool BuildingTemplates::importTemplates(const QString &fileName,
+                                        QList<BuildingTemplate *> &templates)
 {
+    TemplatesFile file;
+    if (!file.read(fileName)) {
+        mError = file.errorString();
         return false;
     }
+    foreach (BuildingTemplate *btemplate, file.templates())
+        templates += new BuildingTemplate(btemplate);
+    return true;
+}
 
+bool BuildingTemplates::exportTemplates(const QString &fileName,
+                                        const QList<BuildingTemplate *> &templates)
+{
+    TemplatesFile file;
+    file.setRevision(0, 0);
+    if (!file.write(fileName, templates)) {
+        mError = file.errorString();
         return false;
     }
     return true;
@@ -588,6 +604,8 @@ void BuildingTemplates::writeTxt(QWidget *parent)
 
 bool BuildingTemplates::mergeTxt()
 {
+    return true;
+
     QString userPath = txtPath();
 
     SimpleFile userFile;
