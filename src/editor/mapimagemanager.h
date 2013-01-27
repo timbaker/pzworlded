@@ -158,7 +158,10 @@ signals:
     
 public slots:
     void mapFileChanged(MapInfo *mapInfo);
+
+private slots:
     void imageLoaded(QImage *image, MapImage *mapImage);
+    void processDeferrals();
 
 private:
     Q_DISABLE_COPY(MapImageManager)
@@ -174,7 +177,38 @@ private:
     QVector<MapImageReaderThread*> mImageReaderThread;
     int mNextThreadForJob;
 
+    friend class MapImageManagerDeferral;
+    void deferThreadResults(bool defer);
+    int mDeferralDepth;
+    QList<MapImage*> mDeferredMapImages;
+    bool mDeferralQueued;
+
     static MapImageManager *mInstance;
+};
+
+class MapImageManagerDeferral
+{
+public:
+    MapImageManagerDeferral() :
+        mReleased(false)
+    {
+        MapImageManager::instance()->deferThreadResults(true);
+    }
+
+    ~MapImageManagerDeferral()
+    {
+        if (!mReleased)
+            MapImageManager::instance()->deferThreadResults(false);
+    }
+
+    void release()
+    {
+        MapImageManager::instance()->deferThreadResults(false);
+        mReleased = true;
+    }
+
+private:
+    bool mReleased;
 };
 
 #endif // MAPIMAGEMANAGER_H

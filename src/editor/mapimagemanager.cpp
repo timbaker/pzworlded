@@ -34,6 +34,7 @@
 
 #include <QDataStream>
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <QImageReader>
@@ -45,8 +46,10 @@ const int IMAGE_WIDTH = 512;
 
 MapImageManager *MapImageManager::mInstance = NULL;
 
-MapImageManager::MapImageManager()
-    : QObject()
+MapImageManager::MapImageManager() :
+    QObject(),
+    mDeferralDepth(0),
+    mDeferralQueued(false)
 {
     mImageReaderThread.resize(10);
     mNextThreadForJob = 0;
@@ -79,6 +82,13 @@ void MapImageManager::deleteInstance()
 
 MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &relativeTo)
 {
+    // Do not emit mapImageChanged as a result of worker threads finishing
+    // loading any images while we are creating a new thumbnail image.
+    // Any time QCoreApplication::processEvents() gets called (as is done
+    // by MapManager's EditorMapReader class and the PROGRESS class) a
+    // worker-thread's signal to us may be processed.
+    MapImageManagerDeferral deferral;
+
 #if 1
     QString suffix = QFileInfo(mapName).suffix();
     if (BMPToTMX::supportedImageFormats().contains(suffix)) {
@@ -450,6 +460,8 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
     QMap<QString,MapImage*>::iterator it_end = mMapImages.end();
     QMap<QString,MapImage*>::iterator it;
 
+    MapImageManagerDeferral deferral;
+
     for (it = it_begin; it != it_end; it++) {
         MapImage *mapImage = it.value();
         if (mapImage->sources().contains(mapInfo)) {
@@ -492,7 +504,11 @@ void MapImageManager::imageLoaded(QImage *image, MapImage *mapImage)
     mapImage->setImage(*image);
     mapImage->mLoaded = true;
     delete image;
-    emit mapImageChanged(mapImage);
+
+    if (mDeferralDepth > 0)
+        mDeferredMapImages += mapImage;
+    else
+        emit mapImageChanged(mapImage);
 }
 
 QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
@@ -521,6 +537,32 @@ QFileInfo MapImageManager::imageDataFileInfo(const QFileInfo &imageFileInfo)
 {
     return QFileInfo(imageFileInfo.absolutePath() + QLatin1Char('/') +
                      imageFileInfo.completeBaseName() + QLatin1String(".dat"));
+}
+
+void MapImageManager::deferThreadResults(bool defer)
+{
+    if (defer) {
+        ++mDeferralDepth;
+//        qDebug() << "MapImageManager::deferThreadResults depth++ =" << mDeferralDepth;
+    } else {
+        Q_ASSERT(mDeferralDepth > 0);
+//        qDebug() << "MapImageManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
+        if (--mDeferralDepth == 0) {
+            if (!mDeferralQueued && mDeferredMapImages.size()) {
+                QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
+                mDeferralQueued = true;
+            }
+        }
+    }
+}
+
+void MapImageManager::processDeferrals()
+{
+    QList<MapImage*> mapImages = mDeferredMapImages;
+    mDeferredMapImages.clear();
+    mDeferralQueued = false;
+    foreach (MapImage *mapImage, mapImages)
+        emit mapImageChanged(mapImage);
 }
 
 ///// ///// ///// ///// /////

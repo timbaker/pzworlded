@@ -31,6 +31,7 @@
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
 #include "mapcomposite.h"
+#include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "mapsdock.h"
 #include "newworlddialog.h"
@@ -601,6 +602,11 @@ bool MainWindow::openFile(const QString &fileName)
 void MainWindow::openLastFiles()
 {
     PROGRESS progress(tr("Restoring session"));
+
+    // MapImageManager's threads will load in the thumbnail images in the
+    // background.  But defer updating the display with those images until
+    // all the documents are loaded.
+    MapImageManagerDeferral defer;
 
     mSettings.beginGroup(QLatin1String("openFiles"));
 
