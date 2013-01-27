@@ -18,6 +18,7 @@
 #ifndef SIMPLEFILE_H
 #define SIMPLEFILE_H
 
+#include <QCoreApplication>
 #include <QString>
 #include <QTextStream>
 
@@ -42,6 +43,8 @@ public:
 
 class SimpleFileBlock
 {
+    Q_DECLARE_TR_FUNCTIONS(SimpleFileBlock)
+
 public:
     QString name;
     QList<SimpleFileKeyValue> values;
@@ -124,7 +127,7 @@ public:
     { return mVersion; }
 
 private:
-    SimpleFileBlock readBlock(QTextStream &ts);
+    SimpleFileBlock readBlock(QTextStream &ts, int &lineNumber, bool &ok);
     void writeBlock(QTextStream &ts, const SimpleFileBlock &block);
 
     QString mError;

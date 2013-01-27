@@ -41,26 +41,14 @@ bool SimpleFile::read(const QString &filePath)
     }
 
     QTextStream ts(&file);
-    QString buf;
-    while (!ts.atEnd()) {
-        QString line = ts.readLine();
-        if (line.contains(QLatin1Char('{'))) {
-            SimpleFileBlock block = readBlock(ts);
-            block.name = buf;
-            blocks += block;
-            buf.clear();
-        } else if (line.contains(QLatin1Char('='))) {
-            QStringList split = line.trimmed().split(QLatin1Char('='));
-            SimpleFileKeyValue kv;
-            kv.name = split[0].trimmed();
-            kv.value = split[1].trimmed();
-            values += kv;
-        } else {
-            buf += line.trimmed();
-        }
-    }
 
-    file.close();
+    int lineNumber = 0;
+    bool ok;
+    SimpleFileBlock block = readBlock(ts, lineNumber, ok);
+    if (!ok)
+        return false;
+    blocks = block.blocks;
+    values = block.values;
 
     mVersion = value("version").toInt(); // will be zero for old files
 
@@ -129,31 +117,46 @@ bool SimpleFile::write(const QString &filePath)
     return true;
 }
 
-SimpleFileBlock SimpleFile::readBlock(QTextStream &ts)
+SimpleFileBlock SimpleFile::readBlock(QTextStream &ts, int &lineNumber, bool &ok)
 {
     SimpleFileBlock block;
     QString buf;
     while (!ts.atEnd()) {
         QString line = ts.readLine();
-        if (line.contains(QLatin1Char('{'))) {
-            SimpleFileBlock childBlock = readBlock(ts);
+        ++lineNumber;
+        if (line.contains(QLatin1Char('='))) {
+            int n = line.indexOf(QLatin1Char('='));
+            SimpleFileKeyValue kv;
+            kv.name = line.left(n).trimmed();
+            kv.value = line.mid(n + 1).trimmed();
+            block.values += kv;
+        }
+        else if (line.contains(QLatin1Char('{'))) {
+            if (line.trimmed().length() != 1) {
+                mError = tr("Brace must be on a line by itself (line %1)")
+                        .arg(lineNumber);
+                ok = false;
+                return block;
+            }
+            SimpleFileBlock childBlock = readBlock(ts, lineNumber, ok);
+            if (!ok) return block;
             childBlock.name = buf;
             block.blocks += childBlock;
             buf.clear();
         }
         else if (line.contains(QLatin1Char('}'))) {
+            if (line.trimmed().length() != 1) {
+                mError = tr("Brace must be on a line by itself (line %1)")
+                        .arg(lineNumber);
+                ok = false;
+                return block;
+            }
             break;
-        }
-        else if (line.contains(QLatin1Char('='))) {
-            QStringList split = line.trimmed().split(QLatin1Char('='));
-            SimpleFileKeyValue kv;
-            kv.name = split[0].trimmed();
-            kv.value = split[1].trimmed();
-            block.values += kv;
         }
         else
             buf += line.trimmed();
     }
+    ok = true;
     return block;
 }
 
