@@ -302,7 +302,7 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource)
     }
 }
 
-void TilesetManager::waitForTilesets(QList<Tileset *> &tilesets)
+void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
 {
     foreach (Tileset *ts, tilesets) {
         if (ts->isLoaded())

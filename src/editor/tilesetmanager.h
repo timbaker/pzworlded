@@ -193,7 +193,7 @@ public:
     TilesetImageCache *imageCache() const { return mTilesetImageCache; }
 
     void loadTileset(Tileset *tileset, const QString &imageSource);
-    void waitForTilesets(QList<Tileset*> &tilesets);
+    void waitForTilesets(const QList<Tileset *> &tilesets);
 #endif
 
 signals:
