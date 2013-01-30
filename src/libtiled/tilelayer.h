@@ -388,6 +388,21 @@ private:
 #else
     QVector<Cell> mGrid;
 #endif
+#ifdef ZOMBOID
+    QMap<Tileset*,int> mUsedTilesets;
+    inline void TileLayer::addReference(Tileset *ts)
+    {
+        mUsedTilesets[ts]++;
+    }
+    inline void TileLayer::removeReference(Tileset *ts)
+    {
+        Q_ASSERT(mUsedTilesets.contains(ts));
+        Q_ASSERT(mUsedTilesets[ts] > 0);
+
+        if (--mUsedTilesets[ts] <= 0)
+            mUsedTilesets.remove(ts);
+    }
+#endif
 };
 
 } // namespace Tiled

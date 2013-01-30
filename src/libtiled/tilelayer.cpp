@@ -40,10 +40,10 @@ TileLayer::TileLayer(const QString &name, int x, int y, int width, int height):
     Layer(TileLayerType, name, x, y, width, height),
     mMaxTileSize(0, 0),
 #ifdef ZOMBOID
-    mTileLayerGroup(0)
+    mTileLayerGroup(0),
 #endif
 #if SPARSE_TILELAYER
-    , mGrid(width, height)
+    mGrid(width, height)
 #else
     mGrid(width * height)
 #endif
@@ -114,6 +114,13 @@ void TileLayer::setCell(int x, int y, const Cell &cell)
         if (mMap)
             mMap->adjustDrawMargins(drawMargins());
     }
+
+#ifdef ZOMBOID
+    if (Tile *tile = cellAt(x, y).tile)
+        removeReference(tile->tileset());
+    if (cell.tile)
+        addReference(cell.tile->tileset());
+#endif
 
 #if SPARSE_TILELAYER
     mGrid.replace(x, y, cell);
@@ -194,6 +201,7 @@ void TileLayer::erase()
     const Cell emptyCell;
     mGrid.fill(emptyCell);
 #endif
+    mUsedTilesets.clear();
 }
 #endif
 
@@ -298,6 +306,9 @@ void TileLayer::rotate(RotateDirection direction)
 
 QSet<Tileset*> TileLayer::usedTilesets() const
 {
+#ifdef ZOMBOID
+    return mUsedTilesets.keys().toSet();
+#else
     QSet<Tileset*> tilesets;
 
     for (int i = 0, i_end = mGrid.size(); i < i_end; ++i)
@@ -305,16 +316,22 @@ QSet<Tileset*> TileLayer::usedTilesets() const
             tilesets.insert(tile->tileset());
 
     return tilesets;
+#endif
 }
 
 bool TileLayer::referencesTileset(const Tileset *tileset) const
 {
+#ifdef ZOMBOID
+    Tileset *key = const_cast<Tileset*>(tileset); // hmmm
+    return mUsedTilesets.contains(key);
+#else
     for (int i = 0, i_end = mGrid.size(); i < i_end; ++i) {
         const Tile *tile = mGrid.at(i).tile;
         if (tile && tile->tileset() == tileset)
             return true;
     }
     return false;
+#endif
 }
 
 QRegion TileLayer::tilesetReferences(Tileset *tileset) const
@@ -334,8 +351,15 @@ void TileLayer::removeReferencesToTileset(Tileset *tileset)
 {
     for (int i = 0, i_end = mGrid.size(); i < i_end; ++i) {
         const Tile *tile = mGrid.at(i).tile;
+#ifdef ZOMBOID
+        if (tile && tile->tileset() == tileset) {
+            removeReference(tileset);
+            mGrid.replace(i, Cell());
+        }
+#else
         if (tile && tile->tileset() == tileset)
             mGrid.replace(i, Cell());
+#endif
     }
 }
 
@@ -344,6 +368,12 @@ void TileLayer::replaceReferencesToTileset(Tileset *oldTileset,
 {
     for (int i = 0, i_end = mGrid.size(); i < i_end; ++i) {
         const Tile *tile = mGrid.at(i).tile;
+#ifdef ZOMBOID
+        if (tile && tile->tileset() == oldTileset) {
+            removeReference(oldTileset);
+            addReference(newTileset);
+        }
+#endif
         if (tile && tile->tileset() == oldTileset)
 #if SPARSE_TILELAYER
             mGrid.setTile(i, newTileset->tileAt(tile->id()));
@@ -367,6 +397,10 @@ void TileLayer::resize(const QSize &size, const QPoint &offset)
     const int endX = qMin(mWidth, size.width() - offset.x());
     const int endY = qMin(mHeight, size.height() - offset.y());
 
+#ifdef ZOMBOID
+    mUsedTilesets.clear();
+#endif
+
     for (int y = startY; y < endY; ++y) {
         for (int x = startX; x < endX; ++x) {
             const int index = x + offset.x() + (y + offset.y()) * size.width();
@@ -374,6 +408,10 @@ void TileLayer::resize(const QSize &size, const QPoint &offset)
             newGrid.replace(index, cellAt(x, y));
 #else
             newGrid[index] = cellAt(x, y);
+#endif
+#ifdef ZOMBOID
+            if (Tile *tile = cellAt(x, y).tile)
+                addReference(tile->tileset());
 #endif
         }
     }
@@ -392,6 +430,10 @@ void TileLayer::offset(const QPoint &offset,
     QVector<Cell> newGrid(mWidth * mHeight);
 #endif
 
+#ifdef ZOMBOID
+    mUsedTilesets.clear();
+#endif
+
     for (int y = 0; y < mHeight; ++y) {
         for (int x = 0; x < mWidth; ++x) {
             // Skip out of bounds tiles
@@ -400,6 +442,10 @@ void TileLayer::offset(const QPoint &offset,
                 newGrid.replace(x, y, cellAt(x, y));
 #else
                 newGrid[x + y * mWidth] = cellAt(x, y);
+#endif
+#ifdef ZOMBOID
+                if (Tile *tile = cellAt(x, y).tile)
+                    addReference(tile->tileset());
 #endif
                 continue;
             }
@@ -435,6 +481,12 @@ void TileLayer::offset(const QPoint &offset,
                 newGrid[x + y * mWidth] = cellAt(oldX, oldY);
             else
                 newGrid[x + y * mWidth] = Cell();
+#endif
+#ifdef ZOMBOID
+            if (contains(oldX, oldY) && bounds.contains(oldX, oldY)) {
+                if (Tile *tile = cellAt(oldX, oldY).tile)
+                    addReference(tile->tileset());
+            }
 #endif
         }
     }
@@ -517,6 +569,7 @@ TileLayer *TileLayer::initializeClone(TileLayer *clone) const
     clone->mMaxTileSize = mMaxTileSize;
     clone->mOffsetMargins = mOffsetMargins;
 #ifdef ZOMBOID
+    clone->mUsedTilesets = mUsedTilesets;
     /* don't clone the group! */
 #endif
     return clone;
