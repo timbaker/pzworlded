@@ -256,6 +256,12 @@ void TilesetManager::imageLoaded(QImage *image, Tileset *tileset)
     // This updates a tileset in the cache.
     tileset->loadFromImage(*image, tileset->imageSource());
 
+    // If a .tbx lot is added, only the used tilesets get loaded, but all of
+    // TileMetaInfoMgr's tilesets are passed to addReferences().  Since only
+    // the tilesets used by the .tbx lot are loaded, the unloaded ones are
+    // still marked "missing" and don't get added to mWatcher.
+    mWatcher->addPath(tileset->imageSource());
+
     // Now update every tileset using this image.
     foreach (Tileset *candidate, tilesets()) {
         if (candidate->isLoaded())
