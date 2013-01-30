@@ -620,7 +620,9 @@ QPolygonF RoofObject::calcShape() const
 
 void RoofObject::setCapTiles(BuildingTileEntry *entry)
 {
-    if (!entry->asRoofCap()) {
+    if (!entry)
+        entry = BuildingTilesMgr::instance()->noneTileEntry();
+    if (!entry->isNone() && !entry->asRoofCap()) {
         qFatal("wrong type of tiles passed to RoofObject::setCapTiles");
         return;
     }
@@ -629,7 +631,9 @@ void RoofObject::setCapTiles(BuildingTileEntry *entry)
 
 void RoofObject::setSlopeTiles(BuildingTileEntry *entry)
 {
-    if (!entry->asRoofSlope()) {
+    if (!entry)
+        entry = BuildingTilesMgr::instance()->noneTileEntry();
+    if (!entry->isNone() && !entry->asRoofSlope()) {
         qFatal("wrong type of tiles passed to RoofObject::setSlopeTiles");
         return;
     }
