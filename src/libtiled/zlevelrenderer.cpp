@@ -246,6 +246,11 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
         QPoint columnItr = rowItr;
 
         for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
+            // Multi-threading
+            if (mAbortDrawing && *mAbortDrawing) {
+                painter->setTransform(baseTransform);
+                return;
+            }
             if (layer->contains(columnItr)) {
                 const Cell &cell = layer->cellAt(columnItr);
                 if (!cell.isEmpty()) {
@@ -366,8 +371,8 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
 
     QTransform baseTransform = painter->transform();
 
-    static QVector<const Cell*> cells(40); // or QVarLengthArray
-    static QVector<qreal> opacities(40); // or QVarLengthArray
+    /*static*/ QVector<const Cell*> cells(40); // or QVarLengthArray
+    /*static*/ QVector<qreal> opacities(40); // or QVarLengthArray
 
     layerGroup->prepareDrawing(this, rect);
 
@@ -382,6 +387,11 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
             cells.resize(0);
             if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
                 for (int i = 0; i < cells.size(); i++) {
+                    // Multi-threading
+                    if (mAbortDrawing && *mAbortDrawing) {
+                        painter->setTransform(baseTransform);
+                        return;
+                    }
                     const Cell *cell = cells[i];
                     if (!cell->isEmpty()) {
                         const QImage &img = cell->tile->image();

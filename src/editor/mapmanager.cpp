@@ -67,6 +67,9 @@ MapManager::MapManager() :
     connect(&mChangedFilesTimer, SIGNAL(timeout()),
             SLOT(fileChangedTimeout()));
 
+    connect(&mMapReaderThread, SIGNAL(mapLoaded(Map*,MapInfo*)),
+            SLOT(mapLoadedByThread(Map*,MapInfo*)));
+
     connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetAdded(Tiled::Tileset*)),
             SLOT(metaTilesetAdded(Tiled::Tileset*)));
     connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetRemoved(Tiled::Tileset*)),
@@ -163,7 +166,7 @@ public:
 #include "BuildingEditor/buildingreader.h"
 #include "BuildingEditor/buildingmap.h"
 
-MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
+MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, bool asynch)
 {
     QString mapFilePath = pathForMap(mapName, relativeTo);
     if (mapFilePath.isEmpty()) {
@@ -175,9 +178,25 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
         return mMapInfo[mapFilePath];
     }
 
+    if (asynch) {
+        MapInfo *mapInfo = this->mapInfo(mapFilePath);
+        if (mapInfo->mLoading)
+            return mapInfo;
+        mapInfo->mLoading = true;
+        mMapReaderThread.addJob(mapInfo);
+        return mapInfo;
+    }
+
     QFileInfo fileInfoMap(mapFilePath);
 
     PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
+
+    // Caller wants the map now but it is being loaded by a worker thread.
+    if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->mLoading) {
+        while (mMapInfo[mapFilePath]->mLoading) {
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+    }
 
     Map *map = 0;
     if (fileInfoMap.suffix() == QLatin1String("tbx")) {
@@ -251,6 +270,9 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo)
 
     mMapInfo[mapFilePath]->mMap = map;
     mMapInfo[mapFilePath]->mPlaceholder = false;
+
+    // The reference count is zero, but prevent it being immediately purged.
+    mMapInfo[mapFilePath]->mReferenceEpoch = ++mReferenceEpoch;
 
     return mMapInfo[mapFilePath];
 }
@@ -666,5 +688,123 @@ void MapManager::metaTilesetRemoved(Tileset *tileset)
     foreach (MapInfo *mapInfo, mMapInfo) {
         if (mapInfo->map() && mapInfo->path().endsWith(QLatin1String(".tbx")))
             fileChanged(mapInfo->path());
+    }
+}
+
+void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
+{
+    Tile *missingTile = TilesetManager::instance()->missingTile();
+    foreach (Tileset *tileset, map->missingTilesets()) {
+        if (tileset->tileHeight() == 128 && tileset->tileWidth() == 64) {
+            // Replace the all-red image with something nicer.
+            for (int i = 0; i < tileset->tileCount(); i++)
+                tileset->tileAt(i)->setImage(missingTile->image());
+        }
+    }
+    TilesetManager::instance()->addReferences(map->tilesets());
+
+    mapInfo->mMap = map;
+    mapInfo->mPlaceholder = false;
+    mapInfo->mLoading = false;
+
+    // The reference count is zero, but prevent it being immediately purged.
+    mapInfo->mReferenceEpoch = ++mReferenceEpoch;
+
+    emit mapLoaded(mapInfo);
+}
+
+void MapManager::mapFailedToLoadByThread(const QString error, MapInfo *mapInfo)
+{
+    mapInfo->mLoading = false;
+}
+
+/////
+
+MapReaderThread::MapReaderThread() :
+    mQuit(false)
+{
+}
+
+MapReaderThread::~MapReaderThread()
+{
+    mMutex.lock();
+    mQuit = true;
+    mWaitForJobs.wakeOne();
+    mMutex.unlock();
+    wait();
+}
+
+void MapReaderThread::run()
+{
+    forever {
+        if (mQuit) // mutex protect it?
+            break;
+
+        mMutex.lock();
+        Job job = mJobs.takeAt(0);
+        mMutex.unlock();
+
+        Map *map = loadMap(job.mapInfo);
+        if (map)
+            emit mapLoaded(map, job.mapInfo);
+        else
+            emit mapFailedToLoad(mError, job.mapInfo);
+
+        if (!mJobs.size()) {
+            mMutex.lock();
+            mWaitForJobs.wait(&mMutex);
+            mMutex.unlock();
+        }
+    }
+}
+
+void MapReaderThread::addJob(MapInfo *mapInfo)
+{
+    QMutexLocker locker(&mMutex);
+    mJobs += Job(mapInfo);
+
+    if (!isRunning())
+        start();
+    else {
+        mWaitForJobs.wakeOne();
+    }
+}
+
+class MapReaderThreadMapReader : public MapReader
+{
+protected:
+    /**
+     * Overridden to make sure the resolved reference is canonical.
+     */
+    QString resolveReference(const QString &reference, const QString &mapPath)
+    {
+        QString resolved = MapReader::resolveReference(reference, mapPath);
+        QString canonical = QFileInfo(resolved).canonicalFilePath();
+
+        // Make sure that we're not returning an empty string when the file is
+        // not found.
+        return canonical.isEmpty() ? resolved : canonical;
+    }
+};
+
+MapReaderThread::Map *MapReaderThread::loadMap(MapInfo *mapInfo)
+{
+    if (mapInfo->path().endsWith(QLatin1String(".tbx"))) {
+        return 0; // no way this will be thread safe due to use of FurnitureGroups/BuildingTilesMgr
+        BuildingEditor::BuildingReader reader;
+        BuildingEditor::Building *building = reader.read(mapInfo->path());
+        if (!building) {
+            mError = reader.errorString();
+            return 0;
+        }
+        BuildingEditor::BuildingMap bmap(building);
+        return bmap.mergedMap();
+    } else {
+        MapReaderThreadMapReader reader;
+//        reader.setTilesetImageCache(TilesetManager::instance()->imageCache()); // not thread-safe class
+        Map *map = reader.readMap(mapInfo->path());
+        if (!map)
+            mError = reader.errorString();
+        return map;
     }
 }

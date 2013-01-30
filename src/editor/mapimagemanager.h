@@ -69,6 +69,66 @@ private:
     bool mQuit;
 };
 
+class MapImageData
+{
+public:
+    MapImageData() :
+        scale(0),
+        missingTilesets(false)
+    {
+
+    }
+
+    bool valid() const { return !image.isNull(); }
+
+    QImage image;
+    QRectF levelZeroBounds;
+    qreal scale;
+    QList<MapInfo*> sources;
+    bool missingTilesets;
+};
+
+#include <QMetaType>
+Q_DECLARE_METATYPE(MapImageData) // for QueuedConnection
+
+class MapImageRenderThread : public QThread
+{
+    Q_OBJECT
+public:
+    MapImageRenderThread();
+
+    ~MapImageRenderThread();
+
+    void run();
+
+    void addJob(MapImage *mapImage);
+    void cleanupDoneJobs();
+
+    void mapLoaded(MapComposite *mapComposite);
+
+signals:
+    void mapNeeded(MapImage *mapImage);
+    void imageRendered(MapImageData data, MapImage *mapImage);
+
+private:
+    MapImageData generateMapImage(MapComposite *mapComposite);
+
+    class Job {
+    public:
+        Job(MapImage *mapImage);
+
+        MapComposite *mapComposite;
+        MapImage *mapImage;
+    };
+    QList<Job> mJobs;
+    QList<Job> mDoneJobs;
+
+    QMutex mMutex;
+    QWaitCondition mWaitForMap;
+    QWaitCondition mWaitForJobs;
+    bool mQuit;
+};
+
 class MapImage
 {
 public:
@@ -102,6 +162,8 @@ public:
     QRectF levelZeroBounds() const
     { return mLevelZeroBounds; }
 
+    bool isMissingTilesets() const { return mMissingTilesets; }
+
     bool isLoaded() const { return mLoaded; }
 
 private:
@@ -110,6 +172,7 @@ private:
     QRectF mLevelZeroBounds;
     qreal mScale;
     QList<MapInfo*> mSources;
+    bool mMissingTilesets;
     bool mLoaded;
 
     friend class MapImageManager;
@@ -134,7 +197,9 @@ protected:
         ImageData() :
             scale(0),
             valid(false),
-            missingTilesets(false)
+            missingTilesets(false),
+            threadLoad(false),
+            threadRender(false)
         {}
         qreal scale;
         QRectF levelZeroBounds;
@@ -143,10 +208,16 @@ protected:
         QStringList sources;
         bool missingTilesets;
         QSize size;
+
+        bool threadLoad;
+        bool threadRender;
     };
 
     ImageData generateMapImage(const QString &mapFilePath, bool force = false);
+#if 0
     ImageData generateMapImage(MapComposite *mapComposite);
+#endif
+    void paintDummyImage(ImageData &data, MapInfo *mapInfo);
 
     ImageData generateBMPImage(const QString &bmpFilePath);
 
@@ -160,7 +231,13 @@ public slots:
     void mapFileChanged(MapInfo *mapInfo);
 
 private slots:
-    void imageLoaded(QImage *image, MapImage *mapImage);
+    void imageLoadedByThread(QImage *image, MapImage *mapImage);
+
+    void renderThreadNeedsMap(MapImage *mapImage);
+    void imageRenderedByThread(MapImageData imgData, MapImage *mapImage);
+
+    void mapLoaded(MapInfo *mapInfo);
+
     void processDeferrals();
 
 private:
@@ -176,6 +253,8 @@ private:
 
     QVector<MapImageReaderThread*> mImageReaderThread;
     int mNextThreadForJob;
+
+    MapImageRenderThread mImageRenderThread;
 
     friend class MapImageManagerDeferral;
     void deferThreadResults(bool defer);

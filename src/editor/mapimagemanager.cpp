@@ -41,6 +41,7 @@
 #include <QMessageBox>
 
 using namespace Tiled;
+using namespace Tiled::Internal;
 
 const int IMAGE_WIDTH = 512;
 
@@ -56,11 +57,20 @@ MapImageManager::MapImageManager() :
     for (int i = 0; i < mImageReaderThread.size(); i++) {
         mImageReaderThread[i] = new MapImageReaderThread;
         connect(mImageReaderThread[i], SIGNAL(imageLoaded(QImage*,MapImage*)),
-                SLOT(imageLoaded(QImage*,MapImage*)));
+                SLOT(imageLoadedByThread(QImage*,MapImage*)));
     }
+
+    connect(&mImageRenderThread, SIGNAL(mapNeeded(MapImage*)),
+            SLOT(renderThreadNeedsMap(MapImage*)));
+    qRegisterMetaType<MapImageData>("MapImageData");
+    connect(&mImageRenderThread,
+            SIGNAL(imageRendered(MapImageData,MapImage*)),
+            SLOT(imageRenderedByThread(MapImageData,MapImage*)));
 
     connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
             SLOT(mapFileChanged(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+            SLOT(mapLoaded(MapInfo*)));
 }
 
 MapImageManager::~MapImageManager()
@@ -122,33 +132,21 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
         return 0;
 
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
-
-    bool threaded = false;
-    if (data.image.isNull()) {
-        data.image = QImage(data.size, QImage::Format_ARGB32);
-//        data.image.setColorTable(QVector<QRgb>() << qRgb(255,255,255));
-        QPainter p(&data.image);
-        QPolygonF poly;
-        MapImage mapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
-        poly += mapImage.tileToImageCoords(0, 0);
-        poly += mapImage.tileToImageCoords(mapInfo->width(), 0);
-        poly += mapImage.tileToImageCoords(mapInfo->width(), mapInfo->height());
-        poly += mapImage.tileToImageCoords(0, mapInfo->height());
-        poly += poly.first();
-        QPainterPath path;
-        path.addPolygon(poly);
-        data.image.fill(QColor(0,0,0,0));
-        p.fillPath(path, QColor(100,100,100));
-        threaded = true;
-    }
-
+    if (data.threadLoad || data.threadRender)
+        paintDummyImage(data, mapInfo);
     MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
-    mapImage->mLoaded = !threaded;
+    mapImage->mMissingTilesets = data.missingTilesets;
+    mapImage->mLoaded = !(data.threadLoad || data.threadRender);
 
-    if (threaded) {
-        QString imageFileName = imageFileInfo(mapFilePath).canonicalFilePath();
-        mImageReaderThread[mNextThreadForJob]->addJob(imageFileName, mapImage);
-        mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderThread.size();
+    if (data.threadLoad || data.threadRender) {
+        if (data.threadLoad) {
+            QString imageFileName = imageFileInfo(mapFilePath).canonicalFilePath();
+            mImageReaderThread[mNextThreadForJob]->addJob(imageFileName, mapImage);
+            mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderThread.size();
+        }
+        if (data.threadRender) {
+            mImageRenderThread.addJob(mapImage);
+        }
     }
 
     // Set up file modification tracking on each TMX that makes
@@ -201,13 +199,60 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
                 }
             }
             if (data.valid) {
-                data.image = QImage();
+                data.threadLoad = true;
                 data.size = reader.size();
                 return data;
             }
         }
     }
 
+#if 1
+    // Create ImageData appropriate for paintDummyImage().
+    MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
+    if (!mapInfo) {
+        mError = MapManager::instance()->errorString();
+        return ImageData();
+    }
+
+    MapRenderer *renderer = NULL;
+    Map staticMap(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
+            mapInfo->tileWidth(), mapInfo->tileHeight());
+    Map *map = &staticMap;
+
+    switch (map->orientation()) {
+    case Map::Isometric:
+        renderer = new IsometricRenderer(map);
+        break;
+    case Map::LevelIsometric:
+        renderer = new ZLevelRenderer(map);
+        break;
+    case Map::Orthogonal:
+        renderer = new OrthogonalRenderer(map);
+        break;
+    case Map::Staggered:
+        renderer = new StaggeredRenderer(map);
+        break;
+    default:
+        return ImageData();
+    }
+
+    QRectF sceneRect = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
+    QSize mapSize = sceneRect.size().toSize();
+    if (mapSize.isEmpty())
+        return ImageData();
+
+    qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
+    mapSize *= scale;
+
+    ImageData data;
+    data.threadRender = true;
+    data.size = mapSize;
+    data.scale = scale;
+    data.levelZeroBounds = sceneRect;
+//    data.sources = mapComposite->getMapFileNames();
+    data.valid = true;
+    return data;
+#else
     PROGRESS progress(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
 
     MapInfo *mapInfo = MapManager::instance()->loadMap(mapFilePath);
@@ -226,8 +271,8 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
         foreach (TileLayer *tl, mc->map()->tileLayers())
             usedTilesets += tl->usedTilesets();
     }
-    usedTilesets.remove(Tiled::Internal::TilesetManager::instance()->missingTileset());
-    Tiled::Internal::TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
+    usedTilesets.remove(TilesetManager::instance()->missingTileset());
+    TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
 
     ImageData data = generateMapImage(&mapComposite);
 
@@ -242,8 +287,10 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     writeImageData(imageDataInfo, data);
 
     return data;
+#endif
 }
 
+#if 0
 MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapComposite)
 {
     Map *map = mapComposite->map();
@@ -268,12 +315,14 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
     }
 
     mapComposite->saveVisibility();
+    mapComposite->saveOpacity();
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
         foreach (TileLayer *tl, layerGroup->layers()) {
             bool isVisible = true;
             if (tl->name().contains(QLatin1String("NoRender")))
                 isVisible = false;
             layerGroup->setLayerVisibility(tl, isVisible);
+            layerGroup->setLayerOpacity(tl, 1.0f);
         }
         layerGroup->synch();
     }
@@ -294,6 +343,8 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
     qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
     mapSize *= scale;
 
+#if 1
+#else
     QImage image(mapSize, QImage::Format_ARGB32);
     image.fill(Qt::transparent);
     QPainter painter(&image);
@@ -311,13 +362,20 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
             renderer->drawTileLayer(&painter, tl);
         }
     }
+#endif
 
     mapComposite->restoreVisibility();
+    mapComposite->restoreOpacity();
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
         layerGroup->synch();
 
     ImageData data;
+#if 1
+    data.threadRender = true;
+    data.size = mapSize;
+#else
     data.image = image;
+#endif
     data.scale = scale;
     data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
     data.levelZeroBounds.translate(-sceneRect.topLeft());
@@ -327,6 +385,26 @@ MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapCo
     delete renderer;
 
     return data;
+}
+#endif
+
+void MapImageManager::paintDummyImage(ImageData &data, MapInfo *mapInfo)
+{
+    Q_ASSERT(data.size.isValid());
+    data.image = QImage(data.size, QImage::Format_ARGB32);
+//        data.image.setColorTable(QVector<QRgb>() << qRgb(255,255,255));
+    QPainter p(&data.image);
+    QPolygonF poly;
+    MapImage mapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
+    poly += mapImage.tileToImageCoords(0, 0);
+    poly += mapImage.tileToImageCoords(mapInfo->width(), 0);
+    poly += mapImage.tileToImageCoords(mapInfo->width(), mapInfo->height());
+    poly += mapImage.tileToImageCoords(0, mapInfo->height());
+    poly += poly.first();
+    QPainterPath path;
+    path.addPolygon(poly);
+    data.image.fill(QColor(Qt::transparent));
+    p.fillPath(path, QColor(100,100,100));
 }
 
 // BMP To TMX image thumbnail
@@ -483,6 +561,10 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
                 foreach (MapInfo *sourceInfo, mapImage->sources())
                     data.sources += sourceInfo->path();
             }
+            if (/*data.threadLoad ||*/ data.threadRender) {
+                paintDummyImage(data, mapInfo);
+                mImageRenderThread.addJob(mapImage);
+            }
             mapImage->mapFileChanged(data.image, data.scale,
                                      data.levelZeroBounds);
 
@@ -494,12 +576,14 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
                     sources += sourceInfo;
             mapImage->setSources(sources);
 
+            mapImage->mLoaded = !(data.threadLoad || data.threadRender);
+
             emit mapImageChanged(mapImage);
         }
     }
 }
 
-void MapImageManager::imageLoaded(QImage *image, MapImage *mapImage)
+void MapImageManager::imageLoadedByThread(QImage *image, MapImage *mapImage)
 {
     mapImage->setImage(*image);
     mapImage->mLoaded = true;
@@ -509,6 +593,60 @@ void MapImageManager::imageLoaded(QImage *image, MapImage *mapImage)
         mDeferredMapImages += mapImage;
     else
         emit mapImageChanged(mapImage);
+}
+
+void MapImageManager::renderThreadNeedsMap(MapImage *mapImage)
+{
+    bool asynch = true;
+    MapManager::instance()->loadMap(mapImage->mapInfo()->path(), QString(), asynch);
+    if (!mapImage->mapInfo()->isLoading())
+        mapLoaded(mapImage->mapInfo());
+}
+
+void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapImage)
+{
+    mapImage->mImage = imgData.image;
+    mapImage->mLevelZeroBounds = imgData.levelZeroBounds;
+    mapImage->mScale = imgData.scale;
+    mapImage->mMissingTilesets = imgData.missingTilesets;
+    mapImage->mSources = imgData.sources;
+    mapImage->mLoaded = true;
+
+    ImageData data;
+    data.image = mapImage->image();
+    data.levelZeroBounds = mapImage->levelZeroBounds();
+    data.scale = mapImage->scale();
+    foreach (MapInfo *mapInfo, mapImage->sources())
+        data.sources += mapInfo->path();
+    data.missingTilesets = mapImage->isMissingTilesets();
+
+    QFileInfo imageInfo = imageFileInfo(mapImage->mapInfo()->path());
+    QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
+    data.image.save(imageInfo.absoluteFilePath());
+    writeImageData(imageDataInfo, data);
+
+    mImageRenderThread.cleanupDoneJobs();
+
+    if (mDeferralDepth > 0)
+        mDeferredMapImages += mapImage;
+    else
+        emit mapImageChanged(mapImage);
+}
+
+void MapImageManager::mapLoaded(MapInfo *mapInfo)
+{
+    MapComposite *mapComposite = new MapComposite(mapInfo);
+
+    // Wait for TilesetManager's threads to finish loading the tilesets.
+    QSet<Tileset*> usedTilesets;
+    foreach (MapComposite *mc, mapComposite->maps()) {
+        foreach (TileLayer *tl, mc->map()->tileLayers())
+            usedTilesets += tl->usedTilesets();
+    }
+    usedTilesets.remove(TilesetManager::instance()->missingTileset());
+    TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
+
+    mImageRenderThread.mapLoaded(mapComposite);
 }
 
 QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
@@ -572,6 +710,7 @@ MapImage::MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, Map
     , mInfo(mapInfo)
     , mLevelZeroBounds(levelZeroBounds)
     , mScale(scale)
+    , mMissingTilesets(false)
     , mLoaded(false)
 {
 }
@@ -681,4 +820,176 @@ void MapImageReaderThread::addJob(const QString &imageFileName, MapImage *mapIma
     else {
         mWaitCondition.wakeOne();
     }
+}
+
+/////
+
+MapImageRenderThread::MapImageRenderThread() :
+    mQuit(false)
+{
+}
+
+MapImageRenderThread::~MapImageRenderThread()
+{
+    mMutex.lock();
+    mQuit = true;
+    mWaitForMap.wakeOne();
+    mWaitForJobs.wakeOne();
+    mMutex.unlock();
+    wait();
+
+    cleanupDoneJobs();
+}
+
+void MapImageRenderThread::run()
+{
+    forever {
+        QMutexLocker locker(&mMutex);
+        if (mQuit) return;
+        emit mapNeeded(mJobs.at(0).mapImage);
+        mWaitForMap.wait(&mMutex);
+        if (mQuit) return;
+        Job job = mJobs.takeAt(0);
+        Q_ASSERT(job.mapComposite != 0);
+        locker.unlock();
+
+        MapImageData data = generateMapImage(job.mapComposite);
+
+        locker.relock();
+        if (mQuit) return;
+        mDoneJobs += job;
+        locker.unlock();
+
+        if (data.valid())
+            emit imageRendered(data, job.mapImage);
+
+        locker.relock();
+        if (mQuit) return;
+        if (!mJobs.size()) {
+            qDebug() << "MapImageRenderThread sleeping";
+            mWaitForJobs.wait(&mMutex);
+            qDebug() << "MapImageRenderThread waking";
+        }
+        locker.unlock();
+    }
+}
+
+void MapImageRenderThread::addJob(MapImage *mapImage)
+{
+    QMutexLocker locker(&mMutex);
+    mJobs += Job(mapImage);
+
+    if (!isRunning())
+        start();
+    else {
+        mWaitForJobs.wakeOne();
+    }
+}
+
+void MapImageRenderThread::cleanupDoneJobs()
+{
+    QMutexLocker locker(&mMutex);
+    foreach (const Job &job, mDoneJobs)
+        delete job.mapComposite;
+    mDoneJobs.clear();
+}
+
+void MapImageRenderThread::mapLoaded(MapComposite *mapComposite)
+{
+    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
+        foreach (TileLayer *tl, layerGroup->layers()) {
+            bool isVisible = true;
+            if (tl->name().contains(QLatin1String("NoRender")))
+                isVisible = false;
+            layerGroup->setLayerVisibility(tl, isVisible);
+            layerGroup->setLayerOpacity(tl, 1.0f);
+        }
+        layerGroup->synch();
+    }
+
+    QMutexLocker locker(&mMutex);
+    Q_ASSERT(mJobs[0].mapComposite == 0);
+    mJobs[0].mapComposite = mapComposite;
+    mWaitForMap.wakeOne();
+}
+
+MapImageData MapImageRenderThread::generateMapImage(MapComposite *mapComposite)
+{
+    Map *map = mapComposite->map();
+
+    MapRenderer *renderer = NULL;
+
+    switch (map->orientation()) {
+    case Map::Isometric:
+        renderer = new IsometricRenderer(map);
+        break;
+    case Map::LevelIsometric:
+        renderer = new ZLevelRenderer(map);
+        break;
+    case Map::Orthogonal:
+        renderer = new OrthogonalRenderer(map);
+        break;
+    case Map::Staggered:
+        renderer = new StaggeredRenderer(map);
+        break;
+    default:
+        return MapImageData();
+    }
+
+    // Don't draw empty levels
+    int maxLevel = 0;
+    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
+        if (!layerGroup->bounds().isEmpty())
+            maxLevel = layerGroup->level();
+    }
+    renderer->setMaxLevel(maxLevel);
+
+    QRectF sceneRect = mapComposite->boundingRect(renderer);
+    QSize mapSize = sceneRect.size().toSize();
+    if (mapSize.isEmpty())
+        return MapImageData();
+
+    qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
+    mapSize *= scale;
+
+    QImage *image = new QImage(mapSize, QImage::Format_ARGB32);
+    image->fill(Qt::transparent);
+    QPainter painter(image);
+
+    painter.setRenderHints(QPainter::SmoothPixmapTransform |
+                           QPainter::HighQualityAntialiasing);
+    painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
+
+    foreach (MapComposite::ZOrderItem zo, mapComposite->zOrder()) {
+        if (zo.group) {
+            renderer->drawTileLayerGroup(&painter, zo.group);
+        } else if (TileLayer *tl = zo.layer->asTileLayer()) {
+            if (tl->name().contains(QLatin1String("NoRender")))
+                continue;
+            renderer->drawTileLayer(&painter, tl);
+        }
+    }
+
+    MapImageData data;
+    data.image = *image;
+    data.scale = scale;
+    data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
+    data.levelZeroBounds.translate(-sceneRect.topLeft());
+    foreach (MapComposite *mc, mapComposite->maps())
+        data.sources += mc->mapInfo();
+
+    foreach (MapComposite *mc, mapComposite->maps()) {
+        if (mc->map()->hasUsedMissingTilesets()) {
+            data.missingTilesets = true;
+            break;
+        }
+    }
+
+    return data;
+}
+
+MapImageRenderThread::Job::Job(MapImage *mapImage) :
+    mapComposite(0),
+    mapImage(mapImage)
+{
 }

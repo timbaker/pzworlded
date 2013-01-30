@@ -142,7 +142,7 @@ void MapsDock::selectionChanged()
 
 void MapsDock::onMapImageChanged(MapImage *mapImage)
 {
-    if (mapImage == mPreviewMapImage) {
+    if (mapImage == mPreviewMapImage && mapImage->isLoaded()) {
         QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio);
         mPreviewLabel->setPixmap(QPixmap::fromImage(image));
     }
