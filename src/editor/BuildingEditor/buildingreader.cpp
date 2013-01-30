@@ -852,7 +852,7 @@ QString BuildingReaderPrivate::getUserTile(BuildingFloor *floor, int x, int y, i
         return mUserTiles.at(index - 1);
     xml.raiseError(tr("Invalid tile index at (%1,%2) on floor %3")
                    .arg(x).arg(y).arg(floor->level()));
-    return 0;
+    return QString();
 }
 
 void BuildingReaderPrivate::readUnknownElement()
