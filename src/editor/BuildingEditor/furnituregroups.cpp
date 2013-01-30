@@ -89,7 +89,7 @@ QString FurnitureGroups::txtPath()
     return Preferences::instance()->configPath(txtName());
 }
 
-FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &error)
+FurnitureTiles *FurnitureGroups::furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &error)
 {
     bool corners = furnitureBlock.value("corners") == QLatin1String("true");
 
@@ -97,7 +97,7 @@ FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &
     FurnitureTiles::FurnitureLayer layer = layerString.isEmpty() ?
             FurnitureTiles::LayerFurniture : FurnitureTiles::layerFromString(layerString);
     if (layer == FurnitureTiles::InvalidLayer) {
-        error = FurnitureGroups::tr("Invalid furniture layer '%1'.").arg(layerString);
+        error = tr("Invalid furniture layer '%1'.").arg(layerString);
         return 0;
     }
 
@@ -106,7 +106,7 @@ FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &
     foreach (SimpleFileBlock entryBlock, furnitureBlock.blocks) {
         if (entryBlock.name == QLatin1String("entry")) {
             FurnitureTile::FurnitureOrientation orient
-                    = FurnitureGroups::orientFromString(entryBlock.value(QLatin1String("orient")));
+                    = orientFromString(entryBlock.value(QLatin1String("orient")));
             FurnitureTile *tile = new FurnitureTile(tiles, orient);
             foreach (SimpleFileKeyValue kv, entryBlock.values) {
                 if (!kv.name.contains(QLatin1Char(',')))
@@ -116,7 +116,7 @@ FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &
                 int x = values[0].toInt();
                 int y = values[1].toInt();
                 if (x < 0 || x >= 50 || y < 0 || y >= 50) {
-                    error = FurnitureGroups::tr("Invalid tile coordinates (%1,%2).")
+                    error = tr("Invalid tile coordinates (%1,%2).")
                             .arg(x).arg(y);
                     delete tiles;
                     return 0;
@@ -124,7 +124,7 @@ FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &
                 QString tilesetName;
                 int tileIndex;
                 if (!BuildingTilesMgr::parseTileName(kv.value, tilesetName, tileIndex)) {
-                    error = FurnitureGroups::tr("Can't parse tile name '%1'.").arg(kv.value);
+                    error = tr("Can't parse tile name '%1'.").arg(kv.value);
                     delete tiles;
                     return 0;
                 }
@@ -132,7 +132,7 @@ FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &
             }
             tiles->setTile(tile);
         } else {
-            error = FurnitureGroups::tr("Unknown block name '%1'.")
+            error = tr("Unknown block name '%1'.")
                     .arg(entryBlock.name);
             delete tiles;
             return 0;
@@ -286,7 +286,7 @@ bool FurnitureGroups::readTxt()
 #endif
 }
 
-SimpleFileBlock furnitureTilesToSFB(FurnitureTiles *ftiles)
+SimpleFileBlock FurnitureGroups::furnitureTilesToSFB(FurnitureTiles *ftiles)
 {
     SimpleFileBlock furnitureBlock;
     furnitureBlock.name = QLatin1String("furniture");

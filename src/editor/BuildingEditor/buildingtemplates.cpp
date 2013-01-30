@@ -374,9 +374,9 @@ BuildingTileEntry *TemplatesFile::readTileEntry(SimpleFileBlock &block, QString 
 
 FurnitureTiles *TemplatesFile::readFurnitureTiles(SimpleFileBlock &block, QString &error)
 {
-    extern FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &block, QString &error);
-    if (FurnitureTiles *result = furnitureTilesFromSFB(block, error)) {
-        FurnitureTiles *match = FurnitureGroups::instance()->findMatch(result);
+    FurnitureGroups *fg = FurnitureGroups::instance();
+    if (FurnitureTiles *result = fg->furnitureTilesFromSFB(block, error)) {
+        FurnitureTiles *match = fg->findMatch(result);
         if (match) {
             delete result;
             result = match;
@@ -408,8 +408,7 @@ void TemplatesFile::writeTileEntry(SimpleFileBlock &parentBlock, BuildingTileEnt
 
 void TemplatesFile::writeFurnitureTiles(SimpleFileBlock &block, FurnitureTiles *ftiles)
 {
-    extern SimpleFileBlock furnitureTilesToSFB(FurnitureTiles *ftiles);
-    block.blocks += furnitureTilesToSFB(ftiles);
+    block.blocks += FurnitureGroups::instance()->furnitureTilesToSFB(ftiles);
 }
 
 QString TemplatesFile::nameForEntry(BuildingTileEntry *entry)

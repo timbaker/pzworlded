@@ -24,6 +24,8 @@
 #include <QStringList>
 #include <QVector>
 
+class SimpleFileBlock;
+
 namespace BuildingEditor {
 
 class BuildingTile;
@@ -237,6 +239,9 @@ public:
     void layerChanged(FurnitureTiles *ftiles);
 
     static FurnitureTile::FurnitureOrientation orientFromString(const QString &s);
+
+    FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &error);
+    SimpleFileBlock furnitureTilesToSFB(FurnitureTiles *ftiles);
 
 signals:
     void furnitureLayerChanged(FurnitureTiles *ftiles);
