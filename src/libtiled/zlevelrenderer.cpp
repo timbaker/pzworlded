@@ -72,7 +72,7 @@ QRectF ZLevelRenderer::boundingRect(const MapObject *object) const
     int level = layer ? layer->level() : 0;
     if (object->tile()) {
         const QPointF bottomCenter = tileToPixelCoords(object->position(), level);
-        const QPixmap &img = object->tile()->image();
+        const QImage &img = object->tile()->image();
         return QRectF(bottomCenter.x() - img.width() / 2,
                       bottomCenter.y() - img.height(),
                       img.width(),
@@ -249,7 +249,7 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
             if (layer->contains(columnItr)) {
                 const Cell &cell = layer->cellAt(columnItr);
                 if (!cell.isEmpty()) {
-                    const QPixmap &img = cell.tile->image();
+                    const QImage &img = cell.tile->image();
                     const QPoint offset = cell.tile->tileset()->tileOffset();
 
                     qreal m11 = 1;      // Horizontal scaling factor
@@ -285,7 +285,7 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                     const QTransform transform(m11, m12, m21, m22, dx, dy);
                     painter->setTransform(transform * baseTransform);
 
-                    painter->drawPixmap(0, 0, img);
+                    painter->drawImage(0, 0, img);
                 }
             }
 
@@ -384,7 +384,7 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                 for (int i = 0; i < cells.size(); i++) {
                     const Cell *cell = cells[i];
                     if (!cell->isEmpty()) {
-                        const QPixmap &img = cell->tile->image();
+                        const QImage &img = cell->tile->image();
                         const QPoint offset = cell->tile->tileset()->tileOffset();
 
                         qreal m11 = 1;      // Horizontal scaling factor
@@ -422,7 +422,7 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
 
                         painter->setOpacity(opacities[i] * opacity);
 
-                        painter->drawPixmap(0, 0, img);
+                        painter->drawImage(0, 0, img);
                     }
                 }
             }
@@ -475,10 +475,10 @@ void ZLevelRenderer::drawMapObject(QPainter *painter,
     QPen pen(Qt::black);
 
     if (object->tile()) {
-        const QPixmap &img = object->tile()->image();
+        const QImage &img = object->tile()->image();
         QPointF paintOrigin(-img.width() / 2, -img.height());
         paintOrigin += tileToPixelCoords(object->position(), level).toPoint();
-        painter->drawPixmap(paintOrigin, img);
+        painter->drawImage(paintOrigin, img);
 
         pen.setStyle(Qt::SolidLine);
         painter->setPen(pen);

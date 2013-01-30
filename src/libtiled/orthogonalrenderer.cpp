@@ -72,7 +72,11 @@ QRectF OrthogonalRenderer::boundingRect(const MapObject *object) const
 
     if (object->tile()) {
         const QPointF bottomLeft = rect.topLeft();
+#ifdef ZOMBOID
+        const QImage &img = object->tile()->image();
+#else
         const QPixmap &img = object->tile()->image();
+#endif
         boundingRect = QRectF(bottomLeft.x(),
                               bottomLeft.y() - img.height(),
                               img.width(),
@@ -244,7 +248,11 @@ void OrthogonalRenderer::drawTileLayer(QPainter *painter,
             if (cell.isEmpty())
                 continue;
 
+#ifdef ZOMBOID
+            const QImage &img = cell.tile->image();
+#else
             const QPixmap &img = cell.tile->image();
+#endif
             const QPoint offset = cell.tile->tileset()->tileOffset();
 
             qreal m11 = 1;      // Horizontal scaling factor
@@ -278,7 +286,11 @@ void OrthogonalRenderer::drawTileLayer(QPainter *painter,
             const QTransform transform(m11, m12, m21, m22, dx, dy);
             painter->setTransform(transform * baseTransform);
 
+#ifdef ZOMBOID
+            painter->drawImage(0, 0, img);
+#else
             painter->drawPixmap(0, 0, img);
+#endif
         }
     }
 
@@ -321,9 +333,15 @@ void OrthogonalRenderer::drawMapObject(QPainter *painter,
     rect.moveTopLeft(QPointF(0, 0));
 
     if (object->tile()) {
+#ifdef ZOMBOID
+        const QImage &img = object->tile()->image();
+        const QPoint paintOrigin(0, -img.height());
+        painter->drawImage(paintOrigin, img);
+#else
         const QPixmap &img = object->tile()->image();
         const QPoint paintOrigin(0, -img.height());
         painter->drawPixmap(paintOrigin, img);
+#endif
 
         QPen pen(Qt::SolidLine);
         painter->setPen(pen);

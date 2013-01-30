@@ -332,7 +332,7 @@ bool BuildingTMX::upgradeTxt()
                     Tileset *ts = new Tileset(tilesetName, 64, 128);
                     // Since the tileset image height/width wasn't saved, create
                     // a tileset with only a single tile.
-                    ts->loadFromImage(TilesetManager::instance()->missingTile()->image().toImage(),
+                    ts->loadFromImage(TilesetManager::instance()->missingTile()->image(),
                                       kv.value + QLatin1String(".png"));
                     ts->setMissing(true);
                     TileMetaInfoMgr::instance()->addTileset(ts);
