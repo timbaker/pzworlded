@@ -25,6 +25,7 @@
 #include "preferences.h"
 #include "progress.h"
 #include "scenetools.h"
+#include "tilesetmanager.h"
 #include "undoredo.h"
 #include "world.h"
 #include "worldcell.h"
@@ -116,6 +117,8 @@ CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
 
     updateBoundingRect();
 
+    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+            SLOT(mapImageChanged(MapImage*)));
     connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
 }
 
@@ -239,6 +242,20 @@ void CellMiniMapItem::sceneRectChanged(const QRectF &sceneRect)
     updateCellImage();
     for (int i = 0; i < mLotImages.size(); i++)
         updateLotImage(i);
+}
+
+void CellMiniMapItem::mapImageChanged(MapImage *mapImage)
+{
+    if (mapImage == mMapImage) {
+        update();
+        return;
+    }
+    foreach (const LotImage &lotImage, mLotImages) {
+        if (mapImage == lotImage.mMapImage) {
+            update();
+            return;
+        }
+    }
 }
 
 ///// ///// ///// ///// /////
@@ -1134,6 +1151,9 @@ void CellScene::setDocument(CellDocument *doc)
             SLOT(selectedRoadsChanged()));
 
     loadMap();
+
+    connect(Tiled::Internal::TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
+            SLOT(tilesetChanged(Tileset*)));
 }
 
 WorldDocument *CellScene::worldDocument() const
@@ -1953,6 +1973,16 @@ bool CellScene::shouldObjectItemBeVisible(ObjectItem *item)
             (!mHighlightCurrentLevel || (mDocument->currentLevel() == obj->level())) &&
             mDocument->isObjectGroupVisible(obj->group(), obj->level()) &&
             mDocument->isObjectLevelVisible(obj->level());
+}
+
+void CellScene::tilesetChanged(Tileset *tileset)
+{
+    foreach (MapComposite *mc, mMapComposite->maps()) {
+        if (mc->map()->isTilesetUsed(tileset)) {
+            update();
+            return;
+        }
+    }
 }
 
 bool CellScene::mapAboutToChange(MapInfo *mapInfo)

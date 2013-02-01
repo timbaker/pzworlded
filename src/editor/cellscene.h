@@ -267,6 +267,7 @@ public:
 
 private slots:
     void sceneRectChanged(const QRectF &sceneRect);
+    void mapImageChanged(MapImage *mapImage);
 
 private:
     struct LotImage {
@@ -391,7 +392,10 @@ protected:
     void updateCurrentLevelHighlight();
     bool shouldObjectItemBeVisible(ObjectItem *item);
 
+    typedef Tiled::Tileset Tileset;
 public slots:
+    void tilesetChanged(Tileset *tileset);
+
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapFileChanged(MapInfo *mapInfo);
 
