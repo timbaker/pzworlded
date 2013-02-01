@@ -100,8 +100,10 @@ public:
                        << mCatGrimeFloor << mCatGrimeWall
                        << mCatRoofCaps << mCatRoofSlopes << mCatRoofTops;
 
-        foreach (BuildingTileCategory *category, mCategories)
+        foreach (BuildingTileCategory *category, mCategories) {
             mCategoryByName[category->name()] = category;
+            mUsedCategories[category] = false;
+        }
 
         mNoneBuildingTile = new NoneBuildingTile();
 
@@ -111,7 +113,7 @@ public:
 
     ~FakeBuildingTilesMgr()
     {
-        // The rest are deleted in fix()
+        // Some of these may have been deleted in fix().
         foreach (BuildingTileCategory *category, mCategories)
             if (!mUsedCategories[category])
                 delete category;
@@ -950,6 +952,7 @@ QString BuildingReaderPrivate::version1TileToEntry(BuildingTileCategory *categor
     if (mEntryMap.contains(key))
         return QString::number(mEntries.indexOf(mEntryMap[key]) + 1);
     BuildingTileEntry *entry = category->createEntryFromSingleTile(tileName);
+    mFakeBuildingTilesMgr.mUsedCategories[category] = true;
 
     if (BuildingTileEntry *match = category->findMatch(entry)) {
         delete entry;
@@ -1182,8 +1185,10 @@ void BuildingReaderPrivate::fix(Building *building)
     building->setUsedFurniture(usedFurniture);
 
     QList<BuildingTileEntry*> usedTiles;
-    foreach (BuildingTileEntry *entry, building->usedTiles())
-        usedTiles += fixEntry(entry);
+    foreach (BuildingTileEntry *entry, building->usedTiles()) {
+        if (entry && !entry->isNone())
+            usedTiles += fixEntry(entry);
+    }
     building->setUsedTiles(usedTiles);
 
     qDeleteAll(deadEntries);
@@ -1219,7 +1224,11 @@ FurnitureTiles *BuildingReaderPrivate::fixFurniture(FurnitureTiles *ftiles)
 
 BuildingTileEntry *BuildingReaderPrivate::fixEntry(BuildingTileEntry *entry)
 {
+    if (!entry || entry->isNone())
+        return entry;
+
     if (!fixedEntries.contains(entry)) {
+        Q_ASSERT(BuildingTilesMgr::instance()->indexOf(entry->mCategory) == -1);
         QString categoryName = entry->category()->name();
         BuildingTileCategory *category = BuildingTilesMgr::instance()->category(categoryName);
         deadCategories.insert(entry->mCategory);
