@@ -193,7 +193,7 @@ QString BuildingTilesMgr::adjustTileNameIndex(const QString &tileName, int offse
     parseTileName(tileName, tilesetName, index);
 
     // Currently, the only place this gets called with offset > 0 is by the
-    // createEntryFromSingleTile() method.  Those methods assume the tilesets
+    // createEntryFromSingleTile() methods.  Those methods assume the tilesets
     // are 8 tiles wide.  Remap the offset onto the tileset's actual number of
     // columns.
     if (offset > 0) {
@@ -752,7 +752,7 @@ bool BuildingTileEntry::equals(BuildingTileEntry *other) const
 
 BuildingTileEntry *BuildingTileEntry::asCategory(int n)
 {
-    return (mCategory == BuildingTilesMgr::instance()->category(n))
+    return (mCategory->name() == BuildingTilesMgr::instance()->category(n)->name())
             ? this : 0;
 }
 
@@ -826,10 +826,10 @@ BTC_Curtains::BTC_Curtains(const QString &label) :
 BuildingTileEntry *BTC_Curtains::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[East] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[South] = BuildingTilesMgr::instance()->get(tileName, 3);
+    entry->mTiles[West] = getTile(tileName);
+    entry->mTiles[East] = getTile(tileName, 1);
+    entry->mTiles[North] = getTile(tileName, 2);
+    entry->mTiles[South] = getTile(tileName, 3);
     return entry;
 }
 
@@ -856,10 +856,10 @@ BTC_Doors::BTC_Doors(const QString &label) :
 BuildingTileEntry *BTC_Doors::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[WestOpen] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[NorthOpen] = BuildingTilesMgr::instance()->get(tileName, 3);
+    entry->mTiles[West] = getTile(tileName);
+    entry->mTiles[North] = getTile(tileName, 1);
+    entry->mTiles[WestOpen] = getTile(tileName, 2);
+    entry->mTiles[NorthOpen] = getTile(tileName, 3);
     return entry;
 }
 
@@ -884,8 +884,8 @@ BTC_DoorFrames::BTC_DoorFrames(const QString &label) :
 BuildingTileEntry *BTC_DoorFrames::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 1);
+    entry->mTiles[West] = getTile(tileName);
+    entry->mTiles[North] = getTile(tileName, 1);
     return entry;
 }
 
@@ -909,7 +909,7 @@ BTC_Floors::BTC_Floors(const QString &label) :
 BuildingTileEntry *BTC_Floors::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[Floor] = BuildingTilesMgr::instance()->get(tileName);
+    entry->mTiles[Floor] = getTile(tileName);
     return entry;
 }
 
@@ -938,12 +938,12 @@ BTC_Stairs::BTC_Stairs(const QString &label) :
 BuildingTileEntry *BTC_Stairs::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West1] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[West2] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[West3] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[North1] = BuildingTilesMgr::instance()->get(tileName, 8);
-    entry->mTiles[North2] = BuildingTilesMgr::instance()->get(tileName, 9);
-    entry->mTiles[North3] = BuildingTilesMgr::instance()->get(tileName, 10);
+    entry->mTiles[West1] = getTile(tileName);
+    entry->mTiles[West2] = getTile(tileName, 1);
+    entry->mTiles[West3] = getTile(tileName, 2);
+    entry->mTiles[North1] = getTile(tileName, 8);
+    entry->mTiles[North2] = getTile(tileName, 9);
+    entry->mTiles[North3] = getTile(tileName, 10);
     return entry;
 }
 
@@ -974,14 +974,14 @@ BTC_Walls::BTC_Walls(const QString &name, const QString &label) :
 BuildingTileEntry *BTC_Walls::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[NorthWest] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[SouthEast] = BuildingTilesMgr::instance()->get(tileName, 3);
-    entry->mTiles[WestWindow] = BuildingTilesMgr::instance()->get(tileName, 8);
-    entry->mTiles[NorthWindow] = BuildingTilesMgr::instance()->get(tileName, 9);
-    entry->mTiles[WestDoor] = BuildingTilesMgr::instance()->get(tileName, 10);
-    entry->mTiles[NorthDoor] = BuildingTilesMgr::instance()->get(tileName, 11);
+    entry->mTiles[West] = getTile(tileName);
+    entry->mTiles[North] = getTile(tileName, 1);
+    entry->mTiles[NorthWest] = getTile(tileName, 2);
+    entry->mTiles[SouthEast] = getTile(tileName, 3);
+    entry->mTiles[WestWindow] = getTile(tileName, 8);
+    entry->mTiles[NorthWindow] = getTile(tileName, 9);
+    entry->mTiles[WestDoor] = getTile(tileName, 10);
+    entry->mTiles[NorthDoor] = getTile(tileName, 11);
     return entry;
 }
 
@@ -1006,8 +1006,8 @@ BTC_Windows::BTC_Windows(const QString &label) :
 BuildingTileEntry *BTC_Windows::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 1);
+    entry->mTiles[West] = getTile(tileName);
+    entry->mTiles[North] = getTile(tileName, 1);
     return entry;
 }
 
@@ -1058,31 +1058,31 @@ BTC_RoofCaps::BTC_RoofCaps(const QString &label) :
 BuildingTileEntry *BTC_RoofCaps::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[CapRiseE1] = BuildingTilesMgr::instance()->get(tileName, 0);
-    entry->mTiles[CapRiseE2] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[CapRiseE3] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[CapFallE1] = BuildingTilesMgr::instance()->get(tileName, 8);
-    entry->mTiles[CapFallE2] = BuildingTilesMgr::instance()->get(tileName, 9);
-    entry->mTiles[CapFallE3] = BuildingTilesMgr::instance()->get(tileName, 10);
-    entry->mTiles[CapRiseS1] = BuildingTilesMgr::instance()->get(tileName, 13);
-    entry->mTiles[CapRiseS2] = BuildingTilesMgr::instance()->get(tileName, 12);
-    entry->mTiles[CapRiseS3] = BuildingTilesMgr::instance()->get(tileName, 11);
-    entry->mTiles[CapFallS1] = BuildingTilesMgr::instance()->get(tileName, 5);
-    entry->mTiles[CapFallS2] = BuildingTilesMgr::instance()->get(tileName, 4);
-    entry->mTiles[CapFallS3] = BuildingTilesMgr::instance()->get(tileName, 3);
-    entry->mTiles[PeakPt5S] = BuildingTilesMgr::instance()->get(tileName, 7);
-    entry->mTiles[PeakPt5E] = BuildingTilesMgr::instance()->get(tileName, 15);
-    entry->mTiles[PeakOnePt5S] = BuildingTilesMgr::instance()->get(tileName, 6);
-    entry->mTiles[PeakOnePt5E] = BuildingTilesMgr::instance()->get(tileName, 14);
-    entry->mTiles[PeakTwoPt5S] = BuildingTilesMgr::instance()->get(tileName, 17);
-    entry->mTiles[PeakTwoPt5E] = BuildingTilesMgr::instance()->get(tileName, 16);
+    entry->mTiles[CapRiseE1] = getTile(tileName, 0);
+    entry->mTiles[CapRiseE2] = getTile(tileName, 1);
+    entry->mTiles[CapRiseE3] = getTile(tileName, 2);
+    entry->mTiles[CapFallE1] = getTile(tileName, 8);
+    entry->mTiles[CapFallE2] = getTile(tileName, 9);
+    entry->mTiles[CapFallE3] = getTile(tileName, 10);
+    entry->mTiles[CapRiseS1] = getTile(tileName, 13);
+    entry->mTiles[CapRiseS2] = getTile(tileName, 12);
+    entry->mTiles[CapRiseS3] = getTile(tileName, 11);
+    entry->mTiles[CapFallS1] = getTile(tileName, 5);
+    entry->mTiles[CapFallS2] = getTile(tileName, 4);
+    entry->mTiles[CapFallS3] = getTile(tileName, 3);
+    entry->mTiles[PeakPt5S] = getTile(tileName, 7);
+    entry->mTiles[PeakPt5E] = getTile(tileName, 15);
+    entry->mTiles[PeakOnePt5S] = getTile(tileName, 6);
+    entry->mTiles[PeakOnePt5E] = getTile(tileName, 14);
+    entry->mTiles[PeakTwoPt5S] = getTile(tileName, 17);
+    entry->mTiles[PeakTwoPt5E] = getTile(tileName, 16);
 #if 0 // impossible to guess these
-    entry->mTiles[CapGapS1] = BuildingTilesMgr::instance()->get(tileName, );
-    entry->mTiles[CapGapS2] = BuildingTilesMgr::instance()->get(tileName, );
-    entry->mTiles[CapGapS3] = BuildingTilesMgr::instance()->get(tileName, );
-    entry->mTiles[CapGapE1] = BuildingTilesMgr::instance()->get(tileName, );
-    entry->mTiles[CapGapE2] = BuildingTilesMgr::instance()->get(tileName, );
-    entry->mTiles[CapGapE3] = BuildingTilesMgr::instance()->get(tileName, );
+    entry->mTiles[CapGapS1] = getTile(tileName, );
+    entry->mTiles[CapGapS2] = getTile(tileName, );
+    entry->mTiles[CapGapS3] = getTile(tileName, );
+    entry->mTiles[CapGapE1] = getTile(tileName, );
+    entry->mTiles[CapGapE2] = getTile(tileName, );
+    entry->mTiles[CapGapE3] = getTile(tileName, );
 #endif
     return entry;
 }
@@ -1143,30 +1143,30 @@ BTC_RoofSlopes::BTC_RoofSlopes(const QString &label) :
 BuildingTileEntry *BTC_RoofSlopes::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[SlopeS1] = BuildingTilesMgr::instance()->get(tileName, 0);
-    entry->mTiles[SlopeS2] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[SlopeS3] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[SlopeE1] = BuildingTilesMgr::instance()->get(tileName, 5);
-    entry->mTiles[SlopeE2] = BuildingTilesMgr::instance()->get(tileName, 4);
-    entry->mTiles[SlopeE3] = BuildingTilesMgr::instance()->get(tileName, 3);
-    entry->mTiles[SlopePt5S] = BuildingTilesMgr::instance()->get(tileName, 15);
-    entry->mTiles[SlopePt5E] = BuildingTilesMgr::instance()->get(tileName, 14);
-    entry->mTiles[SlopeOnePt5S] = BuildingTilesMgr::instance()->get(tileName, 15);
-    entry->mTiles[SlopeOnePt5E] = BuildingTilesMgr::instance()->get(tileName, 14);
-    entry->mTiles[SlopeTwoPt5S] = BuildingTilesMgr::instance()->get(tileName, 15);
-    entry->mTiles[SlopeTwoPt5E] = BuildingTilesMgr::instance()->get(tileName, 14);
-    entry->mTiles[Inner1] = BuildingTilesMgr::instance()->get(tileName, 11);
-    entry->mTiles[Inner2] = BuildingTilesMgr::instance()->get(tileName, 12);
-    entry->mTiles[Inner3] = BuildingTilesMgr::instance()->get(tileName, 13);
-    entry->mTiles[Outer1] = BuildingTilesMgr::instance()->get(tileName, 8);
-    entry->mTiles[Outer2] = BuildingTilesMgr::instance()->get(tileName, 9);
-    entry->mTiles[Outer3] = BuildingTilesMgr::instance()->get(tileName, 10);
-    entry->mTiles[CornerSW1] = BuildingTilesMgr::instance()->get(tileName, 24);
-    entry->mTiles[CornerSW2] = BuildingTilesMgr::instance()->get(tileName, 25);
-    entry->mTiles[CornerSW3] = BuildingTilesMgr::instance()->get(tileName, 26);
-    entry->mTiles[CornerNE1] = BuildingTilesMgr::instance()->get(tileName, 29);
-    entry->mTiles[CornerNE2] = BuildingTilesMgr::instance()->get(tileName, 28);
-    entry->mTiles[CornerNE3] = BuildingTilesMgr::instance()->get(tileName, 27);
+    entry->mTiles[SlopeS1] = getTile(tileName, 0);
+    entry->mTiles[SlopeS2] = getTile(tileName, 1);
+    entry->mTiles[SlopeS3] = getTile(tileName, 2);
+    entry->mTiles[SlopeE1] = getTile(tileName, 5);
+    entry->mTiles[SlopeE2] = getTile(tileName, 4);
+    entry->mTiles[SlopeE3] = getTile(tileName, 3);
+    entry->mTiles[SlopePt5S] = getTile(tileName, 15);
+    entry->mTiles[SlopePt5E] = getTile(tileName, 14);
+    entry->mTiles[SlopeOnePt5S] = getTile(tileName, 15);
+    entry->mTiles[SlopeOnePt5E] = getTile(tileName, 14);
+    entry->mTiles[SlopeTwoPt5S] = getTile(tileName, 15);
+    entry->mTiles[SlopeTwoPt5E] = getTile(tileName, 14);
+    entry->mTiles[Inner1] = getTile(tileName, 11);
+    entry->mTiles[Inner2] = getTile(tileName, 12);
+    entry->mTiles[Inner3] = getTile(tileName, 13);
+    entry->mTiles[Outer1] = getTile(tileName, 8);
+    entry->mTiles[Outer2] = getTile(tileName, 9);
+    entry->mTiles[Outer3] = getTile(tileName, 10);
+    entry->mTiles[CornerSW1] = getTile(tileName, 24);
+    entry->mTiles[CornerSW2] = getTile(tileName, 25);
+    entry->mTiles[CornerSW3] = getTile(tileName, 26);
+    entry->mTiles[CornerNE1] = getTile(tileName, 29);
+    entry->mTiles[CornerNE2] = getTile(tileName, 28);
+    entry->mTiles[CornerNE3] = getTile(tileName, 27);
 
     entry->mOffsets[SlopePt5S] = QPoint(1, 1);
     entry->mOffsets[SlopePt5E] = QPoint(1, 1);
@@ -1203,12 +1203,12 @@ BTC_RoofTops::BTC_RoofTops(const QString &label) :
 BuildingTileEntry *BTC_RoofTops::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West1] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[West2] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[West3] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North1] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North2] = BuildingTilesMgr::instance()->get(tileName);
-    entry->mTiles[North3] = BuildingTilesMgr::instance()->get(tileName);
+    entry->mTiles[West1] = getTile(tileName);
+    entry->mTiles[West2] = getTile(tileName);
+    entry->mTiles[West3] = getTile(tileName);
+    entry->mTiles[North1] = getTile(tileName);
+    entry->mTiles[North2] = getTile(tileName);
+    entry->mTiles[North3] = getTile(tileName);
     entry->mOffsets[West1] = QPoint(-1, -1);
     entry->mOffsets[West2] = QPoint(-2, -2);
     entry->mOffsets[North1] = QPoint(-1, -1);
@@ -1243,14 +1243,14 @@ BTC_GrimeFloor::BTC_GrimeFloor(const QString &label) :
 BuildingTileEntry *BTC_GrimeFloor::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName, 0);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[East] = BuildingTilesMgr::instance()->get(tileName, 9);
-    entry->mTiles[South] = BuildingTilesMgr::instance()->get(tileName, 8);
-    entry->mTiles[SouthWest] = BuildingTilesMgr::instance()->get(tileName, 11);
-    entry->mTiles[NorthWest] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[NorthEast] = BuildingTilesMgr::instance()->get(tileName, 3);
-    entry->mTiles[SouthEast] = BuildingTilesMgr::instance()->get(tileName, 10);
+    entry->mTiles[West] = getTile(tileName, 0);
+    entry->mTiles[North] = getTile(tileName, 1);
+    entry->mTiles[East] = getTile(tileName, 9);
+    entry->mTiles[South] = getTile(tileName, 8);
+    entry->mTiles[SouthWest] = getTile(tileName, 11);
+    entry->mTiles[NorthWest] = getTile(tileName, 2);
+    entry->mTiles[NorthEast] = getTile(tileName, 3);
+    entry->mTiles[SouthEast] = getTile(tileName, 10);
     return entry;
 }
 
@@ -1282,14 +1282,14 @@ BTC_GrimeWall::BTC_GrimeWall(const QString &label) :
 BuildingTileEntry *BTC_GrimeWall::createEntryFromSingleTile(const QString &tileName)
 {
     BuildingTileEntry *entry = new BuildingTileEntry(this);
-    entry->mTiles[West] = BuildingTilesMgr::instance()->get(tileName, 0);
-    entry->mTiles[North] = BuildingTilesMgr::instance()->get(tileName, 1);
-    entry->mTiles[NorthWest] = BuildingTilesMgr::instance()->get(tileName, 2);
-    entry->mTiles[SouthEast] = BuildingTilesMgr::instance()->get(tileName, 3);
-    entry->mTiles[WestWindow] = BuildingTilesMgr::instance()->get(tileName, 8);
-    entry->mTiles[NorthWindow] = BuildingTilesMgr::instance()->get(tileName, 9);
-    entry->mTiles[WestDoor] = BuildingTilesMgr::instance()->get(tileName, 10);
-    entry->mTiles[NorthDoor] = BuildingTilesMgr::instance()->get(tileName, 11);
+    entry->mTiles[West] = getTile(tileName, 0);
+    entry->mTiles[North] = getTile(tileName, 1);
+    entry->mTiles[NorthWest] = getTile(tileName, 2);
+    entry->mTiles[SouthEast] = getTile(tileName, 3);
+    entry->mTiles[WestWindow] = getTile(tileName, 8);
+    entry->mTiles[NorthWindow] = getTile(tileName, 9);
+    entry->mTiles[WestDoor] = getTile(tileName, 10);
+    entry->mTiles[NorthDoor] = getTile(tileName, 11);
     return entry;
 }
 
@@ -1383,6 +1383,11 @@ bool BuildingTileCategory::usesTile(Tile *tile) const
             return true;
     }
     return false;
+}
+
+BuildingTile *BuildingTileCategory::getTile(const QString &tilesetName, int offset)
+{
+    return BuildingTilesMgr::instance()->get(tilesetName, offset);
 }
 
 BuildingTileEntry *BuildingTileCategory::createEntryFromSingleTile(const QString &tileName)

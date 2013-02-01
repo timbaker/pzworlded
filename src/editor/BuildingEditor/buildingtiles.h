@@ -218,6 +218,9 @@ public:
     virtual BuildingTileCategory *asRoofTops() { return 0; }
 
 protected:
+    virtual BuildingTile *getTile(const QString &tilesetName, int offset = 0);
+
+protected:
     QString mName;
     QString mLabel;
     int mDisplayIndex;

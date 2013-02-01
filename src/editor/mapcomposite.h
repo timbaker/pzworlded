@@ -254,6 +254,10 @@ private:
 
     Tiled::TileLayer *mRoadLayer1;
     Tiled::TileLayer *mRoadLayer0;
+
+public:
+    MapComposite *root();
+    bool mFirstCellIs0Floor;
 };
 
 #endif // MAPCOMPOSITE_H

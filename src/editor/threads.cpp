@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -15,37 +15,5 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BUILDINGREADER_H
-#define BUILDINGREADER_H
+#include "threads.h"
 
-#include <QString>
-
-class QIODevice;
-
-namespace BuildingEditor {
-
-class Building;
-class BuildingReaderPrivate;
-
-class BuildingReader
-{
-public:
-    explicit BuildingReader();
-    ~BuildingReader();
-
-    Building *read(const QString &fileName);
-
-    QString errorString() const;
-
-    void fix(Building *building);
-
-private:
-    Building *read(QIODevice *device, const QString &path);
-
-    friend class BuildingReaderPrivate;
-    BuildingReaderPrivate *d;
-};
-
-} // namespace BuildingEditor
-
-#endif // BUILDINGREADER_H

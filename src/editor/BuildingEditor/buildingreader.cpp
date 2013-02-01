@@ -43,6 +43,228 @@ using namespace BuildingEditor;
 
 #define VERSION_LATEST VERSION2
 
+namespace BuildingEditor {
+
+class FakeBuildingTilesMgr;
+
+#define DECLARE_FAKE_CATEGORY(C) \
+class Fake_##C : public BTC_##C \
+{ \
+public: \
+    Fake_##C(FakeBuildingTilesMgr *btiles) : \
+        mFakeBuildingTilesMgr(btiles), \
+        BTC_##C(QString()) \
+    { } \
+private: \
+    BuildingTile *getTile(const QString &tilesetName, int offset); \
+    FakeBuildingTilesMgr *mFakeBuildingTilesMgr; \
+};
+DECLARE_FAKE_CATEGORY(Curtains)
+DECLARE_FAKE_CATEGORY(Doors)
+DECLARE_FAKE_CATEGORY(DoorFrames)
+DECLARE_FAKE_CATEGORY(Floors)
+DECLARE_FAKE_CATEGORY(EWalls)
+DECLARE_FAKE_CATEGORY(IWalls)
+DECLARE_FAKE_CATEGORY(Stairs)
+DECLARE_FAKE_CATEGORY(Windows)
+DECLARE_FAKE_CATEGORY(GrimeFloor)
+DECLARE_FAKE_CATEGORY(GrimeWall)
+DECLARE_FAKE_CATEGORY(RoofCaps)
+DECLARE_FAKE_CATEGORY(RoofSlopes)
+DECLARE_FAKE_CATEGORY(RoofTops)
+
+#define NEW_FAKE_CATEGORY(C) \
+    new Fake_##C(this);
+
+class FakeBuildingTilesMgr
+{
+public:
+    FakeBuildingTilesMgr()
+    {
+        mCatCurtains = NEW_FAKE_CATEGORY(Curtains);
+        mCatDoors = NEW_FAKE_CATEGORY(Doors);
+        mCatDoorFrames = NEW_FAKE_CATEGORY(DoorFrames);
+        mCatFloors = NEW_FAKE_CATEGORY(Floors);
+        mCatEWalls = NEW_FAKE_CATEGORY(EWalls);
+        mCatIWalls = NEW_FAKE_CATEGORY(IWalls);
+        mCatStairs = NEW_FAKE_CATEGORY(Stairs);
+        mCatWindows = NEW_FAKE_CATEGORY(Windows);
+        mCatGrimeFloor = NEW_FAKE_CATEGORY(GrimeFloor);
+        mCatGrimeWall = NEW_FAKE_CATEGORY(GrimeWall);
+        mCatRoofCaps = NEW_FAKE_CATEGORY(RoofCaps);
+        mCatRoofSlopes = NEW_FAKE_CATEGORY(RoofSlopes);
+        mCatRoofTops = NEW_FAKE_CATEGORY(RoofTops);
+
+        mCategories << mCatEWalls << mCatIWalls << mCatFloors << mCatDoors <<
+                       mCatDoorFrames << mCatWindows << mCatCurtains << mCatStairs
+                       << mCatGrimeFloor << mCatGrimeWall
+                       << mCatRoofCaps << mCatRoofSlopes << mCatRoofTops;
+
+        foreach (BuildingTileCategory *category, mCategories)
+            mCategoryByName[category->name()] = category;
+
+        mNoneBuildingTile = new NoneBuildingTile();
+
+        mNoneCategory = new NoneBuildingTileCategory();
+        mNoneTileEntry = new NoneBuildingTileEntry(mNoneCategory);
+    }
+
+    ~FakeBuildingTilesMgr()
+    {
+        // The rest are deleted in fix()
+        foreach (BuildingTileCategory *category, mCategories)
+            if (!mUsedCategories[category])
+                delete category;
+        /*
+        qDeleteAll(mCategories);
+        delete mNoneBuildingTile;
+        delete mNoneCategory;
+        delete mNoneTileEntry;
+        */
+    }
+
+    BuildingTile *add(const QString &tileName)
+    {
+        QString tilesetName;
+        int tileIndex;
+        parseTileName(tileName, tilesetName, tileIndex);
+        BuildingTile *btile = new BuildingTile(tilesetName, tileIndex);
+        Q_ASSERT(!mTileByName.contains(btile->name()));
+        mTileByName[btile->name()] = btile;
+        mTiles = mTileByName.values(); // sorted by increasing tileset name and tile index!
+        return btile;
+    }
+
+    BuildingTile *get(const QString &tileName, int offset = 0)
+    {
+        if (tileName.isEmpty())
+            return noneTile();
+
+        QString adjustedName = adjustTileNameIndex(tileName, offset); // also normalized
+
+        if (!mTileByName.contains(adjustedName))
+            add(adjustedName);
+        return mTileByName[adjustedName];
+    }
+
+    BuildingTileCategory *category(const QString &name) const
+    {
+        if (mCategoryByName.contains(name))
+            return mCategoryByName[name];
+        return 0;
+    }
+
+    static QString nameForTile(const QString &tilesetName, int index)
+    {
+        // The only reason I'm padding the tile index is so that the tiles are sorted
+        // by increasing tileset name and index.
+        return tilesetName + QLatin1Char('_') +
+                QString(QLatin1String("%1")).arg(index, 3, 10, QLatin1Char('0'));
+    }
+
+    static bool parseTileName(const QString &tileName, QString &tilesetName, int &index)
+    {
+        tilesetName = tileName.mid(0, tileName.lastIndexOf(QLatin1Char('_')));
+        QString indexString = tileName.mid(tileName.lastIndexOf(QLatin1Char('_')) + 1);
+        // Strip leading zeroes from the tile index
+        int i = 0;
+        while (i < indexString.length() - 1 && indexString[i] == QLatin1Char('0'))
+            i++;
+        indexString.remove(0, i);
+        index = indexString.toInt();
+        return true;
+    }
+
+    QString adjustTileNameIndex(const QString &tileName, int offset)
+    {
+        QString tilesetName;
+        int index;
+        parseTileName(tileName, tilesetName, index);
+#if 0 // NOT REENTRANT, but not needed for reading old .tbx files
+        // Currently, the only place this gets called with offset > 0 is by the
+        // createEntryFromSingleTile() methods.  Those methods assume the tilesets
+        // are 8 tiles wide.  Remap the offset onto the tileset's actual number of
+        // columns.
+        if (offset > 0) {
+            if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName)) {
+                TileMetaInfoMgr::instance()->loadTilesets(QList<Tileset*>() << ts);
+                int rows = offset / 8;
+                offset = rows * ts->columnCount() + offset % 8;
+            }
+        }
+#endif
+        index += offset;
+        return nameForTile(tilesetName, index);
+    }
+
+    BuildingTile *noneTile() const
+    { return mNoneBuildingTile; }
+
+    BuildingTileEntry *noneTileEntry() const
+    { return mNoneTileEntry; }
+
+    BuildingTileCategory *catEWalls() const { return mCatEWalls; }
+    BuildingTileCategory *catIWalls() const { return mCatIWalls; }
+    BuildingTileCategory *catFloors() const { return mCatFloors; }
+    BuildingTileCategory *catDoors() const { return mCatDoors; }
+    BuildingTileCategory *catDoorFrames() const { return mCatDoorFrames; }
+    BuildingTileCategory *catWindows() const { return mCatWindows; }
+    BuildingTileCategory *catCurtains() const { return mCatCurtains; }
+    BuildingTileCategory *catStairs() const { return mCatStairs; }
+    BuildingTileCategory *catRoofCaps() const { return mCatRoofCaps; }
+    BuildingTileCategory *catRoofSlopes() const { return mCatRoofSlopes; }
+    BuildingTileCategory *catRoofTops() const { return mCatRoofTops; }
+
+    QList<BuildingTileCategory*> mCategories;
+    QMap<QString,BuildingTileCategory*> mCategoryByName;
+
+    QList<BuildingTile*> mTiles;
+    QMap<QString,BuildingTile*> mTileByName;
+
+    BuildingTile *mNoneBuildingTile;
+
+    BuildingTileCategory *mNoneCategory;
+    BuildingTileEntry *mNoneTileEntry;
+
+    Fake_Curtains *mCatCurtains;
+    Fake_Doors *mCatDoors;
+    Fake_DoorFrames *mCatDoorFrames;
+    Fake_Floors *mCatFloors;
+    Fake_Stairs *mCatStairs;
+    Fake_EWalls *mCatEWalls;
+    Fake_IWalls *mCatIWalls;
+    Fake_Windows *mCatWindows;
+    Fake_GrimeFloor *mCatGrimeFloor;
+    Fake_GrimeWall *mCatGrimeWall;
+    Fake_RoofCaps *mCatRoofCaps;
+    Fake_RoofSlopes *mCatRoofSlopes;
+    Fake_RoofTops *mCatRoofTops;
+
+    QMap<BuildingTileCategory*,bool> mUsedCategories;
+};
+
+#define DECLARE_FAKE_GETTILE(C) \
+BuildingTile *Fake_##C::getTile(const QString &tilesetName, int offset) \
+{ \
+    return mFakeBuildingTilesMgr->get(tilesetName, offset); \
+}
+
+DECLARE_FAKE_GETTILE(Curtains)
+DECLARE_FAKE_GETTILE(Doors)
+DECLARE_FAKE_GETTILE(DoorFrames)
+DECLARE_FAKE_GETTILE(Floors)
+DECLARE_FAKE_GETTILE(Stairs)
+DECLARE_FAKE_GETTILE(EWalls)
+DECLARE_FAKE_GETTILE(IWalls)
+DECLARE_FAKE_GETTILE(Windows)
+DECLARE_FAKE_GETTILE(GrimeFloor)
+DECLARE_FAKE_GETTILE(GrimeWall)
+DECLARE_FAKE_GETTILE(RoofCaps)
+DECLARE_FAKE_GETTILE(RoofSlopes)
+DECLARE_FAKE_GETTILE(RoofTops)
+
+} // namespace BuildingEditor
+
 class BuildingEditor::BuildingReaderPrivate
 {
     Q_DECLARE_TR_FUNCTIONS(BuildingReaderPrivate)
@@ -105,6 +327,24 @@ private:
     QMap<QString,BuildingTileEntry*> mEntryMap;
     QStringList mUserTiles;
     int mVersion;
+
+    FakeBuildingTilesMgr mFakeBuildingTilesMgr;
+    FurnitureGroup mFakeFurnitureGroup;
+
+    friend class BuildingReader;
+    void fix(Building *building);
+
+    FurnitureTiles *fixFurniture(FurnitureTiles *ftiles);
+    QMap<FurnitureTiles*,FurnitureTiles*> fixedFurniture;
+    QSet<FurnitureTiles*> deadFurniture;
+
+    BuildingTileEntry *fixEntry(BuildingTileEntry *entry);
+    QMap<BuildingTileEntry*,BuildingTileEntry*> fixedEntries;
+    QSet<BuildingTileEntry*> deadEntries;
+
+    QSet<BuildingTile*> deadTiles;
+
+    QSet<BuildingTileCategory*> deadCategories;
 
     QXmlStreamReader xml;
 };
@@ -173,8 +413,10 @@ Building *BuildingReaderPrivate::readBuilding()
 
     while (xml.readNextStartElement()) {
         if (xml.name() == "furniture") {
-            if (FurnitureTiles *tiles = readFurnitureTiles())
+            if (FurnitureTiles *tiles = readFurnitureTiles()) {
                 mFurnitureTiles += tiles;
+                mFakeFurnitureGroup.mTiles += tiles;
+            }
         } else if (xml.name() == "tile_entry") {
             if (BuildingTileEntry *entry = readTileEntry())
                 mEntries += entry;
@@ -194,7 +436,7 @@ Building *BuildingReaderPrivate::readBuilding()
             readUnknownElement();
     }
 
-    BuildingTilesMgr *btiles = BuildingTilesMgr::instance();
+    FakeBuildingTilesMgr *btiles = &mFakeBuildingTilesMgr;
     for (int i = 0; i < Building::TileCount; i++) {
         QString entryString = atts.value(mBuilding->enumToString(i)).toString();
         if (mVersion == VERSION1) {
@@ -260,7 +502,7 @@ FurnitureTiles *BuildingReaderPrivate::readFurnitureTiles()
         return 0;
     }
 
-    if (FurnitureTiles *match = FurnitureGroups::instance()->findMatch(ftiles)) {
+    if (FurnitureTiles *match = mFakeFurnitureGroup.findMatch(ftiles)) {
         delete ftiles;
         return match;
     }
@@ -322,7 +564,7 @@ BuildingTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTile *ftile, QPo
     pos.setX(x);
     pos.setY(y);
     QString tileName = atts.value(QLatin1String("name")).toString();
-    BuildingTile *btile = BuildingTilesMgr::instance()->get(tileName);
+    BuildingTile *btile = mFakeBuildingTilesMgr.get(tileName);
     xml.skipCurrentElement();
     return btile;
 }
@@ -333,13 +575,14 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
 
     const QXmlStreamAttributes atts = xml.attributes();
     const QString categoryName = atts.value(QLatin1String("category")).toString();
-    BuildingTileCategory *category = BuildingTilesMgr::instance()->category(categoryName);
+    BuildingTileCategory *category = mFakeBuildingTilesMgr.category(categoryName);
     if (!category) {
         xml.raiseError(tr("unknown category '%1'").arg(categoryName));
         return 0;
     }
 
     BuildingTileEntry *entry = new BuildingTileEntry(category);
+    mFakeBuildingTilesMgr.mUsedCategories[category] = true;
 
     while (xml.readNextStartElement()) {
         if (xml.name() == "tile") {
@@ -351,7 +594,7 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
                 return false;
             }
             const QString tileName = atts.value(QLatin1String("tile")).toString();
-            BuildingTile *btile = BuildingTilesMgr::instance()->get(tileName);
+            BuildingTile *btile = mFakeBuildingTilesMgr.get(tileName);
 
             QPoint offset;
             if (!readPoint(QLatin1String("offset"), offset))
@@ -382,7 +625,7 @@ void BuildingReaderPrivate::readUserTiles()
             const QString tileName = atts.value(QLatin1String("tile")).toString();
             QString tilesetName;
             int tileID;
-            if (tileName.isEmpty() || !BuildingTilesMgr::instance()->
+            if (tileName.isEmpty() || !mFakeBuildingTilesMgr.
                     parseTileName(tileName, tilesetName, tileID)) {
                 xml.raiseError(tr("Invalid tile name '%1' in <user_tiles>")
                                .arg(tileName));
@@ -455,7 +698,7 @@ Room *BuildingReaderPrivate::readRoom()
         tiles[i] = atts.value(Room::enumToString(i)).toString();
 
     if (mVersion == VERSION1) {
-        BuildingTilesMgr *btiles = BuildingTilesMgr::instance();
+        FakeBuildingTilesMgr *btiles = &mFakeBuildingTilesMgr;
         tiles[Room::InteriorWall] = version1TileToEntry(btiles->catIWalls(),
                                                         tiles[Room::InteriorWall]);
         tiles[Room::Floor] = version1TileToEntry(btiles->catFloors(),
@@ -544,7 +787,7 @@ BuildingObject *BuildingReaderPrivate::readObject(BuildingFloor *floor)
         return 0;
     }
 
-    BuildingTilesMgr *btiles = BuildingTilesMgr::instance();
+    FakeBuildingTilesMgr *btiles = &mFakeBuildingTilesMgr;
     if (mVersion == VERSION1) {
         // tile name -> BuildingTileEntry
         if (type == QLatin1String("door")) {
@@ -641,13 +884,13 @@ BuildingObject *BuildingReaderPrivate::readObject(BuildingFloor *floor)
 
         BuildingTileEntry *entry = getEntry(tile);
         if (!entry->asExteriorWall())
-            entry = BuildingTilesMgr::instance()->noneTileEntry();
+            entry = mFakeBuildingTilesMgr.noneTileEntry();
         wall->setTile(entry);
 
         QString interiorTileString = atts.value(QLatin1String("InteriorTile")).toString();
         entry = getEntry(interiorTileString);
         if (!entry->asInteriorWall())
-            entry = BuildingTilesMgr::instance()->noneTileEntry();
+            entry = mFakeBuildingTilesMgr.noneTileEntry();
         wall->setTile(entry, 1);
         object = wall;
     } else {
@@ -697,7 +940,7 @@ BuildingTileEntry *BuildingReaderPrivate::getEntry(const QString &s)
     int index = s.toInt();
     if (index >= 1 && index <= mEntries.size())
         return mEntries[index - 1];
-    return BuildingTilesMgr::instance()->noneTileEntry();
+    return mFakeBuildingTilesMgr.noneTileEntry();
 }
 
 QString BuildingReaderPrivate::version1TileToEntry(BuildingTileCategory *category,
@@ -890,4 +1133,111 @@ Building *BuildingReader::read(const QString &fileName)
 QString BuildingReader::errorString() const
 {
     return d->errorString();
+}
+
+void BuildingReader::fix(Building *building)
+{
+    d->fix(building);
+}
+
+void BuildingReaderPrivate::fix(Building *building)
+{
+//    BuildingTileEntry *entry = BuildingTilesMgr::instance()->noneTileEntry();
+//    fixedEntries[entry] = entry;
+
+    foreach (BuildingFloor *floor, building->floors()) {
+        foreach (BuildingObject *object, floor->objects()) {
+            if (FurnitureObject *fo = object->asFurniture()) {
+                if (FurnitureTile *ftile = fo->furnitureTile()) {
+                    FurnitureTiles *ftiles = ftile->owner();
+                    fo->setFurnitureTile(fixFurniture(ftiles)->tile(ftile->orient()));
+                }
+            } else {
+                for (int i = 0; i < 3; i++) {
+                    BuildingTileEntry *entry = object->tile(i);
+                    if (entry && !entry->isNone()) {
+                        object->setTile(fixEntry(entry), i);
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < building->TileCount; i++) {
+        BuildingTileEntry *entry = building->tile(i);
+        if (entry && !entry->isNone())
+            building->setTile(i, fixEntry(entry));
+    }
+    foreach (Room *room, building->rooms()) {
+        for (int i = 0; i < room->TileCount; i++) {
+            BuildingTileEntry *entry = room->tile(i);
+            if (entry && !entry->isNone())
+                room->setTile(i, fixEntry(entry));
+        }
+    }
+
+    QList<FurnitureTiles*> usedFurniture;
+    foreach (FurnitureTiles *ftiles, building->usedFurniture())
+        usedFurniture += fixFurniture(ftiles);
+    building->setUsedFurniture(usedFurniture);
+
+    QList<BuildingTileEntry*> usedTiles;
+    foreach (BuildingTileEntry *entry, building->usedTiles())
+        usedTiles += fixEntry(entry);
+    building->setUsedTiles(usedTiles);
+
+    qDeleteAll(deadEntries);
+    qDeleteAll(deadFurniture);
+    qDeleteAll(deadCategories);
+    qDeleteAll(deadTiles);
+}
+
+FurnitureTiles *BuildingReaderPrivate::fixFurniture(FurnitureTiles *ftiles)
+{
+    if (!fixedFurniture.contains(ftiles)) {
+        foreach (FurnitureTile *ftile, ftiles->tiles()) {
+            for (int y = 0; y < ftile->size().height(); y++) {
+                for (int x = 0; x < ftile->size().width(); x++) {
+                    if (BuildingTile *btile = ftile->tile(x, y)) {
+                        if (btile != BuildingTilesMgr::instance()->noneTile())
+                            deadTiles.insert(btile);
+                        ftile->setTile(x, y, BuildingTilesMgr::instance()->get(btile->name()));
+                    }
+                }
+            }
+        }
+        if (FurnitureTiles *match = FurnitureGroups::instance()->findMatch(ftiles)) {
+            fixedFurniture[ftiles] = match;
+            fixedFurniture[match] = match;
+            deadFurniture.insert(ftiles);
+        } else {
+            fixedFurniture[ftiles] = ftiles;
+        }
+    }
+    return fixedFurniture[ftiles];
+}
+
+BuildingTileEntry *BuildingReaderPrivate::fixEntry(BuildingTileEntry *entry)
+{
+    if (!fixedEntries.contains(entry)) {
+        QString categoryName = entry->category()->name();
+        BuildingTileCategory *category = BuildingTilesMgr::instance()->category(categoryName);
+        deadCategories.insert(entry->mCategory);
+        entry->mCategory = category;
+        for (int i = 0; i < category->enumCount(); i++) {
+            if (BuildingTile *btile = entry->tile(i)) {
+                if (btile != BuildingTilesMgr::instance()->noneTile())
+                    deadTiles.insert(btile);
+                entry->setTile(i, BuildingTilesMgr::instance()->get(btile->name()));
+            }
+        }
+        if (BuildingTileEntry *match = category->findMatch(entry)) {
+            fixedEntries[entry] = match;
+            fixedEntries[match] = match;
+            deadEntries.insert(entry);
+        } else {
+            fixedEntries[entry] = entry;
+        }
+    }
+    return fixedEntries[entry];
 }

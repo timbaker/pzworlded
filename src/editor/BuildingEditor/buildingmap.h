@@ -144,6 +144,8 @@ public:
     Tiled::Map *mergedMap() const;
     static int defaultOrientation();
 
+    bool isTilesetUsed(Tiled::Tileset *tileset);
+
 public:
     void buildingRotated();
     void buildingResized();

@@ -106,7 +106,8 @@ SOURCES += main.cpp\
     BuildingEditor/building.cpp \
     BuildingEditor/buildingwriter.cpp \
     BuildingEditor/buildingreader.cpp \
-    BuildingEditor/buildingtemplates.cpp
+    BuildingEditor/buildingtemplates.cpp \
+    threads.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -172,7 +173,8 @@ HEADERS  += mainwindow.h \
     BuildingEditor/building.h \
     BuildingEditor/buildingwriter.h \
     BuildingEditor/buildingreader.h \
-    BuildingEditor/buildingtemplates.h
+    BuildingEditor/buildingtemplates.h \
+    threads.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

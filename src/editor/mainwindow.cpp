@@ -299,6 +299,7 @@ MainWindow::~MainWindow()
     DocumentManager::deleteInstance();
     ToolManager::deleteInstance();
     Preferences::deleteInstance();
+    MapImageManager::deleteInstance();
     MapManager::deleteInstance();
     TileMetaInfoMgr::deleteInstance();
     TilesetManager::deleteInstance();

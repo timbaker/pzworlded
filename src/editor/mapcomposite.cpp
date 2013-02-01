@@ -168,9 +168,9 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                                          QVector<const Cell *> &cells,
                                          QVector<qreal> &opacities) const
 {
-    static bool FirstCellIs0Floor = false;
+    MapComposite *root = mOwner->root();
     if (!mOwner->parent())
-        FirstCellIs0Floor = false;
+        root->mFirstCellIs0Floor = false;
 
     bool cleared = false;
     for (int index = 0; index < mLayers.size(); index++) {
@@ -187,11 +187,11 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                 if (!cell->isEmpty()) {
                     if (!cleared) {
                         bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
-                        cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
-                        opacities.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
+                        cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
+                        opacities.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                         cleared = true;
                         if (isFloor && !mOwner->parent())
-                            FirstCellIs0Floor = true;
+                            mOwner->mFirstCellIs0Floor = true;
                     }
                     cells.append(cell);
                     opacities.append(mLayerOpacity[index]);
@@ -203,11 +203,11 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             if (!cell->isEmpty()) {
                 if (!cleared) {
                     bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
-                    cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
-                    opacities.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
+                    cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
+                    opacities.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                     cleared = true;
                     if (isFloor && !mOwner->parent())
-                        FirstCellIs0Floor = true;
+                        mOwner->mFirstCellIs0Floor = true;
                 }
                 cells.append(cell);
                 opacities.append(mLayerOpacity[index]);
@@ -227,9 +227,9 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
 // layers (so NoRender layers are included) and visibility of sub-maps.
 bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell *> &cells) const
 {
-    static bool FirstCellIs0Floor = false;
+    MapComposite *root = mOwner->root();
     if (!mOwner->parent())
-        FirstCellIs0Floor = false;
+        root->mFirstCellIs0Floor = false;
 
     bool cleared = false;
     int index = -1;
@@ -245,10 +245,10 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                 if (!cell->isEmpty()) {
                     if (!cleared) {
                         bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
-                        cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
+                        cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                         cleared = true;
                         if (isFloor && !mOwner->parent())
-                            FirstCellIs0Floor = true;
+                            mOwner->mFirstCellIs0Floor = true;
                     }
                     cells.append(cell);
                     continue;
@@ -259,10 +259,10 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
             if (!cell->isEmpty()) {
                 if (!cleared) {
                     bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
-                    cells.resize((!isFloor && FirstCellIs0Floor) ? 1 : 0);
+                    cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                     cleared = true;
                     if (isFloor && !mOwner->parent())
-                        FirstCellIs0Floor = true;
+                        mOwner->mFirstCellIs0Floor = true;
                 }
                 cells.append(cell);
             }
@@ -1042,7 +1042,6 @@ void MapComposite::recreate()
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
-                    // FIXME: look in the same directory as the parent map, then the maptools directory.
                     MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
                                                                           QFileInfo(mMapInfo->path()).absolutePath());
                     if (!subMapInfo) {
@@ -1093,6 +1092,13 @@ void MapComposite::recreate()
     }
 }
 
+MapComposite *MapComposite::root()
+{
+    MapComposite *root = this;
+    while (root->parent())
+        root = root->parent();
+    return root;
+}
 
 QStringList MapComposite::getMapFileNames() const
 {

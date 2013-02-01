@@ -33,28 +33,27 @@
 #include <QTimer>
 
 #ifdef ZOMBOID
-#include <QMutexLocker>
-#include <QThread>
+#include "threads.h"
 #include <QVector>
-#include <QWaitCondition>
 namespace Tiled {
 class Tileset;
 }
 class QImage;
-class TilesetImageReaderThread : public QThread
+class TilesetImageReaderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    TilesetImageReaderThread(int id);
+    TilesetImageReaderWorker(int id);
 
-    ~TilesetImageReaderThread();
+    ~TilesetImageReaderWorker();
 
-    void run();
-
-    void addJob(Tiled::Tileset *tileset);
-
+    typedef Tiled::Tileset Tileset;
 signals:
     void imageLoaded(QImage *image, Tiled::Tileset *tileset);
+
+public slots:
+    void work();
+    void addJob(Tileset *tileset);
 
 private:
     class Job {
@@ -69,10 +68,7 @@ private:
     QList<Job> mJobs;
 
     int mID;
-    QMutex mMutex;
-    QWaitCondition mWaitCondition;
-    bool mWaiting;
-    bool mQuit;
+    bool mWorkPending;
 };
 #endif // ZOMBOID
 
@@ -231,7 +227,8 @@ private:
     Tileset *mMissingTileset;
     Tile *mMissingTile;
 
-    QVector<TilesetImageReaderThread*> mImageReaderThread;
+    QVector<InterruptibleThread*> mImageReaderThreads;
+    QVector<TilesetImageReaderWorker*> mImageReaderWorkers;
     int mNextThreadForJob;
 #endif
 

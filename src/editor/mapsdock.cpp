@@ -88,6 +88,8 @@ MapsDock::MapsDock(QWidget *parent)
 
     connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(onMapImageChanged(MapImage*)));
+    connect(MapImageManager::instance(), SIGNAL(mapImageFailedToLoad(MapImage*)),
+            SLOT(mapImageFailedToLoad(MapImage*)));
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
@@ -142,9 +144,16 @@ void MapsDock::selectionChanged()
 
 void MapsDock::onMapImageChanged(MapImage *mapImage)
 {
-    if (mapImage == mPreviewMapImage && mapImage->isLoaded()) {
+    if ((mapImage == mPreviewMapImage) && mapImage->isLoaded()) {
         QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio);
         mPreviewLabel->setPixmap(QPixmap::fromImage(image));
+    }
+}
+
+void MapsDock::mapImageFailedToLoad(MapImage *mapImage)
+{
+    if (mapImage == mPreviewMapImage) {
+        mPreviewLabel->setPixmap(QPixmap());
     }
 }
 

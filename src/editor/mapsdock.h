@@ -21,13 +21,14 @@
 #include <QDockWidget>
 #include <QTreeView>
 
+class MapImage;
+
 class QFileSystemModel;
 class QLabel;
 class QLineEdit;
 class QModelIndex;
 class QTreeView;
 
-class MapImage;
 class MapsView;
 
 class MapsDock : public QDockWidget
@@ -43,6 +44,7 @@ private slots:
     void onMapsDirectoryChanged();
     void selectionChanged();
     void onMapImageChanged(MapImage *mapImage);
+    void mapImageFailedToLoad(MapImage *mapImage);
 
 protected:
     void changeEvent(QEvent *e);
@@ -65,9 +67,9 @@ public:
 
     QSize sizeHint() const;
 
-    QFileSystemModel *model() const { return mFSModel; }
-
     void mousePressEvent(QMouseEvent *event);
+
+    QFileSystemModel *model() const { return mFSModel; }
 
 private slots:
     void onMapsDirectoryChanged();

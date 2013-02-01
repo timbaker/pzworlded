@@ -330,6 +330,11 @@ int BuildingMap::defaultOrientation()
     return Map::LevelIsometric;
 }
 
+bool BuildingMap::isTilesetUsed(Tileset *tileset)
+{
+    return mMap->isTilesetUsed(tileset) || mBlendMap->isTilesetUsed(tileset);
+}
+
 void BuildingMap::buildingRotated()
 {
     pendingBuildingResized = true;

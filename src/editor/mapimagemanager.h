@@ -31,24 +31,22 @@ namespace Tiled {
 class Map;
 }
 
-#include <QMutexLocker>
-#include <QThread>
-#include <QWaitCondition>
+#include "threads.h"
 class MapImage;
-class MapImageReaderThread : public QThread
+class MapImageReaderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    MapImageReaderThread();
+    MapImageReaderWorker();
 
-    ~MapImageReaderThread();
-
-    void run();
-
-    void addJob(const QString &imageFileName, MapImage *mapImage);
+    ~MapImageReaderWorker();
 
 signals:
     void imageLoaded(QImage *image, MapImage *mapImage);
+
+public slots:
+    void work();
+    void addJob(const QString &imageFileName, MapImage *mapImage);
 
 private:
     class Job {
@@ -64,9 +62,7 @@ private:
     };
     QList<Job> mJobs;
 
-    QMutex mMutex;
-    QWaitCondition mWaitCondition;
-    bool mQuit;
+    bool mWorkPending;
 };
 
 class MapImageData
@@ -91,24 +87,24 @@ public:
 #include <QMetaType>
 Q_DECLARE_METATYPE(MapImageData) // for QueuedConnection
 
-class MapImageRenderThread : public QThread
+class MapImageRenderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    MapImageRenderThread();
+    MapImageRenderWorker(bool *abortPtr);
 
-    ~MapImageRenderThread();
-
-    void run();
-
-    void addJob(MapImage *mapImage);
-    void cleanupDoneJobs();
-
-    void mapLoaded(MapComposite *mapComposite);
+    ~MapImageRenderWorker();
 
 signals:
     void mapNeeded(MapImage *mapImage);
     void imageRendered(MapImageData data, MapImage *mapImage);
+    void jobDone(MapComposite *mapComposite);
+
+public slots:
+    void work();
+    void addJob(MapImage *mapImage);
+    void mapLoaded(MapComposite *mapComposite);
+    void mapFailedToLoad();
 
 private:
     MapImageData generateMapImage(MapComposite *mapComposite);
@@ -123,10 +119,7 @@ private:
     QList<Job> mJobs;
     QList<Job> mDoneJobs;
 
-    QMutex mMutex;
-    QWaitCondition mWaitForMap;
-    QWaitCondition mWaitForJobs;
-    bool mQuit;
+    bool mWorkPending;
 };
 
 class MapImage
@@ -226,8 +219,9 @@ protected:
 
 signals:
     void mapImageChanged(MapImage *mapImage);
+    void mapImageFailedToLoad(MapImage *mapImage);
     
-public slots:
+private slots:
     void mapFileChanged(MapInfo *mapInfo);
 
 private slots:
@@ -235,8 +229,10 @@ private slots:
 
     void renderThreadNeedsMap(MapImage *mapImage);
     void imageRenderedByThread(MapImageData imgData, MapImage *mapImage);
+    void renderJobDone(MapComposite *mapComposite);
 
     void mapLoaded(MapInfo *mapInfo);
+    void mapFailedToLoad(MapInfo *mapInfo);
 
     void processDeferrals();
 
@@ -251,10 +247,14 @@ private:
     QMap<QString,MapImage*> mMapImages;
     QString mError;
 
-    QVector<MapImageReaderThread*> mImageReaderThread;
+    QVector<InterruptibleThread*> mImageReaderThreads;
+    QVector<MapImageReaderWorker*> mImageReaderWorkers;
     int mNextThreadForJob;
 
-    MapImageRenderThread mImageRenderThread;
+    InterruptibleThread *mImageRenderThread;
+    MapImageRenderWorker *mImageRenderWorker;
+    MapImage *mExpectMapImage;
+    QList<MapInfo*> mExpectSubMaps;
 
     friend class MapImageManagerDeferral;
     void deferThreadResults(bool defer);
