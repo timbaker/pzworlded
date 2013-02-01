@@ -20,11 +20,39 @@
 
 #include "basegraphicsview.h"
 
+#include <QGraphicsItem>
+
+class MapImage;
+class WorldBMP;
 class WorldScene;
+
+class WorldMiniMapItem : public QObject, public QGraphicsItem
+{
+    Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
+public:
+    WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+private slots:
+    void worldResized();
+
+    void bmpAdded(int index);
+    void bmpAboutToBeRemoved(int index);
+    void bmpCoordsChanged(int index);
+
+private:
+    WorldScene *mScene;
+    QMap<WorldBMP*,MapImage*> mImages;
+};
 
 class WorldView : public BaseGraphicsView
 {
-    Q_OBJECT
 public:
     explicit WorldView(QWidget *parent = 0);
 
@@ -34,11 +62,8 @@ public:
 
     WorldScene *scene() const;
 
-private slots:
-    void worldResized();
-
 private:
-    QGraphicsPolygonItem *mMiniMapItem;
+    WorldMiniMapItem *mMiniMapItem;
 };
 
 #endif // WORLDVIEW_H

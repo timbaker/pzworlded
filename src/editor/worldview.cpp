@@ -17,11 +17,13 @@
 
 #include "worldview.h"
 
+#include "mapimagemanager.h"
 #include "world.h"
 #include "worlddocument.h"
 #include "worldscene.h"
 #include "zoomable.h"
 
+#include <QGraphicsPixmapItem>
 #include <QMouseEvent>
 
 WorldView::WorldView(QWidget *parent)
@@ -38,8 +40,7 @@ void WorldView::setScene(WorldScene *scene)
     connect(scene->worldDocument(), SIGNAL(worldResized(QSize)),
             SLOT(worldResized()));
 
-    QPolygonF polygon = scene->cellRectToPolygon(scene->world()->bounds());
-    mMiniMapItem = new QGraphicsPolygonItem(polygon);
+    mMiniMapItem = new WorldMiniMapItem(scene);
     addMiniMapItem(mMiniMapItem);
 }
 
@@ -48,16 +49,77 @@ WorldScene *WorldView::scene() const
     return static_cast<WorldScene*>(mScene);
 }
 
-void WorldView::worldResized()
-{
-    QPolygonF polygon = scene()->cellRectToPolygon(scene()->world()->bounds());
-    mMiniMapItem->setPolygon(polygon);
-}
-
 void WorldView::mouseMoveEvent(QMouseEvent *event)
 {
     QPoint tilePos = scene()->pixelToCellCoordsInt(mapToScene(event->pos()));
     emit statusBarCoordinatesChanged(tilePos.x(), tilePos.y());
 
     BaseGraphicsView::mouseMoveEvent(event);
+}
+
+/////
+
+WorldMiniMapItem::WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mScene(scene)
+{
+    for (int i = 0; i < mScene->world()->bmps().size(); i++)
+        bmpAdded(i);
+
+    connect(mScene->worldDocument(), SIGNAL(worldResized(QSize)),
+            SLOT(worldResized()));
+    connect(mScene->worldDocument(), SIGNAL(bmpAdded(int)),
+            SLOT(bmpAdded(int)));
+    connect(mScene->worldDocument(), SIGNAL(bmpAboutToBeRemoved(int)),
+            SLOT(bmpAboutToBeRemoved(int)));
+    connect(mScene->worldDocument(), SIGNAL(bmpCoordsChanged(int)),
+            SLOT(bmpCoordsChanged(int)));
+}
+
+QRectF WorldMiniMapItem::boundingRect() const
+{
+    return mScene->boundingRect(mScene->world()->bounds());
+}
+
+void WorldMiniMapItem::paint(QPainter *painter,
+                             const QStyleOptionGraphicsItem *option,
+                             QWidget *widget)
+{
+    foreach (WorldBMP *bmp, mImages.keys()) {
+        if (MapImage *mapImage = mImages[bmp]) {
+            const QImage &image = mapImage->image();
+            QRectF target = mScene->boundingRect(bmp->bounds());
+            QRectF source = QRect(QPoint(0, 0), image.size());
+            painter->drawImage(target, image, source);
+        }
+    }
+
+    QPolygonF polygon = mScene->cellRectToPolygon(mScene->world()->bounds());
+    painter->drawPolygon(polygon);
+}
+
+void WorldMiniMapItem::worldResized()
+{
+    update();
+}
+
+void WorldMiniMapItem::bmpAdded(int index)
+{
+    WorldBMP *bmp = mScene->world()->bmps().at(index);
+    if (MapImage *mapImage = MapImageManager::instance()->getMapImage(bmp->filePath())) {
+        mImages[bmp] = mapImage;
+    }
+    update();
+}
+
+void WorldMiniMapItem::bmpAboutToBeRemoved(int index)
+{
+    WorldBMP *bmp = mScene->world()->bmps().at(index);
+    mImages.remove(bmp);
+    update();
+}
+
+void WorldMiniMapItem::bmpCoordsChanged(int index)
+{
+    update();
 }
