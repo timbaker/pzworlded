@@ -129,7 +129,10 @@ void MapsDock::selectionChanged()
     }
     QModelIndex index = selectedRows.first();
     QString path = mMapsView->model()->filePath(index);
-    if (QFileInfo(path).isDir())
+    QFileInfo info(path);
+    if (info.isDir())
+        return;
+    if (info.suffix() == QLatin1String("pzw"))
         return;
     MapImage *mapImage = MapImageManager::instance()->getMapImage(path);
     if (mapImage) {
@@ -198,7 +201,9 @@ MapsView::MapsView(QWidget *parent)
 
     model->setFilter(QDir::AllDirs | QDir::NoDot | QDir::Files);
     QStringList filters;
-    filters << QLatin1String("*.tmx") << QLatin1String("*.tbx");
+    filters << QLatin1String("*.tmx")
+            << QLatin1String("*.tbx")
+            << QLatin1String("*.pzw");
     foreach (QString format, BMPToTMX::supportedImageFormats())
         filters << QLatin1String("*.") + format;
     model->setNameFilters(filters);
@@ -260,4 +265,6 @@ void MapsView::onActivated(const QModelIndex &index)
         Preferences *prefs = Preferences::instance();
         prefs->setMapsDirectory(fileInfo.canonicalFilePath());
     }
+    if (fileInfo.suffix() == QLatin1String("pzw"))
+        MainWindow::instance()->openFile(fileInfo.canonicalFilePath());
 }
