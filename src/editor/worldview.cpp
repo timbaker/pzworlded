@@ -37,9 +37,6 @@ void WorldView::setScene(WorldScene *scene)
 {
     BaseGraphicsView::setScene(scene);
 
-    connect(scene->worldDocument(), SIGNAL(worldResized(QSize)),
-            SLOT(worldResized()));
-
     mMiniMapItem = new WorldMiniMapItem(scene);
     addMiniMapItem(mMiniMapItem);
 }
@@ -82,8 +79,8 @@ QRectF WorldMiniMapItem::boundingRect() const
 }
 
 void WorldMiniMapItem::paint(QPainter *painter,
-                             const QStyleOptionGraphicsItem *option,
-                             QWidget *widget)
+                             const QStyleOptionGraphicsItem *,
+                             QWidget *)
 {
     foreach (WorldBMP *bmp, mImages.keys()) {
         if (MapImage *mapImage = mImages[bmp]) {
@@ -121,5 +118,6 @@ void WorldMiniMapItem::bmpAboutToBeRemoved(int index)
 
 void WorldMiniMapItem::bmpCoordsChanged(int index)
 {
+    Q_UNUSED(index)
     update();
 }
