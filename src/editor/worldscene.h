@@ -336,6 +336,7 @@ private:
     WorldScene *mScene;
     WorldBMP *mBMP;
     MapImage *mMapImage;
+    QVector<QImage> mSubImages;
     QRectF mMapImageBounds;
     bool mSelected;
     bool mDragging;
