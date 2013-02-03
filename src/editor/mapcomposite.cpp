@@ -318,7 +318,6 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
     if (mLayers[index] == mRoadLayer1 && !mOwner->roadLayer1()->isEmpty())
         return false;
 #endif
-
 #if SPARSE_TILELAYER
     // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps.
     return mEmptyLayers[index] || mLayers[index]->isEmpty();
@@ -394,6 +393,7 @@ void CompositeLayerGroup::synch()
                 layerGroup->setLayerVisibility(layer->name(), mVisibleLayers[index++]);
 
             layerGroup->synch();
+
             if (layerGroup->mAnyVisibleLayers) {
                 mVisibleSubMapLayers.append(SubMapLayers(subMap, layerGroup));
                 unionTileRects(r, layerGroup->bounds().translated(subMap->origin()), r);
@@ -441,18 +441,17 @@ QMargins CompositeLayerGroup::drawMargins() const
     return mDrawMargins;
 }
 
-void CompositeLayerGroup::setLayerVisibility(const QString &layerName, bool visible)
+bool CompositeLayerGroup::setLayerVisibility(const QString &layerName, bool visible)
 {
     const QString name = MapComposite::layerNameWithoutPrefix(layerName);
     if (!mLayersByName.contains(name))
-        return;
-    foreach (Layer *layer, mLayersByName[name]) {
-        mVisibleLayers[mLayers.indexOf(layer->asTileLayer())] = visible;
-        mNeedsSynch = true;
-    }
+        return false;
+    foreach (Layer *layer, mLayersByName[name])
+        setLayerVisibility(layer->asTileLayer(), visible);
+    return mNeedsSynch;
 }
 
-void CompositeLayerGroup::setLayerVisibility(TileLayer *tl, bool visible)
+bool CompositeLayerGroup::setLayerVisibility(TileLayer *tl, bool visible)
 {
     int index = mLayers.indexOf(tl);
     Q_ASSERT(index != -1);
@@ -460,6 +459,7 @@ void CompositeLayerGroup::setLayerVisibility(TileLayer *tl, bool visible)
         mVisibleLayers[index] = visible;
         mNeedsSynch = true;
     }
+    return mNeedsSynch;
 }
 
 bool CompositeLayerGroup::isLayerVisible(TileLayer *tl)
@@ -469,7 +469,6 @@ bool CompositeLayerGroup::isLayerVisible(TileLayer *tl)
     return mVisibleLayers[index];
 }
 
-#if 0
 void CompositeLayerGroup::layerRenamed(TileLayer *layer)
 {
     QMapIterator<QString,QVector<Layer*> > it(mLayersByName);
@@ -486,7 +485,6 @@ void CompositeLayerGroup::layerRenamed(TileLayer *layer)
     const QString name = MapComposite::layerNameWithoutPrefix(layer);
     mLayersByName[name].append(layer);
 }
-#endif
 
 bool CompositeLayerGroup::setLayerOpacity(const QString &layerName, qreal opacity)
 {
@@ -758,7 +756,108 @@ void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
     subMap->setOrigin(pos);
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
-        layerGroup->synch();
+        layerGroup->setNeedsSynch(true);
+}
+
+void MapComposite::layerAdded(int index)
+{
+    layerRenamed(index);
+}
+
+void MapComposite::layerAboutToBeRemoved(int index)
+{
+    Layer *layer = mMap->layerAt(index);
+    if (TileLayer *tl = layer->asTileLayer()) {
+        if (tl->group()) {
+            CompositeLayerGroup *oldGroup = (CompositeLayerGroup*)tl->group();
+            emit layerAboutToBeRemovedFromGroup(index);
+            removeLayerFromGroup(index);
+            emit layerRemovedFromGroup(index, oldGroup);
+        }
+    }
+}
+
+void MapComposite::layerRenamed(int index)
+{
+    Layer *layer = mMap->layerAt(index);
+
+    int oldLevel = layer->level();
+    int newLevel;
+    bool hadGroup = false;
+    bool hasGroup = levelForLayer(layer, &newLevel);
+    CompositeLayerGroup *oldGroup = 0;
+
+    if (TileLayer *tl = layer->asTileLayer()) {
+        oldGroup = (CompositeLayerGroup*)tl->group();
+        hadGroup = oldGroup != 0;
+        if (oldGroup)
+            oldGroup->layerRenamed(tl);
+    }
+
+    if ((oldLevel != newLevel) || (hadGroup != hasGroup)) {
+        if (hadGroup) {
+            emit layerAboutToBeRemovedFromGroup(index);
+            removeLayerFromGroup(index);
+            emit layerRemovedFromGroup(index, oldGroup);
+        }
+        if (oldLevel != newLevel) {
+            layer->setLevel(newLevel);
+            emit layerLevelChanged(index, oldLevel);
+        }
+        if (hasGroup && layer->isTileLayer()) {
+            addLayerToGroup(index);
+            emit layerAddedToGroup(index);
+        }
+    }
+}
+
+void MapComposite::addLayerToGroup(int index)
+{
+    Layer *layer = mMap->layerAt(index);
+    Q_ASSERT(layer->isTileLayer());
+    Q_ASSERT(levelForLayer(layer));
+    if (TileLayer *tl = layer->asTileLayer()) {
+        int level = tl->level();
+        if (!mLayerGroups.contains(level)) {
+            mLayerGroups[level] = new CompositeLayerGroup(this, level);
+
+            if (level < mMinLevel)
+                mMinLevel = level;
+            if (level > mMaxLevel)
+                mMaxLevel = level;
+
+            mSortedLayerGroups.clear();
+            for (int n = mMinLevel; n <= mMaxLevel; ++n) {
+                if (mLayerGroups.contains(n))
+                    mSortedLayerGroups.append(mLayerGroups[n]);
+            }
+
+            emit layerGroupAdded(level);
+        }
+        mLayerGroups[level]->addTileLayer(tl, index);
+//        tl->setGroup(mLayerGroups[level]);
+    }
+}
+
+void MapComposite::removeLayerFromGroup(int index)
+{
+    Layer *layer = mMap->layerAt(index);
+    Q_ASSERT(layer->isTileLayer());
+    if (TileLayer *tl = layer->asTileLayer()) {
+#if 1
+        // Unused hack for MiniMapScene
+        if (!mMapInfo->isBeingEdited()) {
+            if (CompositeLayerGroup *layerGroup = tileLayersForLevel(tl->level()))
+                layerGroup->removeTileLayer(tl);
+            return;
+        }
+#endif
+        Q_ASSERT(tl->group());
+        if (CompositeLayerGroup *layerGroup = (CompositeLayerGroup*)tl->group()) {
+            layerGroup->removeTileLayer(tl);
+//            tl->setGroup(0);
+        }
+    }
 }
 
 CompositeLayerGroup *MapComposite::tileLayersForLevel(int level) const
@@ -1009,6 +1108,23 @@ bool MapComposite::mapChanged(MapInfo *mapInfo)
     }
 
     return changed;
+}
+
+bool MapComposite::isTilesetUsed(Tileset *tileset)
+{
+    foreach (MapComposite *mc, maps()) {
+        if (mc->map()->isTilesetUsed(tileset))
+            return true;
+    }
+    return false;
+}
+
+void MapComposite::synch()
+{
+    foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
+        if (layerGroup->needsSynch())
+            layerGroup->synch();
+    }
 }
 
 void MapComposite::recreate()

@@ -56,9 +56,10 @@ public:
     void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
 
-    void setLayerVisibility(const QString &layerName, bool visible);
-    void setLayerVisibility(Tiled::TileLayer *tl, bool visible);
+    bool setLayerVisibility(const QString &layerName, bool visible);
+    bool setLayerVisibility(Tiled::TileLayer *tl, bool visible);
     bool isLayerVisible(Tiled::TileLayer *tl);
+    void layerRenamed(Tiled::TileLayer *layer);
 
     bool setLayerOpacity(const QString &layerName, qreal opacity);
     bool setLayerOpacity(Tiled::TileLayer *tl, qreal opacity);
@@ -140,6 +141,10 @@ public:
     Tiled::Map *map() const { return mMap; }
     MapInfo *mapInfo() const { return mMapInfo; }
 
+    void layerAdded(int index);
+    void layerAboutToBeRemoved(int index);
+    void layerRenamed(int index);
+
     int layerGroupCount() const { return mLayerGroups.size(); }
     const QMap<int,CompositeLayerGroup*>& layerGroups() const { return mLayerGroups; }
     CompositeLayerGroup *tileLayersForLevel(int level) const;
@@ -211,6 +216,10 @@ public:
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapChanged(MapInfo *mapInfo);
 
+    bool isTilesetUsed(Tiled::Tileset *tileset);
+
+    void synch();
+
 #ifdef BUILDINGED
     void setBlendOverMap(MapComposite *mapComposite)
     { mBlendOverMap = mapComposite; }
@@ -226,8 +235,15 @@ public:
 
 signals:
     void layerGroupAdded(int level);
+    void layerAddedToGroup(int index);
+    void layerAboutToBeRemovedFromGroup(int index);
+    void layerRemovedFromGroup(int index, CompositeLayerGroup *oldGroup);
+    void layerLevelChanged(int index, int oldLevel);
 
 private:
+    void addLayerToGroup(int index);
+    void removeLayerFromGroup(int index);
+
     void recreate();
 
 private:
