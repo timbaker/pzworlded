@@ -40,6 +40,12 @@
 #include <QImageReader>
 #include <QMessageBox>
 
+#ifdef QT_NO_DEBUG
+inline QNoDebug noise() { return QNoDebug(); }
+#else
+inline QDebug noise() { return QDebug(QtDebugMsg); }
+#endif
+
 using namespace Tiled;
 using namespace Tiled::Internal;
 
@@ -692,7 +698,7 @@ void MapImageManager::renderThreadNeedsMap(MapImage *mapImage)
 
 void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapImage)
 {
-    qDebug() << "imageRenderedByThread" << mapImage->mapInfo()->path();
+    noise() << "imageRenderedByThread" << mapImage->mapInfo()->path();
 
     mapImage->mImage = imgData.image;
     mapImage->mLevelZeroBounds = imgData.levelZeroBounds;
@@ -863,10 +869,10 @@ void MapImageManager::deferThreadResults(bool defer)
 {
     if (defer) {
         ++mDeferralDepth;
-//        qDebug() << "MapImageManager::deferThreadResults depth++ =" << mDeferralDepth;
+//        noise() << "MapImageManager::deferThreadResults depth++ =" << mDeferralDepth;
     } else {
         Q_ASSERT(mDeferralDepth > 0);
-//        qDebug() << "MapImageManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
+//        noise() << "MapImageManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
         if (--mDeferralDepth == 0) {
             if (!mDeferralQueued && mDeferredMapImages.size()) {
                 QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
@@ -1030,7 +1036,9 @@ void MapImageRenderWorker::work()
 
         Job job = mJobs.takeFirst();
 
+        noise() << "MapImageRenderWorker started" << job.mapImage->mapInfo()->path();
         MapImageData data = generateMapImage(job.mapComposite);
+        noise() << "MapImageRenderWorker" << (aborted() ? "aborted" : "finished") << job.mapImage->mapInfo()->path();
 
         emit jobDone(job.mapComposite); // main thread needs to delete this
 
