@@ -293,9 +293,10 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
     mMapInfo[mapFilePath]->mPlaceholder = false;
 
     // The reference count is zero, but prevent it being immediately purged.
-    mMapInfo[mapFilePath]->mReferenceEpoch = ++mReferenceEpoch;
+    mMapInfo[mapFilePath]->mReferenceEpoch = mReferenceEpoch;
 
     return mMapInfo[mapFilePath];
+#endif
 }
 
 MapInfo *MapManager::newFromMap(Map *map, const QString &mapFilePath)
@@ -761,7 +762,7 @@ void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
         emit mapChanged(mapInfo);
     // The reference count is zero, but prevent it being immediately purged.
     // FIXME: add a reference and let the caller deal with it.
-    mapInfo->mReferenceEpoch = ++mReferenceEpoch;
+    mapInfo->mReferenceEpoch = mReferenceEpoch;
 
     emit mapLoaded(mapInfo);
 }
