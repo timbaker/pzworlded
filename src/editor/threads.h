@@ -18,7 +18,11 @@
 #ifndef THREADS_H
 #define THREADS_H
 
+#include <QCoreApplication>
 #include <QThread>
+
+#define IN_APP_THREAD Q_ASSERT(QThread::currentThread() == qApp->thread());
+#define IN_WORKER_THREAD Q_ASSERT(QThread::currentThread() != qApp->thread());
 
 class BaseWorker : public QObject
 {
@@ -49,7 +53,7 @@ public slots:
 signals:
     void finished();
 
-private:
+protected:
     bool *mAbortPtr;
 };
 
@@ -63,7 +67,14 @@ public:
 
     }
 
-    void interrupt() { mInterrupted = true; }
+    void interrupt(bool wait = false)
+    {
+        IN_APP_THREAD;
+        mInterrupted = true; // see BaseWorker::mAbortPtr
+        while (wait && mInterrupted) {
+            msleep(1); // wait for the worker to clear mInterrupted
+        }
+    }
     void resume() { mInterrupted = false; }
 
     bool *var() { return &mInterrupted; }
@@ -85,9 +96,5 @@ public:
         QThread::usleep(usecs);
     }
 };
-
-#include <QCoreApplication>
-#define IN_APP_THREAD Q_ASSERT(QThread::currentThread() == qApp->thread());
-#define IN_WORKER_THREAD Q_ASSERT(QThread::currentThread() != qApp->thread());
 
 #endif // THREADS_H
