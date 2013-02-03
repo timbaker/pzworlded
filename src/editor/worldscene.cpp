@@ -125,6 +125,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
             addItem(item);
             item->setZValue(ZVALUE_CELLITEM); // below mGridItem
             mCellItems[y * world()->width() + x] = item;
+            mPendingThumbnails += item;
         }
     }
 
@@ -142,6 +143,8 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
     connect(prefs, SIGNAL(showBMPsChanged(bool)),
             SLOT(setShowBMPs(bool)));
+    connect(prefs, SIGNAL(worldThumbnailsChanged(bool)),
+            SLOT(worldThumbnailsChanged(bool)));
 
     mPasteCellsTool = PasteCellsTool::instance();
 
@@ -156,6 +159,8 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 
     connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(mapImageChanged(MapImage*)));
+
+    handlePendingThumbnails();
 }
 
 void WorldScene::setTool(AbstractTool *tool)
@@ -610,6 +615,37 @@ void WorldScene::mapImageChanged(MapImage *mapImage)
 {
     foreach (WorldCellItem *item, mCellItems)
         item->mapImageChanged(mapImage);
+    handlePendingThumbnails();
+}
+
+void WorldScene::worldThumbnailsChanged(bool thumbs)
+{
+    mPendingThumbnails.clear();
+    if (thumbs) {
+        foreach (WorldCellItem *item, mCellItems)
+            mPendingThumbnails += item;
+        handlePendingThumbnails();
+    } else {
+        foreach (WorldCellItem *item, mCellItems)
+            item->thumbnailsAreFail();
+    }
+}
+
+void WorldScene::handlePendingThumbnails()
+{
+    if (!Preferences::instance()->worldThumbnails())
+        return;
+
+    if (mPendingThumbnails.size()) {
+        WorldCellItem *item = mPendingThumbnails.first();
+        if (item->thumbnailsAreGo()) {
+            mPendingThumbnails.takeFirst();
+            if (mPendingThumbnails.size()) {
+                QMetaObject::invokeMethod(this, "handlePendingThumbnails",
+                                          Qt::QueuedConnection);
+            }
+        }
+    }
 }
 
 void WorldScene::keyPressEvent(QKeyEvent *event)
@@ -776,6 +812,7 @@ BaseCellItem::BaseCellItem(WorldScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mScene(scene)
     , mMapImage(0)
+    , mWantsImages(true)
 {
     setAcceptedMouseButtons(0);
 #ifndef QT_NO_DEBUG
@@ -811,14 +848,14 @@ void BaseCellItem::paint(QPainter *painter,
 {
     Q_UNUSED(option)
 
-    if (mMapImage) {
+    if (mMapImage && mMapImage->isLoaded()) {
         QRectF target = mMapImageBounds.translated(mDrawOffset);
         QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
         painter->drawImage(target, mMapImage->image(), source);
     }
 
     foreach (const LotImage &lotImage, mLotImages) {
-        if (!lotImage.mMapImage) continue;
+        if (!lotImage.mMapImage || !lotImage.mMapImage->isLoaded()) continue;
         QRectF target = lotImage.mBounds.translated(mDrawOffset);
         QRectF source = QRect(QPoint(0, 0), lotImage.mMapImage->image().size());
         painter->drawImage(target, lotImage.mMapImage->image(), source);
@@ -833,7 +870,7 @@ void BaseCellItem::updateCellImage()
 {
     mMapImage = 0;
     mMapImageBounds = QRect();
-    if (!mapFilePath().isEmpty()) {
+    if (mWantsImages && !mapFilePath().isEmpty()) {
 #ifndef QT_NO_DEBUG
         Q_ASSERT(!mUpdatingImage);
         mUpdatingImage = true;
@@ -853,7 +890,9 @@ void BaseCellItem::updateCellImage()
 void BaseCellItem::updateLotImage(int index)
 {
     WorldCellLot *lot = lots().at(index);
-    MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
+    MapImage *mapImage = mWantsImages
+            ? MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/)
+            : 0;
     if (mapImage) {
         mLotImages.insert(index, LotImage(QRectF(), mapImage));
         calcLotImageBounds(index);
@@ -991,6 +1030,7 @@ WorldCellItem::WorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *
     , mCell(cell)
 {
     setFlag(ItemIsSelectable);
+    mWantsImages = false;
     initialize();
 }
 
@@ -1035,11 +1075,32 @@ void WorldCellItem::mapFileCreated(const QString &path)
         cellContentsChanged();
 }
 
+bool WorldCellItem::thumbnailsAreGo()
+{
+    if (mMapImage && mMapImage->isLoaded())
+        return true;
+    mWantsImages = true;
+    cellContentsChanged();
+    if (mMapImage && mMapImage->isLoaded())
+        return true;
+    return false;
+}
+
+void WorldCellItem::thumbnailsAreFail()
+{
+    if (mWantsImages) {
+        mWantsImages = false;
+        cellContentsChanged();
+    }
+}
+
 /////
 
 DragCellItem::DragCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *parent)
     : WorldCellItem(cell, scene, parent)
 {
+    mWantsImages = Preferences::instance()->worldThumbnails();
+    initialize(); // again?!?!?!?!
 }
 
 void DragCellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)

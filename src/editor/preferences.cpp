@@ -90,6 +90,7 @@ Preferences::Preferences()
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
     mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
+    mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
     mSettings->endGroup();
 
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
@@ -201,6 +202,17 @@ void Preferences::setUseOpenGL(bool useOpenGL)
     mSettings->setValue(QLatin1String("Interface/OpenGL"), mUseOpenGL);
 
     emit useOpenGLChanged(mUseOpenGL);
+}
+
+void Preferences::setWorldThumbnails(bool thumbs)
+{
+    if (mWorldThumbnails == thumbs)
+        return;
+
+    mWorldThumbnails = thumbs;
+    mSettings->setValue(QLatin1String("Interface/WorldThumbnails"), mWorldThumbnails);
+
+    emit worldThumbnailsChanged(mWorldThumbnails);
 }
 
 QString Preferences::openFileDirectory() const

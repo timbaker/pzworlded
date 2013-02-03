@@ -103,6 +103,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="thumbnails">
+            <property name="text">
+             <string>Display map thumbnail images in the world view</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

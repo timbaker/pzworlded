@@ -44,6 +44,7 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
             SLOT(gridColorChanged(QColor)));
 
     ui->openGL->setChecked(prefs->useOpenGL());
+    ui->thumbnails->setChecked(prefs->worldThumbnails());
 }
 
 void PreferencesDialog::browseTilesDirectory()
@@ -64,6 +65,7 @@ void PreferencesDialog::accept()
     Preferences *prefs = Preferences::instance();
     Tiled::TileMetaInfoMgr::instance()->changeTilesDirectory(mTilesDirectory);
     prefs->setUseOpenGL(ui->openGL->isChecked());
+    prefs->setWorldThumbnails(ui->thumbnails->isChecked());
     prefs->setGridColor(mGridColor);
 
     QDialog::accept();

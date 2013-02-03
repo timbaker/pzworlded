@@ -170,6 +170,7 @@ protected:
     QRectF mMapImageBounds;
     QVector<LotImage> mLotImages;
     QPointF mDrawOffset;
+    bool mWantsImages;
 #ifndef QT_NO_DEBUG
     bool mUpdatingImage;
 #endif
@@ -193,8 +194,9 @@ public:
     void lotRemoved(int index);
     void lotMoved(WorldCellLot *lot);
     void cellContentsChanged();
-
     void mapFileCreated(const QString &path);
+    bool thumbnailsAreGo();
+    void thumbnailsAreFail();
 
 protected:
     WorldCell *mCell;
@@ -436,6 +438,9 @@ public slots:
     void mapFileCreated(const QString &path);
     void mapImageChanged(MapImage *mapImage);
 
+    void worldThumbnailsChanged(bool thumbs);
+    void handlePendingThumbnails();
+
 protected:
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
@@ -455,6 +460,7 @@ private:
     WorldSelectionItem *mSelectionItem;
     QVector<WorldCellItem*> mSelectedCellItems;
     QVector<WorldCellItem*> mCellItems;
+    QList<WorldCellItem*> mPendingThumbnails;
     PasteCellsTool *mPasteCellsTool;
     BaseWorldSceneTool *mActiveTool;
     DragMapImageItem *mDragMapImageItem;
