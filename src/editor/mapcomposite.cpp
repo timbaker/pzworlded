@@ -76,6 +76,14 @@ QString MapComposite::layerNameWithoutPrefix(Layer *layer)
 
 ///// ///// ///// ///// /////
 
+CompositeLayerGroup::SubMapLayers::SubMapLayers(MapComposite *subMap,
+                                                CompositeLayerGroup *layerGroup)
+    : mSubMap(subMap)
+    , mLayerGroup(layerGroup)
+    , mBounds(layerGroup->bounds().translated(subMap->origin()))
+{
+}
+
 ///// ///// ///// ///// /////
 
 CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
@@ -216,11 +224,27 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     }
 
     // Overwrite map cells with sub-map cells at this location
-    foreach (const SubMapLayers& subMapLayer, mPreparedSubMapLayers)
+    foreach (const SubMapLayers& subMapLayer, mPreparedSubMapLayers) {
+        if (!subMapLayer.mBounds.contains(pos))
+            continue;
         subMapLayer.mLayerGroup->orderedCellsAt(pos - subMapLayer.mSubMap->origin(),
                                                 cells, opacities);
+    }
 
     return !cells.isEmpty();
+}
+
+void CompositeLayerGroup::prepareDrawing2()
+{
+    mPreparedSubMapLayers.resize(0);
+    foreach (MapComposite *subMap, mOwner->subMaps()) {
+        int levelOffset = subMap->levelOffset();
+        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
+        if (layerGroup) {
+            mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
+            layerGroup->prepareDrawing2();
+        }
+    }
 }
 
 // This is for the benefit of LotFilesManager.  It ignores the visibility of
@@ -270,11 +294,10 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
     }
 
     // Overwrite map cells with sub-map cells at this location
-    foreach (MapComposite *subMap, mOwner->subMaps()) {
-        int levelOffset = subMap->levelOffset();
-        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
-        if (layerGroup)
-            layerGroup->orderedCellsAt2(pos - subMap->origin(), cells);
+    foreach (const SubMapLayers& subMapLayer, mPreparedSubMapLayers) {
+        if (!subMapLayer.mBounds.contains(pos))
+            continue;
+        subMapLayer.mLayerGroup->orderedCellsAt2(pos - subMapLayer.mSubMap->origin(), cells);
     }
 
     return !cells.isEmpty();

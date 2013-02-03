@@ -217,6 +217,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+        lg->prepareDrawing2();
         for (int y = 0; y < mapHeight; y++) {
             for (int x = 0; x < mapWidth; x++) {
                 cells.resize(0);

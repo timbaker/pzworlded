@@ -53,6 +53,7 @@ public:
 
     QRectF boundingRect(const Tiled::MapRenderer *renderer);
 
+    void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
 
     void setLayerVisibility(const QString &layerName, bool visible);
@@ -98,13 +99,11 @@ private:
             , mLayerGroup(0)
         {
         }
-        SubMapLayers(MapComposite *subMap, CompositeLayerGroup *layerGroup)
-            : mSubMap(subMap)
-            , mLayerGroup(layerGroup)
-        {
-        }
+        SubMapLayers(MapComposite *subMap, CompositeLayerGroup *layerGroup);
+
         MapComposite *mSubMap;
         CompositeLayerGroup *mLayerGroup;
+        QRect mBounds;
     };
 
     QVector<SubMapLayers> mPreparedSubMapLayers;
