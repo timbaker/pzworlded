@@ -255,6 +255,7 @@ private:
     MapImageRenderWorker *mImageRenderWorker;
     MapImage *mExpectMapImage;
     QList<MapInfo*> mExpectSubMaps;
+    QList<MapInfo*> mReferencedMaps;
 
     friend class MapImageManagerDeferral;
     void deferThreadResults(bool defer);
