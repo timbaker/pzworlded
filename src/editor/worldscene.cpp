@@ -843,20 +843,7 @@ void BaseCellItem::updateCellImage()
         mUpdatingImage = false;
 #endif
         if (mMapImage) {
-#if 1
             calcMapImageBounds();
-#else
-            QSizeF gridSize = mapSize(300, 300, 64, 32);
-            QSizeF unscaledMapSize = mMapImage->bounds().size();
-            const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
-            int scaledImageWidth = GRID_WIDTH * scaleMapToCell;
-
-            const qreal scaleImageToCell = qreal(scaledImageWidth) / mMapImage->image().width();
-            QPointF offset = mMapImage->tileToImageCoords(0, 0) * scaleImageToCell;
-            int scaledImageHeight = mMapImage->image().height() * scaleImageToCell;
-            mMapImageBounds = QRectF(mScene->cellToPixelCoords(cellPos()) - offset,
-                                    QSizeF(scaledImageWidth, scaledImageHeight));
-#endif
         }
     }
 
@@ -868,26 +855,8 @@ void BaseCellItem::updateLotImage(int index)
     WorldCellLot *lot = lots().at(index);
     MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
     if (mapImage) {
-#if 1
         mLotImages.insert(index, LotImage(QRectF(), mapImage));
         calcLotImageBounds(index);
-#else
-        QSizeF gridSize = mapSize(300, 300, 64, 32);
-        QSizeF unscaledMapSize = mapImage->bounds().size();
-        const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
-        int scaledImageWidth = GRID_WIDTH * scaleMapToCell;
-        const qreal scaleImageToCell = qreal(scaledImageWidth) / mapImage->image().width();
-        int scaledImageHeight = mapImage->image().height() * scaleImageToCell;
-        QSizeF scaledImageSize(scaledImageWidth, scaledImageHeight);
-
-        QRectF bounds = QRectF(calcLotImagePosition(lot, scaledImageWidth, mapImage),
-                               scaledImageSize);
-        mLotImages.insert(index, LotImage(bounds, mapImage));
-
-        // Update lot with current width and height of the map
-        lot->setWidth(mapImage->mapInfo()->width());
-        lot->setHeight(mapImage->mapInfo()->height());
-#endif
     } else {
         mLotImages.insert(index, LotImage());
     }

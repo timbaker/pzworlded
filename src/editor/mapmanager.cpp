@@ -152,7 +152,6 @@ QString MapManager::pathForMap(const QString &mapName, const QString &relativeTo
     return QString();
 }
 
-#include <QApplication>
 class EditorMapReader : public MapReader
 {
 protected:
@@ -163,11 +162,6 @@ protected:
     {
         QString resolved = MapReader::resolveReference(reference, mapPath);
         QString canonical = QFileInfo(resolved).canonicalFilePath();
-
-        // Hack to keep the app responsive.
-        // TODO: Move map reading to a worker thread. Only issue is tileset images
-        // cannot be accessed outside the GUI thread.
-//        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
         // Make sure that we're not returning an empty string when the file is
         // not found.
@@ -189,7 +183,6 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
 
     QFileInfo fileInfoMap(mapFilePath);
 
-#if 1
     MapInfo *mapInfo = this->mapInfo(mapFilePath);
     if (!mapInfo)
         return 0;
@@ -210,99 +203,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
     if (mapInfo->map())
         return mapInfo;
     return 0;
-#else
-    if (asynch) {
-        MapInfo *mapInfo = this->mapInfo(mapFilePath);
-        if (!mapInfo)
-            return 0;
-        if (mapInfo->mLoading)
-            return mapInfo;
-        mapInfo->mLoading = true;
-        QMetaObject::invokeMethod(mMapReaderWorker[mNextThreadForJob], "addJob",
-                                  Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo));
-        mNextThreadForJob = (mNextThreadForJob + 1) % mMapReaderThread.size();
-        return mapInfo;
-    }
 
-    PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
-
-    // Caller wants the map now but it is being loaded by a worker thread.
-    if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->mLoading) {
-        MapInfo *mapInfo = mMapInfo[mapFilePath];
-        while (mapInfo->mLoading) {
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-        }
-        if (mapInfo->map())
-            return mapInfo;
-        return 0;
-    }
-
-    Map *map = 0;
-    if (fileInfoMap.suffix() == QLatin1String("tbx")) {
-        BuildingEditor::BuildingReader reader;
-        BuildingEditor::Building *building = reader.read(mapFilePath);
-        if (!building) {
-            mError = reader.errorString();
-            return 0;
-        }
-        reader.fix(building);
-        BuildingEditor::BuildingMap bmap(building);
-        map = bmap.mergedMap();
-        QSet<Tileset*> usedTilesets;
-        foreach (TileLayer *tl, map->tileLayers())
-            usedTilesets += tl->usedTilesets();
-        usedTilesets.remove(TilesetManager::instance()->missingTileset());
-#if 0
-        QList<Tileset*> remove;
-        foreach (Tileset *ts, map->tilesets()) {
-            if (!usedTilesets.contains(ts))
-                remove += ts;
-        }
-        foreach (Tileset *ts, remove)
-            map->removeTilesetAt(map->indexOfTileset(ts));
-        TilesetManager::instance()->removeReferences(remove);
-#endif
-        TileMetaInfoMgr::instance()->loadTilesets(usedTilesets.toList());
-        // The map references TileMetaInfoMgr's tilesets, but we add a reference
-        // to them ourself below.
-        TilesetManager::instance()->removeReferences(map->tilesets());
-    } else {
-        EditorMapReader reader;
-        reader.setTilesetImageCache(TilesetManager::instance()->imageCache());
-        map = reader.readMap(mapFilePath);
-        if (!map) {
-            mError = reader.errorString();
-            return 0; // TODO: Add error handling
-        }
-    }
-
-    Tile *missingTile = TilesetManager::instance()->missingTile();
-    foreach (Tileset *tileset, map->missingTilesets()) {
-        if (tileset->tileHeight() == 128 && tileset->tileWidth() == 64) {
-            // Replace the all-red image with something nicer.
-            for (int i = 0; i < tileset->tileCount(); i++)
-                tileset->tileAt(i)->setImage(missingTile->image());
-        }
-    }
-    TilesetManager::instance()->addReferences(map->tilesets());
-
-    if (!mMapInfo.contains(mapFilePath)) {
-        MapInfo *info = new MapInfo(map->orientation(),
-                                    map->width(), map->height(),
-                                    map->tileWidth(), map->tileHeight());
-        info->setFilePath(mapFilePath);
-        mMapInfo[mapFilePath] = info;
-        mFileSystemWatcher->addPath(mapFilePath);
-    }
-
-    mMapInfo[mapFilePath]->mMap = map;
-    mMapInfo[mapFilePath]->mPlaceholder = false;
-
-    // The reference count is zero, but prevent it being immediately purged.
-    mMapInfo[mapFilePath]->mReferenceEpoch = mReferenceEpoch;
-
-    return mMapInfo[mapFilePath];
-#endif
 }
 
 MapInfo *MapManager::newFromMap(Map *map, const QString &mapFilePath)
@@ -559,9 +460,7 @@ void MapManager::addReferenceToMap(MapInfo *mapInfo)
     if (mapInfo->mMap) {
         mapInfo->mMapRefCount++;
         mapInfo->mReferenceEpoch = ++mReferenceEpoch;
-#ifndef QT_NO_DEBUG
-        qDebug() << "MapManager refCount++ =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
-#endif
+        noise() << "MapManager refCount++ =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
     }
 }
 
@@ -571,9 +470,7 @@ void MapManager::removeReferenceToMap(MapInfo *mapInfo)
     if (mapInfo->mMap) {
         Q_ASSERT(mapInfo->mMapRefCount > 0);
         mapInfo->mMapRefCount--;
-#ifndef QT_NO_DEBUG
-        qDebug() << "MapManager refCount-- =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
-#endif
+        noise() << "MapManager refCount-- =" << mapInfo->mMapRefCount << mapInfo->mFilePath;
         purgeUnreferencedMaps();
     }
 }
@@ -593,7 +490,7 @@ void MapManager::purgeUnreferencedMaps()
         else if (mapInfo->mMap && mapInfo->mMapRefCount <= 0)
             unpurged++;
     }
-    if (unpurged) qDebug() << "MapManager unpurged =" << unpurged;
+    if (unpurged) noise() << "MapManager unpurged =" << unpurged;
 }
 
 void MapManager::newMapFileCreated(const QString &path)
@@ -606,27 +503,8 @@ void MapManager::newMapFileCreated(const QString &path)
             continue;
         if (QFileInfo(mapInfo->path()) != QFileInfo(path))
             continue;
-#if 1
         mFileSystemWatcher->addPath(mapInfo->path()); // FIXME: make canonical?
         fileChanged(mapInfo->path());
-#else
-        Map *oldMap = mapInfo->map();
-        Q_ASSERT(!mapInfo->isBeingEdited());
-        emit mapAboutToChange(mapInfo);
-        mapInfo->mMap = 0;
-        MapInfo *sameInfo = loadMap(path);
-        if (sameInfo && sameInfo->map()) {
-            TilesetManager *tilesetMgr = TilesetManager::instance();
-            tilesetMgr->removeReferences(oldMap->tilesets());
-            delete oldMap;
-            mapInfo->mPlaceholder = false;
-        } else {
-            qDebug() << "MapManager::emitMapFileCreated: FAILED to load the new map";
-            // Error loading the new map, keep the old one.
-            mapInfo->mMap = oldMap;
-        }
-        emit mapFileChanged(mapInfo);
-#endif
     }
 
     emit mapFileCreated(path);
@@ -688,30 +566,14 @@ void MapManager::fileChangedTimeout()
             if (info.exists()) {
                 mFileSystemWatcher->addPath(path);
                 MapInfo *mapInfo = mMapInfo[path];
-                if (Map *oldMap = mapInfo->map()) {
+                if (mapInfo->map()) {
                     Q_ASSERT(!mapInfo->isBeingEdited());
-#if 1
                     if (!mapInfo->isLoading()) {
                         mapInfo->mLoading = true; // FIXME: seems weird to change this for a loaded map
                         QMetaObject::invokeMethod(mMapReaderWorker[mNextThreadForJob], "addJob",
                                                   Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo));
                         mNextThreadForJob = (mNextThreadForJob + 1) % mMapReaderThread.size();
                     }
-#else
-                    emit mapAboutToChange(mapInfo);
-                    mapInfo->mMap = 0;
-                    MapInfo *sameInfo = loadMap(path);
-                    if (sameInfo && sameInfo->map()) {
-                        TilesetManager *tilesetMgr = TilesetManager::instance();
-                        tilesetMgr->removeReferences(oldMap->tilesets());
-                        delete oldMap;
-                    } else {
-                        noise() << "MapManager::fileChangedTimeout: FAILED to load the changed map";
-                        // Error loading the new map, keep the old one.
-                        mapInfo->mMap = oldMap;
-                    }
-                    emit mapChanged(mapInfo);
-#endif
                 }
                 emit mapFileChanged(mapInfo);
             }
@@ -766,6 +628,7 @@ void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
 
     if (replace)
         emit mapChanged(mapInfo);
+
     // The reference count is zero, but prevent it being immediately purged.
     // FIXME: add a reference and let the caller deal with it.
     mapInfo->mReferenceEpoch = mReferenceEpoch;

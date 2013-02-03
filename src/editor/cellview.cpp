@@ -51,6 +51,10 @@ void CellView::mouseMoveEvent(QMouseEvent *event)
     BaseGraphicsView::mouseMoveEvent(event);
 }
 
+// I put this in BaseGraphicsView so WorldScene could use it, but the OpenGL
+// backend chokes on overly-large BMP images.  It uses QCache in the
+// QGLTextureCache::insert() method which *deletes the texture* and other
+// code doesn't test for that.
 void CellView::setUseOpenGL(bool useOpenGL)
 {
 #ifndef QT_NO_OPENGL

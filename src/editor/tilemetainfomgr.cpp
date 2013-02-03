@@ -66,7 +66,6 @@ void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
         QString source = path + QLatin1Char('/') + relativePath;
         QFileInfo finfo(source);
         QString oldSource = ts->imageSource();
-#if 1
         QImageReader reader(source);
         if (reader.size().isValid()) {
             TilesetManager::instance()->changeTilesetSource(ts, finfo.canonicalFilePath(), false);
@@ -78,16 +77,6 @@ void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
                 ts->tileAt(i)->setImage(missingTile->image());
             TilesetManager::instance()->changeTilesetSource(ts, relativePath, true);
         }
-#else
-        if (finfo.exists() && loadTilesetImage(ts, finfo.canonicalFilePath())) {
-            TilesetManager::instance()->tilesetSourceChanged(ts, oldSource, false);
-        } else {
-            Tile *missingTile = TilesetManager::instance()->missingTile();
-            for (int i = 0; i < ts->tileCount(); i++)
-                ts->tileAt(i)->setImage(missingTile->image());
-            TilesetManager::instance()->changeTilesetSource(ts, relativePath, true);
-        }
-#endif
     }
     Preferences::instance()->setTilesDirectory(path);
     loadTilesets();
@@ -217,13 +206,7 @@ bool TileMetaInfoMgr::readTxt()
                 // chosen the Tiles directory. The tilesets will be loaded when
                 // other code asks for them or when the Tiles directory is changed.
                 int width = columns * 64, height = rows * 128;
-#if 1
                 tileset->loadFromNothing(QSize(width, height), tilesetFileName);
-#else
-                QImage image(width, height, QImage::Format_ARGB32);
-                image.fill(Qt::red);
-                tileset->loadFromImage(image, tilesetFileName);
-#endif
                 Tile *missingTile = TilesetManager::instance()->missingTile();
                 for (int i = 0; i < tileset->tileCount(); i++)
                     tileset->tileAt(i)->setImage(missingTile->image());
@@ -414,23 +397,12 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
                     // This is the name that was saved in Tilesets.txt,
                     // relative to Tiles directory, plus .png.
                     + ts->imageSource();
-#if 1
             QImageReader reader(source);
             if (reader.size().isValid()) {
                 ts->loadFromNothing(reader.size(), ts->imageSource()); // update the size now
                 QFileInfo info(source);
                 TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
             }
-#else
-            QFileInfo info(source);
-            if (info.exists()) {
-                source = info.canonicalFilePath();
-                if (loadTilesetImage(ts, source)) {
-                    ts->setMissing(false); // Yay!
-                    TilesetManager::instance()->tilesetSourceChanged(ts, oldSource, true);
-                }
-            }
-#endif
         }
     }
 }

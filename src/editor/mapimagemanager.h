@@ -118,7 +118,6 @@ private:
         MapImage *mapImage;
     };
     QList<Job> mJobs;
-    QList<Job> mDoneJobs;
 
     bool mWorkPending;
 };

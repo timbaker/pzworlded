@@ -181,8 +181,8 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         MapManager::instance()->newMapFileCreated(path);
 
     // While displaying this, the MapManager's FileSystemWatcher might see some
-    // changed .tmx files, which results in thumbnails being recreated.  It's
-    // a bit odd to see the PROGRESS dialog blocked behind this messagebox.
+    // changed .tmx files, which results in the PROGRESS dialog being displayed.
+    // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
     QMessageBox::information(MainWindow::instance(),
                              tr("BMP To TMX"), tr("Finished!"));
 

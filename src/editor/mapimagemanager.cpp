@@ -134,7 +134,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     // Any time QCoreApplication::processEvents() gets called (as is done
     // by MapManager's EditorMapReader class and the PROGRESS class) a
     // worker-thread's signal to us may be processed.
-    MapImageManagerDeferral deferral;
+    MapImageManagerDeferral deferral; // FIXME: optimized out?
 
 #if 1
     QString suffix = QFileInfo(mapName).suffix();
@@ -248,7 +248,6 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
         }
     }
 
-#if 1
     // Create ImageData appropriate for paintDummyImage().
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
     if (!mapInfo) {
@@ -294,141 +293,7 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     data.sources += mapInfo->path();
     data.valid = true;
     return data;
-#else
-    PROGRESS progress(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
-
-    MapInfo *mapInfo = MapManager::instance()->loadMap(mapFilePath);
-    if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
-        return ImageData(); // TODO: Add error handling
-    }
-
-    progress.update(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
-
-    MapComposite mapComposite(mapInfo);
-
-    // Wait for TilesetManager's threads to finish loading the tilesets.
-    QSet<Tileset*> usedTilesets;
-    foreach (MapComposite *mc, mapComposite.maps()) {
-        foreach (TileLayer *tl, mc->map()->tileLayers())
-            usedTilesets += tl->usedTilesets();
-    }
-    usedTilesets.remove(TilesetManager::instance()->missingTileset());
-    TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
-
-    ImageData data = generateMapImage(&mapComposite);
-
-    foreach (MapComposite *mc, mapComposite.maps()) {
-        if (mc->map()->hasUsedMissingTilesets()) {
-            data.missingTilesets = true;
-            break;
-        }
-    }
-
-    data.image.save(imageInfo.absoluteFilePath());
-    writeImageData(imageDataInfo, data);
-
-    return data;
-#endif
 }
-
-#if 0
-MapImageManager::ImageData MapImageManager::generateMapImage(MapComposite *mapComposite)
-{
-    Map *map = mapComposite->map();
-
-    MapRenderer *renderer = NULL;
-
-    switch (map->orientation()) {
-    case Map::Isometric:
-        renderer = new IsometricRenderer(map);
-        break;
-    case Map::LevelIsometric:
-        renderer = new ZLevelRenderer(map);
-        break;
-    case Map::Orthogonal:
-        renderer = new OrthogonalRenderer(map);
-        break;
-    case Map::Staggered:
-        renderer = new StaggeredRenderer(map);
-        break;
-    default:
-        return ImageData();
-    }
-
-    mapComposite->saveVisibility();
-    mapComposite->saveOpacity();
-    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
-        foreach (TileLayer *tl, layerGroup->layers()) {
-            bool isVisible = true;
-            if (tl->name().contains(QLatin1String("NoRender")))
-                isVisible = false;
-            layerGroup->setLayerVisibility(tl, isVisible);
-            layerGroup->setLayerOpacity(tl, 1.0f);
-        }
-        layerGroup->synch();
-    }
-
-    // Don't draw empty levels
-    int maxLevel = 0;
-    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
-        if (!layerGroup->bounds().isEmpty())
-            maxLevel = layerGroup->level();
-    }
-    renderer->setMaxLevel(maxLevel);
-
-    QRectF sceneRect = mapComposite->boundingRect(renderer);
-    QSize mapSize = sceneRect.size().toSize();
-    if (mapSize.isEmpty())
-        return ImageData();
-
-    qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
-    mapSize *= scale;
-
-#if 1
-#else
-    QImage image(mapSize, QImage::Format_ARGB32);
-    image.fill(Qt::transparent);
-    QPainter painter(&image);
-
-    painter.setRenderHints(QPainter::SmoothPixmapTransform |
-                           QPainter::HighQualityAntialiasing);
-    painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
-
-    foreach (MapComposite::ZOrderItem zo, mapComposite->zOrder()) {
-        if (zo.group) {
-            renderer->drawTileLayerGroup(&painter, zo.group);
-        } else if (TileLayer *tl = zo.layer->asTileLayer()) {
-            if (tl->name().contains(QLatin1String("NoRender")))
-                continue;
-            renderer->drawTileLayer(&painter, tl);
-        }
-    }
-#endif
-
-    mapComposite->restoreVisibility();
-    mapComposite->restoreOpacity();
-    foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups())
-        layerGroup->synch();
-
-    ImageData data;
-#if 1
-    data.threadRender = true;
-    data.size = mapSize;
-#else
-    data.image = image;
-#endif
-    data.scale = scale;
-    data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
-    data.levelZeroBounds.translate(-sceneRect.topLeft());
-    data.sources = mapComposite->getMapFileNames();
-    data.valid = true;
-
-    delete renderer;
-
-    return data;
-}
-#endif
 
 void MapImageManager::paintDummyImage(ImageData &data, MapInfo *mapInfo)
 {
@@ -599,12 +464,11 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
     QMap<QString,MapImage*>::iterator it_end = mMapImages.end();
     QMap<QString,MapImage*>::iterator it;
 
-    MapImageManagerDeferral deferral;
+    MapImageManagerDeferral deferral; // FIXME: optimized out?
 
     for (it = it_begin; it != it_end; it++) {
         MapImage *mapImage = it.value();
         if (mapImage->sources().contains(mapInfo)) {
-#if 1
             if (mapImage->mLoaded) {
                 bool force = true;
                 ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
@@ -619,46 +483,6 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
                                           Q_ARG(MapImage*,mapImage));
                 emit mapImageChanged(mapImage);
             }
-#else
-            // When tilesets are added or removed from TileMetaInfoMgr,
-            // MapManager generates the mapFileChanged signal for .tbx lots.
-            // The generateMapImage() call below would then return the same
-            // data for the image that was already loaded with image.size=0
-            // to indicate we should load the image in a worker thread.
-            // So force the image to be recreated in every case.
-            bool force = true;
-            ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
-            if (!data.valid) {
-                // We had a valid image, but now it's bogus, so blank it out.
-                data.image = mapImage->image();
-                data.image.fill(Qt::white);
-                data.scale = mapImage->scale();
-                data.levelZeroBounds = mapImage->levelZeroBounds();
-                data.sources.clear();
-                foreach (MapInfo *sourceInfo, mapImage->sources())
-                    data.sources += sourceInfo->path();
-            }
-            if (/*data.threadLoad ||*/ data.threadRender) {
-                paintDummyImage(data, mapInfo);
-                QMetaObject::invokeMethod(mImageRenderWorker,
-                                          "addJob", Qt::QueuedConnection,
-                                          Q_ARG(MapImage*,mapImage));
-            }
-            mapImage->mapFileChanged(data.image, data.scale,
-                                     data.levelZeroBounds);
-
-            // Set up file modification tracking on each TMX that makes
-            // up this image.
-            QList<MapInfo*> sources;
-            foreach (QString source, data.sources)
-                if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
-                    sources += sourceInfo;
-            mapImage->setSources(sources);
-
-            mapImage->mLoaded = !(data.threadLoad || data.threadRender);
-
-            emit mapImageChanged(mapImage);
-#endif
         }
     }
 }
@@ -1037,6 +861,9 @@ void MapImageRenderWorker::work()
         Job job = mJobs.takeFirst();
 
         noise() << "MapImageRenderWorker started" << job.mapImage->mapInfo()->path();
+#ifndef QT_NO_DEBUG
+//        Sleep::msleep(1000);
+#endif
         MapImageData data = generateMapImage(job.mapComposite);
         noise() << "MapImageRenderWorker" << (aborted() ? "aborted" : "finished") << job.mapImage->mapInfo()->path();
 
