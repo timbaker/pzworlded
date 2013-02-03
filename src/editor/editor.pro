@@ -1,5 +1,6 @@
 include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
+include(../qtlockedfile/qtlockedfile.pri)
 
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl

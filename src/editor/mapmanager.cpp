@@ -31,6 +31,9 @@
 #include "tilelayer.h"
 #include "tileset.h"
 
+#include "qtlockedfile.h"
+using namespace SharedTools;
+
 #include "BuildingEditor/buildingreader.h"
 #include "BuildingEditor/buildingmap.h"
 #include "BuildingEditor/buildingobjects.h"
@@ -300,13 +303,18 @@ class MapInfoReader
     Q_DECLARE_TR_FUNCTIONS(MapInfoReader)
 
 public:
-    bool openFile(QFile *file)
+    bool openFile(QtLockedFile *file)
     {
         if (!file->exists()) {
             mError = tr("File not found: %1").arg(file->fileName());
             return false;
-        } else if (!file->open(QFile::ReadOnly | QFile::Text)) {
+        }
+        if (!file->open(QFile::ReadOnly | QFile::Text)) {
             mError = tr("Unable to read file: %1").arg(file->fileName());
+            return false;
+        }
+        if (!file->lock(QtLockedFile::ReadLock)) {
+            mError = tr("Unable to lock file for reading: %1").arg(file->fileName());
             return false;
         }
 
@@ -315,7 +323,7 @@ public:
 
     MapInfo *readMap(const QString &mapFilePath)
     {
-        QFile file(mapFilePath);
+        QtLockedFile file(mapFilePath);
         if (!openFile(&file))
             return NULL;
 

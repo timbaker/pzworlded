@@ -24,6 +24,9 @@
 #include "buildingtiles.h"
 #include "furnituregroups.h"
 
+#include "qtlockedfile.h"
+using namespace SharedTools;
+
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -279,7 +282,7 @@ public:
 
     Building *readBuilding(QIODevice *device, const QString &path);
 
-    bool openFile(QFile *file);
+    bool openFile(QtLockedFile *file);
 
     QString errorString() const;
 
@@ -351,13 +354,18 @@ private:
     QXmlStreamReader xml;
 };
 
-bool BuildingReaderPrivate::openFile(QFile *file)
+bool BuildingReaderPrivate::openFile(QtLockedFile *file)
 {
     if (!file->exists()) {
         mError = tr("File not found: %1").arg(file->fileName());
         return false;
-    } else if (!file->open(QFile::ReadOnly | QFile::Text)) {
+    }
+    if (!file->open(QFile::ReadOnly | QFile::Text)) {
         mError = tr("Unable to read file: %1").arg(file->fileName());
+        return false;
+    }
+    if (!file->lock(QtLockedFile::ReadLock)) {
+        mError = tr("Unable to lock file for reading: %1").arg(file->fileName());
         return false;
     }
 
@@ -1126,7 +1134,7 @@ Building *BuildingReader::read(QIODevice *device, const QString &path)
 
 Building *BuildingReader::read(const QString &fileName)
 {
-    QFile file(fileName);
+    QtLockedFile file(fileName);
     if (!d->openFile(&file))
         return 0;
 

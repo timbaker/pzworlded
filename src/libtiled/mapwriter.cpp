@@ -43,6 +43,10 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QXmlStreamWriter>
+#ifdef ZOMBOID
+#include "qtlockedfile.h"
+using namespace SharedTools;
+#endif
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -63,7 +67,11 @@ public:
     void writeTileset(const Tileset *tileset, QIODevice *device,
                       const QString &path);
 
+#ifdef ZOMBOID
+    bool openFile(QtLockedFile *file);
+#else
     bool openFile(QFile *file);
+#endif
 
     QString mError;
     MapWriter::LayerDataFormat mLayerDataFormat;
@@ -97,12 +105,22 @@ MapWriterPrivate::MapWriterPrivate()
 {
 }
 
+#ifdef ZOMBOID
+bool MapWriterPrivate::openFile(QtLockedFile *file)
+#else
 bool MapWriterPrivate::openFile(QFile *file)
+#endif
 {
     if (!file->open(QIODevice::WriteOnly)) {
         mError = tr("Could not open file for writing.");
         return false;
     }
+#ifdef ZOMBOID
+    if (!file->lock(QtLockedFile::WriteLock)) {
+        mError = tr("Could not lock file for writing.");
+        return false;
+    }
+#endif
 
     return true;
 }
@@ -567,7 +585,11 @@ void MapWriter::writeMap(const Map *map, QIODevice *device,
 
 bool MapWriter::writeMap(const Map *map, const QString &fileName)
 {
+#ifdef ZOMBOID
+    QtLockedFile file(fileName);
+#else
     QFile file(fileName);
+#endif
     if (!d->openFile(&file))
         return false;
 
@@ -589,7 +611,11 @@ void MapWriter::writeTileset(const Tileset *tileset, QIODevice *device,
 
 bool MapWriter::writeTileset(const Tileset *tileset, const QString &fileName)
 {
+#ifdef ZOMBOID
+    QtLockedFile file(fileName);
+#else
     QFile file(fileName);
+#endif
     if (!d->openFile(&file))
         return false;
 

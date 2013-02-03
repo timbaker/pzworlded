@@ -46,6 +46,8 @@
 #include <QFileInfo>
 #ifdef ZOMBOID
 #include <QImageReader>
+#include "qtlockedfile.h"
+using namespace SharedTools;
 #endif
 #include <QXmlStreamReader>
 
@@ -69,7 +71,11 @@ public:
     Map *readMap(QIODevice *device, const QString &path);
     Tileset *readTileset(QIODevice *device, const QString &path);
 
+#ifdef ZOMBOID
+    bool openFile(QtLockedFile *file);
+#else
     bool openFile(QFile *file);
+#endif
 
     QString errorString() const;
 
@@ -171,7 +177,11 @@ QString MapReaderPrivate::errorString() const
     }
 }
 
+#ifdef ZOMBOID
+bool MapReaderPrivate::openFile(QtLockedFile *file)
+#else
 bool MapReaderPrivate::openFile(QFile *file)
+#endif
 {
     if (!file->exists()) {
         mError = tr("File not found: %1").arg(file->fileName());
@@ -180,6 +190,12 @@ bool MapReaderPrivate::openFile(QFile *file)
         mError = tr("Unable to read file: %1").arg(file->fileName());
         return false;
     }
+#ifdef ZOMBOID
+    if (!file->lock(QtLockedFile::ReadLock)) {
+        mError = tr("Unable to lock file for reading: %1").arg(file->fileName());
+        return false;
+    }
+#endif
 
     return true;
 }
@@ -954,7 +970,11 @@ Map *MapReader::readMap(QIODevice *device, const QString &path)
 
 Map *MapReader::readMap(const QString &fileName)
 {
+#ifdef ZOMBOID
+    SharedTools::QtLockedFile file(fileName);
+#else
     QFile file(fileName);
+#endif
     if (!d->openFile(&file))
         return 0;
 
@@ -968,7 +988,11 @@ Tileset *MapReader::readTileset(QIODevice *device, const QString &path)
 
 Tileset *MapReader::readTileset(const QString &fileName)
 {
+#ifdef ZOMBOID
+    QtLockedFile file(fileName);
+#else
     QFile file(fileName);
+#endif
     if (!d->openFile(&file))
         return 0;
 
