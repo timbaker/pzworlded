@@ -291,7 +291,7 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     data.size = mapSize;
     data.scale = scale;
     data.levelZeroBounds = sceneRect;
-//    data.sources = mapComposite->getMapFileNames();
+    data.sources += mapInfo->path();
     data.valid = true;
     return data;
 #else
