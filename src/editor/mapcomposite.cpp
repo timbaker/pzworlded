@@ -963,9 +963,11 @@ bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
     return affected;
 }
 
-// Called by MapDocument when MapManager tells it a map changed on disk.
+// Called by MapDocument when MapManager tells it a map changed, either due to
+// its file changing on disk or because a building's map was affected by
+// changing tilesets.
 // Returns true if this map or any sub-map is affected.
-bool MapComposite::mapFileChanged(MapInfo *mapInfo)
+bool MapComposite::mapChanged(MapInfo *mapInfo)
 {
     if (mapInfo == mMapInfo) {
         recreate();
@@ -974,7 +976,7 @@ bool MapComposite::mapFileChanged(MapInfo *mapInfo)
 
     bool changed = false;
     foreach (MapComposite *subMap, mSubMaps) {
-        if (subMap->mapFileChanged(mapInfo)) {
+        if (subMap->mapChanged(mapInfo)) {
             if (!changed) {
                 foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
                     layerGroup->setNeedsSynch(true);

@@ -1995,9 +1995,9 @@ bool CellScene::mapAboutToChange(MapInfo *mapInfo)
     return (mapInfo == mMapComposite->mapInfo());
 }
 
-bool CellScene::mapFileChanged(MapInfo *mapInfo)
+bool CellScene::mapChanged(MapInfo *mapInfo)
 {
-    if (mMapComposite->mapFileChanged(mapInfo)) {
+    if (mMapComposite->mapChanged(mapInfo)) {
         if (mapInfo != mMapComposite->mapInfo())
             doLater(AllGroups | Bounds | Synch | Paint); // only a Lot map changed
     }

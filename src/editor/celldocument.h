@@ -111,7 +111,7 @@ signals:
 
 private slots:
     void mapAboutToChange(MapInfo *mapInfo);
-    void mapFileChanged(MapInfo *mapInfo);
+    void mapChanged(MapInfo *mapInfo);
 
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);

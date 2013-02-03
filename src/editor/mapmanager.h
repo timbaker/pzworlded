@@ -173,7 +173,7 @@ public:
     /**
       * Call this when the map's size or tile size changes.
       */
-    void mapChanged(MapInfo *mapInfo);
+    void mapParametersChanged(MapInfo *mapInfo);
 
     void addReferenceToMap(MapInfo *mapInfo);
     void removeReferenceToMap(MapInfo *mapInfo);
@@ -189,6 +189,7 @@ public:
 
 signals:
     void mapAboutToChange(MapInfo *mapInfo);
+    void mapChanged(MapInfo *mapInfo);
     void mapFileChanged(MapInfo *mapInfo);
     void mapFileCreated(const QString &path);
     void mapLoaded(MapInfo *mapInfo);

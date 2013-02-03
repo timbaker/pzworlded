@@ -397,7 +397,7 @@ public slots:
     void tilesetChanged(Tileset *tileset);
 
     bool mapAboutToChange(MapInfo *mapInfo);
-    bool mapFileChanged(MapInfo *mapInfo);
+    bool mapChanged(MapInfo *mapInfo);
 
     void cellMapFileChanged();
     void cellContentsChanged();

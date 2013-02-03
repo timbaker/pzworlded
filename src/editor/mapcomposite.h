@@ -210,7 +210,7 @@ public:
     QStringList getMapFileNames() const;
 
     bool mapAboutToChange(MapInfo *mapInfo);
-    bool mapFileChanged(MapInfo *mapInfo);
+    bool mapChanged(MapInfo *mapInfo);
 
 #ifdef BUILDINGED
     void setBlendOverMap(MapComposite *mapComposite)

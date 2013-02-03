@@ -57,8 +57,8 @@ CellDocument::CellDocument(WorldDocument *worldDoc, WorldCell *cell)
 
     connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
-            SLOT(mapFileChanged(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
+            SLOT(mapChanged(MapInfo*)));
 }
 
 void CellDocument::setFileName(const QString &fileName)
@@ -325,8 +325,8 @@ void CellDocument::mapAboutToChange(MapInfo *mapInfo)
 }
 
 // Called by MapManager when an already-loaded TMX changes on disk
-void CellDocument::mapFileChanged(MapInfo *mapInfo)
+void CellDocument::mapChanged(MapInfo *mapInfo)
 {
-    if (scene()->mapFileChanged(mapInfo))
+    if (scene()->mapChanged(mapInfo))
         worldDocument()->emitCellMapFileChanged(mCell);
 }
