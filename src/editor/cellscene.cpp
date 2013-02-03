@@ -1977,12 +1977,13 @@ bool CellScene::shouldObjectItemBeVisible(ObjectItem *item)
 
 void CellScene::tilesetChanged(Tileset *tileset)
 {
-    foreach (MapComposite *mc, mMapComposite->maps()) {
-        if (mc->map()->isTilesetUsed(tileset)) {
-            update();
-            return;
-        }
-    }
+    // Saw this was 0 when a map was loaded, probably during event processing
+    // inside loadMap().
+    if (!mMapComposite)
+        return;
+
+    if (mMapComposite->isTilesetUsed(tileset))
+        update();
 }
 
 bool CellScene::mapAboutToChange(MapInfo *mapInfo)

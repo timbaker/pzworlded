@@ -192,6 +192,11 @@ void Map::replaceTileset(Tileset *oldTileset, Tileset *newTileset)
 
 bool Map::isTilesetUsed(Tileset *tileset) const
 {
+#ifdef ZOMBOID
+    if (!mTilesets.contains(tileset))
+        return false;
+#endif
+
     foreach (const Layer *layer, mLayers)
         if (layer->referencesTileset(tileset))
             return true;
