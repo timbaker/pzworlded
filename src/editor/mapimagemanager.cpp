@@ -598,6 +598,22 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
     for (it = it_begin; it != it_end; it++) {
         MapImage *mapImage = it.value();
         if (mapImage->sources().contains(mapInfo)) {
+#if 1
+            if (mapImage->mLoaded) {
+                bool force = true;
+                ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
+                paintDummyImage(data, mapInfo);
+                mapImage->mapFileChanged(data.image, data.scale,
+                                         data.levelZeroBounds);
+                mapImage->mSources.clear();
+                mapImage->mSources += mapImage->mapInfo();
+                mapImage->mLoaded = false;
+                QMetaObject::invokeMethod(mImageRenderWorker,
+                                          "addJob", Qt::QueuedConnection,
+                                          Q_ARG(MapImage*,mapImage));
+                emit mapImageChanged(mapImage);
+            }
+#else
             // When tilesets are added or removed from TileMetaInfoMgr,
             // MapManager generates the mapFileChanged signal for .tbx lots.
             // The generateMapImage() call below would then return the same
@@ -636,6 +652,7 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
             mapImage->mLoaded = !(data.threadLoad || data.threadRender);
 
             emit mapImageChanged(mapImage);
+#endif
         }
     }
 }
