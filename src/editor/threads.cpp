@@ -17,3 +17,62 @@
 
 #include "threads.h"
 
+BaseWorker::BaseWorker(InterruptibleThread *thread) :
+    mThread(thread),
+    mWorkPending(false),
+    mWorkPrevented(false)
+{
+
+}
+
+BaseWorker::~BaseWorker()
+{
+}
+
+bool BaseWorker::aborted()
+{
+    QMutexLocker locker(&mThread->mMutex);
+    return mThread->mInterrupted;
+}
+
+void BaseWorker::scheduleWork()
+{
+    if (aborted())
+        return;
+    if (mWorkPrevented)
+        return;
+    if (mWorkPending)
+        return;
+    mWorkPending = true;
+    QMetaObject::invokeMethod(this, "workWrapper", Qt::QueuedConnection);
+}
+
+void BaseWorker::allowWork()
+{
+    mWorkPrevented = false;
+}
+
+void BaseWorker::preventWork()
+{
+    mWorkPrevented = true;
+}
+
+void BaseWorker::workWrapper()
+{
+    IN_WORKER_THREAD
+
+    mWorkPending = false;
+
+    QMutexLocker locker(&mThread->mMutex);
+    if (mThread->mInterrupted)
+        return;
+    mThread->mWorkerBusy = true;
+    locker.unlock();
+
+    work();
+
+    locker.relock();
+    mThread->mWorkerBusy = false;
+    if (mThread->mWaiting)
+        mThread->mWaitCondition.wakeOne();
+}

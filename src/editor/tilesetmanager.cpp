@@ -61,7 +61,7 @@ TilesetManager::TilesetManager():
     mNextThreadForJob = 0;
     for (int i = 0; i < mImageReaderWorkers.size(); i++) {
         mImageReaderThreads[i] = new InterruptibleThread;
-        mImageReaderWorkers[i] = new TilesetImageReaderWorker(i);
+        mImageReaderWorkers[i] = new TilesetImageReaderWorker(i, mImageReaderThreads[i]);
         mImageReaderWorkers[i]->moveToThread(mImageReaderThreads[i]);
         connect(mImageReaderWorkers[i], SIGNAL(imageLoaded(QImage*,Tiled::Tileset*)),
                 SLOT(imageLoaded(QImage*,Tiled::Tileset*)));
@@ -660,8 +660,8 @@ void TilesetManager::syncTileLayerNames(Tileset *ts)
 #include <QDebug>
 /////
 
-TilesetImageReaderWorker::TilesetImageReaderWorker(int id) :
-    BaseWorker(),
+TilesetImageReaderWorker::TilesetImageReaderWorker(int id, InterruptibleThread *thread) :
+    BaseWorker(thread),
     mID(id),
     mWorkPending(false)
 {
@@ -699,9 +699,6 @@ void TilesetImageReaderWorker::addJob(Tileset *tileset)
     IN_WORKER_THREAD
 
     mJobs += Job(tileset);
-    if (!mWorkPending) {
-        mWorkPending = true;
-        QMetaObject::invokeMethod(this, "work", Qt::QueuedConnection);
-    }
+    scheduleWork();
 }
 #endif // ZOMBOID

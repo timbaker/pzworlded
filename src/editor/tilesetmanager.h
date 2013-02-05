@@ -43,7 +43,7 @@ class TilesetImageReaderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    TilesetImageReaderWorker(int id);
+    TilesetImageReaderWorker(int id, InterruptibleThread *thread);
 
     ~TilesetImageReaderWorker();
 

@@ -36,7 +36,7 @@ class MapReaderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    MapReaderWorker(bool *abortPtr);
+    MapReaderWorker(InterruptibleThread *thread);
     ~MapReaderWorker();
 
     typedef Tiled::Map Map;

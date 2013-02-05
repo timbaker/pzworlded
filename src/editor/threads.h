@@ -19,42 +19,41 @@
 #define THREADS_H
 
 #include <QCoreApplication>
+#include <QMutex>
+#include <QWaitCondition>
 #include <QThread>
 
 #define IN_APP_THREAD Q_ASSERT(QThread::currentThread() == qApp->thread());
 #define IN_WORKER_THREAD Q_ASSERT(QThread::currentThread() != qApp->thread());
+
+class InterruptibleThread;
 
 class BaseWorker : public QObject
 {
     Q_OBJECT
 
 public:
-    BaseWorker() :
-        QObject(0),
-        mAbortPtr(0)
-    {
+    BaseWorker(InterruptibleThread *thread);
+    virtual ~BaseWorker();
 
-    }
-    BaseWorker(bool *abortPtr) :
-        QObject(0),
-        mAbortPtr(abortPtr)
-    {
+    bool aborted();
 
-    }
-    virtual ~BaseWorker()
-    {
-    }
-
-    bool aborted() { return mAbortPtr && *mAbortPtr; }
-
-public slots:
-    virtual void work() = 0;
-
-signals:
-    void finished();
+    InterruptibleThread *workerThread() const { return mThread; }
 
 protected:
-    bool *mAbortPtr;
+    void scheduleWork();
+    void allowWork();
+    void preventWork();
+
+private slots:
+    void workWrapper();
+
+private:
+    virtual void work() = 0;
+
+    InterruptibleThread *mThread;
+    bool mWorkPending;
+    bool mWorkPrevented;
 };
 
 class InterruptibleThread : public QThread
@@ -62,7 +61,9 @@ class InterruptibleThread : public QThread
 public:
     InterruptibleThread() :
         QThread(),
-        mInterrupted(false)
+        mInterrupted(false),
+        mWorkerBusy(false),
+        mWaiting(false)
     {
 
     }
@@ -70,17 +71,26 @@ public:
     void interrupt(bool wait = false)
     {
         IN_APP_THREAD;
-        mInterrupted = true; // see BaseWorker::mAbortPtr
-        while (wait && mInterrupted) {
-            msleep(1); // wait for the worker to clear mInterrupted
+        QMutexLocker locker(&mMutex);
+        mInterrupted = true;
+        if (wait && mWorkerBusy) {
+            mWaiting = true;
+            mWaitCondition.wait(&mMutex);
+            mWaiting = false;
         }
     }
+
     void resume() { mInterrupted = false; }
 
     bool *var() { return &mInterrupted; }
 
 private:
     bool mInterrupted;
+    bool mWorkerBusy;
+    bool mWaiting;
+    QMutex mMutex;
+    QWaitCondition mWaitCondition;
+    friend class BaseWorker;
 };
 
 class Sleep : public QThread

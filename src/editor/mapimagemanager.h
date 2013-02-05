@@ -37,7 +37,7 @@ class MapImageReaderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    MapImageReaderWorker();
+    MapImageReaderWorker(InterruptibleThread *thread);
 
     ~MapImageReaderWorker();
 
@@ -61,8 +61,6 @@ private:
         MapImage *mapImage;
     };
     QList<Job> mJobs;
-
-    bool mWorkPending;
 };
 
 class MapImageData
@@ -91,7 +89,7 @@ class MapImageRenderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    MapImageRenderWorker(bool *abortPtr);
+    MapImageRenderWorker(InterruptibleThread *thread);
 
     ~MapImageRenderWorker();
 
@@ -118,8 +116,6 @@ private:
         MapImage *mapImage;
     };
     QList<Job> mJobs;
-
-    bool mWorkPending;
 };
 
 class MapImage
@@ -223,6 +219,7 @@ signals:
     
 private slots:
     void mapAboutToChange(MapInfo *mapInfo);
+    void mapChanged(MapInfo *mapInfo);
     void mapFileChanged(MapInfo *mapInfo);
 
 private slots:

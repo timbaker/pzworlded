@@ -876,7 +876,9 @@ CompositeLayerGroup *MapComposite::layerGroupForLevel(int level) const
 
 CompositeLayerGroup *MapComposite::layerGroupForLayer(TileLayer *tl) const
 {
-    return tileLayersForLevel(tl->level());
+    if (tl->group())
+        return tileLayersForLevel(tl->level());
+    return 0;
 }
 
 const QList<MapComposite *> MapComposite::maps()
