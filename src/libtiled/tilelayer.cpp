@@ -569,7 +569,6 @@ TileLayer *TileLayer::initializeClone(TileLayer *clone) const
     clone->mMaxTileSize = mMaxTileSize;
     clone->mOffsetMargins = mOffsetMargins;
 #ifdef ZOMBOID
-    clone->mUsedTilesets = mUsedTilesets;
     /* don't clone the group! */
 #endif
     return clone;

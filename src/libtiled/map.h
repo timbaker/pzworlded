@@ -265,6 +265,11 @@ public:
     bool isTilesetUsed(Tileset *tileset) const;
 
 #ifdef ZOMBOID
+    QSet<Tileset*> usedTilesets() const;
+
+    void addTilesetUser(Tileset *tileset);
+    void removeTilesetUser(Tileset *tileset);
+
     QList<Tileset*> missingTilesets() const;
     bool hasMissingTilesets() const;
     bool hasUsedMissingTilesets() const;
@@ -302,6 +307,7 @@ private:
 #ifdef ZOMBOID
     QPoint mCellsPerLevel;
     QList<ZTileLayerGroup*> mTileLayerGroups;
+    QMap<Tileset*,int> mUsedTilesets;
 #endif
 };
 

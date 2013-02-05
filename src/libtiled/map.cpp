@@ -150,12 +150,21 @@ void Map::adoptLayer(Layer *layer)
 
     if (TileLayer *tileLayer = dynamic_cast<TileLayer*>(layer))
         adjustDrawMargins(tileLayer->drawMargins());
+
+#ifdef ZOMBOID
+    foreach (Tileset *ts, layer->usedTilesets())
+        addTilesetUser(ts);
+#endif
 }
 
 Layer *Map::takeLayerAt(int index)
 {
     Layer *layer = mLayers.takeAt(index);
     layer->setMap(0);
+#ifdef ZOMBOID
+    foreach (Tileset *ts, layer->usedTilesets())
+        removeTilesetUser(ts);
+#endif
     return layer;
 }
 
@@ -193,18 +202,35 @@ void Map::replaceTileset(Tileset *oldTileset, Tileset *newTileset)
 bool Map::isTilesetUsed(Tileset *tileset) const
 {
 #ifdef ZOMBOID
-    if (!mTilesets.contains(tileset))
-        return false;
-#endif
-
+    return mUsedTilesets.contains(tileset);
+#else
     foreach (const Layer *layer, mLayers)
         if (layer->referencesTileset(tileset))
             return true;
 
     return false;
+#endif
 }
 
 #ifdef ZOMBOID
+QSet<Tileset *> Map::usedTilesets() const
+{
+    return mUsedTilesets.keys().toSet();
+}
+
+void Map::addTilesetUser(Tileset *tileset)
+{
+    mUsedTilesets[tileset]++;
+}
+
+void Map::removeTilesetUser(Tileset *tileset)
+{
+    Q_ASSERT(mUsedTilesets.contains(tileset));
+    Q_ASSERT(mUsedTilesets[tileset] > 0);
+    if (--mUsedTilesets[tileset] <= 0)
+        mUsedTilesets.remove(tileset);
+}
+
 QList<Tileset *> Map::missingTilesets() const
 {
     QList<Tileset*> tilesets;
@@ -226,6 +252,11 @@ bool Map::hasMissingTilesets() const
 
 bool Map::hasUsedMissingTilesets() const
 {
+#if 1
+    foreach (Tileset *ts, mUsedTilesets.keys())
+        if (ts->isMissing())
+            return true;
+#else
     QSet<Tileset*> usedTilesets;
     foreach (TileLayer *tl, tileLayers())
         usedTilesets += tl->usedTilesets();
@@ -234,6 +265,7 @@ bool Map::hasUsedMissingTilesets() const
         if (ts->isMissing() && usedTilesets.contains(ts))
             return true;
     }
+#endif
     return false;
 }
 

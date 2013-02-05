@@ -227,6 +227,12 @@ public:
 protected:
     Layer *initializeClone(Layer *clone) const;
 
+#ifdef ZOMBOID
+    void addReference(Tileset *ts);
+    void removeReference(Tileset *ts);
+    QMap<Tileset*,int> mUsedTilesets;
+#endif
+
     QString mName;
     Type mType;
     int mX;

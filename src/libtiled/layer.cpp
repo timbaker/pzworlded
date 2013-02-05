@@ -30,6 +30,9 @@
 #include "layer.h"
 
 #include "imagelayer.h"
+#ifdef ZOMBOID
+#include "map.h"
+#endif
 #include "objectgroup.h"
 #include "tilelayer.h"
 
@@ -77,6 +80,7 @@ Layer *Layer::initializeClone(Layer *clone) const
     clone->setProperties(properties());
 #ifdef ZOMBOID
     clone->mLevel = mLevel;
+    clone->mUsedTilesets = mUsedTilesets;
 #endif
     return clone;
 }
@@ -95,3 +99,24 @@ ImageLayer *Layer::asImageLayer()
 {
     return isImageLayer() ? static_cast<ImageLayer*>(this) : 0;
 }
+
+#ifdef ZOMBOID
+void Layer::addReference(Tileset *ts)
+{
+    mUsedTilesets[ts]++;
+    if (mMap && (mUsedTilesets[ts] == 1))
+        mMap->addTilesetUser(ts);
+}
+
+void Layer::removeReference(Tileset *ts)
+{
+    Q_ASSERT(mUsedTilesets.contains(ts));
+    Q_ASSERT(mUsedTilesets[ts] > 0);
+
+    if (--mUsedTilesets[ts] <= 0) {
+        mUsedTilesets.remove(ts);
+        if (mMap)
+            mMap->removeTilesetUser(ts);
+    }
+}
+#endif
