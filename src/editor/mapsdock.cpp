@@ -137,7 +137,8 @@ void MapsDock::selectionChanged()
     MapImage *mapImage = MapImageManager::instance()->getMapImage(path);
     if (mapImage) {
         if (mapImage->isLoaded()) {
-            QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio);
+            QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio,
+                                                    Qt::SmoothTransformation);
             mPreviewLabel->setPixmap(QPixmap::fromImage(image));
         }
     } else
@@ -148,7 +149,8 @@ void MapsDock::selectionChanged()
 void MapsDock::onMapImageChanged(MapImage *mapImage)
 {
     if ((mapImage == mPreviewMapImage) && mapImage->isLoaded()) {
-        QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio);
+        QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio,
+                                                Qt::SmoothTransformation);
         mPreviewLabel->setPixmap(QPixmap::fromImage(image));
     }
 }
