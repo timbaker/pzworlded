@@ -91,10 +91,13 @@ CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
     , mOwner(owner)
     , mAnyVisibleLayers(false)
     , mNeedsSynch(true)
+#ifdef BUILDINGED
+    , mToolTileLayer(0)
+#endif // BUILDINGED
 #if 1 // ROAD_CRUD
     , mRoadLayer0(0)
     , mRoadLayer1(0)
-#endif
+#endif // ROAD_CRUD
 {
 
 }
@@ -122,13 +125,14 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 
 #ifdef BUILDINGED
     mBlendLayers.insert(index, 0);
-#endif
+    mForceNonEmpty.insert(index, false);
+#endif // BUILDINGED
 #if 1 // ROAD_CRUD
     if (layer->name() == QLatin1String("0_Floor"))
         mRoadLayer0 = layer;
     if (layer->name() == QLatin1String("0_FloorOverlay"))
         mRoadLayer1 = layer;
-#endif
+#endif // ROAD_CRUD
 }
 
 void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
@@ -139,7 +143,8 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
     mEmptyLayers.remove(index);
 #ifdef BUILDINGED
     mBlendLayers.remove(index);
-#endif
+    mForceNonEmpty.remove(index);
+#endif // BUILDINGED
 
     ZTileLayerGroup::removeTileLayer(layer);
 
@@ -152,7 +157,7 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
         mRoadLayer0 = 0;
     if (layer == mRoadLayer1)
         mRoadLayer1 = 0;
-#endif
+#endif // ROAD_CRUD
 }
 
 void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect)
@@ -176,6 +181,8 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                                          QVector<const Cell *> &cells,
                                          QVector<qreal> &opacities) const
 {
+    static QLatin1String sFloor("0_Floor");
+
     MapComposite *root = mOwner->root();
     if (!mOwner->parent())
         root->mFirstCellIs0Floor = false;
@@ -185,7 +192,10 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
         if (isLayerEmpty(index))
             continue;
         TileLayer *tl = mLayers[index];
-        QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
+#ifdef BUILDINGED
+        TileLayer *tlBlend = mBlendLayers[index];
+#endif // BUILDINGED
+        QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel - tl->position();
         if (tl->contains(subPos)) {
 #if 1 // ROAD_CRUD
             if (tl == mRoadLayer0 || tl == mRoadLayer1) {
@@ -206,11 +216,19 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                     continue;
                 }
             }
-#endif
+#endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
+#ifdef BUILDINGED
+            // Use an empty tool tile if given during erasing.
+            if ((mToolTileLayer == tl) && !mToolTiles.isEmpty() &&
+                    QRect(mToolTilesPos, QSize(mToolTiles.size(), mToolTiles[0].size())).contains(subPos))
+                cell = &mToolTiles[subPos.x()-mToolTilesPos.x()][subPos.y()-mToolTilesPos.y()];
+            else if (cell->isEmpty() && tlBlend && tlBlend->contains(subPos))
+                cell = &tlBlend->cellAt(subPos);
+#endif // BUILDINGED
             if (!cell->isEmpty()) {
                 if (!cleared) {
-                    bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                    bool isFloor = !mLevel && !index && (tl->name() == sFloor);
                     cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                     opacities.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                     cleared = true;
@@ -218,7 +236,14 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                         mOwner->mFirstCellIs0Floor = true;
                 }
                 cells.append(cell);
+#if 1
                 opacities.append(mLayerOpacity[index]);
+#else
+                if (mHighlightLayer.isEmpty() || tl->name() == mHighlightLayer)
+                    opacities.append(mLayerOpacity[index]);
+                else
+                    opacities.append(0.25);
+#endif
             }
         }
     }
@@ -251,6 +276,8 @@ void CompositeLayerGroup::prepareDrawing2()
 // layers (so NoRender layers are included) and visibility of sub-maps.
 bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell *> &cells) const
 {
+    static QLatin1String sFloor("0_Floor");
+
     MapComposite *root = mOwner->root();
     if (!mOwner->parent())
         root->mFirstCellIs0Floor = false;
@@ -268,7 +295,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                         : &mOwner->roadLayer1()->cellAt(subPos);
                 if (!cell->isEmpty()) {
                     if (!cleared) {
-                        bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                        bool isFloor = !mLevel && !index && (tl->name() == sFloor);
                         cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                         cleared = true;
                         if (isFloor && !mOwner->parent())
@@ -278,11 +305,11 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                     continue;
                 }
             }
-#endif
+#endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
-                    bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
+                    bool isFloor = !mLevel && !index && (tl->name() == sFloor);
                     cells.resize((!isFloor && root->mFirstCellIs0Floor) ? 1 : 0);
                     cleared = true;
                     if (isFloor && !mOwner->parent())
@@ -308,16 +335,19 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
     if (!mVisibleLayers[index])
         return true;
 #ifdef BUILDINGED
+    if (mForceNonEmpty[index])
+        return false;
     if (mBlendLayers[index] && !mBlendLayers[index]->isEmpty())
-    	return false;
-#endif
-
+        return false;
+    if (mToolTileLayer && !mToolTiles.isEmpty())
+        return false;
+#endif // BUILDINGED
 #if 1 // ROAD_CRUD
     if (mLayers[index] == mRoadLayer0 && !mOwner->roadLayer0()->isEmpty())
         return false;
     if (mLayers[index] == mRoadLayer1 && !mOwner->roadLayer1()->isEmpty())
         return false;
-#endif
+#endif // ROAD_CRUD
 #if SPARSE_TILELAYER
     // Checking isEmpty() and mEmptyLayers to catch hidden NoRender layers in submaps.
     return mEmptyLayers[index] || mLayers[index]->isEmpty();
@@ -331,6 +361,19 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
 
 void CompositeLayerGroup::synch()
 {
+    if (!mVisible) {
+        mAnyVisibleLayers = false;
+        mTileBounds = QRect();
+        mSubMapTileBounds = QRect();
+        mDrawMargins = QMargins(0, mOwner->map()->tileHeight(), mOwner->map()->tileWidth(), 0);
+        mVisibleSubMapLayers.clear();
+#ifdef BUILDINGED
+        mBlendLayers.fill(0);
+#endif
+        mNeedsSynch = false;
+        return;
+    }
+
     QRect r;
     // See TileLayer::drawMargins()
     QMargins m(0, mOwner->map()->tileHeight(), mOwner->map()->tileWidth(), 0);
@@ -360,7 +403,41 @@ void CompositeLayerGroup::synch()
             }
         }
     }
+
+    if (mToolTileLayer && !mToolTiles.isEmpty()) {
+        unionTileRects(r, mToolTileLayer->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
+        maxMargins(m, QMargins(0, 128, 64, 0), m);
+        mAnyVisibleLayers = true;
+    }
 #endif
+
+    // Set the visibility and opacity of this group's layers to match the root
+    // map's layer-group's layers. Layers without a matching name in the root map
+    // are always shown at full opacity.
+    // Note that changing the opacity of a layer is *not* a reason for calling
+    // synch() again.
+    if (mOwner->parent()) {
+        for (int index = 0; index < mLayers.size(); index++) {
+            mVisibleLayers[index] = true;
+            mLayerOpacity[index] = 1.0;
+        }
+        CompositeLayerGroup *rootGroup = mOwner->root()->layerGroupForLevel(mOwner->levelRecursive() + mLevel);
+        if (rootGroup) {
+            // FIXME: this doesn't properly handle multiple layers with the same name.
+            for (int rootIndex = 0; rootIndex < rootGroup->mLayers.size(); rootIndex++) {
+                QString layerName = rootGroup->mLayers[rootIndex]->name();
+                const QString name = MapComposite::layerNameWithoutPrefix(layerName);
+                if (!mLayersByName.contains(name))
+                    continue;
+                foreach (Layer *layer, mLayersByName[name]) {
+                    int index = mLayers.indexOf(layer->asTileLayer());
+                    Q_ASSERT(index != -1);
+                    mVisibleLayers[index] = rootGroup->mVisibleLayers[rootIndex];
+                    mLayerOpacity[index] = rootGroup->mLayerOpacity[rootIndex];
+                }
+            }
+        }
+    }
 
     int index = 0;
     foreach (TileLayer *tl, mLayers) {
@@ -383,17 +460,7 @@ void CompositeLayerGroup::synch()
         int levelOffset = subMap->levelOffset();
         CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
         if (layerGroup) {
-
-            // Set the visibility of sub-map layers to match this layer-group's layers.
-            // Layers in the sub-map without a matching name in the base map are always shown.
-            foreach (TileLayer *layer, layerGroup->mLayers)
-                layerGroup->setLayerVisibility(layer, true);
-            int index = 0;
-            foreach (TileLayer *layer, mLayers)
-                layerGroup->setLayerVisibility(layer->name(), mVisibleLayers[index++]);
-
             layerGroup->synch();
-
             if (layerGroup->mAnyVisibleLayers) {
                 mVisibleSubMapLayers.append(SubMapLayers(subMap, layerGroup));
                 unionTileRects(r, layerGroup->bounds().translated(subMap->origin()), r);
@@ -402,6 +469,11 @@ void CompositeLayerGroup::synch()
             }
         }
     }
+
+#ifdef BUILDINGEDxxx
+    if (mAnyVisibleLayers)
+        maxMargins(m, QMargins(0, 128, 64, 0), m);
+#endif
 
     mSubMapTileBounds = r;
     mDrawMargins = m;
@@ -428,6 +500,29 @@ void CompositeLayerGroup::restoreOpacity()
 {
     mLayerOpacity = mSavedOpacity;
 }
+
+#ifdef BUILDINGED
+bool CompositeLayerGroup::setLayerNonEmpty(const QString &layerName, bool force)
+{
+    const QString name = MapComposite::layerNameWithoutPrefix(layerName);
+    if (!mLayersByName.contains(name))
+        return false;
+    foreach (Layer *layer, mLayersByName[name])
+        setLayerNonEmpty(layer->asTileLayer(), force);
+    return mNeedsSynch;
+}
+
+bool CompositeLayerGroup::setLayerNonEmpty(TileLayer *tl, bool force)
+{
+    int index = mLayers.indexOf(tl);
+    Q_ASSERT(index != -1);
+    if (force != mForceNonEmpty[index]) {
+        mForceNonEmpty[index] = force;
+        mNeedsSynch = true;
+    }
+    return mNeedsSynch;
+}
+#endif
 
 QRect CompositeLayerGroup::bounds() const
 {
@@ -590,9 +685,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mVisible(true)
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
-    #ifdef BUILDINGED
+#ifdef BUILDINGED
     , mBlendOverMap(0)
-    #endif
+#endif
 {
     MapManager::instance()->addReferenceToMap(mMapInfo);
 
@@ -629,12 +724,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
 #endif
 
-#if 0
-    // FIXME: no changing of mMap should happen after it is loaded!
-    foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
-        mMap->addTileLayerGroup(layerGroup);
-#endif
-
+    // Load lots, but only if this is not the map being edited (that is handled
+    // by the LotManager).
     if (!mapInfo->isBeingEdited()) {
         foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
             foreach (MapObject *object, objectGroup->objects()) {
@@ -645,21 +736,17 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
                                                                           QFileInfo(mMapInfo->path()).absolutePath());
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
+#if 1 // FIXME: attempt to load this if mapsDirectory changes
                         subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(),
                                                                                32, 32); // FIXME: calculate map size
+#endif
                     }
                     if (subMapInfo) {
                         int levelOffset;
                         (void) levelForLayer(objectGroup, &levelOffset);
-#if 1
-                        MapComposite *_subMap = new MapComposite(subMapInfo, mOrientRender,
-                                                                 this, object->position().toPoint()
-                                                                 + mOrientAdjustPos * levelOffset,
-                                                                 levelOffset);
-                        mSubMaps.append(_subMap);
-#else
-                        addMap(subMap, object->position().toPoint(), levelOffset);
-#endif
+                        addMap(subMapInfo, object->position().toPoint()
+                               + mOrientAdjustPos * levelOffset,
+                               levelOffset);
                     }
                 }
             }
@@ -693,8 +780,10 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 
 MapComposite::~MapComposite()
 {
+#if 1 // ROAD_CRUD
     delete mRoadLayer1;
     delete mRoadLayer0;
+#endif // ROAD_CRUD
     qDeleteAll(mSubMaps);
     qDeleteAll(mLayerGroups);
     if (mMapInfo)
@@ -730,11 +819,6 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos, int leve
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
         layerGroup->setNeedsSynch(true);
-
-        if (CompositeLayerGroup *subMapLayerGroup = subMap->tileLayersForLevel(layerGroup->level() - levelOffset)) {
-            foreach (TileLayer *tl, layerGroup->layers())
-                subMapLayerGroup->setLayerOpacity(tl->name(), tl->opacity());
-        }
     }
 
     return subMap;
@@ -1136,10 +1220,10 @@ void MapComposite::recreate()
     mSubMaps.clear();
     mLayerGroups.clear();
     mSortedLayerGroups.clear();
-
+#if 1 // ROAD_CRUD
     delete mRoadLayer0;
     delete mRoadLayer1;
-
+#endif // ROAD_CRUD
     mMap = mMapInfo->map();
 
     ///// FIXME: everything below here is copied from our constructor
@@ -1170,15 +1254,13 @@ void MapComposite::recreate()
         ++index;
     }
 
+#if 1 // ROAD_CRUD
     mRoadLayer1 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
     mRoadLayer0 = new TileLayer(QString(), 0, 0, mMap->width(), mMap->height());
+#endif // ROAD_CRUD
 
-#if 0
-    // FIXME: no changing of mMap should happen after it is loaded!
-    foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
-        mMap->addTileLayerGroup(layerGroup);
-#endif
-
+    // Load lots, but only if this is not the map being edited (that is handled
+    // by the LotManager).
     if (!mMapInfo->isBeingEdited()) {
         foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
             foreach (MapObject *object, objectGroup->objects()) {
@@ -1189,21 +1271,17 @@ void MapComposite::recreate()
                                                                           QFileInfo(mMapInfo->path()).absolutePath());
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
+#if 1 // FIXME: attempt to load this if mapsDirectory changes
                         subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(),
                                                                                32, 32); // FIXME: calculate map size
+#endif
                     }
                     if (subMapInfo) {
                         int levelOffset;
                         (void) levelForLayer(objectGroup, &levelOffset);
-#if 1
-                        MapComposite *_subMap = new MapComposite(subMapInfo, mOrientRender,
-                                                                 this, object->position().toPoint()
-                                                                 + mOrientAdjustPos * levelOffset,
-                                                                 levelOffset);
-                        mSubMaps.append(_subMap);
-#else
-                        addMap(subMap, object->position().toPoint(), levelOffset);
-#endif
+                        addMap(subMapInfo, object->position().toPoint()
+                               + mOrientAdjustPos * levelOffset,
+                               levelOffset);
                     }
                 }
             }
@@ -1256,6 +1334,7 @@ QStringList MapComposite::getMapFileNames() const
     return result;
 }
 
+#if 1 // ROAD_CRUD
 #include "road.h"
 #include "tileset.h"
 #include <QRegion>
@@ -1438,3 +1517,4 @@ void MapComposite::generateRoadLayers(const QPoint &roadPos, const QList<Road *>
         }
     }
 }
+#endif // ROAD_CRUD

@@ -19,6 +19,10 @@
 #define MAPCOMPOSITE_H
 
 #include "map.h"
+#define BUILDINGED
+#ifdef BUILDINGED
+#include "tilelayer.h" // for Cell
+#endif
 #include "ztilelayergroup.h"
 
 #include <QObject>
@@ -28,7 +32,9 @@
 #include <QVector>
 
 class MapInfo;
+#if 1 // ROAD_CRUD
 class Road;
+#endif // ROAD_CRUD
 
 namespace Tiled {
 class Layer;
@@ -79,6 +85,25 @@ public:
     void saveOpacity();
     void restoreOpacity();
 
+#ifdef BUILDINGED
+    void setToolTiles(const QVector<QVector<Tiled::Cell> > &tiles,
+                      const QPoint &pos, Tiled::TileLayer *layer)
+    {
+        mToolTiles = tiles;
+        mToolTilesPos = pos;
+        mToolTileLayer = layer;
+    }
+
+    void clearToolTiles()
+    { mToolTiles.clear(); mToolTileLayer = 0; mToolTilesPos = QPoint(-1, -1); }
+
+    bool setLayerNonEmpty(const QString &layerName, bool force);
+    bool setLayerNonEmpty(Tiled::TileLayer *tl, bool force);
+
+    void setHighlightLayer(const QString &layerName)
+    { mHighlightLayer = layerName; }
+#endif
+
 private:
     MapComposite *mOwner;
     bool mAnyVisibleLayers;
@@ -110,14 +135,18 @@ private:
     QVector<SubMapLayers> mPreparedSubMapLayers;
     QVector<SubMapLayers> mVisibleSubMapLayers;
 
-#define BUILDINGED
 #ifdef BUILDINGED
     QVector<Tiled::TileLayer*> mBlendLayers;
-#endif
+    QVector<QVector<Tiled::Cell> > mToolTiles;
+    QPoint mToolTilesPos;
+    Tiled::TileLayer *mToolTileLayer;
+    QString mHighlightLayer;
+    QVector<bool> mForceNonEmpty;
+#endif // BUILDINGED
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer0; // 0_Floor
     Tiled::TileLayer *mRoadLayer1; // 0_FloorOverlay
-#endif
+#endif // ROAD_CRUD
 };
 
 class MapComposite : public QObject
@@ -228,10 +257,12 @@ public:
     { return mBlendOverMap; }
 
     MapComposite *mBlendOverMap;
-#endif
+#endif // BUILDINGED
+#if 1 // ROAD_CRUD
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
     Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
     Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }
+#endif // ROAD_CRUD
 
 signals:
     void layerGroupAdded(int level);
@@ -266,9 +297,10 @@ private:
     bool mSavedGroupVisible;
     bool mSavedVisible;
     bool mHiddenDuringDrag;
-
+#if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer1;
     Tiled::TileLayer *mRoadLayer0;
+#endif // ROAD_CRUD
 
 public:
     MapComposite *root();
