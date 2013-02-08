@@ -1947,9 +1947,11 @@ int BuildingFloor::Square::getWallOffset()
 
     switch (mWallOrientation) {
     case WallOrientN:
-        if (mEntries[SectionDoor] != 0)
+        if (mEntries[SectionDoor] != 0 &&
+                mEntryEnum[SectionDoor] == BTC_Doors::North)
             offset = BTC_Walls::NorthDoor;
-        else if (mEntries[SectionWindow] != 0)
+        else if (mEntries[SectionWindow] != 0 &&
+                 mEntryEnum[SectionWindow] == BTC_Windows::North)
             offset = BTC_Walls::NorthWindow;
         else
             offset = BTC_Walls::North;
@@ -1958,9 +1960,11 @@ int BuildingFloor::Square::getWallOffset()
         offset = BTC_Walls::NorthWest;
         break;
     case WallOrientW:
-        if (mEntries[SectionDoor] != 0)
+        if (mEntries[SectionDoor] != 0 &&
+                mEntryEnum[SectionDoor] == BTC_Doors::West)
             offset = BTC_Walls::WestDoor;
-        else if (mEntries[SectionWindow] != 0)
+        else if (mEntries[SectionWindow] != 0 &&
+                 mEntryEnum[SectionWindow] == BTC_Windows::West)
             offset = BTC_Walls::WestWindow;
         break;
     case WallOrientSE:
