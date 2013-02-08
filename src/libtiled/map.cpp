@@ -288,6 +288,10 @@ Map *Map::clone() const
     foreach (const Layer *layer, mLayers)
         o->addLayer(layer->clone());
     o->mTilesets = mTilesets;
+#ifdef ZOMBOID
+    Q_ASSERT(o->mUsedTilesets == mUsedTilesets);
+    o->mUsedTilesets = mUsedTilesets; // not needed because of addLayer() above
+#endif
     o->setProperties(properties());
     return o;
 }

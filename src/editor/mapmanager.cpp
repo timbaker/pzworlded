@@ -646,9 +646,7 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     BuildingMap bmap(building);
     Map *map = bmap.mergedMap();
 
-    QSet<Tileset*> usedTilesets;
-    foreach (TileLayer *tl, map->tileLayers())
-        usedTilesets += tl->usedTilesets();
+    QSet<Tileset*> usedTilesets = map->usedTilesets();
     usedTilesets.remove(TilesetManager::instance()->missingTileset());
 
     TileMetaInfoMgr::instance()->loadTilesets(usedTilesets.toList());
