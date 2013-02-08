@@ -1281,7 +1281,7 @@ void BuildingFloor::LayoutToSquares()
         }
         for (int i = 0; i < ftile->size().height(); i++) {
             for (int j = 0; j < ftile->size().width(); j++) {
-                if (bounds().adjusted(0,0,1,1).contains(x + j + dx, y + i + dy)) {
+                if (bounds(1, 1).contains(x + j + dx, y + i + dy)) {
                     Square &s = squares[x + j + dx][y + i + dy];
                     s.mTiles[Square::SectionWall] = ftile->tile(j, i);
                     s.mEntries[Square::SectionWall] = 0;
@@ -1518,7 +1518,7 @@ QRect BuildingFloor::bounds(int dw, int dh) const
 
 bool BuildingFloor::contains(int x, int y, int dw, int dh)
 {
-    return bounds().adjusted(0, 0, dw, dh).contains(x, y);
+    return bounds(dw, dh).contains(x, y);
 }
 
 bool BuildingFloor::contains(const QPoint &p, int dw, int dh)

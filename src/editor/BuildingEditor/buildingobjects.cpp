@@ -57,7 +57,7 @@ bool BuildingObject::isValidPos(const QPoint &offset, BuildingFloor *floor) cons
         floor = mFloor; // hackery for BaseObjectTool
 
     // +1 because doors/windows can be on the outside edge of the building
-    QRect floorBounds = floor->bounds().adjusted(0, 0, 1, 1);
+    QRect floorBounds = floor->bounds(1, 1);
     QRect objectBounds = bounds().translated(offset);
     return (floorBounds & objectBounds) == objectBounds;
 }
