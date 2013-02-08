@@ -362,11 +362,13 @@ static void ReplaceFurniture(int x, int y,
                              BuildingTile *btile,
                              BuildingFloor::Square::SquareSection section,
                              BuildingFloor::Square::SquareSection section2
-                             = BuildingFloor::Square::SectionInvalid)
+                             = BuildingFloor::Square::SectionInvalid,
+                             int dw = 0, int dh = 0)
 {
     if (!btile)
         return;
-    QRect bounds(0, 0, squares.size() - 1, squares[0].size() - 1);
+    Q_ASSERT(dw <= 1 && dh <= 1);
+    QRect bounds(0, 0, squares.size() - 1 + dw, squares[0].size() - 1 + dh);
     if (bounds.contains(x, y))
         squares[x][y].ReplaceFurniture(btile, section, section2);
 }
@@ -641,7 +643,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceFurniture(x + j + dx, y + i + dy,
                                          squares, ftile->tile(j, i),
                                          Square::SectionRoofCap,
-                                         Square::SectionRoofCap2);
+                                         Square::SectionRoofCap2,
+                                         dx, dy);
                         break;
                     }
                     case FurnitureTiles::LayerWallOverlay:
@@ -660,7 +663,9 @@ void BuildingFloor::LayoutToSquares()
                         if (fo->furnitureTile()->isS()) ++dy;
                         ReplaceFurniture(x + j + dx, y + i + dy,
                                          squares, ftile->tile(j, i),
-                                         Square::SectionFrame);
+                                         Square::SectionFrame,
+                                         Square::SectionInvalid,
+                                         dx, dy);
                         break;
                     }
                     case FurnitureTiles::LayerDoors: {
@@ -669,7 +674,9 @@ void BuildingFloor::LayoutToSquares()
                         if (fo->furnitureTile()->isS()) ++dy;
                         ReplaceFurniture(x + j + dx, y + i + dy,
                                          squares, ftile->tile(j, i),
-                                         Square::SectionDoor);
+                                         Square::SectionDoor,
+                                         Square::SectionInvalid,
+                                         dx, dy);
                         break;
                     }
                     case FurnitureTiles::LayerFurniture:
