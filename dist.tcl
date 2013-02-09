@@ -65,3 +65,19 @@ copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qjpcodecs4.dll
 copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qkrcodecs4.dll
 copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qtwcodecs4.dll
 
+proc removeFD {dir name} {
+    foreach f [glob -nocomplain -types d -dir $dir $name] {
+        puts "removing $f"
+        file delete -force $f
+    }
+    foreach f [glob -nocomplain -types d -dir $dir *] {
+        if {$f == "." || $f == ".."} continue
+        removeFD $f $name
+    }
+    return
+}
+if 1 {
+removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} .pzeditor
+removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} lots
+removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} *.bak
+}
