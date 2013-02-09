@@ -771,6 +771,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     if (!mParent && !mMapInfo->isBeingEdited())
         mMaxLevel = qMax(mMaxLevel, 10);
 
+    mSortedLayerGroups.clear();
     for (int level = mMinLevel; level <= mMaxLevel; ++level) {
         if (!mLayerGroups.contains(level))
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
