@@ -4,7 +4,7 @@ set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
 set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
 set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
 set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
-set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\Tools\WorldEd}
+set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
 
 proc copyFile {SOURCE DEST name {name2 ""}} {
     if {$name2 == ""} { set name2 $name }
