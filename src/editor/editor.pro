@@ -196,4 +196,8 @@ OTHER_FILES +=
 RESOURCES += \
     editor.qrc
 
+win32 {
+    RC_FILE = worlded.rc
+}
+
 win32:INCLUDEPATH += .
