@@ -131,8 +131,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Make sure Ctrl+= also works for zooming in
     QList<QKeySequence> keys = QKeySequence::keyBindings(QKeySequence::ZoomIn);
-//    keys += QKeySequence(tr("Ctrl+="));
+    keys += QKeySequence(tr("Ctrl+="));
     keys += QKeySequence(tr("+"));
+    keys += QKeySequence(tr("="));
     ui->actionZoomIn->setShortcuts(keys);
     keys = QKeySequence::keyBindings(QKeySequence::ZoomOut);
     keys += QKeySequence(tr("-"));
