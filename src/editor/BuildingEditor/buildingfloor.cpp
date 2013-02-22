@@ -408,6 +408,7 @@ static void ReplaceWindow(Window *window, QVector<QVector<BuildingFloor::Square>
     }
 }
 
+#if 0
 static void ReplaceWallW(int x, int y, BuildingTileEntry *entry, bool exterior,
                          QVector<QVector<BuildingFloor::Square> > &squares)
 {
@@ -423,6 +424,7 @@ static void ReplaceWallN(int x, int y, BuildingTileEntry *entry, bool exterior,
     if (bounds.contains(x, y))
         squares[x][y].SetWallN(entry, exterior);
 }
+#endif
 
 void BuildingFloor::LayoutToSquares()
 {

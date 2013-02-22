@@ -339,21 +339,6 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
     }
 }
 
-void TilesetManager::tilesetSourceChanged(Tileset *tileset,
-                                          const QString &oldSource,
-                                          bool wasMissing)
-{
-    if (!wasMissing && !oldSource.isEmpty())
-        mWatcher->removePath(oldSource);
-    if (!tileset->isMissing() && !tileset->imageSource().isEmpty()) {
-        mWatcher->addPath(tileset->imageSource());
-#ifdef ZOMBOID_TILE_LAYER_NAMES
-        readTileLayerNames(tileset);
-#endif
-    }
-    emit tilesetChanged(tileset);
-}
-
 void TilesetManager::changeTilesetSource(Tileset *tileset, const QString &source,
                                          bool missing)
 {

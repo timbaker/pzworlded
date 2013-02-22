@@ -72,9 +72,7 @@ void BuildingObject::rotate(bool right)
         int x = mX;
         mX = oldHeight - mY - 1;
         mY = x;
-        if (mDir == N)
-            ;
-        else
+        if (mDir == W)
             mX++;
     } else {
         int x = mX;
@@ -82,8 +80,6 @@ void BuildingObject::rotate(bool right)
         mY = oldWidth - x - 1;
         if (mDir == N)
             mY++;
-        else
-            ;
     }
 }
 

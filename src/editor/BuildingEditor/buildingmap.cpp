@@ -141,7 +141,6 @@ QStringList BuildingMap::requiredLayerNames()
     return ret;
 }
 
-#if 1
 void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object)
 {
     if (mCursorObjectFloor && (mCursorObjectFloor != floor)) {
@@ -228,90 +227,6 @@ void BuildingMap::suppressTiles(BuildingFloor *floor, const QRegion &rgn)
         }
     }
 }
-
-#else
-/**
-  This method requires a bit of explanation.  The purpose is to show the result of
-  adding or resizing a building object in real time.  BuildingFloor::LayoutToSquares
-  is rather slow and doesn't support updating a sub-area of a floor.  This method
-  creates a new tiny building that is just a bit larger than the object being
-  created or resized.  The tiny building is given a copy of only those objects
-  that overlap its bounds.  LayoutToSquares is then run just on the floor in the
-  tiny building, and those squares are later used by BuildingSquaresToTileLayers.
-  There are still issues with objects that should affect the floors above/below
-  like stairs.
-  */
-void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object,
-                                  const QRect &bounds)
-{
-    if (mCursorObjectFloor) {
-        BuildingFloor *floor2 = mBuilding->floor(mCursorObjectFloor->level());
-        pendingSquaresToTileLayers[floor2] |= mCursorObjectFloor->bounds().translated(mCursorObjectPos);
-        if (!pending) {
-            QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-            pending = true;
-        }
-        delete mCursorObjectFloor;
-        mCursorObjectFloor = 0;
-        delete mCursorObjectBuilding;
-        mCursorObjectBuilding = 0;
-    }
-    if (object/* && floor->bounds().intersects(object->bounds())*/) {
-        // When resizing a wall object, we must call SquaresToTileLayers with
-        // the combined area of the wall object's original bounds and the
-        // current bounds during resizing.
-        mCursorObjectBounds = bounds.isNull() ? object->bounds() : bounds;
-        QRect r = mCursorObjectBounds.adjusted(-2, -2, 2, 2) & floor->bounds();
-        mCursorObjectBuilding = new Building(r.width(), r.height());
-        mCursorObjectBuilding->setExteriorWall(floor->building()->exteriorWall());
-        foreach (Room *room, floor->building()->rooms())
-            mCursorObjectBuilding->insertRoom(mCursorObjectBuilding->roomCount(),
-                                              room);
-        foreach (BuildingFloor *floor2, floor->building()->floors()) {
-            BuildingFloor *clone = new BuildingFloor(mCursorObjectBuilding, floor2->level());
-            mCursorObjectBuilding->insertFloor(clone->level(), clone);
-            // TODO: clone stairs/roofs on floor below
-            if (floor2 == floor)
-                mCursorObjectFloor = clone;
-        }
-
-        for (int x = r.x(); x <= r.right(); x++) {
-            for (int y = r.y(); y <= r.bottom(); y++) {
-                mCursorObjectFloor->SetRoomAt(x - r.x(), y - r.y(), floor->GetRoomAt(x, y));
-            }
-        }
-
-        // Copy overlapping objects.
-        foreach (BuildingObject *object, floor->objects()) {
-            if (r.adjusted(0,0,1,1) // some objects can be on the edge of the building
-                    .intersects(object->bounds())) {
-                BuildingObject *clone = object->clone();
-                clone->setPos(clone->pos() - r.topLeft());
-                clone->setFloor(mCursorObjectFloor);
-                mCursorObjectFloor->insertObject(mCursorObjectFloor->objectCount(),
-                                                 clone);
-            }
-        }
-
-        // Clone the given object if it is a cursor object.
-        if (!floor->objects().contains(object)) {
-            BuildingObject *clone = object->clone();
-            clone->setPos(clone->pos() - r.topLeft());
-            clone->setFloor(mCursorObjectFloor);
-            mCursorObjectFloor->insertObject(mCursorObjectFloor->objectCount(), clone);
-        }
-
-        mCursorObjectFloor->LayoutToSquares();
-        mCursorObjectPos = r.topLeft();
-
-        pendingSquaresToTileLayers[floor] |= r;
-        if (!pending) {
-            QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-            pending = true;
-        }
-    }
-}
-#endif
 
 Map *BuildingMap::mergedMap() const
 {
