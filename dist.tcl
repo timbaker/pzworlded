@@ -40,7 +40,7 @@ proc copyFile {SOURCE DEST name {name2 ""}} {
     return
 }
 
-copyFile {C:\Programming\Tiled} $DEST vcredist_x86.exe
+#copyFile {C:\Programming\Tiled} $DEST vcredist_x86.exe
 
 copyFile $BIN $DEST PZWorldEd.exe
 copyFile $BIN $DEST tiled.dll
