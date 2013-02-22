@@ -191,6 +191,18 @@ private:
                           const QRect &bounds);
 
 private:
+    Building *mBuilding;
+    MapComposite *mMapComposite;
+    Tiled::Map *mMap;
+    MapComposite *mBlendMapComposite;
+    Tiled::Map *mBlendMap;
+    Tiled::MapRenderer *mMapRenderer;
+    QMap<QString,int> mLayerToSection;
+
+    BuildingFloor *mCursorObjectFloor;
+    ShadowBuilding *mShadowBuilding;
+    QMap<BuildingFloor*,QRegion> mSuppressTiles;
+
     bool pending;
     bool pendingRecreateAll;
     bool pendingBuildingResized;
@@ -198,18 +210,6 @@ private:
     QMap<BuildingFloor*,QRegion> pendingSquaresToTileLayers; // BuildingSquaresToTileLayers
     QSet<BuildingFloor*> pendingEraseUserTiles; // TileLayer::erase on all user-tile layers
     QMap<BuildingFloor*,QMap<QString,QRegion> > pendingUserTilesToLayer; // floorTilesToLayer
-
-    Building *mBuilding;
-    MapComposite *mBlendMapComposite;
-    Tiled::Map *mBlendMap;
-    MapComposite *mMapComposite;
-    Tiled::Map *mMap;
-    Tiled::MapRenderer *mMapRenderer;
-    QMap<QString,int> mLayerToSection;
-
-    BuildingFloor *mCursorObjectFloor;
-    ShadowBuilding *mShadowBuilding;
-    QMap<BuildingFloor*,QRegion> mSuppressTiles;
 };
 
 } // namespace BuildingEditor

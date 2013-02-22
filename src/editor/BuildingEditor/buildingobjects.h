@@ -121,9 +121,9 @@ public:
 
 protected:
     BuildingFloor *mFloor;
-    Direction mDir;
     int mX;
     int mY;
+    Direction mDir;
     BuildingTileEntry *mTile;
 };
 

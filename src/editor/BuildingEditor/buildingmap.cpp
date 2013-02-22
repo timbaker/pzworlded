@@ -50,11 +50,11 @@ BuildingMap::BuildingMap(Building *building) :
     mBlendMapComposite(0),
     mBlendMap(0),
     mMapRenderer(0),
+    mCursorObjectFloor(0),
+    mShadowBuilding(0),
     pending(false),
     pendingRecreateAll(false),
-    pendingBuildingResized(false),
-    mCursorObjectFloor(0),
-    mShadowBuilding(0)
+    pendingBuildingResized(false)
 {
     BuildingToMap();
 }

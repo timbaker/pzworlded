@@ -55,8 +55,8 @@ class Fake_##C : public BTC_##C \
 { \
 public: \
     Fake_##C(FakeBuildingTilesMgr *btiles) : \
-        mFakeBuildingTilesMgr(btiles), \
-        BTC_##C(QString()) \
+        BTC_##C(QString()), \
+        mFakeBuildingTilesMgr(btiles) \
     { } \
 private: \
     BuildingTile *getTile(const QString &tilesetName, int offset); \
