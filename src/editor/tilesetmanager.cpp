@@ -90,6 +90,8 @@ TilesetManager::~TilesetManager()
         delete mImageReaderWorkers[i];
         delete mImageReaderThreads[i];
     }
+
+    delete mTilesetImageCache;
 #endif
 
     // Since all MapDocuments should be deleted first, we assert that there are
