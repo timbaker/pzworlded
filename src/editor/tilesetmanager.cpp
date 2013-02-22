@@ -148,11 +148,10 @@ void TilesetManager::addReference(Tileset *tileset)
     } else {
         mTilesets.insert(tileset, 1);
 #ifdef ZOMBOID
-        if (!tileset->imageSource().isEmpty() && !tileset->isMissing())
 #else
         if (!tileset->imageSource().isEmpty())
-#endif
             mWatcher->addPath(tileset->imageSource());
+#endif
     }
 #ifdef ZOMBOID_TILE_LAYER_NAMES
     if (!tileset->imageSource().isEmpty() && !tileset->isMissing())
@@ -172,11 +171,10 @@ void TilesetManager::removeReference(Tileset *tileset)
     if (mTilesets.value(tileset) == 0) {
         mTilesets.remove(tileset);
 #ifdef ZOMBOID
-        if (!tileset->imageSource().isEmpty() && !tileset->isMissing())
 #else
         if (!tileset->imageSource().isEmpty())
-#endif
             mWatcher->removePath(tileset->imageSource());
+#endif
 
         delete tileset;
     }
@@ -270,10 +268,7 @@ void TilesetManager::imageLoaded(QImage *image, Tileset *tileset)
     // This updates a tileset in the cache.
     tileset->loadFromImage(*image, tileset->imageSource());
 
-    // If a .tbx lot is added, only the used tilesets get loaded, but all of
-    // TileMetaInfoMgr's tilesets are passed to addReferences().  Since only
-    // the tilesets used by the .tbx lot are loaded, the unloaded ones are
-    // still marked "missing" and don't get added to mWatcher.
+    // Watch the image file for changes.
     mWatcher->addPath(tileset->imageSource());
 
     // Now update every tileset using this image.
@@ -342,12 +337,9 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
 void TilesetManager::changeTilesetSource(Tileset *tileset, const QString &source,
                                          bool missing)
 {
-    if (!tileset->imageSource().isEmpty() && !tileset->isMissing())
-        mWatcher->removePath(tileset->imageSource());
     tileset->setImageSource(source);
     tileset->setMissing(missing);
     if (!tileset->imageSource().isEmpty() && !tileset->isMissing()) {
-        mWatcher->addPath(tileset->imageSource());
 #ifdef ZOMBOID_TILE_LAYER_NAMES
         readTileLayerNames(tileset);
 #endif
