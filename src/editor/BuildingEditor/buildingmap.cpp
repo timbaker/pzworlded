@@ -717,6 +717,11 @@ void BuildingMap::handlePending()
         mBlendMap->setWidth(width);
         mBlendMap->setHeight(height);
 
+        MapInfo *mapInfo = mMapComposite->mapInfo();
+        MapManager::instance()->mapParametersChanged(mapInfo);
+        foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups())
+            lg->setNeedsSynch(true);
+
         delete mShadowBuilding;
         mShadowBuilding = new ShadowBuilding(mBuilding);
     }
