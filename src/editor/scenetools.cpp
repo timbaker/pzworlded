@@ -37,12 +37,15 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QUndoStack>
+#include <QUrl>
 
 using namespace Tiled;
 
@@ -522,6 +525,10 @@ void SubMapTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         event->accept();
         break;
     case Qt::RightButton:
+        if (mMode == NoMode) {
+            showContextMenu(event->scenePos(), event->screenPos());
+            event->accept();
+        }
         // Right-clicks exits moving, same as the Escape key.
         if (mMode == Moving) {
             cancelMoving();
@@ -695,6 +702,30 @@ void SubMapTool::cancelMoving()
     qDeleteAll(mDnDItems);
     mDnDItems.clear();
     mMovingItems.clear();
+}
+
+void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
+{
+    SubMapItem *item = topmostItemAt(scenePos);
+    if (!item)
+        return;
+
+    QMenu menu;
+    QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
+    QAction *removeAction = menu.addAction(removeIcon, tr("Remove Lot"));
+    menu.addSeparator();
+    QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
+    QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
+
+    QAction *action = menu.exec(screenPos);
+    if (action == removeAction) {
+        int lotIndex = mScene->cell()->indexOf(item->lot());
+        mScene->worldDocument()->removeCellLot(mScene->cell(), lotIndex);
+    }
+    if (action == openAction) {
+        QUrl url = QUrl::fromLocalFile(item->subMap()->mapInfo()->path());
+        QDesktopServices::openUrl(url);
+    }
 }
 
 SubMapItem *SubMapTool::topmostItemAt(const QPointF &scenePos)
@@ -1532,6 +1563,9 @@ void WorldCellTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         mClickedItem = topmostItemAt(mStartScenePos);
         break;
     case Qt::RightButton:
+        if (mMode == NoMode) {
+            showContextMenu(event->scenePos(), event->screenPos());
+        }
         // Right-clicks exits moving, same as the Escape key.
         if (mMode == Moving) {
             mMode = CancelMoving;
@@ -1768,6 +1802,25 @@ void WorldCellTool::pushCellToMove(WorldCell *cell, const QPoint &offset)
             pushCellToMove(test, offset);
     }
     mOrderedMovingCells += cell;
+}
+
+void WorldCellTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
+{
+    WorldCellItem *item = topmostItemAt(scenePos);
+    if (!item)
+        return;
+
+    QMenu menu;
+    QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
+    QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
+    if (item->cell()->mapFilePath().isEmpty())
+        openAction->setEnabled(false);
+
+    QAction *action = menu.exec(screenPos);
+    if (action == openAction) {
+        QUrl url = QUrl::fromLocalFile(item->cell()->mapFilePath());
+        QDesktopServices::openUrl(url);
+    }
 }
 
 WorldCellItem *WorldCellTool::topmostItemAt(const QPointF &scenePos)

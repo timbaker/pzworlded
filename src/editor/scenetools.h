@@ -291,6 +291,8 @@ private:
     void finishMoving(const QPointF &pos);
     void cancelMoving();
 
+    void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
+
 private:
     enum Mode {
         NoMode,
@@ -567,6 +569,8 @@ private:
     void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
     void finishMoving(const QPointF &pos);
     void pushCellToMove(WorldCell *cell, const QPoint &offset);
+
+    void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
 
     enum Mode {
         NoMode,

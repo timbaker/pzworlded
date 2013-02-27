@@ -288,6 +288,7 @@ public:
     void insertLot(int index, WorldCellLot *lot);
     WorldCellLot *removeLot(int index);
     const WorldCellLotList &lots() const { return mLots; }
+    int indexOf(WorldCellLot *lot) { return mLots.indexOf(lot); }
 
     void insertObject(int index, WorldCellObject *obj);
     WorldCellObject *removeObject(int index);
