@@ -1006,6 +1006,8 @@ void BaseCellItem::calcLotImageBounds(int index)
     WorldCellLot *lot = lots().at(index);
     LotImage &lotImage = mLotImages[index];
     MapImage *mapImage = lotImage.mMapImage;
+    if (!mapImage)
+        return;
 
     QSizeF gridSize = mapSize(300, 300, 64, 32);
     QSizeF unscaledMapSize = mapImage->bounds().size();
