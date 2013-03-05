@@ -142,6 +142,10 @@ public:
     /////
 
     Tiled::Map *mergedMap() const;
+
+    void addRoomDefObjects(Tiled::Map *map);
+    void addRoomDefObjects(Tiled::Map *map, BuildingFloor *floor);
+
     static int defaultOrientation();
 
     bool isTilesetUsed(Tiled::Tileset *tileset);
@@ -193,9 +197,9 @@ private:
 private:
     Building *mBuilding;
     MapComposite *mMapComposite;
-    Tiled::Map *mMap;
+    Tiled::Map *mMap; // tile layers contain only user-drawn tiles
     MapComposite *mBlendMapComposite;
-    Tiled::Map *mBlendMap;
+    Tiled::Map *mBlendMap; // tile layers contain only building-generated tiles
     Tiled::MapRenderer *mMapRenderer;
     QMap<QString,int> mLayerToSection;
 

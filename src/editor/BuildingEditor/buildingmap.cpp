@@ -31,7 +31,9 @@
 
 #include "isometricrenderer.h"
 #include "map.h"
+#include "mapobject.h"
 #include "maprenderer.h"
+#include "objectgroup.h"
 #include "tile.h"
 #include "tilelayer.h"
 #include "tileset.h"
@@ -238,6 +240,37 @@ Map *BuildingMap::mergedMap() const
 
     }
     return map;
+}
+
+void BuildingMap::addRoomDefObjects(Map *map)
+{
+    foreach (BuildingFloor *floor, mBuilding->floors())
+        addRoomDefObjects(map, floor);
+}
+
+void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
+{
+    Building *building = floor->building();
+    ObjectGroup *objectGroup = new ObjectGroup(tr("%1_RoomDefs").arg(floor->level()),
+                                               0, 0, map->width(), map->height());
+    map->addLayer(objectGroup);
+
+    int delta = (building->floorCount() - 1 - floor->level()) * 3;
+    if (map->orientation() == Map::LevelIsometric)
+        delta = 0;
+    QPoint offset(delta, delta);
+    int roomID = 1;
+    foreach (Room *room, building->rooms()) {
+        foreach (QRect rect, floor->roomRegion(room)) {
+            QString name = room->internalName + QLatin1Char('#')
+                    + QString::number(roomID);
+            MapObject *mapObject = new MapObject(name, QLatin1String("room"),
+                                                 rect.topLeft() + offset,
+                                                 rect.size());
+            objectGroup->addObject(mapObject);
+        }
+        ++roomID;
+    }
 }
 
 int BuildingMap::defaultOrientation()
