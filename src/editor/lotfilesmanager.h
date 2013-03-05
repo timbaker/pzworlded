@@ -133,6 +133,7 @@ public:
 };
 
 class Building;
+class Room;
 
 class RoomObject
 {
@@ -142,15 +143,75 @@ public:
     int y; // Cell coord
 };
 
-class Room
+class RoomRect
 {
 public:
-    Room(const QString &name, int x, int y, int level, int w, int h)
-        : ID(-1)
-        , x(x)
+    RoomRect(const QString &name, int x, int y, int level, int w, int h)
+        : x(x)
         , y(y)
         , w(w)
         , h(h)
+        , floor(level)
+        , name(name)
+        , room(0)
+    {
+
+    }
+
+    QRect bounds() const
+    {
+        return QRect(x, y, w, h);
+    }
+
+    QPoint topLeft() const { return QPoint(x, y); }
+    QPoint topRight() const { return QPoint(x + w, y); }
+    QPoint bottomLeft() const { return QPoint(x, y + h); }
+    QPoint bottomRight() const { return QPoint(x + w, y + h); }
+
+    bool isAdjacent(RoomRect *comp) const
+    {
+        QRect a(x - 1, y - 1, w + 2, h + 2);
+        QRect b(comp->x, comp->y, comp->w, comp->h);
+        return a.intersects(b);
+    }
+
+    bool isTouchingCorners(RoomRect *comp) const
+    {
+        return topLeft() == comp->bottomRight() ||
+                topRight() == comp->bottomLeft() ||
+                bottomLeft() == comp->topRight() ||
+                bottomRight() == comp->topLeft();
+    }
+
+    bool inSameRoom(RoomRect *comp) const
+    {
+        if (floor != comp->floor) return false;
+        if (name != comp->name) return false;
+        if (!name.contains(QLatin1Char('#'))) return false;
+        return isAdjacent(comp) && !isTouchingCorners(comp);
+    }
+
+    QString nameWithoutSuffix() const
+    {
+        int pos = name.indexOf(QLatin1Char('#'));
+        if (pos == -1) return name;
+        return name.left(pos);
+    }
+
+    int x;
+    int y;
+    int w;
+    int h;
+    int floor;
+    QString name;
+    Room *room;
+};
+
+class Room
+{
+public:
+    Room(const QString &name, int level)
+        : ID(-1)
         , floor(level)
         , name(name)
         , building(0)
@@ -158,21 +219,22 @@ public:
 
     }
 
-    bool IsSameBuilding(Room *comp)
+    bool inSameBuilding(Room *comp)
     {
-        QRect a(x - 1, y - 1, w + 2, h + 2);
-        QRect b(comp->x - 1, comp->y - 1, comp->w + 2, comp->h + 2);
-        return a.intersects(b);
+        foreach (RoomRect *rr, rects) {
+            foreach (RoomRect *rr2, comp->rects) {
+                if (rr->isAdjacent(rr2))
+                    return true;
+            }
+        }
+        return false;
     }
 
     int ID;
-    int x;
-    int y;
-    int w;
-    int h;
     int floor;
     QString name;
     Building *building;
+    QList<RoomRect*> rects;
     QList<RoomObject> objects;
 };
 
@@ -188,12 +250,14 @@ public:
     Stats() :
         numBuildings(0),
         numRooms(0),
+        numRoomRects(0),
         numRoomObjects(0)
     {
     }
 
     int numBuildings;
     int numRooms;
+    int numRoomRects;
     int numRoomObjects;
 };
 
@@ -217,7 +281,9 @@ public:
     bool generateHeader(WorldCell *cell, MapComposite *mapComposite);
     bool generateHeaderAux(WorldCell *cell, MapComposite *mapComposite);
     bool generateChunk(QDataStream &out, WorldCell *cell, MapComposite *mapComposite, int cx, int cy);
-    bool generateBuildingObjects(int mapWidth, int mapHeight);
+    void generateBuildingObjects(int mapWidth, int mapHeight);
+    void generateBuildingObjects(int mapWidth, int mapHeight,
+                                 LotFile::Room *room, LotFile::RoomRect *rr);
 
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
 
@@ -232,7 +298,8 @@ public slots:
 private:
     uint cellToGid(const Tiled::Cell *cell);
     void processObjectGroups(MapComposite *mapComposite);
-    void processObjectGroup(Tiled::ObjectGroup *objectGroup, const QPoint &offset);
+    void processObjectGroup(Tiled::ObjectGroup *objectGroup, int levelOffset,
+                            const QPoint &offset);
 
 private:
     Q_DISABLE_COPY(LotFilesManager)
@@ -249,6 +316,8 @@ private:
     QVector<QVector<QVector<LotFile::Square> > > mGridData;
     int MaxLevel;
     int Version;
+    QList<LotFile::RoomRect*> mRoomRects;
+    QMap<int,QList<LotFile::RoomRect*> > mRoomRectByLevel;
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
     QImage ZombieSpawnMap;

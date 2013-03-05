@@ -127,9 +127,10 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
         }
     }
 
-    QString stats = tr("Finished!\n\nBuildings: %1\nRoom rects: %2\nRoom objects: %3")
+    QString stats = tr("Finished!\n\nBuildings: %1\nRooms: %2\nRoom rects: %3\nRoom objects: %4")
             .arg(mStats.numBuildings)
             .arg(mStats.numRooms)
+            .arg(mStats.numRoomRects)
             .arg(mStats.numRoomObjects);
     QMessageBox::information(MainWindow::instance(),
                              tr("Generate Lot Files"), stats);
@@ -285,10 +286,13 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 {
     Q_UNUSED(cell)
 
+    qDeleteAll(mRoomRects);
     qDeleteAll(roomList);
     qDeleteAll(buildingList);
     qDeleteAll(ZoneList);
 
+    mRoomRects.clear();
+    mRoomRectByLevel.clear();
     roomList.clear();
     buildingList.clear();
     ZoneList.clear();
@@ -311,6 +315,52 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
     processObjectGroups(mapComposite);
 
+    // Merge adjacent RoomRects on the same level into rooms.
+    // Only RoomRects with matching names and with # in the name are merged.
+    foreach (int level, mRoomRectByLevel.keys()) {
+        QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
+        foreach (LotFile::RoomRect *rr, rrList) {
+            if (rr->room == 0) {
+                rr->room = new LotFile::Room(rr->nameWithoutSuffix(),
+                                             rr->floor);
+                rr->room->rects += rr;
+                roomList += rr->room;
+            }
+            if (!rr->name.contains(QLatin1Char('#')))
+                continue;
+            foreach (LotFile::RoomRect *comp, rrList) {
+                if (comp == rr)
+                    continue;
+                if (comp->room == rr->room)
+                    continue;
+                if (rr->inSameRoom(comp)) {
+                    if (comp->room != 0) {
+                        LotFile::Room *room = comp->room;
+                        foreach (LotFile::RoomRect *rr2, room->rects) {
+                            Q_ASSERT(rr2->room == room);
+                            Q_ASSERT(!rr->room->rects.contains(rr2));
+                            rr2->room = rr->room;
+                        }
+                        rr->room->rects += room->rects;
+                        roomList.removeOne(room);
+                        delete room;
+                    } else {
+                        comp->room = rr->room;
+                        rr->room->rects += comp;
+                        Q_ASSERT(rr->room->rects.count(comp) == 1);
+                    }
+                }
+            }
+        }
+    }
+    for (int i = 0; i < roomList.size(); i++)
+        roomList[i]->ID = i;
+    mStats.numRoomRects += mRoomRects.size();
+    mStats.numRooms += roomList.size();
+
+    // Merge adjacent rooms into buildings.
+    // Rooms on different levels that overlap in x/y are merged into the
+    // same buliding.
     foreach (LotFile::Room *r, roomList) {
         if (r->building == 0) {
             r->building = new LotFile::Building();
@@ -323,7 +373,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             if (r->building == comp->building)
                 continue;
 
-            if (r->IsSameBuilding(comp)) {
+            if (r->inSameBuilding(comp)) {
                 if (comp->building != 0) {
                     LotFile::Building *b = comp->building;
                     foreach (LotFile::Room *r2, b->RoomList) {
@@ -391,19 +441,22 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     out << qint32(roomList.count());
     foreach (LotFile::Room *room, roomList) {
         SaveString(out, room->name);
-        out << qint32(room->x);
-        out << qint32(room->y);
-        out << qint32(room->w);
-        out << qint32(room->h);
         out << qint32(room->floor);
-#if 1
+
+        out << qint32(room->rects.size());
+        foreach (LotFile::RoomRect *rr, room->rects) {
+            out << qint32(rr->x);
+            out << qint32(rr->y);
+            out << qint32(rr->w);
+            out << qint32(rr->h);
+        }
+
         out << qint32(room->objects.size());
         foreach (const LotFile::RoomObject &object, room->objects) {
             out << qint32(object.metaEnum);
             out << qint32(object.x);
             out << qint32(object.y);
         }
-#endif
     }
 
     out << qint32(buildingList.count());
@@ -480,69 +533,74 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
     return true;
 }
 
-bool LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
+void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
 {
     foreach (LotFile::Room *room, roomList) {
-        for (int x = room->x; x < room->x + room->w; x++) {
-            for (int y = room->y; y < room->y + room->h; y++) {
+        foreach (LotFile::RoomRect *rr, room->rects)
+            generateBuildingObjects(mapWidth, mapHeight, room, rr);
+    }
+}
 
-                // Remember the room at each position in the map.
-                mGridData[x][y][room->floor].roomID = room->ID;
+void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
+                                              LotFile::Room *room, LotFile::RoomRect *rr)
+{
+    for (int x = rr->x; x < rr->x + rr->w; x++) {
+        for (int y = rr->y; y < rr->y + rr->h; y++) {
 
-                /* Examine every tile inside the room.  If the tile's metaEnum >= 0
-                   then create a new RoomObject for it. */
-                foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
-                    int metaEnum = TileMap[entry->gid]->metaEnum;
-                    if (metaEnum >= 0) {
-                        LotFile::RoomObject object;
-                        object.x = x;
-                        object.y = y;
-                        object.metaEnum = metaEnum;
-                        room->objects += object;
-                        ++mStats.numRoomObjects;
-                    }
-                }
-            }
-        }
+            // Remember the room at each position in the map.
+            mGridData[x][y][room->floor].roomID = room->ID;
 
-        // Check south of the room for doors.
-        int y = room->y + room->h;
-        if (y < mapHeight) {
-            for (int x = room->x; x < room->x + room->w; x++) {
-                foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
-                    int metaEnum = TileMap[entry->gid]->metaEnum;
-                    if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumNorth(metaEnum)) {
-                        LotFile::RoomObject object;
-                        object.x = x;
-                        object.y = y - 1;
-                        object.metaEnum = metaEnum + 1;
-                        room->objects += object;
-                        ++mStats.numRoomObjects;
-                    }
-                }
-            }
-        }
-
-        // Check east of the room for doors.
-        int x = room->x + room->w;
-        if (x < mapWidth) {
-            for (int y = room->y; y < room->y + room->h; y++) {
-                foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
-                    int metaEnum = TileMap[entry->gid]->metaEnum;
-                    if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumWest(metaEnum)) {
-                        LotFile::RoomObject object;
-                        object.x = x - 1;
-                        object.y = y;
-                        object.metaEnum = metaEnum + 1;
-                        room->objects += object;
-                        ++mStats.numRoomObjects;
-                    }
+            /* Examine every tile inside the room.  If the tile's metaEnum >= 0
+               then create a new RoomObject for it. */
+            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+                int metaEnum = TileMap[entry->gid]->metaEnum;
+                if (metaEnum >= 0) {
+                    LotFile::RoomObject object;
+                    object.x = x;
+                    object.y = y;
+                    object.metaEnum = metaEnum;
+                    room->objects += object;
+                    ++mStats.numRoomObjects;
                 }
             }
         }
     }
 
-    return true;
+    // Check south of the room for doors.
+    int y = rr->y + rr->h;
+    if (y < mapHeight) {
+        for (int x = rr->x; x < rr->x + rr->w; x++) {
+            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+                int metaEnum = TileMap[entry->gid]->metaEnum;
+                if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumNorth(metaEnum)) {
+                    LotFile::RoomObject object;
+                    object.x = x;
+                    object.y = y - 1;
+                    object.metaEnum = metaEnum + 1;
+                    room->objects += object;
+                    ++mStats.numRoomObjects;
+                }
+            }
+        }
+    }
+
+    // Check east of the room for doors.
+    int x = rr->x + rr->w;
+    if (x < mapWidth) {
+        for (int y = rr->y; y < rr->y + rr->h; y++) {
+            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+                int metaEnum = TileMap[entry->gid]->metaEnum;
+                if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumWest(metaEnum)) {
+                    LotFile::RoomObject object;
+                    object.x = x - 1;
+                    object.y = y;
+                    object.metaEnum = metaEnum + 1;
+                    room->objects += object;
+                    ++mStats.numRoomObjects;
+                }
+            }
+        }
+    }
 }
 
 static QString nameOfTileset(const Tileset *tileset)
@@ -628,18 +686,21 @@ void LotFilesManager::processObjectGroups(MapComposite *mapComposite)
 {
     foreach (Layer *layer, mapComposite->map()->layers()) {
         if (ObjectGroup *og = layer->asObjectGroup())
-            processObjectGroup(og, mapComposite->originRecursive());
+            processObjectGroup(og, mapComposite->levelRecursive(),
+                               mapComposite->originRecursive());
     }
 
     foreach (MapComposite *subMap, mapComposite->subMaps())
         processObjectGroups(subMap);
 }
 
-void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup, const QPoint &offset)
+void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup,
+                                         int levelOffset, const QPoint &offset)
 {
     int level;
     if (!MapComposite::levelForLayer(objectGroup, &level))
         return;
+    level += levelOffset;
 
     foreach (const MapObject *mapObject, objectGroup->objects()) {
 #if 0
@@ -668,10 +729,10 @@ void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup, const QPoint 
         y += offset.y();
 
         if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
-            LotFile::Room *room = new LotFile::Room(name, x, y, level, w, h);
-            room->ID = roomList.count();
-            roomList += room;
-            mStats.numRooms++;
+            LotFile::RoomRect *rr = new LotFile::RoomRect(name, x, y, level,
+                                                          w, h);
+            mRoomRects += rr;
+            mRoomRectByLevel[level] += rr;
         } else {
             LotFile::Zone *z = new LotFile::Zone(name,
                                                  mapObject->type(),
