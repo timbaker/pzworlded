@@ -746,7 +746,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
                         (void) levelForLayer(objectGroup, &levelOffset);
                         addMap(subMapInfo, object->position().toPoint()
                                + mOrientAdjustPos * levelOffset,
-                               levelOffset);
+                               levelOffset, true);
                     }
                 }
             }
@@ -811,10 +811,14 @@ bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
     return levelForLayer(layer->name(), levelPtr);
 }
 
-MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset)
+MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
+                                   int levelOffset, bool creating)
 {
     MapComposite *subMap = new MapComposite(mapInfo, mOrientRender, this, pos, levelOffset);
     mSubMaps.append(subMap);
+
+    if (creating)
+        return subMap;
 
     ensureMaxLevels(levelOffset + subMap->maxLevel());
 
@@ -1222,6 +1226,7 @@ void MapComposite::recreate()
     mSubMaps.clear();
     mLayerGroups.clear();
     mSortedLayerGroups.clear();
+    mMinLevel = mMaxLevel = 0;
 #if 1 // ROAD_CRUD
     delete mRoadLayer0;
     delete mRoadLayer1;
@@ -1283,7 +1288,7 @@ void MapComposite::recreate()
                         (void) levelForLayer(objectGroup, &levelOffset);
                         addMap(subMapInfo, object->position().toPoint()
                                + mOrientAdjustPos * levelOffset,
-                               levelOffset);
+                               levelOffset, true);
                     }
                 }
             }

@@ -163,7 +163,8 @@ public:
     static QString layerNameWithoutPrefix(const QString &name);
     static QString layerNameWithoutPrefix(Tiled::Layer *layer);
 
-    MapComposite *addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset);
+    MapComposite *addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset,
+                         bool creating = false);
     void removeMap(MapComposite *subMap);
     void moveSubMap(MapComposite *subMap, const QPoint &pos);
 
