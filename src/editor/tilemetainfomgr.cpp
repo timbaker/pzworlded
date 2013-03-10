@@ -111,7 +111,7 @@ QString TileMetaInfoMgr::txtName()
 
 QString TileMetaInfoMgr::txtPath()
 {
-    return QDir::homePath() + QLatin1String("/.TileZed/") + txtName();
+    return Preferences::instance()->configPath(txtName());
 }
 
 #define VERSION0 0

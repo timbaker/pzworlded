@@ -38,6 +38,9 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(ui->browseTilesDirectory, SIGNAL(clicked()),
             SLOT(browseTilesDirectory()));
 
+    QString configPath = prefs->configPath();
+    ui->configDirectory->setText(QDir::toNativeSeparators(configPath));
+
     mGridColor = prefs->gridColor();
     ui->gridColor->setColor(mGridColor);
     connect(ui->gridColor, SIGNAL(colorChanged(QColor)),
@@ -51,8 +54,10 @@ void PreferencesDialog::browseTilesDirectory()
 {
     QString f = QFileDialog::getExistingDirectory(this, tr("Tiles Directory"),
                                                   ui->tilesDirectory->text());
-    if (!f.isEmpty())
+    if (!f.isEmpty()) {
         mTilesDirectory = f;
+        ui->tilesDirectory->setText(QDir::toNativeSeparators(f));
+    }
 }
 
 void PreferencesDialog::gridColorChanged(const QColor &gridColor)

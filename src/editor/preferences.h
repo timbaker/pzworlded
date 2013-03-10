@@ -43,6 +43,7 @@ public:
     int miniMapWidth() const;
     bool highlightCurrentLevel() const;
 
+
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
 
@@ -113,6 +114,7 @@ private:
     bool mShowMiniMap;
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;
+    QString mConfigDirectory;
     QString mMapsDirectory;
     QString mTilesDirectory;
     QString mOpenFileDirectory;
