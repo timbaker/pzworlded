@@ -79,6 +79,8 @@ public:
         return -1;
     }
 
+    QStringList tilesetPaths() const;
+
     QStringList enumNames() const
     { return mEnumNames; }
 
