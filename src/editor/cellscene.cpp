@@ -1991,6 +1991,18 @@ bool CellScene::mapAboutToChange(MapInfo *mapInfo)
     if (mMapComposite->mapAboutToChange(mapInfo)) {
     }
 
+    // Recreating the cell's MapComposite will delete all the submaps, so delete
+    // all the SubMapItems.  Loading the map may put up a PROGRESS dialog which
+    // causes repainting of the scene.
+    if (mapInfo == mMapComposite->mapInfo()) {
+        foreach (SubMapItem *item, mSubMapItems) {
+            mSubMapItems.removeAll(item);
+            mSelectedSubMapItems.remove(item);
+            removeItem(item);
+            delete item;
+        }
+    }
+
     // If the cell's map changed, other classes (like LayersModel) need to know.
     // If only a Lot map changed, other classes don't need to know.
     return (mapInfo == mMapComposite->mapInfo());
