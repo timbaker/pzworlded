@@ -400,11 +400,6 @@ QString BMPToTMX::defaultMapBaseXMLFile() const
             + QLatin1String("MapBaseXML.txt");
 }
 
-QString BMPToTMX::defaultTilesetsDotTxtFile() const
-{
-    return QDir::homePath() + QLatin1String("/.TileZed/Tilesets.txt");
-}
-
 bool BMPToTMX::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
 {
     // Get the top-most BMP covering the cell

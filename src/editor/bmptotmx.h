@@ -67,7 +67,6 @@ public:
     QString defaultRulesFile() const;
     QString defaultBlendsFile() const;
     QString defaultMapBaseXMLFile() const;
-    QString defaultTilesetsDotTxtFile() const;
 
     class ConversionEntry
     {
