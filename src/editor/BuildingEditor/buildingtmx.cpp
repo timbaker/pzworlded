@@ -141,7 +141,9 @@ bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
                 map->addLayer(og);
             }
         }
-
+#if 1
+        bmap.addRoomDefObjects(map, floor);
+#else
         ObjectGroup *objectGroup = new ObjectGroup(tr("%1_RoomDefs").arg(floor->level()),
                                                    0, 0, map->width(), map->height());
 
@@ -151,15 +153,20 @@ bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
         int delta = (building->floorCount() - 1 - floor->level()) * 3;
         if (map->orientation() == Map::LevelIsometric)
             delta = 0;
-        QPoint offset(delta, delta); // FIXME: not for LevelIsometric
+        QPoint offset(delta, delta);
+        int roomID = 1;
         foreach (Room *room, building->rooms()) {
             foreach (QRect rect, floor->roomRegion(room)) {
-                MapObject *mapObject = new MapObject(room->internalName, tr("room"),
+                QString name = room->internalName + QLatin1Char('#')
+                        + QString::number(roomID);
+                MapObject *mapObject = new MapObject(name, QLatin1String("room"),
                                                      rect.topLeft() + offset,
                                                      rect.size());
                 objectGroup->addObject(mapObject);
             }
+            ++roomID;
         }
+#endif
     }
 
     MapWriter writer;
