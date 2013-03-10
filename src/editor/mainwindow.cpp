@@ -851,7 +851,10 @@ void MainWindow::updateWindowTitle()
     }
     setWindowTitle(tr("[*]%1 - WorldEd").arg(fileName));
     setWindowFilePath(fileName);
-    setWindowModified(mCurrentDocument ? mCurrentDocument->isModified() : false);
+    bool isModified = mCurrentDocument ? mCurrentDocument->isModified() : false;
+    if (mCurrentDocument && mCurrentDocument->isCellDocument())
+        isModified = mCurrentDocument->asCellDocument()->worldDocument()->isModified();
+    setWindowModified(isModified);
 }
 
 static void generateLots(MainWindow *mainWin, Document *doc,
