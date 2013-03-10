@@ -242,6 +242,25 @@ Map *BuildingMap::mergedMap() const
     return map;
 }
 
+void BuildingMap::loadNeededTilesets(Building *building)
+{
+    // If the building uses any tilesets that aren't in Tilesets.txt, then
+    // try to load them in now.
+    foreach (QString tilesetName, building->tilesetNames()) {
+        if (!TileMetaInfoMgr::instance()->tileset(tilesetName)) {
+            QString source = TileMetaInfoMgr::instance()->tilesDirectory() +
+                    QLatin1Char('/') + tilesetName + QLatin1String(".png");
+            QFileInfo info(source);
+            if (!info.exists())
+                continue;
+            source = info.canonicalFilePath();
+            if (Tileset *ts = TileMetaInfoMgr::instance()->loadTileset(source)) {
+                TileMetaInfoMgr::instance()->addTileset(ts);
+            }
+        }
+    }
+}
+
 void BuildingMap::addRoomDefObjects(Map *map)
 {
     foreach (BuildingFloor *floor, mBuilding->floors())
@@ -341,7 +360,7 @@ void BuildingMap::BuildingToMap()
                    64, 32);
 
     // Add tilesets from Tilesets.txt
-    mMap->addTileset(TilesetManager::instance()->missingTile()->tileset());
+    mMap->addTileset(TilesetManager::instance()->missingTileset());
     foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets())
         mMap->addTileset(ts);
     TilesetManager::instance()->addReferences(mMap->tilesets());

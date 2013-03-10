@@ -20,6 +20,7 @@
 
 #include <QPolygon>
 #include <QRegion>
+#include <QSet>
 #include <QString>
 
 namespace BuildingEditor {
@@ -100,6 +101,15 @@ public:
         return mTile;
     }
 
+    virtual QList<BuildingTileEntry*> tiles() const
+    {
+        QList<BuildingTileEntry*> ret;
+        ret += mTile;
+        return ret;
+    }
+
+    virtual QSet<BuildingTile*> buildingTiles() const;
+
     virtual bool isValidPos(const QPoint &offset = QPoint(),
                             BuildingEditor::BuildingFloor *floor = 0) const;
 
@@ -152,6 +162,13 @@ public:
     BuildingTileEntry *tile(int alternate = 0) const
     { return alternate ? mFrameTile : mTile; }
 
+    virtual QList<BuildingTileEntry*> tiles() const
+    {
+        QList<BuildingTileEntry*> ret;
+        ret << mTile << mFrameTile;
+        return ret;
+    }
+
     BuildingTileEntry *frameTile() const
     { return mFrameTile; }
 private:
@@ -198,6 +215,13 @@ public:
     BuildingTileEntry *tile(int alternate = 0) const
     { return alternate ? mInteriorTile : mTile; }
 
+    virtual QList<BuildingTileEntry*> tiles() const
+    {
+        QList<BuildingTileEntry*> ret;
+        ret << mTile << mInteriorTile;
+        return ret;
+    }
+
     void rotate(bool right);
     void flip(bool horizontal);
 
@@ -237,6 +261,13 @@ public:
     BuildingTileEntry *tile(int alternate = 0) const
     { return alternate ? mCurtainsTile : mTile; }
 
+    virtual QList<BuildingTileEntry*> tiles() const
+    {
+        QList<BuildingTileEntry*> ret;
+        ret << mTile << mCurtainsTile;
+        return ret;
+    }
+
     BuildingObject *clone() const;
 
     QPolygonF calcShape() const;
@@ -265,6 +296,8 @@ public:
 
     bool isValidPos(const QPoint &offset = QPoint(),
                     BuildingEditor::BuildingFloor *floor = 0) const;
+
+    virtual QSet<BuildingTile*> buildingTiles() const;
 
     BuildingObject *clone() const;
 
@@ -338,6 +371,13 @@ public:
     void setTile(BuildingTileEntry *tile, int alternate = 0);
 
     BuildingTileEntry *tile(int alternate = 0) const;
+
+    virtual QList<BuildingTileEntry*> tiles() const
+    {
+        QList<BuildingTileEntry*> ret;
+        ret << mCapTiles << mSlopeTiles << mTopTiles;
+        return ret;
+    }
 
     bool affectsFloorAbove() const { return true; }
 

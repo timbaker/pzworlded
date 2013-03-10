@@ -143,6 +143,8 @@ public:
 
     Tiled::Map *mergedMap() const;
 
+    static void loadNeededTilesets(Building *building);
+
     void addRoomDefObjects(Tiled::Map *map);
     void addRoomDefObjects(Tiled::Map *map, BuildingFloor *floor);
 

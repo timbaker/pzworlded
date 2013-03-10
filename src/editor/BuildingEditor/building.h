@@ -164,6 +164,8 @@ public:
     void rotate(bool right);
     void flip(bool horizontal);
 
+    QStringList tilesetNames() const;
+
 private:
     int mWidth, mHeight;
     QList<BuildingFloor*> mFloors;

@@ -643,6 +643,8 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     BuildingReader reader;
     reader.fix(building);
 
+    BuildingMap::loadNeededTilesets(building);
+
     BuildingMap bmap(building);
     Map *map = bmap.mergedMap();
     bmap.addRoomDefObjects(map);

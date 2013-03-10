@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,8 +18,12 @@
 #include "building.h"
 
 #include "buildingfloor.h"
+#include "buildingobjects.h"
 #include "buildingtemplates.h"
 #include "buildingtiles.h"
+#include "furnituregroups.h"
+
+#include <QSet>
 
 using namespace BuildingEditor;
 
@@ -114,4 +118,71 @@ void Building::rotate(bool right)
 void Building::flip(bool horizontal)
 {
     Q_UNUSED(horizontal)
+}
+
+QStringList Building::tilesetNames() const
+{
+    QSet<BuildingTileEntry*> entries;
+    foreach (BuildingTileEntry *entry, tiles()) {
+        if (entry && !entry->isNone())
+            entries += entry;
+    }
+    foreach (Room *room, rooms()) {
+        foreach (BuildingTileEntry *entry, room->tiles()) {
+            if (entry && !entry->isNone())
+                entries += entry;
+        }
+    }
+    QSet<BuildingTile*> btiles;
+
+    foreach (BuildingTileEntry *entry, usedTiles()) {
+        if (entry && !entry->isNone())
+            entries += entry;
+    }
+    foreach (FurnitureTiles *ftiles, usedFurniture()) {
+        foreach (FurnitureTile *ftile, ftiles->tiles()) {
+            if (!ftile || ftile->isEmpty())
+                continue;
+            foreach (BuildingTile *btile, ftile->tiles()) {
+                if (btile && !btile->isNone() && !btile->mTilesetName.isEmpty())
+                    btiles += btile;
+            }
+        }
+    }
+
+    foreach (BuildingTileEntry *entry, entries) {
+        foreach (BuildingTile *btile, entry->mTiles) {
+            if (!btile->mTilesetName.isEmpty())
+                btiles += btile;
+        }
+    }
+
+    QSet<QString> ret;
+
+    foreach (BuildingFloor *floor, floors()) {
+        foreach (BuildingObject *object, floor->objects())
+            btiles |= object->buildingTiles();
+        foreach (QString layerName, floor->grimeLayers()) {
+            for (int y = 0; y < floor->height(); y++) {
+                for (int x = 0; x < floor->width(); x++) {
+                    QString tileName = floor->grime()[layerName]->at(x, y);
+                    if (tileName.isEmpty())
+                        continue;
+                    QString tilesetName;
+                    int index;
+                    if (BuildingTilesMgr::instance()->parseTileName(tileName,
+                                                                    tilesetName,
+                                                                    index))
+                        ret += tilesetName;
+                }
+            }
+        }
+    }
+
+    foreach (BuildingTile *btile, btiles) {
+        if (!btile->mTilesetName.isEmpty())
+            ret += btile->mTilesetName;
+    }
+
+    return ret.toList();
 }

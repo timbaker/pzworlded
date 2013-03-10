@@ -51,6 +51,20 @@ BuildingObject::Direction BuildingObject::dirFromString(const QString &s)
     return Invalid;
 }
 
+QSet<BuildingTile*> BuildingObject::buildingTiles() const
+{
+    QSet<BuildingTile*> ret;
+    foreach (BuildingTileEntry *entry, tiles()) {
+        if (entry && !entry->isNone()) {
+            foreach (BuildingTile *btile, entry->mTiles) {
+                if (btile && !btile->isNone())
+                    ret |= btile;
+            }
+        }
+    }
+    return ret;
+}
+
 bool BuildingObject::isValidPos(const QPoint &offset, BuildingFloor *floor) const
 {
     if (!floor)
@@ -315,6 +329,18 @@ bool FurnitureObject::isValidPos(const QPoint &offset, BuildingFloor *floor) con
     QRect floorBounds = floor->bounds();
     QRect objectBounds = bounds().translated(offset);
     return (floorBounds & objectBounds) == objectBounds;
+}
+
+QSet<BuildingTile *> FurnitureObject::buildingTiles() const
+{
+    QSet<BuildingTile *> ret;
+    if (!mFurnitureTile || mFurnitureTile->isEmpty())
+        return ret;
+    foreach (BuildingTile *btile, mFurnitureTile->tiles()) {
+        if (btile && !btile->isNone())
+            ret += btile;
+    }
+    return ret;
 }
 
 BuildingObject *FurnitureObject::clone() const
