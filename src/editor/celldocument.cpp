@@ -266,8 +266,10 @@ void CellDocument::cellContentsAboutToChange(WorldCell *cell)
 void CellDocument::cellContentsChanged(WorldCell *cell)
 {
     if (cell == mCell) {
+        QPointF scenePos = view()->mapToScene(view()->rect().center());
         emit cellContentsChanged();
         mMiniMapItem->cellContentsChanged();
+        view()->centerOn(scenePos);
     }
 }
 
@@ -280,8 +282,10 @@ void CellDocument::cellMapFileAboutToChange(WorldCell *cell)
 void CellDocument::cellMapFileChanged(WorldCell *cell)
 {
     if (cell == mCell) {
+        QPointF scenePos = view()->mapToScene(view()->rect().center());
         emit cellMapFileChanged();
         mMiniMapItem->updateCellImage();
+        view()->centerOn(scenePos);
     }
 }
 
