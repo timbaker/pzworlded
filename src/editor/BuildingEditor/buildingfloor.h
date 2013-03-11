@@ -120,6 +120,8 @@ public:
             SectionCurtains, // West, North windows
             SectionFurniture,
             SectionFurniture2,
+            SectionFurniture3,
+            SectionFurniture4,
             SectionCurtains2, // East, South windows
             SectionRoof,
             SectionRoof2,
@@ -160,8 +162,8 @@ public:
         void ReplaceWindow(BuildingTileEntry *tile, int offset);
         void ReplaceCurtains(Window *window, bool exterior);
         void ReplaceFurniture(BuildingTileEntry *tile, int offset = 0);
-        void ReplaceFurniture(BuildingTile *tile, SquareSection section,
-                              SquareSection section2 = SectionInvalid);
+        void ReplaceFurniture(BuildingTile *btile, SquareSection sectionMin,
+                              SquareSection sectionMax);
         void ReplaceRoof(BuildingTileEntry *tile, int offset = 0);
         void ReplaceRoofCap(BuildingTileEntry *tile, int offset = 0);
         void ReplaceRoofTop(BuildingTileEntry *tile, int offset);

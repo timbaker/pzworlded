@@ -123,6 +123,8 @@ static const char *gLayerNames[] = {
     "Curtains",
     "Furniture",
     "Furniture2",
+    "Furniture3",
+    "Furniture4",
     "Curtains2",
     "Roof",
     "Roof2",

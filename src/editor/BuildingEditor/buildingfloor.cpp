@@ -360,9 +360,8 @@ static void ReplaceRoofCorner(RoofObject *ro, int x, int y,
 static void ReplaceFurniture(int x, int y,
                              QVector<QVector<BuildingFloor::Square> > &squares,
                              BuildingTile *btile,
-                             BuildingFloor::Square::SquareSection section,
-                             BuildingFloor::Square::SquareSection section2
-                             = BuildingFloor::Square::SectionInvalid,
+                             BuildingFloor::Square::SquareSection sectionMin,
+                             BuildingFloor::Square::SquareSection sectionMax,
                              int dw = 0, int dh = 0)
 {
     if (!btile)
@@ -370,7 +369,7 @@ static void ReplaceFurniture(int x, int y,
     Q_ASSERT(dw <= 1 && dh <= 1);
     QRect bounds(0, 0, squares.size() - 1 + dw, squares[0].size() - 1 + dh);
     if (bounds.contains(x, y))
-        squares[x][y].ReplaceFurniture(btile, section, section2);
+        squares[x][y].ReplaceFurniture(btile, sectionMin, sectionMax);
 }
 
 static void ReplaceDoor(Door *door, QVector<QVector<BuildingFloor::Square> > &squares)
@@ -617,13 +616,13 @@ void BuildingFloor::LayoutToSquares()
                     ReplaceFurniture(x, y + i, squares,
                                      stairs->tile()->tile(stairs->getOffset(x, y + i)),
                                      Square::SectionFurniture,
-                                     Square::SectionFurniture2);
+                                     Square::SectionFurniture4);
             } else {
                 for (int i = 1; i <= 3; i++)
                     ReplaceFurniture(x + i, y, squares,
                                      stairs->tile()->tile(stairs->getOffset(x + i, y)),
                                      Square::SectionFurniture,
-                                     Square::SectionFurniture2);
+                                     Square::SectionFurniture4);
             }
         }
         if (FurnitureObject *fo = object->asFurniture()) {
@@ -666,7 +665,7 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceFurniture(x + j + dx, y + i + dy,
                                          squares, ftile->tile(j, i),
                                          Square::SectionFrame,
-                                         Square::SectionInvalid,
+                                         Square::SectionFrame,
                                          dx, dy);
                         break;
                     }
@@ -677,14 +676,14 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceFurniture(x + j + dx, y + i + dy,
                                          squares, ftile->tile(j, i),
                                          Square::SectionDoor,
-                                         Square::SectionInvalid,
+                                         Square::SectionDoor,
                                          dx, dy);
                         break;
                     }
                     case FurnitureTiles::LayerFurniture:
                         ReplaceFurniture(x + j, y + i, squares, ftile->tile(j, i),
                                          Square::SectionFurniture,
-                                         Square::SectionFurniture2);
+                                         Square::SectionFurniture4);
                         break;
                     case FurnitureTiles::LayerRoof:
                         ReplaceFurniture(x + j, y + i, squares, ftile->tile(j, i),
@@ -1898,17 +1897,23 @@ void BuildingFloor::Square::ReplaceFurniture(BuildingTileEntry *tile, int offset
     mEntryEnum[SectionFurniture] = offset;
 }
 
-void BuildingFloor::Square::ReplaceFurniture(BuildingTile *tile,
-                                             SquareSection section,
-                                             SquareSection section2)
+void BuildingFloor::Square::ReplaceFurniture(BuildingTile *btile,
+                                             SquareSection sectionMin,
+                                             SquareSection sectionMax)
 {
-    if (mTiles[section] && !mTiles[section]->isNone() && (section2 != SectionInvalid)) {
-        mTiles[section2] = tile;
-        mEntryEnum[section2] = 0;
-        return;
+    for (int s = sectionMin; s <= sectionMax; s++) {
+        if (!mTiles[s] || mTiles[s]->isNone()) {
+            mTiles[s] = btile;
+            mEntryEnum[s] = 0;
+            return;
+        }
     }
-    mTiles[section] = tile;
-    mEntryEnum[section] = 0;
+    for (int s = sectionMin + 1; s <= sectionMax; s++) {
+        mTiles[s-1] = mTiles[s];
+        mEntryEnum[s-1] = mEntryEnum[s];
+    }
+    mTiles[sectionMax] = btile;
+    mEntryEnum[sectionMax] = 0;
 }
 
 void BuildingFloor::Square::ReplaceRoof(BuildingTileEntry *tile, int offset)
