@@ -1232,6 +1232,7 @@ void MapComposite::recreate()
     delete mRoadLayer1;
 #endif // ROAD_CRUD
     mMap = mMapInfo->map();
+    mOrientAdjustPos = mOrientAdjustTiles = QPoint();
 
     ///// FIXME: everything below here is copied from our constructor
 
