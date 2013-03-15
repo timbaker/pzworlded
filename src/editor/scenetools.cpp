@@ -707,8 +707,22 @@ void SubMapTool::cancelMoving()
 void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
 {
     SubMapItem *item = topmostItemAt(scenePos);
-    if (!item)
+    if (!item) {
+        foreach (MapComposite *subMap, mScene->mapComposite()->subMaps()) {
+            if (subMap->boundingRect(mScene->renderer()).contains(scenePos)) {
+                QMenu menu;
+                QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
+                QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
+                QAction *action = menu.exec(screenPos);
+                if (action == openAction) {
+                    QUrl url = QUrl::fromLocalFile(subMap->mapInfo()->path());
+                    QDesktopServices::openUrl(url);
+                }
+                return;
+            }
+        }
         return;
+    }
 
     QMenu menu;
     QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
