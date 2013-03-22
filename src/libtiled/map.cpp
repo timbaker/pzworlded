@@ -47,7 +47,9 @@ Map::Map(Orientation orientation,
     mTileHeight(tileHeight)
 #ifdef ZOMBOID
     ,
-    mCellsPerLevel(0,3)
+    mCellsPerLevel(0,3),
+    mBmpMain(mWidth, mHeight),
+    mBmpVeg(mWidth, mHeight)
 #endif
 {
 }
@@ -279,7 +281,7 @@ void Map::addTileLayerGroup(ZTileLayerGroup *tileLayerGroup)
     }
     mTileLayerGroups.insert(arrayIndex, tileLayerGroup);
 }
-#endif
+#endif // ZOMBOID
 
 Map *Map::clone() const
 {
@@ -344,3 +346,73 @@ Map *Map::fromLayer(Layer *layer)
     result->addLayer(layer);
     return result;
 }
+
+#ifdef ZOMBOID
+MapRands::MapRands(int width, int height, uint seed) :
+    mSeed(seed)
+{
+    setSize(width, height);
+}
+
+void MapRands::setSize(int width, int height)
+{
+    qsrand(mSeed);
+    resize(width);
+    for (int x = 0; x < width; x++) {
+        (*this)[x].resize(height);
+        for (int y = 0; y < height; y++)
+            (*this)[x][y] = qrand();
+    }
+}
+
+void MapRands::setSeed(uint seed)
+{
+    mSeed = seed;
+    setSize(size(), at(0).size());
+}
+
+/////
+
+MapBmp::MapBmp(int width, int height) :
+    mImage(width, height, QImage::Format_ARGB32),
+    mRands(width, height, 1)
+{
+    mImage.fill(Qt::black);
+}
+
+void MapBmp::resize(const QSize &size, const QPoint &offset)
+{
+    QImage newImage(size, QImage::Format_ARGB32);
+    newImage.fill(Qt::black);
+
+    // Copy over the preserved part
+    const int startX = qMax(0, -offset.x());
+    const int startY = qMax(0, -offset.y());
+    const int endX = qMin(width(), size.width() - offset.x());
+    const int endY = qMin(height(), size.height() - offset.y());
+
+    for (int y = startY; y < endY; ++y) {
+        for (int x = startX; x < endX; ++x) {
+            newImage.setPixel(x + offset.x(), y + offset.y(), mImage.pixel(x, y));
+        }
+    }
+
+    mImage = newImage;
+
+    mRands.setSize(size.width(), size.height());
+}
+
+QList<QRgb> MapBmp::colors() const
+{
+    const QRgb black = qRgb(0, 0, 0);
+    QSet<QRgb> colorSet;
+    for (int y = 0; y < height(); y++) {
+        for (int x = 0; x < width(); x++) {
+            QRgb rgb = mImage.pixel(x, y);
+            if (rgb != black)
+                colorSet += rgb;
+        }
+    }
+    return colorSet.toList();
+}
+#endif // ZOMBOID

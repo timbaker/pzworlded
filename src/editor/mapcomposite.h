@@ -85,6 +85,10 @@ public:
     void saveOpacity();
     void restoreOpacity();
 
+    bool setBmpBlendLayers(const QList<Tiled::TileLayer*> &layers);
+    const QVector<Tiled::TileLayer*> &bmpBlendLayers() const
+    { return mBmpBlendLayers; }
+
 #ifdef BUILDINGED
     void setToolTiles(const QVector<QVector<Tiled::Cell> > &tiles,
                       const QPoint &pos, Tiled::TileLayer *layer)
@@ -135,6 +139,7 @@ private:
     QVector<SubMapLayers> mPreparedSubMapLayers;
     QVector<SubMapLayers> mVisibleSubMapLayers;
 
+    QVector<Tiled::TileLayer*> mBmpBlendLayers;
 #ifdef BUILDINGED
     QVector<Tiled::TileLayer*> mBlendLayers;
     QVector<QVector<Tiled::Cell> > mToolTiles;

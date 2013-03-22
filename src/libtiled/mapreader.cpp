@@ -115,6 +115,12 @@ private:
     Properties readProperties();
     void readProperty(Properties *properties);
 
+#ifdef ZOMBOID
+    void readBmpImage();
+    void readBmpPixels(int index, const QList<QRgb> &colors);
+    void decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors, const QStringRef &text);
+#endif
+
     MapReader *p;
 
     QString mError;
@@ -243,6 +249,10 @@ Map *MapReaderPrivate::readMap()
             mMap->addLayer(readObjectGroup());
         else if (xml.name() == "imagelayer")
             mMap->addLayer(readImageLayer());
+#ifdef ZOMBOID
+        else if (xml.name() == "bmp-image")
+            readBmpImage();
+#endif
         else
             readUnknownElement();
     }
@@ -948,6 +958,101 @@ void MapReaderPrivate::readProperty(Properties *properties)
 
     properties->insert(propertyName, propertyValue);
 }
+
+#ifdef ZOMBOID
+void MapReaderPrivate::readBmpImage()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == "bmp-image");
+
+    const QXmlStreamAttributes atts = xml.attributes();
+    int index = atts.value(QLatin1String("index")).toString().toUInt();
+    uint seed = atts.value(QLatin1String("seed")).toString().toUInt();
+
+    mMap->rbmp(index).rrands().setSeed(seed);
+
+    QList<QRgb> colors;
+
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("color")) {
+            QString rgbString = xml.attributes().value(QLatin1String("rgb")).toString();
+            if (rgbString.isEmpty()) {
+bogusColor:
+                xml.raiseError(tr("invalid bmp-image color '%1'").arg(rgbString));
+                return;
+            }
+            QStringList split = rgbString.split(QLatin1Char(' '), QString::SkipEmptyParts);
+            if (split.size() != 3)
+                goto bogusColor;
+            int r = split[0].toInt();
+            int g = split[1].toInt();
+            int b = split[2].toInt();
+            colors += qRgb(r, g, b);
+
+            xml.skipCurrentElement();
+        } else if (xml.name() == "pixels") {
+            readBmpPixels(index, colors);
+        } else {
+            readUnknownElement();
+        }
+    }
+}
+
+void MapReaderPrivate::readBmpPixels(int index, const QList<QRgb> &colors)
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == "pixels");
+
+    while (xml.readNext() != QXmlStreamReader::Invalid) {
+        if (xml.isEndElement()) {
+            break;
+        } else if (xml.isCharacters() && !xml.isWhitespace()) {
+            decodeBmpPixels(index, colors, xml.text());
+        }
+    }
+}
+
+void MapReaderPrivate::decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors,
+                                       const QStringRef &text)
+{
+#if QT_VERSION < 0x040800
+    const QString textData = QString::fromRawData(text.unicode(), text.size());
+    const QByteArray latin1Text = textData.toLatin1();
+#else
+    const QByteArray latin1Text = text.toLatin1();
+#endif
+    QByteArray tileData = QByteArray::fromBase64(latin1Text);
+    const int size = (mMap->width() * mMap->height()) * 4;
+
+    tileData = decompress(tileData, size);
+
+    if (size != tileData.length()) {
+        xml.raiseError(tr("Corrupt bmp data"));
+        return;
+    }
+
+    const unsigned char *data =
+            reinterpret_cast<const unsigned char*>(tileData.constData());
+    int x = 0;
+    int y = 0;
+
+    for (int i = 0; i < size - 3; i += 4) {
+        const quint32 n = data[i] |
+                          data[i + 1] << 8 |
+                          data[i + 2] << 16 |
+                          data[i + 3] << 24;
+        if (n > 0 && int(n) <= colors.size()) {
+            QRgb rgb = colors[n - 1];
+            mMap->rbmp(bmpIndex).setPixel(x, y, rgb);
+        }
+
+        x++;
+        if (x == mMap->width()) {
+            x = 0;
+            y++;
+        }
+    }
+}
+
+#endif // ZOMBOID
 
 
 MapReader::MapReader()

@@ -123,6 +123,7 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
             : layer->isEmpty() || layer->name().contains(QLatin1String("NoRender"));
     mEmptyLayers.insert(index, empty);
 
+    mBmpBlendLayers.insert(index, 0);
 #ifdef BUILDINGED
     mBlendLayers.insert(index, 0);
     mForceNonEmpty.insert(index, false);
@@ -141,6 +142,7 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
     mVisibleLayers.remove(index);
     mLayerOpacity.remove(index);
     mEmptyLayers.remove(index);
+    mBmpBlendLayers.remove(index);
 #ifdef BUILDINGED
     mBlendLayers.remove(index);
     mForceNonEmpty.remove(index);
@@ -192,6 +194,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
         if (isLayerEmpty(index))
             continue;
         TileLayer *tl = mLayers[index];
+        TileLayer *tlBmpBlend = mBmpBlendLayers[index];
 #ifdef BUILDINGED
         TileLayer *tlBlend = mBlendLayers[index];
 #endif // BUILDINGED
@@ -218,6 +221,8 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             }
 #endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
+            if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty())
+                cell = &tlBmpBlend->cellAt(subPos);
 #ifdef BUILDINGED
             // Use an empty tool tile if given during erasing.
             if ((mToolTileLayer == tl) && !mToolTiles.isEmpty() &&
@@ -286,6 +291,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
     int index = -1;
     foreach (TileLayer *tl, mLayers) {
         ++index;
+        TileLayer *tlBmpBlend = mBmpBlendLayers[index];
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
 #if 1 // ROAD_CRUD
@@ -307,6 +313,8 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
             }
 #endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
+            if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty())
+                cell = &tlBmpBlend->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
                     bool isFloor = !mLevel && !index && (tl->name() == sFloor);
@@ -334,6 +342,8 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
 {
     if (!mVisibleLayers[index])
         return true;
+    if (mBmpBlendLayers[index] && !mBmpBlendLayers[index]->isEmpty())
+        return false;
 #ifdef BUILDINGED
     if (mForceNonEmpty[index])
         return false;
@@ -379,6 +389,16 @@ void CompositeLayerGroup::synch()
     QMargins m(0, mOwner->map()->tileHeight(), mOwner->map()->tileWidth(), 0);
 
     mAnyVisibleLayers = false;
+
+    for (int i = 0; i < mLayers.size(); i++) {
+        if (!mVisibleLayers[i])
+            continue;
+        if (mBmpBlendLayers[i] && !mBmpBlendLayers[i]->isEmpty()) {
+            unionTileRects(r, mBmpBlendLayers[i]->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
+            maxMargins(m, mBmpBlendLayers[i]->drawMargins(), m);
+            mAnyVisibleLayers = true;
+        }
+    }
 
 #ifdef BUILDINGED
     // Do this before the isLayerEmpty() call below.
@@ -499,6 +519,21 @@ void CompositeLayerGroup::saveOpacity()
 void CompositeLayerGroup::restoreOpacity()
 {
     mLayerOpacity = mSavedOpacity;
+}
+
+bool CompositeLayerGroup::setBmpBlendLayers(const QList<TileLayer *> &layers)
+{
+    QVector<TileLayer*> old = mBmpBlendLayers;
+
+    mBmpBlendLayers.fill(0);
+    foreach (TileLayer *tl, layers) {
+        for (int i = 0; i < mLayers.size(); i++) {
+            if (mLayers[i]->name() == tl->name())
+                mBmpBlendLayers[i] = tl;
+        }
+    }
+
+    return old != mBmpBlendLayers;
 }
 
 #ifdef BUILDINGED
@@ -625,8 +660,12 @@ bool CompositeLayerGroup::regionAltered(Tiled::TileLayer *tl)
         setNeedsSynch(true);
         return true;
     }
-#ifdef BUILDINGED
     int index = mLayers.indexOf(tl);
+    if (mTileBounds.isEmpty() && mBmpBlendLayers[index] && !mBmpBlendLayers[index]->isEmpty()) {
+        setNeedsSynch(true);
+        return true;
+    }
+#ifdef BUILDINGED
     if (mTileBounds.isEmpty() && mBlendLayers[index] && !mBlendLayers[index]->isEmpty()) {
         setNeedsSynch(true);
         return true;
@@ -1207,6 +1246,10 @@ bool MapComposite::isTilesetUsed(Tileset *tileset)
     foreach (MapComposite *mc, maps()) {
         if (mc->map()->isTilesetUsed(tileset))
             return true;
+        foreach (TileLayer *tl, mc->tileLayersForLevel(0)->bmpBlendLayers()) {
+            if (tl && tl->usedTilesets().contains(tileset))
+                return true;
+        }
     }
     return false;
 }

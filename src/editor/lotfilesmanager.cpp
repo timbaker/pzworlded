@@ -17,6 +17,7 @@
 
 #include "lotfilesmanager.h"
 
+#include "bmpblender.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
@@ -175,6 +176,17 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
     }
 
+    Tiled::Internal::BmpBlender *blender = 0;
+    Map *map = mapInfo->map();
+    if (map->rbmp(0).colors().size() || map->rbmp(1).colors().size()) {
+        blender = new Tiled::Internal::BmpBlender(map);
+        if (!blender->read()) {
+            mError = blender->mError;
+            return false;
+        }
+        blender->update(0, 0, map->width(), map->height());
+    }
+
     PROGRESS progress(tr("Generating .lot files (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 
@@ -182,6 +194,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     MapComposite *mapComposite = &staticMapComposite;
     mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
                                      cell->world()->roads());
+    if (blender) {
+        mapComposite->layerGroupForLevel(0)->setBmpBlendLayers(
+                    blender->mTileLayers.values());
+    }
 
     foreach (WorldCellLot *lot, cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName())) {
@@ -443,6 +459,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         SaveString(out, room->name);
         out << qint32(room->floor);
 
+#ifdef QT_NO_DEBUG
         out << qint32(room->rects.size());
         foreach (LotFile::RoomRect *rr, room->rects) {
             out << qint32(rr->x);
@@ -457,6 +474,14 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
             out << qint32(object.x);
             out << qint32(object.y);
         }
+#else
+        // My old version of PZ
+        LotFile::RoomRect *rr = room->rects.first();
+        out << qint32(rr->x);
+        out << qint32(rr->y);
+        out << qint32(rr->w);
+        out << qint32(rr->h);
+#endif
     }
 
     out << qint32(buildingList.count());
