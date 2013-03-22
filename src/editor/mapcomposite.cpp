@@ -104,7 +104,15 @@ CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
 
 void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 {
+#ifndef WORLDED
+    // Hack -- only a map being edited can set a TileLayer's group.
+    ZTileLayerGroup *oldGroup = layer->group();
+#endif
     ZTileLayerGroup::addTileLayer(layer, index);
+#ifndef WORLDED
+    if (!mOwner->mapInfo()->isBeingEdited())
+        layer->setGroup(oldGroup);
+#endif
 
     // Remember the names of layers (without the N_ prefix)
     const QString name = MapComposite::layerNameWithoutPrefix(layer);
@@ -147,8 +155,15 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
     mBlendLayers.remove(index);
     mForceNonEmpty.remove(index);
 #endif // BUILDINGED
-
+#ifndef WORLDED
+    // Hack -- only a map being edited can set a TileLayer's group.
+    ZTileLayerGroup *oldGroup = layer->group();
+#endif
     ZTileLayerGroup::removeTileLayer(layer);
+#ifndef WORLDED
+    if (!mOwner->mapInfo()->isBeingEdited())
+        layer->setGroup(oldGroup);
+#endif
 
     const QString name = MapComposite::layerNameWithoutPrefix(layer);
     index = mLayersByName[name].indexOf(layer);
@@ -264,6 +279,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     return !cells.isEmpty();
 }
 
+#ifdef WORLDED
 void CompositeLayerGroup::prepareDrawing2()
 {
     mPreparedSubMapLayers.resize(0);
@@ -337,6 +353,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
 
     return !cells.isEmpty();
 }
+#endif // WORLDED
 
 bool CompositeLayerGroup::isLayerEmpty(int index) const
 {
@@ -490,7 +507,7 @@ void CompositeLayerGroup::synch()
         }
     }
 
-#ifdef BUILDINGEDxxx
+#if defined(BUILDINGED) && !defined(WORLDED)
     if (mAnyVisibleLayers)
         maxMargins(m, QMargins(0, 128, 64, 0), m);
 #endif
@@ -728,8 +745,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mBlendOverMap(0)
 #endif
 {
+#ifdef WORLDED
     MapManager::instance()->addReferenceToMap(mMapInfo);
-
+#endif
     if (mOrientRender == Map::Unknown)
         mOrientRender = mMap->orientation();
     if (mMap->orientation() != mOrientRender) {
@@ -806,9 +824,10 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 
     if (mMinLevel == 10000)
         mMinLevel = 0;
-
+#ifdef WORLDED
     if (!mParent && !mMapInfo->isBeingEdited())
         mMaxLevel = qMax(mMaxLevel, 10);
+#endif // WORLDED
 
     mSortedLayerGroups.clear();
     for (int level = mMinLevel; level <= mMaxLevel; ++level) {
@@ -826,8 +845,10 @@ MapComposite::~MapComposite()
 #endif // ROAD_CRUD
     qDeleteAll(mSubMaps);
     qDeleteAll(mLayerGroups);
+#ifdef WORLDED
     if (mMapInfo)
         MapManager::instance()->removeReferenceToMap(mMapInfo);
+#endif
 }
 
 bool MapComposite::levelForLayer(const QString &layerName, int *levelPtr)
@@ -1353,9 +1374,10 @@ void MapComposite::recreate()
 
     if (mMinLevel == 10000)
         mMinLevel = 0;
-
+#ifdef WORLDED
     if (!mParent && !mMapInfo->isBeingEdited())
         mMaxLevel = qMax(mMaxLevel, 10);
+#endif
 
     for (int level = mMinLevel; level <= mMaxLevel; ++level) {
         if (!mLayerGroups.contains(level))

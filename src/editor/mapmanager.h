@@ -85,8 +85,10 @@ public:
         , mMap(0)
         , mPlaceholder(false)
         , mBeingEdited(false)
+#ifdef WORLDED
         , mMapRefCount(0)
         , mReferenceEpoch(0)
+#endif
         , mLoading(false)
     {
 
@@ -121,8 +123,10 @@ private:
     Tiled::Map *mMap;
     bool mPlaceholder;
     bool mBeingEdited;
+#ifdef WORLDED
     int mMapRefCount;
     int mReferenceEpoch;
+#endif
     bool mLoading;
 
     friend class MapManager;
@@ -174,13 +178,13 @@ public:
       * Call this when the map's size or tile size changes.
       */
     void mapParametersChanged(MapInfo *mapInfo);
-
+#ifdef WORLDED
     void addReferenceToMap(MapInfo *mapInfo);
     void removeReferenceToMap(MapInfo *mapInfo);
     void purgeUnreferencedMaps();
 
     void newMapFileCreated(const QString &path);
-
+#endif
     QString errorString() const
     { return mError; }
 
@@ -191,7 +195,9 @@ signals:
     void mapAboutToChange(MapInfo *mapInfo);
     void mapChanged(MapInfo *mapInfo);
     void mapFileChanged(MapInfo *mapInfo);
+#ifdef WORLDED
     void mapFileCreated(const QString &path);
+#endif
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
 
@@ -221,9 +227,9 @@ private:
     QVector<InterruptibleThread*> mMapReaderThread;
     QVector<MapReaderWorker*> mMapReaderWorker;
     int mNextThreadForJob;
-
+#ifdef WORLDED
     int mReferenceEpoch;
-
+#endif
     QString mError;
 };
 

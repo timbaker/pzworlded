@@ -7,4 +7,4 @@ macx {
     contains(QT_CONFIG, ppc):CONFIG += x86 ppc
 }
 
-DEFINES += ZOMBOID
+DEFINES += ZOMBOID WORLDED

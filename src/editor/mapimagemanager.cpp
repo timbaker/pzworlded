@@ -138,7 +138,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     // worker-thread's signal to us may be processed.
     MapImageManagerDeferral deferral; // FIXME: optimized out?
 
-#if 1
+#ifdef WORLDED
     QString suffix = QFileInfo(mapName).suffix();
     if (BMPToTMX::supportedImageFormats().contains(suffix)) {
         QString keyName = QFileInfo(mapName).canonicalFilePath();
@@ -316,6 +316,7 @@ void MapImageManager::paintDummyImage(ImageData &data, MapInfo *mapInfo)
     p.fillPath(path, QColor(100,100,100));
 }
 
+#ifdef WORLDED
 // BMP To TMX image thumbnail
 MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpFilePath)
 {
@@ -377,6 +378,7 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
 
     return data;
 }
+#endif // WORLDED
 
 #define IMAGE_DATA_MAGIC 0xB15B00B5
 #define IMAGE_DATA_VERSION 3
@@ -531,7 +533,9 @@ void MapImageManager::renderThreadNeedsMap(MapImage *mapImage)
     }
     mExpectMapImage = mapImage;
     mExpectSubMaps.clear();
+#ifdef WORLDED
     mReferencedMaps.clear();
+#endif
     Q_ASSERT(mapInfo == mapImage->mapInfo());
     if (!mapInfo->isLoading())
         mapLoaded(mapInfo);
@@ -597,20 +601,26 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
         return;
 
     if (mExpectMapImage->mapInfo() == mapInfo) {
+#ifdef WORLDED
         MapManager::instance()->addReferenceToMap(mapInfo), mReferencedMaps += mapInfo;
+#endif
         foreach (const QString &path, getSubMapFileNames(mapInfo)) {
             bool async = true;
             if (MapInfo *subMapInfo = MapManager::instance()->loadMap(path, QString(), async)) {
                 if (!mExpectSubMaps.contains(subMapInfo)) {
                     if (subMapInfo->isLoading())
                         mExpectSubMaps += subMapInfo;
+#ifdef WORLDED
                     else
                         MapManager::instance()->addReferenceToMap(subMapInfo), mReferencedMaps += subMapInfo;
+#endif
                 }
             }
         }
     } else if (mExpectSubMaps.contains(mapInfo)) {
+#ifdef WORLDED
         MapManager::instance()->addReferenceToMap(mapInfo), mReferencedMaps += mapInfo;
+#endif
         mExpectSubMaps.removeAll(mapInfo);
         foreach (const QString &path, getSubMapFileNames(mapInfo)) {
             bool async = true;
@@ -618,8 +628,10 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
                 if (!mExpectSubMaps.contains(subMapInfo)) {
                     if (subMapInfo->isLoading())
                         mExpectSubMaps += subMapInfo;
+#ifdef WORLDED
                     else
                         MapManager::instance()->addReferenceToMap(subMapInfo), mReferencedMaps += subMapInfo;
+#endif
                 }
             }
         }
@@ -634,11 +646,11 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
     mExpectMapImage = 0;
 
     mRenderMapComposite = new MapComposite(mapInfo);
-
+#ifdef WORLDED
     // Now that mapComposite is referencing the maps...
     foreach (MapInfo *mapInfo, mReferencedMaps)
         MapManager::instance()->removeReferenceToMap(mapInfo);
-
+#endif
     // Wait for TilesetManager's threads to finish loading the tilesets.
     // FIXME: this shouldn't block the gui.
     QSet<Tileset*> usedTilesets;
@@ -662,10 +674,11 @@ void MapImageManager::mapFailedToLoad(MapInfo *mapInfo)
     // The render thread was waiting for a map to load, but that failed.
     // Tell the render thread to continue on with the next job.
     if (mExpectMapImage && (mapInfo == mExpectMapImage->mapInfo())) {
+#ifdef WORLDED
         foreach (MapInfo *mapInfo, mReferencedMaps)
             MapManager::instance()->removeReferenceToMap(mapInfo);
         mReferencedMaps.clear();
-
+#endif
         MapImage *mapImage = mExpectMapImage;
         mapImage->mImage.fill(Qt::transparent);
         mapImage->mLoaded = true; // FIXME: delete bogus MapImage???
@@ -819,8 +832,10 @@ void MapImageReaderWorker::work()
         Job job = mJobs.takeAt(0);
 
         QImage *image = new QImage(job.imageFileName);
+#ifdef WORLDED
         if (!image->isNull())
             *image = image->convertToFormat(QImage::Format_ARGB4444_Premultiplied);
+#endif // WORLDED
 
 #ifndef QT_NO_DEBUG
         Sleep::msleep(250);
@@ -991,7 +1006,11 @@ MapImageData MapImageRenderWorker::generateMapImage(MapComposite *mapComposite)
     }
 
     MapImageData data;
+#ifdef WORLDED
     data.image = image.convertToFormat(QImage::Format_ARGB4444_Premultiplied);
+#else
+    data.image = image;
+#endif
     data.scale = scale;
     data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
     data.levelZeroBounds.translate(-sceneRect.topLeft());
