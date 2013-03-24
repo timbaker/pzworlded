@@ -24,6 +24,8 @@
 #include <QStringList>
 
 namespace Tiled {
+class BmpBlend;
+class BmpRule;
 class Tile;
 }
 
@@ -68,69 +70,20 @@ public:
     QString defaultBlendsFile() const;
     QString defaultMapBaseXMLFile() const;
 
-    class ConversionEntry
-    {
-    public:
-        int bitmapIndex;
-        QRgb color;
-        QRgb condition;
-        QStringList tileChoices;
-        QString targetLayer;
-
-        ConversionEntry(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition)
-        { this->bitmapIndex = bitmapIndex, color = col, tileChoices = tiles, targetLayer = layer, this->condition = condition; }
-        ConversionEntry(int bitmapIndex, QRgb col, QStringList tiles, QString layer)
-        { this->bitmapIndex = bitmapIndex, color = col, tileChoices = tiles, targetLayer = layer, this->condition = qRgb(0, 0, 0); }
-        ConversionEntry(int bitmapIndex, QRgb col, QString tile, QString layer);
-        ConversionEntry(int bitmapIndex, QRgb col, QString tile, QString layer, QRgb condition);
-    };
-
-    class Blend
-    {
-    public:
-        enum Direction {
-            Unknown,
-            N,
-            S,
-            E,
-            W,
-            NW,
-            NE,
-            SW,
-            SE
-        };
-
-        QString targetLayer;
-        QString mainTile;
-        QString blendTile;
-        Direction dir;
-        QStringList ExclusionList;
-
-        Blend()
-        {}
-        Blend(const QString &layer, const QString &main, const QString &blend, Direction dir, const QStringList &exclusions)
-            : targetLayer(layer), mainTile(main), blendTile(blend), dir(dir), ExclusionList(exclusions)
-        {}
-
-        bool isNull()
-        { return mainTile.isEmpty(); }
-    };
-
-
 private:
     bool shouldGenerateCell(WorldCell *cell, int &bmpIndex);
 
     QImage loadImage(const QString &path, const QString &suffix = QString());
     bool LoadBaseXML();
     bool LoadRules();
-    bool setupBlends();
+    bool LoadBlends();
 
-    void AddConversion(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition);
-    void AddConversion(int bitmapIndex, QRgb col, QStringList tiles, QString layer);
+    void AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition);
+    void AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer);
 
     bool BlendMap();
     QString getNeighbouringTile(int x, int y);
-    Blend getBlendRule(int x, int y, const QString &floorTile, const QString &layer);
+    Tiled::BmpBlend *getBlendRule(int x, int y, const QString &floorTile, const QString &layer);
 
     bool WriteMap(WorldCell *cell, int bmpIndex);
 
@@ -152,7 +105,11 @@ private:
 
     WorldDocument *mWorldDoc;
     QList<BMPToTMXImages*> mImages;
-    QMap<QRgb,QList<ConversionEntry> > Conversions;
+
+    QString mRuleFileName;
+    QList<Tiled::BmpRule*> mRules;
+    QMap<QRgb,QList<Tiled::BmpRule*> > mRulesByColor;
+
     QVector<QVector<QVector<QString> > > Entries;
 
     class LayerInfo
@@ -173,9 +130,11 @@ private:
     };
     QList<LayerInfo> mLayers;
 
-    QList<Blend> blendList;
-    QList<QString> blendLayers;
-    QMap<QString,QList<int> > mBlendsByLayer;
+    QString mBlendFileName;
+    QList<Tiled::BmpBlend*> mBlends;
+    QStringList mBlendLayers;
+    QMap<QString,QList<Tiled::BmpBlend*> > mBlendsByLayer;
+
     QString mError;
 
     struct UnknownColor {

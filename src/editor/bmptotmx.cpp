@@ -17,6 +17,7 @@
 
 #include "bmptotmx.h"
 
+#include "bmpblender.h"
 #include "bmptotmxconfirmdialog.h"
 #include "mainwindow.h"
 #include "mapmanager.h"
@@ -71,6 +72,8 @@ BMPToTMX::BMPToTMX(QObject *parent)
 
 BMPToTMX::~BMPToTMX()
 {
+    qDeleteAll(mRules);
+    qDeleteAll(mBlends);
 }
 
 bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mode)
@@ -138,8 +141,10 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         mError += tr("\n(while reading Rules.txt)");
         return false;
     }
-    if (!setupBlends())
+    if (!LoadBlends()) {
+        mError += tr("\n(while reading Blends.txt)");
         return false;
+    }
 
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
@@ -209,7 +214,7 @@ bool BMPToTMX::generateCell(WorldCell *cell)
     for (int x = 0; x < 300; x++) {
         Entries[x].resize(300);
         for (int y = 0; y < 300; y++)
-            Entries[x][y].resize(2+blendLayers.size());
+            Entries[x][y].resize(2+mBlendLayers.size());
     }
 
     int sx = cell->x() * 300;
@@ -219,22 +224,22 @@ bool BMPToTMX::generateCell(WorldCell *cell)
             QRgb col = bmp.pixel(x - images->mBounds.x() * 300, y - images->mBounds.y() * 300);
             QRgb col2 = bmpVeg.pixel(x - images->mBounds.x() * 300, y - images->mBounds.y() * 300);
 
-            if (Conversions.contains(col)) {
-                QList<ConversionEntry> entries = Conversions[col];
+            if (mRulesByColor.contains(col)) {
+                QList<BmpRule*> rules = mRulesByColor[col];
 
-                foreach (ConversionEntry entry, entries) {
-                    if (entry.bitmapIndex != 0)
+                foreach (BmpRule *rule, rules) {
+                    if (rule->bitmapIndex != 0)
                         continue;
                     int index = 0;
-                    if (entry.targetLayer == QLatin1String("0_Floor"))
+                    if (rule->targetLayer == QLatin1String("0_Floor"))
                         index = 0;
-                    else if (entry.targetLayer == QLatin1String("0_Vegetation"))
+                    else if (rule->targetLayer == QLatin1String("0_Vegetation"))
                         index = 1;
                     else
                         continue;
 
                     Entries[x - sx][y - sy][index] =
-                            entry.tileChoices[qrand() % entry.tileChoices.count()];
+                            rule->tileChoices[qrand() % rule->tileChoices.count()];
                 }
             } else {
                 if (!mUnknownColors[images->mPath].contains(col)) {
@@ -243,24 +248,24 @@ bool BMPToTMX::generateCell(WorldCell *cell)
                 }
             }
 
-            if (col2 != qRgb(0, 0, 0) && Conversions.contains(col2)) {
-                QList<ConversionEntry> entries = Conversions[col2];
+            if (col2 != qRgb(0, 0, 0) && mRulesByColor.contains(col2)) {
+                QList<BmpRule*> rules = mRulesByColor[col2];
 
-                foreach (ConversionEntry entry, entries) {
-                    if (entry.bitmapIndex != 1)
+                foreach (BmpRule *rule, rules) {
+                    if (rule->bitmapIndex != 1)
                         continue;
-                    if (entry.condition != col && entry.condition != qRgb(0, 0, 0))
+                    if (rule->condition != col && rule->condition != qRgb(0, 0, 0))
                         continue;
                     int index = 0;
-                    if (entry.targetLayer == QLatin1String("0_Floor"))
+                    if (rule->targetLayer == QLatin1String("0_Floor"))
                         index = 0;
-                    else if (entry.targetLayer == QLatin1String("0_Vegetation"))
+                    else if (rule->targetLayer == QLatin1String("0_Vegetation"))
                         index = 1;
                     else
                         continue;
 
                     Entries[x - sx][y - sy][index] =
-                            entry.tileChoices[qrand() % entry.tileChoices.count()];
+                            rule->tileChoices[qrand() % rule->tileChoices.count()];
                 }
             } else {
                 if (col2 != qRgb(0, 0, 0) && !mUnknownVegColors[images->mPath].contains(col2)) {
@@ -570,6 +575,22 @@ bool BMPToTMX::LoadRules()
     QString path = mWorldDoc->world()->getBMPToTMXSettings().rulesFile;
     if (path.isEmpty())
         path = defaultRulesFile();
+#if 1
+    Tiled::Internal::BmpRulesFile file;
+    if (!file.read(path)) {
+        mError = file.errorString();
+        return false;
+    }
+
+    mRuleFileName = path;
+
+    qDeleteAll(mRules);
+    mRules.clear();
+    mRulesByColor.clear();
+    foreach (BmpRule *rule, file.rules())
+        AddRule(rule->bitmapIndex, rule->color, rule->tileChoices,
+                rule->targetLayer, rule->condition);
+#else
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
         mError = file.errorString();
@@ -617,11 +638,12 @@ bool BMPToTMX::LoadRules()
             AddConversion(bmp, col, choices, layer);
         }
     }
+#endif
 
     // Verify all the listed tiles exist.
-    foreach (QList<ConversionEntry> convs, Conversions) {
-        foreach (ConversionEntry conv, convs) {
-            foreach (QString tileName, conv.tileChoices) {
+    foreach (QList<BmpRule*> convs, mRulesByColor) {
+        foreach (BmpRule *conv, convs) {
+            foreach (QString tileName, conv->tileChoices) {
                 if (!tileName.isEmpty() && getTileFromTileName(tileName) == 0) {
                     mError = tr("A tile listed in Rules.txt could not be found.\n");
                     mError += tr("The missing tile is called '%1'.\n\n").arg(tileName);
@@ -635,14 +657,30 @@ bool BMPToTMX::LoadRules()
     return true;
 }
 
-bool BMPToTMX::setupBlends()
+bool BMPToTMX::LoadBlends()
 {
-    blendList.clear();
+    qDeleteAll(mBlends);
+    mBlends.clear();
     mBlendsByLayer.clear();
 
     QString path = mWorldDoc->world()->getBMPToTMXSettings().blendsFile;
     if (path.isEmpty())
         path = defaultBlendsFile();
+#if 1
+    Tiled::Internal::BmpBlendsFile file;
+    if (!file.read(path)) {
+        mError = file.errorString();
+        return false;
+    }
+
+    mBlendFileName = path;
+
+    foreach (BmpBlend *blend, file.blends()) {
+        mBlends += new BmpBlend(blend->targetLayer, blend->mainTile, blend->blendTile,
+                                blend->dir, blend->ExclusionList);
+        mBlendsByLayer[blend->targetLayer] += mBlends.last();
+    }
+#else
     SimpleFile simpleFile;
     if (!simpleFile.read(path)) {
         mError = tr("Failed to read %1").arg(path);
@@ -696,23 +734,25 @@ bool BMPToTMX::setupBlends()
             return false;
         }
     }
-
+#endif
     QSet<QString> layers;
-    foreach (Blend blend, blendList)
-        layers.insert(blend.targetLayer);
-    blendLayers = layers.values();
+    foreach (BmpBlend *blend, mBlends)
+        layers.insert(blend->targetLayer);
+    mBlendLayers = layers.values();
 
     return true;
 }
 
-void BMPToTMX::AddConversion(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition)
+void BMPToTMX::AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition)
 {
-    Conversions[col] += ConversionEntry(bitmapIndex, col, tiles, layer, condition);
+    mRules += new BmpRule(bitmapIndex, col, tiles, layer, condition);
+    mRulesByColor[col] += mRules.last();
 }
 
-void BMPToTMX::AddConversion(int bitmapIndex, QRgb col, QStringList tiles, QString layer)
+void BMPToTMX::AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer)
 {
-    Conversions[col] += ConversionEntry(bitmapIndex, col, tiles, layer);
+    mRules += new BmpRule(bitmapIndex, col, tiles, layer);
+    mRulesByColor[col] += mRules.last();
 }
 
 bool BMPToTMX::BlendMap()
@@ -721,10 +761,10 @@ bool BMPToTMX::BlendMap()
         for (int x = 0; x < 300; x++) {
             QString tile = Entries[x][y][0]; // 0_Floor
 
-            for (int i = 0; i < blendLayers.size(); i++) {
-                Blend blend = getBlendRule(x, y, tile, blendLayers[i]);
-                if (!blend.isNull())
-                    Entries[x][y][2+i] = blend.blendTile;
+            for (int i = 0; i < mBlendLayers.size(); i++) {
+                BmpBlend *blend = getBlendRule(x, y, tile, mBlendLayers[i]);
+                if (blend != 0)
+                    Entries[x][y][2+i] = blend->blendTile;
             }
         }
 
@@ -738,49 +778,48 @@ QString BMPToTMX::getNeighbouringTile(int x, int y)
     return Entries[x][y][0]; // 0_Floor
 }
 
-BMPToTMX::Blend BMPToTMX::getBlendRule(int x, int y, const QString &texture, const QString &layer)
+BmpBlend *BMPToTMX::getBlendRule(int x, int y, const QString &texture, const QString &layer)
 {
-    Blend lastBlend;
+    BmpBlend *lastBlend = 0;
     if (texture.isEmpty())
         return lastBlend;
-    foreach (int index, mBlendsByLayer[layer]) {
-        Blend &blend = blendList[index];
-        Q_ASSERT(blend.targetLayer == layer);
-        if (blend.targetLayer != layer)
+    foreach (BmpBlend *blend, mBlendsByLayer[layer]) {
+        Q_ASSERT(blend->targetLayer == layer);
+        if (blend->targetLayer != layer)
             continue;
 
-        if (texture != blend.mainTile) {
-            if (blend.ExclusionList.contains(texture))
+        if (texture != blend->mainTile) {
+            if (blend->ExclusionList.contains(texture))
                 continue;
             bool bPass = false;
-            switch (blend.dir) {
-            case Blend::N:
-                bPass = getNeighbouringTile(x, y - 1) == blend.mainTile;
+            switch (blend->dir) {
+            case BmpBlend::N:
+                bPass = getNeighbouringTile(x, y - 1) == blend->mainTile;
                 break;
-            case Blend::S:
-                bPass = getNeighbouringTile(x, y + 1) == blend.mainTile;
+            case BmpBlend::S:
+                bPass = getNeighbouringTile(x, y + 1) == blend->mainTile;
                 break;
-            case Blend::E:
-                bPass = getNeighbouringTile(x + 1, y) == blend.mainTile;
+            case BmpBlend::E:
+                bPass = getNeighbouringTile(x + 1, y) == blend->mainTile;
                 break;
-            case Blend::W:
-                bPass = getNeighbouringTile(x - 1, y) == blend.mainTile;
+            case BmpBlend::W:
+                bPass = getNeighbouringTile(x - 1, y) == blend->mainTile;
                 break;
-            case Blend::NE:
-                bPass = getNeighbouringTile(x, y - 1) == blend.mainTile &&
-                        getNeighbouringTile(x + 1, y) == blend.mainTile;
+            case BmpBlend::NE:
+                bPass = getNeighbouringTile(x, y - 1) == blend->mainTile &&
+                        getNeighbouringTile(x + 1, y) == blend->mainTile;
                 break;
-            case Blend::SE:
-                bPass = getNeighbouringTile(x, y + 1) == blend.mainTile &&
-                        getNeighbouringTile(x + 1, y) == blend.mainTile;
+            case BmpBlend::SE:
+                bPass = getNeighbouringTile(x, y + 1) == blend->mainTile &&
+                        getNeighbouringTile(x + 1, y) == blend->mainTile;
                 break;
-            case Blend::NW:
-                bPass = getNeighbouringTile(x, y - 1) == blend.mainTile &&
-                        getNeighbouringTile(x - 1, y) == blend.mainTile;
+            case BmpBlend::NW:
+                bPass = getNeighbouringTile(x, y - 1) == blend->mainTile &&
+                        getNeighbouringTile(x - 1, y) == blend->mainTile;
                 break;
-            case Blend::SW:
-                bPass = getNeighbouringTile(x, y + 1) == blend.mainTile &&
-                        getNeighbouringTile(x - 1, y) == blend.mainTile;
+            case BmpBlend::SW:
+                bPass = getNeighbouringTile(x, y + 1) == blend->mainTile &&
+                        getNeighbouringTile(x - 1, y) == blend->mainTile;
                 break;
             }
 
@@ -794,7 +833,7 @@ BMPToTMX::Blend BMPToTMX::getBlendRule(int x, int y, const QString &texture, con
 
 bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
 {
-    Map map(Map::Isometric, 300, 300, 64, 32);
+    Map map(Map::Isometric, 300, 300, 64, 32); // FIXME: or LevelIsometric
     foreach (Tiled::Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
         map.addTileset(ts);
     }
@@ -809,8 +848,8 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
                 index = 0;
             else if (layer.mName == QLatin1String("0_Vegetation"))
                 index = 1;
-            else if (blendLayers.contains(layer.mName))
-                index = 2 + blendLayers.indexOf(layer.mName);
+            else if (mBlendLayers.contains(layer.mName))
+                index = 2 + mBlendLayers.indexOf(layer.mName);
             else
                 continue;
             for (int y = 0; y < map.width(); y++) {
