@@ -293,6 +293,9 @@ Map *Map::clone() const
 #ifdef ZOMBOID
     Q_ASSERT(o->mUsedTilesets == mUsedTilesets);
     o->mUsedTilesets = mUsedTilesets; // not needed because of addLayer() above
+    o->mBmpMain = mBmpMain;
+    o->mBmpVeg = mBmpVeg;
+    o->mBmpSettings.clone(mBmpSettings);
 #endif
     o->setProperties(properties());
     return o;
@@ -369,6 +372,70 @@ void MapRands::setSeed(uint seed)
 {
     mSeed = seed;
     setSize(size(), at(0).size());
+}
+
+/////
+
+QString BmpBlend::dirAsString() const
+{
+    QMap<BmpBlend::Direction,QString> dirMap;
+    dirMap[BmpBlend::N] = QLatin1String("n");
+    dirMap[BmpBlend::S] = QLatin1String("s");
+    dirMap[BmpBlend::E] = QLatin1String("e");
+    dirMap[BmpBlend::W] = QLatin1String("w");
+    dirMap[BmpBlend::NW] = QLatin1String("nw");
+    dirMap[BmpBlend::SW] = QLatin1String("sw");
+    dirMap[BmpBlend::NE] = QLatin1String("ne");
+    dirMap[BmpBlend::SE] = QLatin1String("se");
+    return dirMap[dir];
+}
+
+/////
+
+BmpSettings::BmpSettings()
+{
+}
+
+BmpSettings::~BmpSettings()
+{
+    qDeleteAll(mRules);
+    qDeleteAll(mBlends);
+}
+
+void BmpSettings::setRules(const QList<BmpRule*> &rules)
+{
+    qDeleteAll(mRules);
+    mRules = rules;
+}
+
+QList<BmpRule *> BmpSettings::rulesCopy() const
+{
+    QList<BmpRule *> ret;
+    foreach (BmpRule *rule, mRules)
+        ret += new BmpRule(rule);
+    return ret;
+}
+
+void BmpSettings::setBlends(const QList<BmpBlend*> &blends)
+{
+    qDeleteAll(mBlends);
+    mBlends = blends;
+}
+
+QList<BmpBlend *> BmpSettings::blendsCopy() const
+{
+    QList<BmpBlend *> ret;
+    foreach (BmpBlend *blend, mBlends)
+        ret += new BmpBlend(blend);
+    return ret;
+}
+
+void BmpSettings::clone(const BmpSettings &other)
+{
+    mRulesFileName = other.mRulesFileName;
+    mBlendsFileName = other.mBlendsFileName;
+    mRules = other.rulesCopy();
+    mBlends = other.blendsCopy();
 }
 
 /////

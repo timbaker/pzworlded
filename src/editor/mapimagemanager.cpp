@@ -653,11 +653,17 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
 #endif
     // Wait for TilesetManager's threads to finish loading the tilesets.
     // FIXME: this shouldn't block the gui.
+#if 1
+    QList<Tileset*> usedTilesets = mRenderMapComposite->usedTilesets();
+    usedTilesets.removeAll(TilesetManager::instance()->missingTileset());
+    TilesetManager::instance()->waitForTilesets(usedTilesets);
+#else
     QSet<Tileset*> usedTilesets;
     foreach (MapComposite *mc, mRenderMapComposite->maps())
         usedTilesets += mc->map()->usedTilesets();
     usedTilesets.remove(TilesetManager::instance()->missingTileset());
     TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
+#endif
 
     QMetaObject::invokeMethod(mImageRenderWorker,
                               "mapLoaded", Qt::QueuedConnection,

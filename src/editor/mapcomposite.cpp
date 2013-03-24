@@ -17,6 +17,7 @@
 
 #include "mapcomposite.h"
 
+#include "bmpblender.h"
 #include "mapmanager.h"
 #include "mapobject.h"
 #include "maprenderer.h"
@@ -730,7 +731,8 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer)
 MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
                            MapComposite *parent, const QPoint &positionInParent,
                            int levelOffset)
-    : mMapInfo(mapInfo)
+    : QObject()
+    , mMapInfo(mapInfo)
     , mMap(mapInfo->map())
     , mParent(parent)
     , mPos(positionInParent)
@@ -744,6 +746,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 #ifdef BUILDINGED
     , mBlendOverMap(0)
 #endif
+    , mBmpBlender(new Tiled::Internal::BmpBlender(mMap, this))
 {
 #ifdef WORLDED
     MapManager::instance()->addReferenceToMap(mMapInfo);
@@ -835,6 +838,10 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
         mSortedLayerGroups.append(mLayerGroups[level]);
     }
+
+    connect(mBmpBlender, SIGNAL(layersRecreated()), SLOT(bmpBlenderLayersRecreated()));
+    mBmpBlender->update(0, 0, mMap->width(), mMap->height());
+    mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
 
 MapComposite::~MapComposite()
@@ -1030,7 +1037,7 @@ CompositeLayerGroup *MapComposite::layerGroupForLayer(TileLayer *tl) const
     return 0;
 }
 
-const QList<MapComposite *> MapComposite::maps()
+QList<MapComposite *> MapComposite::maps()
 {
     QList<MapComposite*> ret;
     ret += this;
@@ -1262,9 +1269,11 @@ bool MapComposite::mapChanged(MapInfo *mapInfo)
     return changed;
 }
 
-bool MapComposite::isTilesetUsed(Tileset *tileset)
+bool MapComposite::isTilesetUsed(Tileset *tileset, bool recurse)
 {
-    foreach (MapComposite *mc, maps()) {
+    QList<MapComposite*> maps = recurse ? this->maps() : (QList<MapComposite*>() << this);
+
+    foreach (MapComposite *mc, maps) {
         if (mc->map()->isTilesetUsed(tileset))
             return true;
         foreach (TileLayer *tl, mc->tileLayersForLevel(0)->bmpBlendLayers()) {
@@ -1273,6 +1282,17 @@ bool MapComposite::isTilesetUsed(Tileset *tileset)
         }
     }
     return false;
+}
+
+QList<Tileset *> MapComposite::usedTilesets()
+{
+    QSet<Tileset*> usedTilesets;
+    foreach (MapComposite *mc, maps()) {
+        usedTilesets += mc->map()->usedTilesets();
+        foreach (TileLayer *tl, mc->mBmpBlender->tileLayers())
+            usedTilesets += tl->usedTilesets();
+    }
+    return usedTilesets.values();
 }
 
 void MapComposite::synch()
@@ -1384,6 +1404,8 @@ void MapComposite::recreate()
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
         mSortedLayerGroups.append(mLayerGroups[level]);
     }
+
+    mBmpBlender->setMap(mMap);
 }
 
 MapComposite *MapComposite::root()
@@ -1405,6 +1427,11 @@ QStringList MapComposite::getMapFileNames() const
                 result += path;
 
     return result;
+}
+
+void MapComposite::bmpBlenderLayersRecreated()
+{
+    mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
 
 #if 1 // ROAD_CRUD

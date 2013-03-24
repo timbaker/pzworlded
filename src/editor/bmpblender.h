@@ -18,39 +18,108 @@
 #ifndef BMPBLENDER_H
 #define BMPBLENDER_H
 
+#include <QCoreApplication>
 #include <QMap>
+#include <QRegion>
 #include <QRgb>
 #include <QStringList>
-#include <QVector>
 
 namespace BuildingEditor {
 class FloorTileGrid;
 }
 
 namespace Tiled {
+class BmpBlend;
+class BmpRule;
 class Map;
+class Tile;
 class TileLayer;
+class Tileset;
 
 namespace Internal {
+
+class BmpRulesFile
+{
+    Q_DECLARE_TR_FUNCTIONS(BmpRulesFile)
+
+public:
+    BmpRulesFile();
+    ~BmpRulesFile();
+
+    bool read(const QString &fileName);
+    bool write(const QString &fileName);
+
+    QString errorString() const
+    { return mError; }
+
+    const QList<BmpRule*> &rules() const
+    { return mRules; }
+    QList<BmpRule*> rulesCopy() const;
+
+private:
+    void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
+                 QString layer, QRgb condition);
+    void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
+                 QString layer);
+
+    QList<BmpRule*> mRules;
+    QString mError;
+};
+
+class BmpBlendsFile
+{
+    Q_DECLARE_TR_FUNCTIONS(BmpBlendsFile)
+
+public:
+    BmpBlendsFile();
+    ~BmpBlendsFile();
+
+    bool read(const QString &fileName);
+    bool write(const QString &fileName);
+
+    QString errorString() const
+    { return mError; }
+
+    const QList<BmpBlend*> &blends() const
+    { return mBlends; }
+    QList<BmpBlend*> blendsCopy() const;
+
+private:
+    QList<BmpBlend*> mBlends;
+    QString mError;
+};
 
 class BmpBlender : public QObject
 {
     Q_OBJECT
 public:
-    BmpBlender(Map *map);
+    BmpBlender(Map *map, QObject *parent = 0);
     ~BmpBlender();
 
-    bool read();
-    bool readRules(const QString &filePath);
-    bool readBlends(const QString &filePath);
+    void setMap(Map *map);
 
+    void fromMap();
     void recreate();
     void update(int x1, int y1, int x2, int y2);
 
+    QList<TileLayer*> tileLayers()
+    { return mTileLayers.values(); }
+
+    QStringList tileLayerNames()
+    { return mTileLayers.keys(); }
+
+    QStringList blendLayers()
+    { return mBlendLayers; }
+
+    void tilesetAdded(Tileset *ts);
+    void tilesetRemoved(const QString &tilesetName);
+
 signals:
     void layersRecreated();
+    void regionAltered(const QRegion &region);
 
-public: // TODO: make private
+private:
+    void initTiles();
     void imagesToTileNames(int x1, int y1, int x2, int y2);
     void blend(int x1, int y1, int x2, int y2);
     void tileNamesToLayers(int x1, int y1, int x2, int y2);
@@ -59,81 +128,20 @@ public: // TODO: make private
     QMap<QString,BuildingEditor::FloorTileGrid*> mTileNameGrids;
     QMap<QString,TileLayer*> mTileLayers;
 
-    class Rule
-    {
-    public:
-        int bitmapIndex;
-        QRgb color;
-        QRgb condition;
-        QStringList tileChoices;
-        QString targetLayer;
-
-        Rule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition) :
-            bitmapIndex(bitmapIndex),
-            color(col),
-            tileChoices(tiles),
-            targetLayer(layer),
-            condition(condition)
-        {}
-        Rule(int bitmapIndex, QRgb col, QStringList tiles, QString layer) :
-            bitmapIndex(bitmapIndex),
-            color(col),
-            tileChoices(tiles),
-            targetLayer(layer),
-            condition(qRgb(0,0,0))
-        {}
-        Rule(int bitmapIndex, QRgb col, QString tile, QString layer);
-        Rule(int bitmapIndex, QRgb col, QString tile, QString layer, QRgb condition);
-    };
-
-    class Blend
-    {
-    public:
-        enum Direction {
-            Unknown,
-            N,
-            S,
-            E,
-            W,
-            NW,
-            NE,
-            SW,
-            SE
-        };
-
-        QString targetLayer;
-        QString mainTile;
-        QString blendTile;
-        Direction dir;
-        QStringList ExclusionList;
-
-        Blend()
-        {}
-        Blend(const QString &layer, const QString &main, const QString &blend,
-              Direction dir, const QStringList &exclusions) :
-            targetLayer(layer), mainTile(main), blendTile(blend), dir(dir),
-            ExclusionList(exclusions)
-        {}
-
-        bool isNull()
-        { return mainTile.isEmpty(); }
-    };
-
-    void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
-                 QString layer, QRgb condition);
-    void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
-                 QString layer);
+    QStringList mTilesetNames;
+    QStringList mTileNames;
+    QMap<QString,Tile*> mTileByName;
 
     QString getNeighbouringTile(int x, int y);
-    Blend getBlendRule(int x, int y, const QString &tileName, const QString &layer);
+    BmpBlend *getBlendRule(int x, int y, const QString &tileName, const QString &layer);
 
-    QList<Rule*> mRules;
-    QMap<QRgb,QList<Rule*> > mRuleByColor;
+    QList<BmpRule*> mRules;
+    QMap<QRgb,QList<BmpRule*> > mRuleByColor;
     QStringList mRuleLayers;
 
-    QList<Blend> mBlendList;
+    QList<BmpBlend*> mBlendList;
     QStringList mBlendLayers;
-    QMap<QString,QList<int> > mBlendsByLayer;
+    QMap<QString,QList<BmpBlend*> > mBlendsByLayer;
 
     QString mError;
 };

@@ -92,6 +92,112 @@ public:
     MapRands mRands;
 };
 
+class TILEDSHARED_EXPORT BmpRule
+{
+public:
+    int bitmapIndex;
+    QRgb color;
+    QRgb condition;
+    QStringList tileChoices;
+    QString targetLayer;
+
+    BmpRule(const BmpRule *other) :
+        bitmapIndex(other->bitmapIndex),
+        color(other->color),
+        tileChoices(other->tileChoices),
+        targetLayer(other->targetLayer),
+        condition(other->condition)
+    {}
+    BmpRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition) :
+        bitmapIndex(bitmapIndex),
+        color(col),
+        tileChoices(tiles),
+        targetLayer(layer),
+        condition(condition)
+    {}
+    BmpRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer) :
+        bitmapIndex(bitmapIndex),
+        color(col),
+        tileChoices(tiles),
+        targetLayer(layer),
+        condition(qRgb(0,0,0))
+    {}
+    BmpRule(int bitmapIndex, QRgb col, QString tile, QString layer);
+    BmpRule(int bitmapIndex, QRgb col, QString tile, QString layer, QRgb condition);
+};
+
+class TILEDSHARED_EXPORT BmpBlend
+{
+public:
+    enum Direction {
+        Unknown,
+        N,
+        S,
+        E,
+        W,
+        NW,
+        NE,
+        SW,
+        SE
+    };
+
+    QString targetLayer;
+    QString mainTile;
+    QString blendTile;
+    Direction dir;
+    QStringList ExclusionList;
+
+    BmpBlend(const BmpBlend *other) :
+        targetLayer(other->targetLayer),
+        mainTile(other->mainTile),
+        blendTile(other->blendTile),
+        dir(other->dir),
+        ExclusionList(other->ExclusionList)
+    {}
+    BmpBlend(const QString &layer, const QString &main, const QString &blend,
+          Direction dir, const QStringList &exclusions) :
+        targetLayer(layer), mainTile(main), blendTile(blend), dir(dir),
+        ExclusionList(exclusions)
+    {}
+
+    QString dirAsString() const;
+};
+
+class TILEDSHARED_EXPORT BmpSettings
+{
+public:
+    BmpSettings();
+    ~BmpSettings();
+
+    void setRulesFile(const QString &fileName)
+    { mRulesFileName = fileName; }
+    QString rulesFile() const
+    { return mRulesFileName; }
+
+    void setBlendsFile(const QString &fileName)
+    { mBlendsFileName = fileName; }
+    QString blendsFile() const
+    { return mBlendsFileName; }
+
+    void setRules(const QList<BmpRule*> &rules);
+    const QList<BmpRule*> &rules() const
+    { return mRules; }
+    QList<BmpRule*> rulesCopy() const;
+
+    void setBlends(const QList<BmpBlend*> &blends);
+    const QList<BmpBlend*> &blends() const
+    { return mBlends; }
+    QList<BmpBlend*> blendsCopy() const;
+
+    void clone(const BmpSettings &other);
+
+private:
+    QString mRulesFileName;
+    QString mBlendsFileName;
+    QList<BmpRule*> mRules;
+    QList<BmpBlend*> mBlends;
+};
+
 #endif // ZOMBOID
 
 /**
@@ -330,13 +436,16 @@ public:
 
 #ifdef ZOMBOID
     MapBmp &rbmp(int index) { return index ? mBmpVeg : mBmpMain; }
-    MapBmp bmp(int index) { return index ? mBmpVeg : mBmpMain; }
+    MapBmp bmp(int index) const { return index ? mBmpVeg : mBmpMain; }
 
     MapBmp &rbmpMain() { return mBmpMain; }
     MapBmp &rbmpVeg() { return mBmpVeg; }
 
     MapBmp bmpMain() const { return mBmpMain; }
     MapBmp bmpVeg() const { return mBmpVeg; }
+
+    BmpSettings *rbmpSettings() { return &mBmpSettings; }
+    const BmpSettings *bmpSettings() const { return &mBmpSettings; }
 #endif
 
     Map *clone() const;
@@ -368,6 +477,7 @@ private:
     QMap<Tileset*,int> mUsedTilesets;
     MapBmp mBmpMain;
     MapBmp mBmpVeg;
+    BmpSettings mBmpSettings;
 #endif
 };
 

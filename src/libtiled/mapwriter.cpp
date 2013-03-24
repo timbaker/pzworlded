@@ -89,6 +89,8 @@ private:
     void writeProperties(QXmlStreamWriter &w,
                          const Properties &properties);
 #ifdef ZOMBOID
+    QString rgbString(QRgb rgb);
+    void writeBmpSettings(QXmlStreamWriter &w, const BmpSettings *settings);
     void writeBmpImage(QXmlStreamWriter &w, int index, const MapBmp &bmp);
 #endif
 
@@ -212,6 +214,7 @@ void MapWriterPrivate::writeMap(QXmlStreamWriter &w, const Map *map)
     }
 
 #ifdef ZOMBOID
+    writeBmpSettings(w, map->bmpSettings());
     writeBmpImage(w, 0, map->bmpMain());
     writeBmpImage(w, 1, map->bmpVeg());
 #endif
@@ -575,6 +578,65 @@ void MapWriterPrivate::writeProperties(QXmlStreamWriter &w,
 }
 
 #ifdef ZOMBOID
+QString MapWriterPrivate::rgbString(QRgb rgb)
+{
+    return tr("%1 %2 %3").arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb));
+}
+
+#define BMP_SETTINGS_VERSION 1
+void MapWriterPrivate::writeBmpSettings(QXmlStreamWriter &w,
+                                        const BmpSettings *settings)
+{
+    w.writeStartElement(QLatin1String("bmp-settings"));
+    w.writeAttribute(QLatin1String("version"), QString::number(BMP_SETTINGS_VERSION));
+
+    w.writeStartElement(QLatin1String("rules-file"));
+    QString fileName = settings->rulesFile();
+    if (QDir::isAbsolutePath(fileName))
+        fileName = mMapDir.relativeFilePath(fileName);
+    w.writeAttribute(QLatin1String("file"), fileName);
+    w.writeEndElement(); // <rules-file>
+
+    w.writeStartElement(QLatin1String("blends-file"));
+    fileName = settings->blendsFile();
+    if (QDir::isAbsolutePath(fileName))
+        fileName = mMapDir.relativeFilePath(fileName);
+    w.writeAttribute(QLatin1String("file"), fileName);
+    w.writeEndElement(); // <blends-file>
+
+    w.writeStartElement(QLatin1String("rules"));
+    foreach (BmpRule *rule, settings->rules()) {
+        w.writeStartElement(QLatin1String("rule"));
+        w.writeAttribute(QLatin1String("bitmapIndex"), QString::number(rule->bitmapIndex));
+        w.writeAttribute(QLatin1String("color"), rgbString(rule->color));
+        QStringList tileChoices;
+        foreach (QString tileName, rule->tileChoices) {
+            if (tileName.isEmpty())
+                tileName = QLatin1String("null");
+            tileChoices += tileName;
+        }
+        w.writeAttribute(QLatin1String("tileChoices"), tileChoices.join(QLatin1String(" ")));
+        w.writeAttribute(QLatin1String("targetLayer"), rule->targetLayer);
+        w.writeAttribute(QLatin1String("condition"), rgbString(rule->condition));
+        w.writeEndElement(); // <rule>
+    }
+    w.writeEndElement(); // <rules>
+
+    w.writeStartElement(QLatin1String("blends"));
+    foreach (BmpBlend *blend, settings->blends()) {
+        w.writeStartElement(QLatin1String("blend"));
+        w.writeAttribute(QLatin1String("targetLayer"), blend->targetLayer);
+        w.writeAttribute(QLatin1String("mainTile"), blend->mainTile);
+        w.writeAttribute(QLatin1String("blendTile"), blend->blendTile);
+        w.writeAttribute(QLatin1String("dir"), blend->dirAsString());
+        w.writeAttribute(QLatin1String("ExclusionList"), blend->ExclusionList.join(QLatin1String(" ")));
+        w.writeEndElement(); // <blend>
+    }
+    w.writeEndElement(); // <blends>
+
+    w.writeEndElement(); // <bmp-settings>
+}
+
 void MapWriterPrivate::writeBmpImage(QXmlStreamWriter &w,
                                      int index, const MapBmp &bmp)
 {

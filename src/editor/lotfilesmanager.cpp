@@ -176,17 +176,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
     }
 
-    Tiled::Internal::BmpBlender *blender = 0;
-    Map *map = mapInfo->map();
-    if (map->rbmp(0).colors().size() || map->rbmp(1).colors().size()) {
-        blender = new Tiled::Internal::BmpBlender(map);
-        if (!blender->read()) {
-            mError = blender->mError;
-            return false;
-        }
-        blender->update(0, 0, map->width(), map->height());
-    }
-
     PROGRESS progress(tr("Generating .lot files (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 
@@ -194,10 +183,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     MapComposite *mapComposite = &staticMapComposite;
     mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
                                      cell->world()->roads());
-    if (blender) {
-        mapComposite->layerGroupForLevel(0)->setBmpBlendLayers(
-                    blender->mTileLayers.values());
-    }
 
     foreach (WorldCellLot *lot, cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName())) {

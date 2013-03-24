@@ -50,10 +50,6 @@ namespace Tiled {
 class MapRenderer;
 class Layer;
 class ZTileLayerGroup;
-
-namespace Internal {
-class BmpBlender;
-}
 }
 
 class ObjectLabelItem : public QGraphicsSimpleTextItem
@@ -468,7 +464,6 @@ private:
     QVector<QGraphicsItem*> mLayerItems;
     QMap<int,CompositeLayerGroupItem*> mTileLayerGroupItems;
     CellDocument *mDocument;
-    Tiled::Internal::BmpBlender *mBmpBlender;
     Tiled::MapRenderer *mRenderer;
     DnDItem *mDnDItem;
     QList<SubMapItem*> mSubMapItems;

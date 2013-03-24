@@ -116,6 +116,10 @@ private:
     void readProperty(Properties *properties);
 
 #ifdef ZOMBOID
+    void readBmpSettings();
+    QRgb rgbFromString(const QString &s, bool &ok);
+    void readBmpRules();
+    void readBmpBlends();
     void readBmpImage();
     void readBmpPixels(int index, const QList<QRgb> &colors);
     void decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors, const QStringRef &text);
@@ -250,6 +254,8 @@ Map *MapReaderPrivate::readMap()
         else if (xml.name() == "imagelayer")
             mMap->addLayer(readImageLayer());
 #ifdef ZOMBOID
+        else if (xml.name() == "bmp-settings")
+            readBmpSettings();
         else if (xml.name() == "bmp-image")
             readBmpImage();
 #endif
@@ -960,6 +966,121 @@ void MapReaderPrivate::readProperty(Properties *properties)
 }
 
 #ifdef ZOMBOID
+void MapReaderPrivate::readBmpSettings()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == "bmp-settings");
+
+    const QXmlStreamAttributes atts = xml.attributes();
+    int version = atts.value(QLatin1String("version")).toString().toInt();
+
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("rules-file")) {
+            const QXmlStreamAttributes atts = xml.attributes();
+            QString fileName = atts.value(QLatin1String("file")).toString();
+            if (!fileName.isEmpty()) {
+                fileName = p->resolveReference(fileName, mPath);
+                mMap->rbmpSettings()->setRulesFile(fileName);
+            }
+            xml.skipCurrentElement();
+        } else if (xml.name() == QLatin1String("blends-file")) {
+            const QXmlStreamAttributes atts = xml.attributes();
+            QString fileName = atts.value(QLatin1String("file")).toString();
+            if (!fileName.isEmpty()) {
+                fileName = p->resolveReference(fileName, mPath);
+                mMap->rbmpSettings()->setBlendsFile(fileName);
+            }
+            xml.skipCurrentElement();
+        } else if (xml.name() == QLatin1String("rules")) {
+            readBmpRules();
+        } else if (xml.name() == QLatin1String("blends")) {
+            readBmpBlends();
+        } else {
+            readUnknownElement();
+        }
+    }
+}
+
+QRgb MapReaderPrivate::rgbFromString(const QString &s, bool &ok)
+{
+    QStringList parts = s.split(QLatin1Char(' '));
+    if (parts.length() != 3) {
+        ok = false;
+        return 0;
+    }
+    int r, g, b;
+    r = parts[0].toUInt(); // TODO: validate 0-255
+    g = parts[1].toUInt();
+    b = parts[2].toUInt();
+    ok = true;
+    return qRgb(r, g, b);
+}
+
+void MapReaderPrivate::readBmpRules()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == "rules");
+
+    QList<BmpRule*> rules;
+
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("rule")) {
+            const QXmlStreamAttributes atts = xml.attributes();
+            uint bitmapIndex = atts.value(QLatin1String("bitmapIndex")).toString().toUInt();
+            bool ok;
+            QRgb color = rgbFromString(atts.value(QLatin1String("color")).toString(), ok);
+            QStringList tileChoices = atts.value(QLatin1String("tileChoices")).toString().split(QLatin1Char(' '));
+            for (int i = 0; i < tileChoices.size(); i++)
+                if (tileChoices[i] == QLatin1String("null"))
+                    tileChoices[i].clear();
+            QString targetLayer = atts.value(QLatin1String("targetLayer")).toString();
+            QRgb condition = rgbFromString(atts.value(QLatin1String("condition")).toString(), ok);
+            rules += new BmpRule(bitmapIndex, color, tileChoices, targetLayer, condition);
+            xml.skipCurrentElement();
+        } else {
+            readUnknownElement();
+        }
+    }
+
+    mMap->rbmpSettings()->setRules(rules);
+}
+
+void MapReaderPrivate::readBmpBlends()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == "blends");
+
+    QMap<QString,BmpBlend::Direction> dirMap;
+    dirMap[QLatin1String("n")] = BmpBlend::N;
+    dirMap[QLatin1String("s")] = BmpBlend::S;
+    dirMap[QLatin1String("e")] = BmpBlend::E;
+    dirMap[QLatin1String("w")] = BmpBlend::W;
+    dirMap[QLatin1String("nw")] = BmpBlend::NW;
+    dirMap[QLatin1String("sw")] = BmpBlend::SW;
+    dirMap[QLatin1String("ne")] = BmpBlend::NE;
+    dirMap[QLatin1String("se")] = BmpBlend::SE;
+
+    QList<BmpBlend*> blends;
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("blend")) {
+            const QXmlStreamAttributes atts = xml.attributes();
+            QString targetLayer = atts.value(QLatin1String("targetLayer")).toString();
+            QString mainTile = atts.value(QLatin1String("mainTile")).toString();
+            QString blendTile = atts.value(QLatin1String("blendTile")).toString();
+            QString dirString = atts.value(QLatin1String("dir")).toString();
+            if (!dirMap.contains(dirString)) {
+                xml.raiseError(tr("unknown BMP blend direction '%1").arg(dirString));
+                return;
+            }
+            BmpBlend::Direction dir = dirMap[dirString];
+            QStringList ExclusionList = atts.value(QLatin1String("ExclusionList")).toString().split(QLatin1Char(' '));
+            blends += new BmpBlend(targetLayer, mainTile, blendTile, dir, ExclusionList);
+            xml.skipCurrentElement();
+        } else {
+            readUnknownElement();
+        }
+    }
+
+    mMap->rbmpSettings()->setBlends(blends);
+}
+
 void MapReaderPrivate::readBmpImage()
 {
     Q_ASSERT(xml.isStartElement() && xml.name() == "bmp-image");

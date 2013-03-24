@@ -1014,7 +1014,6 @@ CellScene::CellScene(QObject *parent)
     , mMap(0)
     , mMapComposite(0)
     , mDocument(0)
-    , mBmpBlender(0)
     , mRenderer(0)
     , mDnDItem(0)
     , mDarkRectangle(new QGraphicsRectItem)
@@ -1046,7 +1045,6 @@ CellScene::~CellScene()
     // mMap, mMapInfo are shared, don't destroy
     delete mMapComposite;
     delete mRenderer;
-    delete mBmpBlender;
 }
 
 void CellScene::setTool(AbstractTool *tool)
@@ -1313,7 +1311,6 @@ void CellScene::loadMap()
 
         delete mMapComposite;
         delete mRenderer;
-        delete mBmpBlender;
 
         mLayerItems.clear();
         mTileLayerGroupItems.clear();
@@ -1360,16 +1357,6 @@ void CellScene::loadMap()
     }
 
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
-
-    mBmpBlender = new Tiled::Internal::BmpBlender(mMap);
-    if (!mBmpBlender->read()) {
-        QMessageBox::warning(MainWindow::instance(), tr("Error Loading Map"),
-                             mBmpBlender->mError);
-        return; // TODO: Add error handling
-    }
-    mBmpBlender->update(0, 0, mMap->width(), mMap->height());
-    mMapComposite->layerGroupForLevel(0)->setBmpBlendLayers(
-                mBmpBlender->mTileLayers.values());
 
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
     connect(mMapComposite, SIGNAL(layerGroupAdded(int)),

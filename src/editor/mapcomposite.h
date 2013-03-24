@@ -38,6 +38,9 @@ class Road;
 
 namespace Tiled {
 class Layer;
+namespace Internal {
+class BmpBlender;
+}
 }
 
 class MapComposite;
@@ -190,7 +193,7 @@ public:
     CompositeLayerGroup *layerGroupForLayer(Tiled::TileLayer *tl) const;
 
     const QVector<MapComposite*>& subMaps() const { return mSubMaps; }
-    const QList<MapComposite*> maps();
+    QList<MapComposite*> maps();
 
     MapComposite *parent() const { return mParent; }
 
@@ -253,9 +256,13 @@ public:
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapChanged(MapInfo *mapInfo);
 
-    bool isTilesetUsed(Tiled::Tileset *tileset);
+    bool isTilesetUsed(Tiled::Tileset *tileset, bool recurse = true);
+    QList<Tiled::Tileset*> usedTilesets();
 
     void synch();
+
+    Tiled::Internal::BmpBlender *bmpBlender() const
+    { return mBmpBlender; }
 
 #ifdef BUILDINGED
     void setBlendOverMap(MapComposite *mapComposite)
@@ -278,6 +285,9 @@ signals:
     void layerAboutToBeRemovedFromGroup(int index);
     void layerRemovedFromGroup(int index, CompositeLayerGroup *oldGroup);
     void layerLevelChanged(int index, int oldLevel);
+
+private slots:
+    void bmpBlenderLayersRecreated();
 
 private:
     void addLayerToGroup(int index);
@@ -305,6 +315,8 @@ private:
     bool mSavedGroupVisible;
     bool mSavedVisible;
     bool mHiddenDuringDrag;
+
+    Tiled::Internal::BmpBlender *mBmpBlender;
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer1;
     Tiled::TileLayer *mRoadLayer0;
