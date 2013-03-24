@@ -642,6 +642,7 @@ public:
     static QString nameForTile(const QString &tilesetName, int index);
     static QString nameForTile(Tiled::Tile *tile);
     static bool parseTileName(const QString &tileName, QString &tilesetName, int &index);
+    static bool legalTileName(const QString &tileName);
     static QString adjustTileNameIndex(const QString &tileName, int offset);
     static QString normalizeTileName(const QString &tileName);
 

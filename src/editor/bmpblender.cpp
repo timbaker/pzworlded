@@ -35,6 +35,12 @@
 using namespace Tiled;
 using namespace Tiled::Internal;
 
+BmpBlender::BmpBlender(QObject *parent) :
+    QObject(parent),
+    mMap(0)
+{
+}
+
 BmpBlender::BmpBlender(Map *map, QObject *parent) :
     QObject(parent),
     mMap(map),
@@ -318,7 +324,7 @@ QString BmpBlender::getNeighbouringTile(int x, int y)
 }
 
 BmpBlend *BmpBlender::getBlendRule(int x, int y, const QString &tileName,
-                                           const QString &layer)
+                                   const QString &layer)
 {
     BmpBlend *lastBlend = 0;
     if (tileName.isEmpty())
@@ -395,8 +401,10 @@ bool BmpRulesFile::read(const QString &fileName)
     mRules.clear();
 
     QTextStream sr(&file);
+    int lineNo = 0;
     while (!sr.atEnd()) {
         QString line = sr.readLine();
+        ++lineNo;
 
         if (line.contains(QLatin1Char('#')))
             continue;
@@ -404,33 +412,59 @@ bool BmpRulesFile::read(const QString &fileName)
             continue;
 
         QStringList lineSplit = line.split(QLatin1Char(','));
-        int bmp = lineSplit[0].trimmed().toInt();
-        QRgb col = qRgb(lineSplit[1].trimmed().toInt(),
-                        lineSplit[2].trimmed().toInt(),
-                        lineSplit[3].trimmed().toInt());
+        if (lineSplit.length() != 6 && lineSplit.length() != 9) {
+            mError = tr("Line %1: Expected a comma-separated list of 6 or 9 values").arg(lineNo);
+            return false;
+        }
+        bool ok;
+        int bmpIndex = lineSplit[0].trimmed().toUInt(&ok);
+        if (!ok || bmpIndex > 1) {
+            mError = tr("Line %1: Expected BMP index 0 or 1").arg(lineNo);
+            return false;
+        }
+        QRgb col = rgbFromStringList(lineSplit.mid(1, 3), ok);
+        if (!ok) {
+            mError = tr("Line %1: Invalid RGB triplet '%2 %3 %4'")
+                    .arg(lineNo)
+                    .arg(lineSplit[1].trimmed())
+                    .arg(lineSplit[2].trimmed())
+                    .arg(lineSplit[3].trimmed());
+            return false;
+        }
         QStringList choices = lineSplit[4].split(QLatin1Char(' '));
         int n = 0;
         foreach (QString choice, choices) {
             choices[n] = choice.trimmed();
             if (choices[n] == QLatin1String("null"))
                 choices[n].clear();
+            else if (!BuildingEditor::BuildingTilesMgr::legalTileName(choices[n])) {
+                mError = tr("Line %1: Invalid tile name '%2'").arg(lineNo).arg(choices[n]);
+                return false;
+            }
             n++;
         }
-        QRgb con = qRgb(0, 0, 0);
 
         QString layer = lineSplit[5].trimmed();
+
+        QRgb con = qRgb(0, 0, 0);
         bool hasCon = false;
         if (lineSplit.length() > 6) {
-            con = qRgb(lineSplit[6].trimmed().toInt(),
-                       lineSplit[7].trimmed().toInt(),
-                       lineSplit[8].trimmed().toInt());
+            con = rgbFromStringList(lineSplit.mid(6, 3), ok);
+            if (!ok) {
+                mError = tr("Line %1: Invalid RGB triplet '%2 %3 %4'")
+                        .arg(lineNo)
+                        .arg(lineSplit[6].trimmed())
+                        .arg(lineSplit[7].trimmed())
+                        .arg(lineSplit[8].trimmed());
+                return false;
+            }
             hasCon = true;
         }
 
         if (hasCon) {
-            AddRule(bmp, col, choices, layer, con);
+            AddRule(bmpIndex, col, choices, layer, con);
         } else {
-            AddRule(bmp, col, choices, layer);
+            AddRule(bmpIndex, col, choices, layer);
         }
     }
 
@@ -464,6 +498,27 @@ void BmpRulesFile::AddRule(int bitmapIndex, QRgb col, QStringList tiles,
         normalizedTileNames += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
 
     mRules += new BmpRule(bitmapIndex, col, normalizedTileNames, layer);
+}
+
+QRgb BmpRulesFile::rgbFromStringList(const QStringList &rgb, bool &ok)
+{
+    int r = rgb[0].trimmed().toInt(&ok);
+    if (!ok || r < 0 || r > 255) {
+        ok = false;
+        return QRgb();
+    }
+    int g = rgb[1].trimmed().toInt(&ok);
+    if (!ok || g < 0 || g > 255) {
+        ok = false;
+        return QRgb();
+    }
+    int b = rgb[2].trimmed().toInt(&ok);
+    if (!ok || b < 0 || b > 255) {
+        ok = false;
+        return QRgb();
+    }
+    ok = true;
+    return qRgb(r, g, b);
 }
 
 /////
@@ -523,8 +578,22 @@ bool BmpBlendsFile::read(const QString &fileName)
             }
 
             QStringList excludes;
-            foreach (QString exclude, block.value("exclude").split(QLatin1String(" "), QString::SkipEmptyParts))
+            foreach (QString exclude, block.value("exclude").split(QLatin1String(" "), QString::SkipEmptyParts)) {
+                if (!BuildingEditor::BuildingTilesMgr::legalTileName(exclude)) {
+                    mError = tr("Invalid tile name '%1'").arg(exclude);
+                    return false;
+                }
                 excludes += BuildingEditor::BuildingTilesMgr::normalizeTileName(exclude);
+            }
+
+            QStringList tileNames;
+            tileNames << block.value("mainTile") << block.value("blendTile");
+            foreach (QString tileName, tileNames) {
+                if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                    mError = tr("Invalid tile name '%1'").arg(tileName);
+                    return false;
+                }
+            }
 
             BmpBlend *blend = new BmpBlend(block.value("layer"),
                         BuildingEditor::BuildingTilesMgr::normalizeTileName(block.value("mainTile")),
