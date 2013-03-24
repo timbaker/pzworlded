@@ -866,6 +866,17 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         }
     }
 
+    map.rbmpSettings()->setBlendsFile(mBlendFileName);
+    map.rbmpSettings()->setRulesFile(mRuleFileName);
+    QList<BmpBlend*> blends;
+    foreach (BmpBlend *blend, mBlends)
+        blends += new BmpBlend(blend);
+    map.rbmpSettings()->setBlends(blends);
+    QList<BmpRule*> rules;
+    foreach (BmpRule *rule, mRules)
+        rules += new BmpRule(rule);
+    map.rbmpSettings()->setRules(rules);
+
     QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
     if (!QFileInfo(filePath).exists())
         mNewFiles += filePath;
