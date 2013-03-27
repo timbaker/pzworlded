@@ -23,6 +23,15 @@
 #include "buildingtiles.h"
 #include "furnituregroups.h"
 
+#ifdef Q_OS_WIN
+// Hmmmm.  libtiled.dll defines the MapRands class as so:
+// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QVector<QVector<int> >;
+#endif
+
 using namespace BuildingEditor;
 
 /////

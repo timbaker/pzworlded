@@ -536,7 +536,11 @@ QString BuildingTemplates::txtName()
 
 QString BuildingTemplates::txtPath()
 {
+#ifdef WORLDED
     return Preferences::instance()->configPath(txtName());
+#else
+    return BuildingPreferences::instance()->configPath(txtName());
+#endif
 }
 
 bool BuildingTemplates::readTxt()
@@ -603,8 +607,9 @@ bool BuildingTemplates::exportTemplates(const QString &fileName,
 
 bool BuildingTemplates::mergeTxt()
 {
+#ifdef WORLDED
     return true;
-
+#endif
     QString userPath = txtPath();
 
     SimpleFile userFile;

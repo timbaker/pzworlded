@@ -208,7 +208,9 @@ protected:
 #endif
     void paintDummyImage(ImageData &data, MapInfo *mapInfo);
 
+#ifdef WORLDED
     ImageData generateBMPImage(const QString &bmpFilePath);
+#endif
 
     ImageData readImageData(const QFileInfo &imageDataFileInfo);
     void writeImageData(const QFileInfo &imageDataFileInfo, const ImageData &data);
@@ -253,7 +255,9 @@ private:
     MapImageRenderWorker *mImageRenderWorker;
     MapImage *mExpectMapImage;
     QList<MapInfo*> mExpectSubMaps;
+#ifdef WORLDED
     QList<MapInfo*> mReferencedMaps;
+#endif
     MapComposite *mRenderMapComposite;
 
     friend class MapImageManagerDeferral;

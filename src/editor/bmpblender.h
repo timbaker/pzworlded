@@ -129,6 +129,7 @@ private:
 
     Map *mMap;
     QMap<QString,BuildingEditor::FloorTileGrid*> mTileNameGrids;
+    BuildingEditor::FloorTileGrid *mFakeTileGrid;
     QMap<QString,TileLayer*> mTileLayers;
 
     QStringList mTilesetNames;

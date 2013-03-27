@@ -264,6 +264,11 @@ public:
     Tiled::Internal::BmpBlender *bmpBlender() const
     { return mBmpBlender; }
 
+    void setShowMapTiles(bool show)
+    { mShowMapTiles = show; }
+    bool showMapTiles() const
+    { return mShowMapTiles; }
+
 #ifdef BUILDINGED
     void setBlendOverMap(MapComposite *mapComposite)
     { mBlendOverMap = mapComposite; }
@@ -315,6 +320,8 @@ private:
     bool mSavedGroupVisible;
     bool mSavedVisible;
     bool mHiddenDuringDrag;
+    bool mShowMapTiles;
+    bool mSavedShowMapTiles;
 
     Tiled::Internal::BmpBlender *mBmpBlender;
 #if 1 // ROAD_CRUD

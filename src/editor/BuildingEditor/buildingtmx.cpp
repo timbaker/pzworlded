@@ -87,7 +87,7 @@ QStringList BuildingTMX::tileLayerNamesForLevel(int level)
 
 bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
 {
-#ifdef BUILDINGED
+#ifdef WORLDED
     Q_UNUSED(building)
     Q_UNUSED(fileName)
     return false;
@@ -169,14 +169,14 @@ bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
 #endif
     }
 
-    MapWriter writer;
+    TmxMapWriter writer;
     bool ok = writer.write(map, fileName);
     if (!ok)
         mError = writer.errorString();
     TilesetManager::instance()->removeReferences(map->tilesets());
     delete map;
     return ok;
-#endif
+#endif // WORLDED
 }
 
 QString BuildingTMX::txtName()
@@ -204,7 +204,7 @@ bool BuildingTMX::readTxt()
         return false;
     }
 
-#if 0
+#ifndef WORLDED
     if (!upgradeTxt())
         return false;
 
@@ -271,8 +271,9 @@ bool BuildingTMX::readTxt()
 
 bool BuildingTMX::writeTxt()
 {
+#ifdef WORLDED
     return false;
-
+#endif
     SimpleFile simpleFile;
 
     SimpleFileBlock layersBlock;

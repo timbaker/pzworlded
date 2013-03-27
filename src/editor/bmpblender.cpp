@@ -37,13 +37,15 @@ using namespace Tiled::Internal;
 
 BmpBlender::BmpBlender(QObject *parent) :
     QObject(parent),
-    mMap(0)
+    mMap(0),
+    mFakeTileGrid(0)
 {
 }
 
 BmpBlender::BmpBlender(Map *map, QObject *parent) :
     QObject(parent),
     mMap(map),
+    mFakeTileGrid(0),
     mRules(map->bmpSettings()->rules()),
     mBlendList(map->bmpSettings()->blends())
 {
@@ -55,6 +57,7 @@ BmpBlender::~BmpBlender()
 //    qDeleteAll(mRules);
 //    qDeleteAll(mBlendList);
     qDeleteAll(mTileNameGrids);
+    delete mFakeTileGrid;
     qDeleteAll(mTileLayers);
 }
 
@@ -69,6 +72,7 @@ void BmpBlender::recreate()
 {
     qDeleteAll(mTileNameGrids);
     mTileNameGrids.clear();
+    delete mFakeTileGrid;
 
     qDeleteAll(mTileLayers);
     mTileLayers.clear();
@@ -178,6 +182,8 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
                                                             mMap->height());
             }
         }
+        mFakeTileGrid = new BuildingEditor::FloorTileGrid(mMap->width(),
+                                                          mMap->height());
     }
 
     const QRgb black = qRgb(0, 0, 0);
@@ -186,7 +192,7 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
     // one of the Rules.txt tiles, pretend that that pixel exists in the image.
     x1 -= 1, x2 += 1, y1 -= 1, y2 += 1;
     int index = mMap->indexOfLayer(QLatin1String("0_Floor"), Layer::TileLayerType);
-    TileLayer *tl = (index == -1) ? 0 : mMap->layerAt(index)->asTileLayer();
+    TileLayer *floorLayer = (index == -1) ? 0 : mMap->layerAt(index)->asTileLayer();
     QList<BmpRule*> floor0Rules;
     foreach (BmpRule *rule, mRules) {
         if (rule->targetLayer == QLatin1String("0_Floor") &&
@@ -203,23 +209,10 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
         for (int x = x1; x <= x2; x++) {
             foreach (QString layerName, mRuleLayers)
                 mTileNameGrids[layerName]->replace(x, y, QString());
+            mFakeTileGrid->replace(x, y, QString());
 
             QRgb col = mMap->rbmpMain().pixel(x, y);
             QRgb col2 = mMap->rbmpVeg().pixel(x, y);
-
-            // Hack - If a pixel is black, and the user-drawn map tile in 0_Floor is
-            // one of the Rules.txt tiles, pretend that that pixel exists in the image.
-            if (tl && col == black && adjacentToNonBlack(mMap->rbmpMain().rimage(),
-                                                         mMap->rbmpVeg().rimage(),
-                                                         x, y)) {
-                if (Tile *tile = tl->cellAt(x, y).tile) {
-                    QString tileName = BuildingEditor::BuildingTilesMgr::nameForTile(tile);
-                    foreach (BmpRule *rule, floor0Rules) {
-                        if (rule->tileChoices.contains(tileName))
-                            col = rule->color;
-                    }
-                }
-            }
 
             if (mRuleByColor.contains(col)) {
                 QList<BmpRule*> rules = mRuleByColor[col];
@@ -231,6 +224,23 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
                         continue;
                     QString tileName = rule->tileChoices[mMap->bmp(0).rand(x, y) % rule->tileChoices.count()];
                     mTileNameGrids[rule->targetLayer]->replace(x, y, tileName);
+                }
+            }
+
+            // Hack - If a pixel is black, and the user-drawn map tile in 0_Floor is
+            // one of the Rules.txt tiles, pretend that that pixel exists in the image.
+            if (floorLayer && col == black && adjacentToNonBlack(mMap->rbmpMain().rimage(),
+                                                                 mMap->rbmpVeg().rimage(),
+                                                                 x, y)) {
+                if (Tile *tile = floorLayer->cellAt(x, y).tile) {
+                    QString tileName = BuildingEditor::BuildingTilesMgr::nameForTile(tile);
+                    foreach (BmpRule *rule, floor0Rules) {
+                        if (rule->tileChoices.contains(tileName)) {
+                            tileName = rule->tileChoices[mMap->bmp(0).rand(x, y) % rule->tileChoices.count()];
+                            mFakeTileGrid->replace(x, y, tileName);
+                            col = rule->color;
+                        }
+                    }
                 }
             }
 
@@ -266,6 +276,8 @@ void BmpBlender::blend(int x1, int y1, int x2, int y2)
     for (int y = y1; y <= y2; y++) {
         for (int x = x1; x <= x2; x++) {
             QString tileName = grid->at(x, y);
+            if (tileName.isEmpty())
+                tileName = mFakeTileGrid->at(x, y);
             foreach (QString layerName, mBlendLayers) {
                 BmpBlend *blend = getBlendRule(x, y, tileName, layerName);
                 mTileNameGrids[layerName]->replace(x, y, blend ? blend->blendTile : QString());
@@ -320,7 +332,10 @@ QString BmpBlender::getNeighbouringTile(int x, int y)
         return QString();
     BuildingEditor::FloorTileGrid *grid
             = mTileNameGrids[QLatin1String("0_Floor")];
-    return grid->at(x, y);
+    QString tileName = grid->at(x, y);
+    if (tileName.isEmpty())
+        tileName = mFakeTileGrid->at(x, y);
+    return tileName;
 }
 
 BmpBlend *BmpBlender::getBlendRule(int x, int y, const QString &tileName,

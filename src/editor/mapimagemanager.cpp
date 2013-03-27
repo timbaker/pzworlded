@@ -17,7 +17,9 @@
 
 #include "mapimagemanager.h"
 
+#ifdef WORLDED
 #include "bmptotmx.h"
+#endif // WORLDED
 #include "imagelayer.h"
 #include "isometricrenderer.h"
 #include "mainwindow.h"

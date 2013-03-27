@@ -237,6 +237,9 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             }
 #endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
+            const Cell emptyCell;
+            if (!mOwner->parent() && !mOwner->showMapTiles())
+                cell = &emptyCell;
             if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty())
                 cell = &tlBmpBlend->cellAt(subPos);
 #ifdef BUILDINGED
@@ -747,6 +750,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mBlendOverMap(0)
 #endif
     , mBmpBlender(new Tiled::Internal::BmpBlender(mMap, this))
+    , mShowMapTiles(true)
 {
 #ifdef WORLDED
     MapManager::instance()->addReferenceToMap(mMapInfo);
@@ -1113,6 +1117,9 @@ void MapComposite::saveVisibility()
     mSavedVisible = mVisible;
     mVisible = true; // hack
 
+    mSavedShowMapTiles = mShowMapTiles;
+    mShowMapTiles = true;
+
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->saveVisibility();
 
@@ -1126,6 +1133,7 @@ void MapComposite::restoreVisibility()
 {
     mGroupVisible = mSavedGroupVisible;
     mVisible = mSavedVisible;
+    mShowMapTiles = mSavedShowMapTiles;
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->restoreVisibility();
@@ -1406,6 +1414,13 @@ void MapComposite::recreate()
     }
 
     mBmpBlender->setMap(mMap);
+
+#ifndef WORLDED
+    /////
+
+    if (mParent)
+        mParent->moveSubMap(this, origin());
+#endif
 }
 
 MapComposite *MapComposite::root()
