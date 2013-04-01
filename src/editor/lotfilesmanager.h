@@ -102,6 +102,7 @@ public:
     {
         qDeleteAll(Entries);
         Entries = other.Entries;
+        roomID = other.roomID;
         return *this;
     }
 
