@@ -532,8 +532,13 @@ FurnitureTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTiles *ftiles)
         xml.raiseError(tr("invalid furniture tile orientation '%1'").arg(orientString));
         return 0;
     }
+    QString grimeString = atts.value(QLatin1String("grime")).toString();
+    bool grime = true;
+    if (grimeString.length() && !booleanFromString(grimeString, grime))
+        return 0;
 
     FurnitureTile *ftile = new FurnitureTile(ftiles, orient);
+    ftile->setAllowGrime(grime);
 
     if (mVersion == VERSION1) {
         // v1 didn't have FurnitureTiles::mCorners, it had either W/N/E/S

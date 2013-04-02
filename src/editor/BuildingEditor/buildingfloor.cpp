@@ -1296,6 +1296,7 @@ void BuildingFloor::LayoutToSquares()
                     s.mTiles[Square::SectionWall] = ftile->tile(j, i);
                     s.mEntries[Square::SectionWall] = 0;
                     s.mEntryEnum[Square::SectionWall] = 0;
+                    s.mAllowGrime = ftile->allowGrime();
                     switch (fo->furnitureTile()->orient()) {
                     case FurnitureTile::FurnitureW:
                     case FurnitureTile::FurnitureE:
@@ -1352,15 +1353,21 @@ void BuildingFloor::LayoutToSquares()
         }
     }
 
-    for (int x = 0; x < width(); x++) {
-        for (int y = 0; y < height(); y++) {
+    for (int x = 0; x < w; x++) {
+        for (int y = 0; y < h; y++) {
             Square &sq = squares[x][y];
-            Room *room = mRoomAtPos[x][y];
-            // Floor Grime
-            if (sq.mEntries[Square::SectionWall]
+            if (!sq.mAllowGrime)
+                continue;
+            Room *room = GetRoomAt(x, y);
+
+            // Floor Grime inside a room.
+            BuildingTileEntry *grimeTile = room ? room->tile(Room::GrimeFloor) : 0;
+            if (grimeTile && grimeTile->isNone())
+                grimeTile = 0;
+            if (grimeTile
+                    && sq.mEntries[Square::SectionWall]
                     && !sq.mEntries[Square::SectionWall]->isNone()
-                    && !sq.mExterior
-                    && room && room->tile(Room::GrimeFloor)) {
+                    && !sq.mExterior) {
                 int e1 = -1, e2 = -1;
 
                 // Handle 2 different wall tiles due to WallObjects.
@@ -1382,38 +1389,43 @@ void BuildingFloor::LayoutToSquares()
                 case BTC_Walls::SouthEast: e1 = BTC_GrimeFloor::NorthWest; break;
                 }
                 if (e1 >= 0) {
-                    sq.mEntries[Square::SectionFloorGrime] = room->tile(Room::GrimeFloor);
+                    sq.mEntries[Square::SectionFloorGrime] = grimeTile;
                     sq.mEntryEnum[Square::SectionFloorGrime] = e1;
                 }
                 if (e2 >= 0) {
-                    sq.mEntries[Square::SectionFloorGrime2] = room->tile(Room::GrimeFloor);
+                    sq.mEntries[Square::SectionFloorGrime2] = grimeTile;
                     sq.mEntryEnum[Square::SectionFloorGrime2] = e2;
                 }
             }
-            // Floor Grime (on furniture in Walls layer)
-            if (sq.mTiles[Square::SectionWall]
+
+            // Floor Grime (when furniture in Walls layer) inside a room.
+            if (grimeTile
+                    && sq.mTiles[Square::SectionWall]
                     && !sq.mTiles[Square::SectionWall]->isNone()
-                    && !sq.mExterior
-                    && room && room->tile(Room::GrimeFloor)) {
+                    && !sq.mExterior) {
                 int e1 = -1, e2 = -1;
                 switch (sq.mWallOrientation) {
                 case Square::WallOrientW: e1 = BTC_GrimeFloor::West; break;
                 case Square::WallOrientN: e2 = BTC_GrimeFloor::North; break;
                 }
                 if (e1 >= 0) {
-                    sq.mEntries[Square::SectionFloorGrime] = room->tile(Room::GrimeFloor);
+                    sq.mEntries[Square::SectionFloorGrime] = grimeTile;
                     sq.mEntryEnum[Square::SectionFloorGrime] = e1;
                 }
                 if (e2 >= 0) {
-                    sq.mEntries[Square::SectionFloorGrime2] = room->tile(Room::GrimeFloor);
+                    sq.mEntries[Square::SectionFloorGrime2] = grimeTile;
                     sq.mEntryEnum[Square::SectionFloorGrime2] = e2;
                 }
             }
-            // Wall Grime
-            if (sq.mEntries[Square::SectionWall]
+
+            // Wall Grime inside a room.
+            grimeTile = room ? room->tile(Room::GrimeWall) : 0;
+            if (grimeTile && grimeTile->isNone())
+                grimeTile = 0;
+            if (grimeTile
+                    && sq.mEntries[Square::SectionWall]
                     && !sq.mEntries[Square::SectionWall]->isNone()
-                    && !sq.mExterior
-                    && room && room->tile(Room::GrimeWall)) {
+                    && !sq.mExterior) {
                 int e = -1;
 
                 // Handle 2 different wall tiles due to WallObjects.
@@ -1432,22 +1444,72 @@ void BuildingFloor::LayoutToSquares()
                 case BTC_Walls::SouthEast: e = BTC_GrimeWall::SouthEast; break;
                 }
                 if (e >= 0) {
-                    sq.mEntries[Square::SectionWallGrime] = room->tile(Room::GrimeWall);
+                    sq.mEntries[Square::SectionWallGrime] = grimeTile;
                     sq.mEntryEnum[Square::SectionWallGrime] = e;
                 }
             }
             // Wall Grime (on furniture in Walls layer)
-            if (sq.mTiles[Square::SectionWall]
+            if (grimeTile
+                    && sq.mTiles[Square::SectionWall]
                     && !sq.mTiles[Square::SectionWall]->isNone()
-                    && !sq.mExterior
-                    && room && room->tile(Room::GrimeFloor)) {
+                    && !sq.mExterior) {
                 int e = -1;
                 switch (sq.mWallOrientation) {
                 case Square::WallOrientW: e = BTC_GrimeWall::West; break;
                 case Square::WallOrientN: e = BTC_GrimeWall::North; break;
                 }
                 if (e >= 0) {
-                    sq.mEntries[Square::SectionWallGrime] = room->tile(Room::GrimeWall);
+                    sq.mEntries[Square::SectionWallGrime] = grimeTile;
+                    sq.mEntryEnum[Square::SectionWallGrime] = e;
+                }
+            }
+
+            // Place exterior wall grime on level 0 only.
+            if (level() > 0)
+                continue;
+
+            // Wall Grime on building exterior.
+            grimeTile = building()->tile(Building::GrimeWall);
+            if (grimeTile && grimeTile->isNone())
+                grimeTile = 0;
+            if (grimeTile
+                    && sq.mEntries[Square::SectionWall]
+                    && !sq.mEntries[Square::SectionWall]->isNone()
+                    && sq.mExterior) {
+                int e = -1;
+
+                // Handle 2 different wall tiles due to WallObjects.
+                int wallEnum = sq.mEntryEnum[Square::SectionWall];
+                if (sq.mWallOrientation == Square::WallOrientNW)
+                    wallEnum = BTC_Walls::NorthWest;
+
+                switch (wallEnum) {
+                case BTC_Walls::West: e = BTC_GrimeWall::West; break;
+                case BTC_Walls::WestDoor: e = BTC_GrimeWall::WestDoor; break;
+                case BTC_Walls::WestWindow: e = BTC_GrimeWall::WestWindow; break;
+                case BTC_Walls::North: e = BTC_GrimeWall::North; break;
+                case BTC_Walls::NorthDoor: e = BTC_GrimeWall::NorthDoor; break;
+                case BTC_Walls::NorthWindow: e = BTC_GrimeWall::NorthWindow; break;
+                case BTC_Walls::NorthWest: e = BTC_GrimeWall::NorthWest; break;
+                case BTC_Walls::SouthEast: e = BTC_GrimeWall::SouthEast; break;
+                }
+                if (e >= 0) {
+                    sq.mEntries[Square::SectionWallGrime] = grimeTile;
+                    sq.mEntryEnum[Square::SectionWallGrime] = e;
+                }
+            }
+            // Wall Grime (on furniture in Walls layer) on building exterior.
+            if (grimeTile
+                    && sq.mTiles[Square::SectionWall]
+                    && !sq.mTiles[Square::SectionWall]->isNone()
+                    && sq.mExterior) {
+                int e = -1;
+                switch (sq.mWallOrientation) {
+                case Square::WallOrientW: e = BTC_GrimeWall::West; break;
+                case Square::WallOrientN: e = BTC_GrimeWall::North; break;
+                }
+                if (e >= 0) {
+                    sq.mEntries[Square::SectionWallGrime] = grimeTile;
                     sq.mEntryEnum[Square::SectionWallGrime] = e;
                 }
             }
@@ -1745,7 +1807,8 @@ BuildingFloor::Square::Square() :
     mEntries(MaxSection, 0),
     mEntryEnum(MaxSection, 0),
     mExterior(false),
-    mTiles(MaxSection, 0)
+    mTiles(MaxSection, 0),
+    mAllowGrime(true)
 {
     mWallN.entry = mWallW.entry = 0;
 }

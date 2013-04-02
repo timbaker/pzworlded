@@ -105,6 +105,7 @@ public:
         RoofCap,
         RoofSlope,
         RoofTop,
+        GrimeWall,
         TileCount
     };
 
@@ -157,6 +158,9 @@ public:
 
     static QString enumToString(int n);
 
+    static QStringList enumTileNames() { return mTileNames; }
+    static QString enumToTileName(int n);
+
 private:
     static void initNames();
 
@@ -164,6 +168,7 @@ private:
     QString Name;
     QVector<BuildingTileEntry*> mTiles;
     static QStringList mEnumNames;
+    static QStringList mTileNames;
     QList<Room*> RoomList;
     QList<BuildingTileEntry*> mUsedTiles;
     QList<FurnitureTiles*> mUsedFurniture;

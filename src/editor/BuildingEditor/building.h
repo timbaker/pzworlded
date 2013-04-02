@@ -26,6 +26,7 @@
 namespace BuildingEditor {
 
 class BuildingFloor;
+class BuildingObject;
 class BuildingTemplate;
 class BuildingTileEntry;
 class FurnitureTiles;
@@ -44,6 +45,7 @@ public:
         RoofCap,
         RoofSlope,
         RoofTop,
+        GrimeWall,
         TileCount
     };
 
@@ -67,6 +69,8 @@ public:
     void insertFloor(int index, BuildingFloor *floor);
     BuildingFloor *removeFloor(int index);
 
+    QList<BuildingObject*> objects() const;
+
     const QList<Room*> &rooms() const
     { return mRooms; }
 
@@ -88,7 +92,7 @@ public:
     const QVector<BuildingTileEntry*> &tiles() const
     { return mTiles; }
 
-    BuildingTileEntry *tile(int n)
+    BuildingTileEntry *tile(int n) const
     { return mTiles[n]; }
 
     void setUsedTiles(const QList<BuildingTileEntry*> &tiles)

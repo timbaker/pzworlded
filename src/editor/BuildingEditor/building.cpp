@@ -66,6 +66,14 @@ BuildingFloor *Building::removeFloor(int index)
     return floor;
 }
 
+QList<BuildingObject *> Building::objects() const
+{
+    QList<BuildingObject *> ret;
+    foreach (BuildingFloor *floor, mFloors)
+        ret += floor->objects();
+    return ret;
+}
+
 void Building::insertRoom(int index, Room *room)
 {
     mRooms.insert(index, room);

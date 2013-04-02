@@ -107,7 +107,15 @@ FurnitureTiles *FurnitureGroups::furnitureTilesFromSFB(SimpleFileBlock &furnitur
         if (entryBlock.name == QLatin1String("entry")) {
             FurnitureTile::FurnitureOrientation orient
                     = orientFromString(entryBlock.value(QLatin1String("orient")));
+            QString grimeString = entryBlock.value(QLatin1String("grime"));
+            bool grime = true;
+            if (grimeString.length() && !booleanFromString(grimeString, grime)) {
+                error = mError;
+                delete tiles;
+                return 0;
+            }
             FurnitureTile *tile = new FurnitureTile(tiles, orient);
+            tile->setAllowGrime(grime);
             foreach (SimpleFileKeyValue kv, entryBlock.values) {
                 if (!kv.name.contains(QLatin1Char(',')))
                     continue;
@@ -153,7 +161,7 @@ bool FurnitureGroups::readTxt()
         return false;
     }
 
-#if 0
+#if !defined(WORLDED)
     if (!upgradeTxt())
         return false;
 
@@ -301,6 +309,8 @@ SimpleFileBlock FurnitureGroups::furnitureTilesToSFB(FurnitureTiles *ftiles)
         entryBlock.name = QLatin1String("entry");
         entryBlock.values += SimpleFileKeyValue(QLatin1String("orient"),
                                                 ftile->orientToString());
+        if (!ftile->allowGrime())
+            entryBlock.addValue("grime", QLatin1String("false"));
         for (int x = 0; x < ftile->width(); x++) {
             for (int y = 0; y < ftile->height(); y++) {
                 if (BuildingTile *btile = ftile->tile(x, y)) {
@@ -317,8 +327,9 @@ SimpleFileBlock FurnitureGroups::furnitureTilesToSFB(FurnitureTiles *ftiles)
 
 bool FurnitureGroups::writeTxt()
 {
+#ifdef WORLDED
     return false;
-
+#endif
     SimpleFile simpleFile;
     foreach (FurnitureGroup *group, groups()) {
         SimpleFileBlock groupBlock;
@@ -389,6 +400,11 @@ void FurnitureGroups::layerChanged(FurnitureTiles *ftiles)
     emit furnitureLayerChanged(ftiles);
 }
 
+void FurnitureGroups::grimeChanged(FurnitureTile *ftile)
+{
+    emit furnitureTileChanged(ftile);
+}
+
 FurnitureTile::FurnitureOrientation FurnitureGroups::orientFromString(const QString &s)
 {
     if (s == QLatin1String("W")) return FurnitureTile::FurnitureW;
@@ -400,6 +416,20 @@ FurnitureTile::FurnitureOrientation FurnitureGroups::orientFromString(const QStr
     if (s == QLatin1String("NE")) return FurnitureTile::FurnitureNE;
     if (s == QLatin1String("SE")) return FurnitureTile::FurnitureSE;
     return FurnitureTile::FurnitureUnknown;
+}
+
+bool FurnitureGroups::booleanFromString(const QString &s, bool &result)
+{
+    if (s == QLatin1String("true")) {
+        result = true;
+        return true;
+    }
+    if (s == QLatin1String("false")) {
+        result = false;
+        return true;
+    }
+    mError = tr("Expected boolean but got '%1'").arg(s);
+    return false;
 }
 
 bool FurnitureGroups::upgradeTxt()
@@ -543,7 +573,8 @@ FurnitureTile::FurnitureTile(FurnitureTiles *ftiles, FurnitureOrientation orient
     mOwner(ftiles),
     mOrient(orient),
     mSize(1, 1),
-    mTiles(1, 0)
+    mTiles(1, 0),
+    mGrime(true)
 {
 }
 
@@ -562,7 +593,8 @@ bool FurnitureTile::equals(FurnitureTile *other) const
 {
     return other->mTiles == mTiles &&
             other->mOrient == mOrient &&
-            other->mSize == mSize;
+            other->mSize == mSize &&
+            other->mGrime == mGrime;
 }
 
 void FurnitureTile::setTile(int x, int y, BuildingTile *btile)

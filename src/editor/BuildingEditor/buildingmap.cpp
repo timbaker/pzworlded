@@ -1012,7 +1012,8 @@ void ShadowBuilding::floorEdited(BuildingFloor *floor)
 {
     // BuildingDocument emits roomDefinitionChanged when the exterior wall changes.
     // BuildingTileModeScene::roomDefinitionChanged() calls this method.
-    mShadowBuilding->setExteriorWall(mBuilding->exteriorWall());
+    for (int e = 0; e < Building::TileCount; e++)
+        mShadowBuilding->setTile(e, mBuilding->tile(e));
 
     mShadowBuilding->floor(floor->level())->setGrid(floor->grid());
 }

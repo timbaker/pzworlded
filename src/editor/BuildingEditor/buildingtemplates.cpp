@@ -670,6 +670,7 @@ bool BuildingTemplates::mergeTxt()
 /////
 
 QStringList BuildingTemplate::mEnumNames;
+QStringList BuildingTemplate::mTileNames;
 
 BuildingTemplate::BuildingTemplate() :
     mTiles(TileCount)
@@ -715,6 +716,7 @@ int BuildingTemplate::categoryEnum(int n)
     case RoofCap: return BuildingTilesMgr::RoofCaps;
     case RoofSlope: return BuildingTilesMgr::RoofSlopes;
     case RoofTop: return BuildingTilesMgr::RoofTops;
+    case GrimeWall: return BuildingTilesMgr::GrimeWall;
     default:
         qFatal("Invalid enum passed to BuildingTemplate::categoryEnum");
         break;
@@ -726,6 +728,12 @@ QString BuildingTemplate::enumToString(int n)
 {
     initNames();
     return mEnumNames[n];
+}
+
+QString BuildingTemplate::enumToTileName(int n)
+{
+    initNames();
+    return mTileNames[n];
 }
 
 void BuildingTemplate::initNames()
@@ -742,7 +750,22 @@ void BuildingTemplate::initNames()
     mEnumNames += QLatin1String("RoofCap");
     mEnumNames += QLatin1String("RoofSlope");
     mEnumNames += QLatin1String("RoofTop");
+    mEnumNames += QLatin1String("GrimeWall");
     Q_ASSERT(mEnumNames.size() == TileCount);
+
+    // These are displayed in the UI (templates dialog for example).
+    mTileNames.reserve(TileCount);
+    mTileNames += QCoreApplication::tr("Exterior wall");
+    mTileNames += QCoreApplication::tr("Door");
+    mTileNames += QCoreApplication::tr("Door frame");
+    mTileNames += QCoreApplication::tr("Window");
+    mTileNames += QCoreApplication::tr("Curtains");
+    mTileNames += QCoreApplication::tr("Stairs");
+    mTileNames += QCoreApplication::tr("Roof Cap");
+    mTileNames += QCoreApplication::tr("Roof Slope");
+    mTileNames += QCoreApplication::tr("Roof Top");
+    mTileNames += QCoreApplication::tr("Grime - Walls");
+    Q_ASSERT(mTileNames.size() == TileCount);
 }
 
 /////

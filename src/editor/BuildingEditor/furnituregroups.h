@@ -98,6 +98,11 @@ public:
 
     FloorTileGrid *toFloorTileGrid(QRegion &rgn);
 
+    void setAllowGrime(bool allow)
+    { mGrime = allow; }
+    bool allowGrime() const
+    { return mGrime; }
+
 private:
     void resize(int width, int height);
     bool columnEmpty(int x);
@@ -108,6 +113,7 @@ private:
     FurnitureOrientation mOrient;
     QSize mSize;
     QVector<BuildingTile*> mTiles;
+    bool mGrime;
 };
 
 class FurnitureTiles
@@ -237,8 +243,10 @@ public:
 
     void tileChanged(FurnitureTile *ftile);
     void layerChanged(FurnitureTiles *ftiles);
+    void grimeChanged(FurnitureTile *ftile);
 
     static FurnitureTile::FurnitureOrientation orientFromString(const QString &s);
+    bool booleanFromString(const QString &s, bool &result);
 
     FurnitureTiles *furnitureTilesFromSFB(SimpleFileBlock &furnitureBlock, QString &error);
     SimpleFileBlock furnitureTilesToSFB(FurnitureTiles *ftiles);

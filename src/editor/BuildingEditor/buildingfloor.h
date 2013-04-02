@@ -145,6 +145,7 @@ public:
         WallOrientation mWallOrientation;
         bool mExterior;
         QVector<BuildingTile*> mTiles;
+        bool mAllowGrime;
 
         struct {
             BuildingTileEntry *entry;

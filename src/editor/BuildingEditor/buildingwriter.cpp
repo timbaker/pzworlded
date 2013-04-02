@@ -182,6 +182,8 @@ public:
             return;
         w.writeStartElement(QLatin1String("entry"));
         w.writeAttribute(QLatin1String("orient"), ftile->orientToString());
+        if (!ftile->allowGrime())
+            w.writeAttribute(QLatin1String("grime"), QLatin1String("false"));
         for (int x = 0; x < ftile->width(); x++)
             for (int y = 0; y < ftile->height(); y++)
                 writeFurnitureTile(w, x, y, ftile->tile(x, y));
