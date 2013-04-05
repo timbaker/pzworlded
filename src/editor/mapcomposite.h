@@ -123,6 +123,7 @@ private:
     QVector<bool> mVisibleLayers;
     QVector<bool> mEmptyLayers;
     QVector<qreal> mLayerOpacity;
+    int mMaxFloorLayer;
     QMap<QString,QVector<Tiled::Layer*> > mLayersByName;
     QVector<bool> mSavedVisibleLayers;
     QVector<qreal> mSavedOpacity;
@@ -331,7 +332,7 @@ private:
 
 public:
     MapComposite *root();
-    bool mFirstCellIs0Floor;
+    int mKeepFloorLayerCount;
 };
 
 #endif // MAPCOMPOSITE_H
