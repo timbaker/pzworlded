@@ -115,6 +115,7 @@ static const char *gLayerNames[] = {
     "WallOverlay",
     "WallOverlay2",
     "WallGrime",
+    "WallGrime2",
     "WallFurniture",
     "WallFurniture2",
     "Frames",
