@@ -1989,6 +1989,11 @@ void CellScene::tilesetChanged(Tileset *tileset)
 
 bool CellScene::mapAboutToChange(MapInfo *mapInfo)
 {
+    // Saw this was 0 when a map was loaded, probably during event processing
+    // inside loadMap().
+    if (!mMapComposite)
+        return false;
+
     if (mMapComposite->mapAboutToChange(mapInfo)) {
     }
 
@@ -2011,6 +2016,11 @@ bool CellScene::mapAboutToChange(MapInfo *mapInfo)
 
 bool CellScene::mapChanged(MapInfo *mapInfo)
 {
+    // Saw this was 0 when a map was loaded, probably during event processing
+    // inside loadMap().
+    if (!mMapComposite)
+        return false;
+
     if (mMapComposite->mapChanged(mapInfo)) {
         if (mapInfo != mMapComposite->mapInfo())
             doLater(AllGroups | Bounds | Synch | Paint); // only a Lot map changed
