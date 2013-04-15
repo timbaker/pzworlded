@@ -118,6 +118,7 @@ private:
 #ifdef ZOMBOID
     void readBmpSettings();
     QRgb rgbFromString(const QString &s, bool &ok);
+    void readBmpAliases();
     void readBmpRules();
     void readBmpBlends();
     void readBmpImage();
@@ -971,8 +972,9 @@ void MapReaderPrivate::readBmpSettings()
     Q_ASSERT(xml.isStartElement() && xml.name() == "bmp-settings");
 
     const QXmlStreamAttributes atts = xml.attributes();
+#if 0
     int version = atts.value(QLatin1String("version")).toString().toInt();
-
+#endif
     while (xml.readNextStartElement()) {
         if (xml.name() == QLatin1String("rules-file")) {
             const QXmlStreamAttributes atts = xml.attributes();
@@ -990,6 +992,8 @@ void MapReaderPrivate::readBmpSettings()
                 mMap->rbmpSettings()->setBlendsFile(fileName);
             }
             xml.skipCurrentElement();
+        } else if (xml.name() == QLatin1String("aliases")) {
+            readBmpAliases();
         } else if (xml.name() == QLatin1String("rules")) {
             readBmpRules();
         } else if (xml.name() == QLatin1String("blends")) {
@@ -1013,6 +1017,28 @@ QRgb MapReaderPrivate::rgbFromString(const QString &s, bool &ok)
     b = parts[2].toUInt();
     ok = true;
     return qRgb(r, g, b);
+}
+
+void MapReaderPrivate::readBmpAliases()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == "aliases");
+
+    QList<BmpAlias*> aliases;
+
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("alias")) {
+            const QXmlStreamAttributes atts = xml.attributes();
+            QString name = atts.value(QLatin1String("name")).toString();
+            QStringList tiles = atts.value(QLatin1String("tiles")).toString()
+                    .split(QLatin1Char(' '), QString::SkipEmptyParts);
+            aliases += new BmpAlias(name, tiles);
+            xml.skipCurrentElement();
+        } else {
+            readUnknownElement();
+        }
+    }
+
+    mMap->rbmpSettings()->setAliases(aliases);
 }
 
 void MapReaderPrivate::readBmpRules()

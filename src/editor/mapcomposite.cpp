@@ -742,6 +742,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     : QObject()
     , mMapInfo(mapInfo)
     , mMap(mapInfo->map())
+    #ifdef BUILDINGED
+        , mBlendOverMap(0)
+    #endif
     , mParent(parent)
     , mPos(positionInParent)
     , mLevelOffset(levelOffset)
@@ -751,11 +754,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mVisible(true)
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
-#ifdef BUILDINGED
-    , mBlendOverMap(0)
-#endif
-    , mBmpBlender(new Tiled::Internal::BmpBlender(mMap, this))
     , mShowMapTiles(true)
+    , mBmpBlender(new Tiled::Internal::BmpBlender(mMap, this))
 {
 #ifdef WORLDED
     MapManager::instance()->addReferenceToMap(mMapInfo);

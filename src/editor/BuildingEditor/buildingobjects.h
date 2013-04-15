@@ -50,6 +50,7 @@ public:
     };
 
     BuildingObject(BuildingFloor *floor, int x, int y, Direction mDir);
+    virtual ~BuildingObject() {}
 
     void setFloor(BuildingFloor *floor)
     { mFloor = floor; }

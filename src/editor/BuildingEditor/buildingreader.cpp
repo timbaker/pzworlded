@@ -606,14 +606,14 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
             int e = category->enumFromString(enumName);
             if (e == BuildingTileCategory::Invalid) {
                 xml.raiseError(tr("Unknown %1 enum '%2'").arg(categoryName).arg(enumName));
-                return false;
+                return 0;
             }
             const QString tileName = atts.value(QLatin1String("tile")).toString();
             BuildingTile *btile = mFakeBuildingTilesMgr.get(tileName);
 
             QPoint offset;
             if (!readPoint(QLatin1String("offset"), offset))
-                return false;
+                return 0;
 
             entry->mTiles[e] = btile;
             entry->mOffsets[e] = offset;

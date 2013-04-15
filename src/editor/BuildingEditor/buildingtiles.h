@@ -41,6 +41,7 @@ public:
         mTilesetName(tilesetName),
         mIndex(index)
     {}
+    virtual ~BuildingTile() {}
 
     virtual bool isNone() const
     { return false; }
@@ -69,6 +70,7 @@ class BuildingTileEntry
 {
 public:
     BuildingTileEntry(BuildingTileCategory *category);
+    virtual ~BuildingTileEntry() {}
 
     BuildingTileCategory *category() const
     { return mCategory; }
@@ -135,6 +137,7 @@ public:
 
     BuildingTileCategory(const QString &name, const QString &label,
                          int displayIndex);
+    virtual ~BuildingTileCategory() {}
 
     QString name() const
     { return mName; }

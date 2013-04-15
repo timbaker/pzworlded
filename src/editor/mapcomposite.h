@@ -276,8 +276,6 @@ public:
 
     MapComposite *blendOverMap() const
     { return mBlendOverMap; }
-
-    MapComposite *mBlendOverMap;
 #endif // BUILDINGED
 #if 1 // ROAD_CRUD
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
@@ -304,6 +302,9 @@ private:
 private:
     MapInfo *mMapInfo;
     Tiled::Map *mMap;
+#ifdef BUILDINGED
+    MapComposite *mBlendOverMap;
+#endif
     QVector<MapComposite*> mSubMaps;
     QMap<int,CompositeLayerGroup*> mLayerGroups;
     QList<CompositeLayerGroup*> mSortedLayerGroups;

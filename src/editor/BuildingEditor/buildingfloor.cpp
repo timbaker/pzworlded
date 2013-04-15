@@ -23,7 +23,7 @@
 #include "buildingtiles.h"
 #include "furnituregroups.h"
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the MapRands class as so:
 // class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
 // Suddenly I'm getting a 'multiply-defined symbol' error.
@@ -519,6 +519,8 @@ void BuildingFloor::LayoutToSquares()
                     killN = true;
                     dy = 1;
                     break;
+                default:
+                    break;
                 }
                 for (int i = 0; i < ftile->size().height(); i++) {
                     for (int j = 0; j < ftile->size().width(); j++) {
@@ -696,6 +698,9 @@ void BuildingFloor::LayoutToSquares()
                                          Square::SectionRoof,
                                          Square::SectionRoof2);
                         break;
+                    default:
+                        Q_ASSERT(false);
+                        break;
                     }
                 }
             }
@@ -729,6 +734,8 @@ void BuildingFloor::LayoutToSquares()
                 ReplaceRoofSlope(ro, se.adjusted(0,1,0,-1), squares, RoofObject::SlopeS2);
                 ReplaceRoofSlope(ro, se.adjusted(0,0,0,-2), squares, RoofObject::SlopeS3);
                 break;
+            default:
+                break;
             }
 
             QRect ee = ro->eastEdge();
@@ -756,6 +763,8 @@ void BuildingFloor::LayoutToSquares()
                 ReplaceRoofSlope(ro, ee.adjusted(2,0,0,0), squares, RoofObject::SlopeE1);
                 ReplaceRoofSlope(ro, ee.adjusted(1,0,-1,0), squares, RoofObject::SlopeE2);
                 ReplaceRoofSlope(ro, ee.adjusted(0,0,-2,0), squares, RoofObject::SlopeE3);
+                break;
+            default:
                 break;
             }
 
@@ -792,6 +801,8 @@ void BuildingFloor::LayoutToSquares()
                     ReplaceRoofCorner(ro, r.left()+2, r.top(), squares, RoofObject::SlopeS3);
                     ReplaceRoofCorner(ro, r.left()+2, r.top()+1, squares, RoofObject::SlopeS2);
                     break;
+                default:
+                    break;
                 }
                 break;
             case RoofObject::CornerOuterSW:
@@ -814,6 +825,8 @@ void BuildingFloor::LayoutToSquares()
                     ReplaceRoofCorner(ro, r.left()+2, r.bottom(), squares, RoofObject::SlopeS1);
                     ReplaceRoofCorner(ro, r.left()+2, r.bottom()-1, squares, RoofObject::SlopeS2);
                     break;
+                default:
+                    break;
                 }
                 break;
             case RoofObject::CornerOuterNE:
@@ -835,6 +848,8 @@ void BuildingFloor::LayoutToSquares()
                     ReplaceRoofCorner(ro, r.left()+2, r.top()+1, squares, RoofObject::SlopeE1);
                     ReplaceRoofCorner(ro, r.left()+2, r.top()+2, squares, RoofObject::SlopeE1);
                     ReplaceRoofCorner(ro, r.left()+1, r.top()+2, squares, RoofObject::SlopeE2);
+                    break;
+                default:
                     break;
                 }
                 break;
@@ -869,7 +884,11 @@ void BuildingFloor::LayoutToSquares()
                     ReplaceRoofCorner(ro, r.left()+1, r.top()+2, squares, RoofObject::SlopeS1);
                     ReplaceRoofCorner(ro, r.left(), r.top()+1, squares, RoofObject::SlopeS2);
                     break;
+                default:
+                    break;
                 }
+                break;
+            default:
                 break;
             }
 
@@ -934,6 +953,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.bottom()-1, squares, RoofObject::CapRiseE2);
                         ReplaceRoofCap(ro, r.left(), r.bottom(), squares, RoofObject::CapRiseE1);
                         break;
+                    default:
+                        break;
                     }
                     break;
                 case RoofObject::SlopeN:
@@ -957,6 +978,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallE1);
                         ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapFallE2);
                         ReplaceRoofCap(ro, r.left(), r.top()+2, squares, RoofObject::CapFallE3);
+                        break;
+                    default:
                         break;
                     }
                     break;
@@ -982,7 +1005,11 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapRiseE2);
                         ReplaceRoofCap(ro, r.left(), r.top()+2, squares, RoofObject::CapRiseE1);
                         break;
+                    default:
+                        break;
                     }
+                    break;
+                default:
                     break;
                 }
             }
@@ -1025,6 +1052,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()+1, r.bottom()-1, squares, RoofObject::CapRiseE2);
                         ReplaceRoofCap(ro, r.right()+1, r.bottom(), squares, RoofObject::CapRiseE1);
                         break;
+                    default:
+                        break;
                     }
                     break;
                 case RoofObject::SlopeN:
@@ -1048,6 +1077,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapFallE1);
                         ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapFallE2);
                         ReplaceRoofCap(ro, r.right()+1, r.top()+2, squares, RoofObject::CapFallE3);
+                        break;
+                    default:
                         break;
                     }
                     break;
@@ -1073,7 +1104,11 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapRiseE2);
                         ReplaceRoofCap(ro, r.right()+1, r.top()+2, squares, RoofObject::CapRiseE1);
                         break;
+                    default:
+                        break;
                     }
+                    break;
+                default:
                     break;
                 }
             }
@@ -1116,6 +1151,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()-1, r.top(), squares, RoofObject::CapFallS2);
                         ReplaceRoofCap(ro, r.right(), r.top(), squares, RoofObject::CapFallS1);
                         break;
+                    default:
+                        break;
                     }
                     break;
                 case RoofObject::SlopeW:
@@ -1139,6 +1176,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseS1);
                         ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapRiseS2);
                         ReplaceRoofCap(ro, r.left()+2, r.top(), squares, RoofObject::CapRiseS3);
+                        break;
+                    default:
                         break;
                     }
                     break;
@@ -1164,7 +1203,11 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapFallS2);
                         ReplaceRoofCap(ro, r.left()+2, r.top(), squares, RoofObject::CapFallS1);
                         break;
+                    default:
+                        break;
                     }
+                    break;
+                default:
                     break;
                 }
             }
@@ -1207,6 +1250,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()-1, r.bottom()+1, squares, RoofObject::CapFallS2);
                         ReplaceRoofCap(ro, r.right(), r.bottom()+1, squares, RoofObject::CapFallS1);
                         break;
+                    default:
+                        break;
                     }
                     break;
                 case RoofObject::SlopeW:
@@ -1230,6 +1275,8 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapRiseS1);
                         ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapRiseS2);
                         ReplaceRoofCap(ro, r.left()+2, r.bottom()+1, squares, RoofObject::CapRiseS3);
+                        break;
+                    default:
                         break;
                     }
                     break;
@@ -1255,7 +1302,11 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapFallS2);
                         ReplaceRoofCap(ro, r.left()+2, r.bottom()+1, squares, RoofObject::CapFallS1);
                         break;
+                    default:
+                        break;
                     }
+                    break;
+                default:
                     break;
                 }
             }
@@ -1285,6 +1336,8 @@ void BuildingFloor::LayoutToSquares()
             s.mWallOrientation = Square::WallOrientSE;
             break;
 #endif
+        default:
+            break;
         }
         for (int i = 0; i < ftile->size().height(); i++) {
             for (int j = 0; j < ftile->size().width(); j++) {
@@ -1317,6 +1370,8 @@ void BuildingFloor::LayoutToSquares()
                             s.mWallOrientation = Square::WallOrientNW;
                         else
                             s.mWallOrientation = Square::WallOrientN;
+                        break;
+                    default:
                         break;
                     }
                 }
@@ -1773,7 +1828,8 @@ void BuildingFloor::Square::ReplaceDoor(BuildingTileEntry *tile, int offset)
         return;
     }
 
-    mEntryEnum[SectionWall] = getWallOffset();
+    if (mWallOrientation != WallOrientInvalid)
+        mEntryEnum[SectionWall] = getWallOffset();
 }
 
 void BuildingFloor::Square::ReplaceFrame(BuildingTileEntry *tile, int offset)
@@ -1821,7 +1877,8 @@ void BuildingFloor::Square::ReplaceWindow(BuildingTileEntry *tile, int offset)
         return;
     }
 
-    mEntryEnum[SectionWall] = getWallOffset();
+    if (mWallOrientation != WallOrientInvalid)
+        mEntryEnum[SectionWall] = getWallOffset();
 }
 
 void BuildingFloor::Square::ReplaceCurtains(Window *window, bool exterior)
@@ -2055,6 +2112,9 @@ int BuildingFloor::Square::getWallOffset()
         break;
     case WallOrientSE:
         offset = BTC_Walls::SouthEast;
+        break;
+    default:
+        Q_ASSERT(false);
         break;
     }
 

@@ -1904,7 +1904,7 @@ void CellScene::roadsChanged()
 {
     mMapComposite->generateRoadLayers(QPoint(cell()->x() * 300, cell()->y() * 300),
                                       world()->roads());
-    if (CompositeLayerGroup *lg = mMapComposite->tileLayersForLevel(0))
+    if (mMapComposite->tileLayersForLevel(0))
         if (mTileLayerGroupItems.contains(0))
             mTileLayerGroupItems[0]->update();
 }

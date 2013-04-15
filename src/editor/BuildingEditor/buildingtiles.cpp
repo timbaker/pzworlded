@@ -280,7 +280,7 @@ static BuildingTileEntry *readTileEntry(BuildingTileCategory *category,
             if (split.size() != 3) {
                 error = BuildingTilesMgr::instance()->tr("Expected 'offset = name x y', got '%1'").arg(kv.value);
                 delete entry;
-                return false;
+                return 0;
             }
             int e = category->enumFromString(split[0]);
             if (e == BuildingTileCategory::Invalid) {

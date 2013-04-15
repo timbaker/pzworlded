@@ -67,7 +67,7 @@ public:
         mChildren.insert(index, child);
     }
 
-    ~Item()
+    virtual ~Item()
     {
         qDeleteAll(mChildren);
     }
@@ -99,7 +99,6 @@ public:
     typedef CopyPasteDialog::MapTypeItem MapTypeItem;
     typedef CopyPasteDialog::ObjectGroupItem ObjectGroupItem;
     typedef CopyPasteDialog::ObjectItem ObjectItem;
-    typedef CopyPasteDialog::ObjectGroupItem ObjectGroupItem;
     typedef CopyPasteDialog::ObjectTypeItem ObjectTypeItem;
     typedef CopyPasteDialog::PropertyItem PropertyItem;
     typedef CopyPasteDialog::PropertyDefItem PropertyDefItem;
@@ -776,6 +775,8 @@ void CopyPasteDialog::worldSelectionChanged(int index)
     case ObjectGroups:
         showObjectGroups();
         break;
+    default:
+        break;
     }
 }
 
@@ -797,6 +798,8 @@ void CopyPasteDialog::worldCheckAll()
         for (int i = 0; i < view->topLevelItemCount(); i++)
             view->topLevelItem(i)->setCheckState(0, Qt::Checked);
         break;
+    default:
+        break;
     }
 }
 
@@ -810,6 +813,8 @@ void CopyPasteDialog::worldCheckNone()
     case ObjectGroups:
         for (int i = 0; i < view->topLevelItemCount(); i++)
             view->topLevelItem(i)->setCheckState(0, Qt::Unchecked);
+        break;
+    default:
         break;
     }
 }
@@ -975,6 +980,8 @@ void CopyPasteDialog::cellCategoryChanged(int index)
         break;
     case Map:
         showCellMap();
+        break;
+    default:
         break;
     }
 }

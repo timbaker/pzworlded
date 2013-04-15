@@ -54,9 +54,9 @@ class TILEDSHARED_EXPORT MapRenderer
 public:
 #ifdef ZOMBOID
     MapRenderer(const Map *map)
-        : mMap(map)
+        : mAbortDrawing(0)
+        , mMap(map)
         , mMaxLevel(0)
-        , mAbortDrawing(0)
     {}
 #else
     MapRenderer(const Map *map) : mMap(map) {}

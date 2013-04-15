@@ -633,8 +633,8 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
 
     // TODO: Verify that two tilesets sharing the same name are identical
     // between maps.
-    QMap<Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
-    QMap<Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
+    QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
+    QMap<const Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
     while (i != i_end) {
         QString name2 = nameOfTileset(i.key());
         if (name == name2) {
@@ -682,8 +682,8 @@ uint LotFilesManager::cellToGid(const Cell *cell)
 {
     Tileset *tileset = cell->tile->tileset();
 
-    QMap<Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
-    QMap<Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
+    QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
+    QMap<const Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
     while (i != i_end && i.key() != tileset)
         ++i;
     if (i == i_end) // tileset not found
