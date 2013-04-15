@@ -19,7 +19,7 @@
 #define SIMPLEFILE_H
 
 #include <QCoreApplication>
-#include <QString>
+#include <QStringList>
 #include <QTextStream>
 
 class SimpleFileKeyValue
@@ -37,8 +37,14 @@ public:
 
     }
 
+    QStringList values() const
+    {
+        return value.split(QRegExp(QLatin1String("[\\s]+")), QString::SkipEmptyParts);
+    }
+
     QString name;
     QString value;
+    int lineNumber;
 };
 
 class SimpleFileBlock
@@ -49,13 +55,19 @@ public:
     QString name;
     QList<SimpleFileKeyValue> values;
     QList<SimpleFileBlock> blocks;
+    int lineNumber;
 
     int findBlock(const QString &key) const;
+
+    bool hasValue(const char *key) const
+    { return hasValue(QLatin1String(key)); }
+    bool hasValue(const QString &key) const;
+
     int findValue(const QString &key) const;
 
-    SimpleFileKeyValue keyValue(const char *name)
-    { return keyValue(QLatin1String(name)); }
-    SimpleFileKeyValue keyValue(const QString &name);
+    bool keyValue(const char *name, SimpleFileKeyValue &kv)
+    { return keyValue(QLatin1String(name), kv); }
+    bool keyValue(const QString &name, SimpleFileKeyValue &kv);
 
     QString value(const char *key)
     { return value(QLatin1String(key)); }

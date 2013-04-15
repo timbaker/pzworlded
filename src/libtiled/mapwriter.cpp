@@ -604,6 +604,15 @@ void MapWriterPrivate::writeBmpSettings(QXmlStreamWriter &w,
     w.writeAttribute(QLatin1String("file"), fileName);
     w.writeEndElement(); // <blends-file>
 
+    w.writeStartElement(QLatin1String("aliases"));
+    foreach (BmpAlias *alias, settings->aliases()) {
+        w.writeStartElement(QLatin1String("alias"));
+        w.writeAttribute(QLatin1String("name"), alias->name);
+        w.writeAttribute(QLatin1String("tiles"), alias->tiles.join(QLatin1String(" ")));
+        w.writeEndElement();
+    }
+    w.writeEndElement();
+
     w.writeStartElement(QLatin1String("rules"));
     foreach (BmpRule *rule, settings->rules()) {
         w.writeStartElement(QLatin1String("rule"));

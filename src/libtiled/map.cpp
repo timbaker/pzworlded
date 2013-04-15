@@ -398,8 +398,23 @@ BmpSettings::BmpSettings()
 
 BmpSettings::~BmpSettings()
 {
+    qDeleteAll(mAliases);
     qDeleteAll(mRules);
     qDeleteAll(mBlends);
+}
+
+void BmpSettings::setAliases(const QList<BmpAlias *> &aliases)
+{
+    qDeleteAll(mAliases);
+    mAliases = aliases;
+}
+
+QList<BmpAlias *> BmpSettings::aliasesCopy() const
+{
+    QList<BmpAlias*> ret;
+    foreach (BmpAlias *alias, mAliases)
+        ret += new BmpAlias(alias);
+    return ret;
 }
 
 void BmpSettings::setRules(const QList<BmpRule*> &rules)
@@ -434,6 +449,7 @@ void BmpSettings::clone(const BmpSettings &other)
 {
     mRulesFileName = other.mRulesFileName;
     mBlendsFileName = other.mBlendsFileName;
+    mAliases = other.aliasesCopy();
     mRules = other.rulesCopy();
     mBlends = other.blendsCopy();
 }

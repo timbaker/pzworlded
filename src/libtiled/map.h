@@ -92,6 +92,22 @@ public:
     MapRands mRands;
 };
 
+class TILEDSHARED_EXPORT BmpAlias
+{
+public:
+    QString name;
+    QStringList tiles;
+
+    BmpAlias(const BmpAlias *other) :
+        name(other->name),
+        tiles(other->tiles)
+    {}
+    BmpAlias(const QString &name, const QStringList &tiles) :
+        name(name),
+        tiles(tiles)
+    {}
+};
+
 class TILEDSHARED_EXPORT BmpRule
 {
 public:
@@ -179,6 +195,11 @@ public:
     QString blendsFile() const
     { return mBlendsFileName; }
 
+    void setAliases(const QList<BmpAlias*> &aliases);
+    const QList<BmpAlias*> &aliases() const
+    { return mAliases; }
+    QList<BmpAlias*> aliasesCopy() const;
+
     void setRules(const QList<BmpRule*> &rules);
     const QList<BmpRule*> &rules() const
     { return mRules; }
@@ -194,6 +215,7 @@ public:
 private:
     QString mRulesFileName;
     QString mBlendsFileName;
+    QList<BmpAlias*> mAliases;
     QList<BmpRule*> mRules;
     QList<BmpBlend*> mBlends;
 };

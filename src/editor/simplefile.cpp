@@ -117,9 +117,17 @@ bool SimpleFile::write(const QString &filePath)
     return true;
 }
 
+static QString rtrim(QString str)
+{
+  while (str.size() > 0 && str.at(str.size() - 1).isSpace())
+    str.chop(1);
+  return str;
+}
+
 SimpleFileBlock SimpleFile::readBlock(QTextStream &ts, int &lineNumber, bool &ok)
 {
     SimpleFileBlock block;
+    block.lineNumber = lineNumber - 1; // approximate
     QString buf;
     while (!ts.atEnd()) {
         QString line = ts.readLine();
@@ -129,6 +137,15 @@ SimpleFileBlock SimpleFile::readBlock(QTextStream &ts, int &lineNumber, bool &ok
             SimpleFileKeyValue kv;
             kv.name = line.left(n).trimmed();
             kv.value = line.mid(n + 1).trimmed();
+            kv.lineNumber = lineNumber;
+            if (kv.value.startsWith(QLatin1Char('['))) {
+                while (!ts.atEnd() && !rtrim(kv.value).endsWith(QLatin1Char(']'))) {
+                    kv.value += ts.readLine();
+                    ++lineNumber;
+                }
+                kv.value = kv.value.mid(1);
+                kv.value.chop(1);
+            }
             block.values += kv;
         }
         else if (line.contains(QLatin1Char('{'))) {
@@ -184,6 +201,11 @@ int SimpleFileBlock::findBlock(const QString &key) const
     return -1;
 }
 
+bool SimpleFileBlock::hasValue(const QString &key) const
+{
+    return findValue(key) >= 0;
+}
+
 int SimpleFileBlock::findValue(const QString &key) const
 {
     for (int i = 0; i < values.size(); i++) {
@@ -193,12 +215,18 @@ int SimpleFileBlock::findValue(const QString &key) const
     return -1;
 }
 
-SimpleFileKeyValue SimpleFileBlock::keyValue(const QString &name)
+bool SimpleFileBlock::keyValue(const QString &name, SimpleFileKeyValue &kv)
 {
     int i = findValue(name);
-    if (i >= 0)
-        return values[i];
-    return SimpleFileKeyValue();
+    if (i >= 0) {
+        kv = values[i];
+        return true;
+    }
+
+    kv.name = name;
+    kv.value = QString();
+    kv.lineNumber = -1;
+    return false;
 }
 
 QString SimpleFileBlock::value(const QString &key)

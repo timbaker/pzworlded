@@ -238,8 +238,9 @@ bool BMPToTMX::generateCell(WorldCell *cell)
                     else
                         continue;
 
-                    Entries[x - sx][y - sy][index] =
-                            rule->tileChoices[qrand() % rule->tileChoices.count()];
+                    QString tileName = rule->tileChoices[qrand() % rule->tileChoices.count()];
+                    tileName = resolveAlias(tileName, qrand());
+                    Entries[x - sx][y - sy][index] = tileName;
                 }
             } else {
                 if (!mUnknownColors[images->mPath].contains(col)) {
@@ -264,8 +265,9 @@ bool BMPToTMX::generateCell(WorldCell *cell)
                     else
                         continue;
 
-                    Entries[x - sx][y - sy][index] =
-                            rule->tileChoices[qrand() % rule->tileChoices.count()];
+                    QString tileName = rule->tileChoices[qrand() % rule->tileChoices.count()];
+                    tileName = resolveAlias(tileName, qrand());
+                    Entries[x - sx][y - sy][index] = tileName;
                 }
             } else {
                 if (col2 != qRgb(0, 0, 0) && !mUnknownVegColors[images->mPath].contains(col2)) {
@@ -587,6 +589,10 @@ bool BMPToTMX::LoadRules()
     qDeleteAll(mRules);
     mRules.clear();
     mRulesByColor.clear();
+    qDeleteAll(mAliases);
+    mAliases = file.aliasesCopy();
+    foreach (BmpAlias *alias, mAliases)
+        mAliasByName[alias->name] = alias;
     foreach (BmpRule *rule, file.rules())
         AddRule(rule->bitmapIndex, rule->color, rule->tileChoices,
                 rule->targetLayer, rule->condition);
@@ -644,6 +650,8 @@ bool BMPToTMX::LoadRules()
     foreach (QList<BmpRule*> convs, mRulesByColor) {
         foreach (BmpRule *conv, convs) {
             foreach (QString tileName, conv->tileChoices) {
+                if (mAliasByName.contains(tileName))
+                    continue;
                 if (!tileName.isEmpty() && getTileFromTileName(tileName) == 0) {
                     mError = tr("A tile listed in Rules.txt could not be found.\n");
                     mError += tr("The missing tile is called '%1'.\n\n").arg(tileName);
@@ -668,7 +676,7 @@ bool BMPToTMX::LoadBlends()
         path = defaultBlendsFile();
 #if 1
     Tiled::Internal::BmpBlendsFile file;
-    if (!file.read(path)) {
+    if (!file.read(path, mAliases)) {
         mError = file.errorString();
         return false;
     }
@@ -679,6 +687,14 @@ bool BMPToTMX::LoadBlends()
         mBlends += new BmpBlend(blend->targetLayer, blend->mainTile, blend->blendTile,
                                 blend->dir, blend->ExclusionList);
         mBlendsByLayer[blend->targetLayer] += mBlends.last();
+        QStringList excludes;
+        foreach (QString tileName, blend->ExclusionList) {
+            if (mAliasByName.contains(tileName))
+                excludes += mAliasByName[tileName]->tiles;
+            else
+                excludes += tileName;
+        }
+        mBlendExcludes[blend] = excludes;
     }
 #else
     SimpleFile simpleFile;
@@ -778,48 +794,54 @@ QString BMPToTMX::getNeighbouringTile(int x, int y)
     return Entries[x][y][0]; // 0_Floor
 }
 
-BmpBlend *BMPToTMX::getBlendRule(int x, int y, const QString &texture, const QString &layer)
+BmpBlend *BMPToTMX::getBlendRule(int x, int y, const QString &tileName, const QString &layer)
 {
     BmpBlend *lastBlend = 0;
-    if (texture.isEmpty())
+    if (tileName.isEmpty())
         return lastBlend;
     foreach (BmpBlend *blend, mBlendsByLayer[layer]) {
         Q_ASSERT(blend->targetLayer == layer);
         if (blend->targetLayer != layer)
             continue;
 
-        if (texture != blend->mainTile) {
-            if (blend->ExclusionList.contains(texture))
+        QStringList mainTiles(blend->mainTile);
+        if (mAliasByName.contains(blend->mainTile))
+            mainTiles = mAliasByName[blend->mainTile]->tiles;
+
+        if (!mainTiles.contains(tileName)) {
+            if (mBlendExcludes[blend].contains(tileName))
                 continue;
             bool bPass = false;
             switch (blend->dir) {
             case BmpBlend::N:
-                bPass = getNeighbouringTile(x, y - 1) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x, y - 1));
                 break;
             case BmpBlend::S:
-                bPass = getNeighbouringTile(x, y + 1) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x, y + 1));
                 break;
             case BmpBlend::E:
-                bPass = getNeighbouringTile(x + 1, y) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x + 1, y));
                 break;
             case BmpBlend::W:
-                bPass = getNeighbouringTile(x - 1, y) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x - 1, y));
                 break;
             case BmpBlend::NE:
-                bPass = getNeighbouringTile(x, y - 1) == blend->mainTile &&
-                        getNeighbouringTile(x + 1, y) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x, y - 1)) &&
+                        mainTiles.contains(getNeighbouringTile(x + 1, y));
                 break;
             case BmpBlend::SE:
-                bPass = getNeighbouringTile(x, y + 1) == blend->mainTile &&
-                        getNeighbouringTile(x + 1, y) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x, y + 1)) &&
+                        mainTiles.contains(getNeighbouringTile(x + 1, y));
                 break;
             case BmpBlend::NW:
-                bPass = getNeighbouringTile(x, y - 1) == blend->mainTile &&
-                        getNeighbouringTile(x - 1, y) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x, y - 1)) &&
+                        mainTiles.contains(getNeighbouringTile(x - 1, y));
                 break;
             case BmpBlend::SW:
-                bPass = getNeighbouringTile(x, y + 1) == blend->mainTile &&
-                        getNeighbouringTile(x - 1, y) == blend->mainTile;
+                bPass = mainTiles.contains(getNeighbouringTile(x, y + 1)) &&
+                        mainTiles.contains(getNeighbouringTile(x - 1, y));
+                break;
+            default:
                 break;
             }
 
@@ -829,6 +851,15 @@ BmpBlend *BMPToTMX::getBlendRule(int x, int y, const QString &texture, const QSt
     }
 
     return lastBlend;
+}
+
+QString BMPToTMX::resolveAlias(const QString &tileName, int randForPos) const
+{
+    if (mAliasByName.contains(tileName)) {
+        const QStringList &tiles = mAliasByName[tileName]->tiles;
+        return tiles[randForPos % tiles.size()];
+    }
+    return tileName;
 }
 
 bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
@@ -868,6 +899,10 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
 
     map.rbmpSettings()->setBlendsFile(mBlendFileName);
     map.rbmpSettings()->setRulesFile(mRuleFileName);
+    QList<BmpAlias*> aliases;
+    foreach (BmpAlias *alias, mAliases)
+        aliases += new BmpAlias(alias);
+    map.rbmpSettings()->setAliases(aliases);
     QList<BmpBlend*> blends;
     foreach (BmpBlend *blend, mBlends)
         blends += new BmpBlend(blend);

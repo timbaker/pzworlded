@@ -29,6 +29,7 @@ class FloorTileGrid;
 }
 
 namespace Tiled {
+class BmpAlias;
 class BmpBlend;
 class BmpRule;
 class Map;
@@ -52,6 +53,10 @@ public:
     QString errorString() const
     { return mError; }
 
+    const QList<BmpAlias*> &aliases() const
+    { return mAliases; }
+    QList<BmpAlias*> aliasesCopy() const;
+
     const QList<BmpRule*> &rules() const
     { return mRules; }
     QList<BmpRule*> rulesCopy() const;
@@ -62,8 +67,14 @@ private:
     void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
                  QString layer);
 
+    QRgb rgbFromString(const QString &string, bool &ok);
     QRgb rgbFromStringList(const QStringList &rgb, bool &ok);
 
+    bool isOldFormat(const QString &fileName);
+    bool readOldFormat(const QString &fileName);
+
+    QList<BmpAlias*> mAliases;
+    QMap<QString,BmpAlias*> mAliasByName;
     QList<BmpRule*> mRules;
     QString mError;
 };
@@ -76,7 +87,7 @@ public:
     BmpBlendsFile();
     ~BmpBlendsFile();
 
-    bool read(const QString &fileName);
+    bool read(const QString &fileName, const QList<BmpAlias *> &aliases);
     bool write(const QString &fileName);
 
     QString errorString() const
@@ -126,6 +137,7 @@ private:
     void imagesToTileNames(int x1, int y1, int x2, int y2);
     void blend(int x1, int y1, int x2, int y2);
     void tileNamesToLayers(int x1, int y1, int x2, int y2);
+    QString resolveAlias(const QString &tileName, int randForPos) const;
 
     Map *mMap;
     QMap<QString,BuildingEditor::FloorTileGrid*> mTileNameGrids;
@@ -139,13 +151,19 @@ private:
     QString getNeighbouringTile(int x, int y);
     BmpBlend *getBlendRule(int x, int y, const QString &tileName, const QString &layer);
 
+    QList<BmpAlias*> mAliases;
+    QMap<QString,BmpAlias*> mAliasByName;
+
     QList<BmpRule*> mRules;
     QMap<QRgb,QList<BmpRule*> > mRuleByColor;
     QStringList mRuleLayers;
+    QList<BmpRule*> mFloor0Rules;
+    QList<QStringList> mFloor0RuleTiles;
 
     QList<BmpBlend*> mBlendList;
     QStringList mBlendLayers;
     QMap<QString,QList<BmpBlend*> > mBlendsByLayer;
+    QMap<BmpBlend*,QStringList> mBlendExcludes;
 
     QString mError;
 };
