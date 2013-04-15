@@ -690,7 +690,7 @@ PropertyTemplate *CopyPasteDialog::cloneTemplate(World *world, PropertyTemplate 
     pt->mDescription = ptIn->mDescription;
     foreach (PropertyTemplate *pt1, ptIn->templates())
         if (PropertyTemplate *pt2 = cloneTemplate(world, pt1))
-            pt->addTemplate(pt->templates().size(), pt1);
+            pt->addTemplate(pt->templates().size(), pt2);
     foreach (Property *p, ptIn->properties()) {
         if (Property *p1 = cloneProperty(world, p))
             pt->addProperty(pt->properties().size(), p1);
