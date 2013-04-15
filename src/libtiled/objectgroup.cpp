@@ -58,19 +58,30 @@ void ObjectGroup::addObject(MapObject *object)
 {
     mObjects.append(object);
     object->setObjectGroup(this);
+#ifdef ZOMBOID
+    if (object->tile())
+        addReference(object->tile()->tileset());
+#endif
 }
 
 void ObjectGroup::insertObject(int index, MapObject *object)
 {
     mObjects.insert(index, object);
     object->setObjectGroup(this);
+#ifdef ZOMBOID
+    if (object->tile())
+        addReference(object->tile()->tileset());
+#endif
 }
 
 int ObjectGroup::removeObject(MapObject *object)
 {
     const int index = mObjects.indexOf(object);
     Q_ASSERT(index != -1);
-
+#ifdef ZOMBOID
+    if (object->tile())
+        removeReference(object->tile()->tileset());
+#endif
     mObjects.removeAt(index);
     object->setObjectGroup(0);
     return index;
@@ -80,6 +91,11 @@ void ObjectGroup::removeObjectAt(int index)
 {
     MapObject *object = mObjects.takeAt(index);
     object->setObjectGroup(0);
+
+#ifdef ZOMBOID
+    if (object->tile())
+        removeReference(object->tile()->tileset());
+#endif
 }
 
 QRectF ObjectGroup::objectsBoundingRect() const
@@ -97,6 +113,9 @@ bool ObjectGroup::isEmpty() const
 
 QSet<Tileset*> ObjectGroup::usedTilesets() const
 {
+#ifdef ZOMBOID
+    return mUsedTilesets.keys().toSet();
+#else
     QSet<Tileset*> tilesets;
 
     foreach (const MapObject *object, mObjects)
@@ -104,10 +123,15 @@ QSet<Tileset*> ObjectGroup::usedTilesets() const
             tilesets.insert(tile->tileset());
 
     return tilesets;
+#endif
 }
 
 bool ObjectGroup::referencesTileset(const Tileset *tileset) const
 {
+#ifdef ZOMBOID
+    Tileset *key = const_cast<Tileset*>(tileset); // hmmm
+    return mUsedTilesets.contains(key);
+#else
     foreach (const MapObject *object, mObjects) {
         const Tile *tile = object->tile();
         if (tile && tile->tileset() == tileset)
@@ -115,6 +139,7 @@ bool ObjectGroup::referencesTileset(const Tileset *tileset) const
     }
 
     return false;
+#endif
 }
 
 void ObjectGroup::replaceReferencesToTileset(Tileset *oldTileset,
@@ -122,8 +147,17 @@ void ObjectGroup::replaceReferencesToTileset(Tileset *oldTileset,
 {
     foreach (MapObject *object, mObjects) {
         const Tile *tile = object->tile();
+#ifdef ZOMBOID
+        if (tile && tile->tileset() == oldTileset) {
+            removeReference(oldTileset);
+            if (newTileset->tileAt(tile->id()))
+                addReference(newTileset);
+            object->setTile(newTileset->tileAt(tile->id()));
+        }
+#else
         if (tile && tile->tileset() == oldTileset)
             object->setTile(newTileset->tileAt(tile->id()));
+#endif
     }
 }
 

@@ -110,4 +110,9 @@ private:
 
 } // namespace Tiled
 
+#ifdef ZOMBOID
+#include <QMetaType>
+Q_DECLARE_METATYPE(Tiled::Tile*)
+#endif
+
 #endif // TILE_H
