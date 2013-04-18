@@ -444,7 +444,6 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         SaveString(out, room->name);
         out << qint32(room->floor);
 
-#ifdef QT_NO_DEBUG
         out << qint32(room->rects.size());
         foreach (LotFile::RoomRect *rr, room->rects) {
             out << qint32(rr->x);
@@ -459,14 +458,6 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
             out << qint32(object.x);
             out << qint32(object.y);
         }
-#else
-        // My old version of PZ
-        LotFile::RoomRect *rr = room->rects.first();
-        out << qint32(rr->x);
-        out << qint32(rr->y);
-        out << qint32(rr->w);
-        out << qint32(rr->h);
-#endif
     }
 
     out << qint32(buildingList.count());
