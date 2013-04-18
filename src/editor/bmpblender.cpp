@@ -28,6 +28,7 @@
 #include "tileset.h"
 
 #include <QApplication>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QImage>
@@ -106,14 +107,30 @@ void BmpBlender::tilesetRemoved(const QString &tilesetName)
     }
 }
 
+static QStringList normalizeTileNames(const QStringList &tileNames)
+{
+    QStringList ret;
+    foreach (QString tileName, tileNames) {
+        Q_ASSERT_X(BuildingEditor::BuildingTilesMgr::legalTileName(tileName), "normalizeTileNames", (char*)tileName.toAscii().constData());
+        ret += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
+    }
+    return ret;
+}
+
 void BmpBlender::fromMap()
 {
     QSet<QString> tileNames;
 
+    // We have to take care that any alias references exist, because when
+    // loading or clearing Rules.txt the aliases are changed before the rules.
+    // Also, if the aliases change, Blends.txt may reference undefined aliases!
+
     mAliases = mMap->bmpSettings()->aliases();
     mAliasByName.clear();
+    mAliasTiles.clear();
     foreach (BmpAlias *alias, mAliases) {
         mAliasByName[alias->name] = alias;
+        mAliasTiles[alias->name] = normalizeTileNames(alias->tiles);
         foreach (QString tileName, alias->tiles)
             tileNames += tileName;
     }
@@ -128,19 +145,24 @@ void BmpBlender::fromMap()
         if (!mRuleLayers.contains(rule->targetLayer))
             mRuleLayers += rule->targetLayer;
         foreach (QString tileName, rule->tileChoices) {
-            if (!mAliasByName.contains(tileName))
-                tileNames += tileName;
+            if (BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                if (!mAliasByName.contains(tileName))
+                    tileNames += tileName;
+            }
         }
         if (rule->targetLayer == QLatin1String("0_Floor") && rule->bitmapIndex == 0) {
             mFloor0Rules += rule;
             QStringList tiles;
             foreach (QString tileName, rule->tileChoices) {
-                if (mAliasByName.contains(tileName))
-                    tiles += mAliasByName[tileName]->tiles;
-                else
+                if (tileName.isEmpty())
+                    ;
+                else if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                    if (mAliasByName.contains(tileName))
+                        tiles += mAliasByName[tileName]->tiles;
+                } else
                     tiles += tileName;
             }
-            mFloor0RuleTiles += tiles;
+            mFloor0RuleTiles += normalizeTileNames(tiles);
         }
     }
 
@@ -154,21 +176,24 @@ void BmpBlender::fromMap()
         layers.insert(blend->targetLayer);
         QStringList excludes;
         foreach (QString tileName, blend->ExclusionList) {
-            if (mAliasByName.contains(tileName))
-                excludes += mAliasByName[tileName]->tiles;
-            else {
+            if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                if (mAliasByName.contains(tileName))
+                    excludes += mAliasByName[tileName]->tiles;
+            } else {
                 excludes += tileName;
                 tileNames += tileName;
             }
         }
-        mBlendExcludes[blend] = excludes;
-        if (!mAliasByName.contains(blend->mainTile))
-            tileNames += blend->mainTile;
+        mBlendExcludes[blend] = normalizeTileNames(excludes);
+        if (BuildingEditor::BuildingTilesMgr::legalTileName(blend->mainTile)) {
+            if (!mAliasByName.contains(blend->mainTile))
+                tileNames += blend->mainTile;
+        }
         tileNames += blend->blendTile;
     }
     mBlendLayers = layers.values();
 
-    mTileNames = tileNames.values();
+    mTileNames = normalizeTileNames(tileNames.values());
 
     initTiles();
 }
@@ -191,6 +216,8 @@ void BmpBlender::initTiles()
                 mTileByName[tileName] = tilesets[tilesetName]->tileAt(tileID);
         }
     }
+
+    updateWarnings();
 }
 
 static bool adjacentToNonBlack(const QImage &image1, const QImage &image2, int x1, int y1)
@@ -251,6 +278,7 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
                         continue;
                     if (!mTileNameGrids.contains(rule->targetLayer))
                         continue;
+                    // FIXME: may not be normalized
                     QString tileName = rule->tileChoices[mMap->bmp(0).rand(x, y) % rule->tileChoices.count()];
                     tileName = resolveAlias(tileName, mMap->bmp(0).rand(x, y));
                     mTileNameGrids[rule->targetLayer]->replace(x, y, tileName);
@@ -266,8 +294,9 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
                     QString tileName = BuildingEditor::BuildingTilesMgr::nameForTile(tile);
                     for (int i = 0; i < mFloor0Rules.size(); i++) {
                         BmpRule *rule = mFloor0Rules[i];
-                        QStringList &tiles = mFloor0RuleTiles[i];
+                        const QStringList &tiles = mFloor0RuleTiles[i];
                         if (tiles.contains(tileName)) {
+                            // FIXME: may not be normalized
                             tileName = rule->tileChoices[mMap->bmp(0).rand(x, y) % rule->tileChoices.count()];
                             tileName = resolveAlias(tileName, mMap->bmp(0).rand(x, y));
                             mFakeTileGrid->replace(x, y, tileName);
@@ -287,6 +316,7 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
                         continue;
                     if (!mTileNameGrids.contains(rule->targetLayer))
                         continue;
+                    // FIXME: may not be normalized
                     QString tileName = rule->tileChoices[mMap->bmp(1).rand(x, y) % rule->tileChoices.count()];
                     tileName = resolveAlias(tileName, mMap->bmp(1).rand(x, y));
                     mTileNameGrids[rule->targetLayer]->replace(x, y, tileName);
@@ -353,8 +383,10 @@ void BmpBlender::tileNamesToLayers(int x1, int y1, int x2, int y2)
         }
     }
 
-    if (recreated)
+    if (recreated) {
         emit layersRecreated();
+        updateWarnings();
+    }
 
     QRect r(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
     emit regionAltered(r);
@@ -363,10 +395,70 @@ void BmpBlender::tileNamesToLayers(int x1, int y1, int x2, int y2)
 QString BmpBlender::resolveAlias(const QString &tileName, int randForPos) const
 {
     if (mAliasByName.contains(tileName)) {
-        const QStringList &tiles = mAliasByName[tileName]->tiles;
+        const QStringList &tiles = mAliasTiles[tileName];
         return tiles[randForPos % tiles.size()];
     }
     return tileName;
+}
+
+void BmpBlender::updateWarnings()
+{
+    QSet<QString> warnings;
+
+    if (mMap->bmpSettings()->rules().isEmpty())
+        warnings += tr("Map has no rules.  Import some!");
+    if (mMap->bmpSettings()->blends().isEmpty())
+        warnings += tr("Map has no blends.  Import some!");
+
+    QMap<QString,Tileset*> tilesets;
+    foreach (Tileset *ts, mMap->tilesets())
+        tilesets[ts->name()] = ts;
+    foreach (QString tilesetName, mTilesetNames) {
+        if (!tilesets.contains(tilesetName))
+            warnings += tr("Map is missing \"%1\" tileset.").arg(tilesetName);
+    }
+
+    foreach (QString layerName, mTileLayers.keys()) {
+        int n = mMap->indexOfLayer(layerName, Layer::TileLayerType);
+        if (n == -1)
+            warnings += tr("Map is missing \"%1\" tile layer.").arg(layerName);
+    }
+
+    int ruleIndex = 1;
+    foreach (BmpRule *rule, mRules) {
+        foreach (QString tileName, rule->tileChoices) {
+            if (!tileName.isEmpty()
+                    && !BuildingEditor::BuildingTilesMgr::legalTileName(tileName)
+                    && !mAliasByName.contains(tileName)) {
+                // This shouldn't even be possible, since aliases are defined
+                // in Rules.txt and wouldn't load if the alias were unknown.
+                warnings += tr("Rule %1 uses unknown alias '%2'.").arg(ruleIndex).arg(tileName);
+            }
+        }
+        ++ruleIndex;
+    }
+
+    int blendIndex = 1;
+    foreach (BmpBlend *blend, mBlendList) {
+        foreach (QString tileName, blend->ExclusionList) {
+            if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                if (!mAliasByName.contains(tileName))
+                    warnings += tr("Blend %1 uses unknown alias '%2'.")
+                            .arg(blendIndex).arg(tileName);
+            }
+        }
+        if (!BuildingEditor::BuildingTilesMgr::legalTileName(blend->mainTile)) {
+            if (!mAliasByName.contains(blend->mainTile))
+                warnings += tr("Blend %1 uses unknown alias '%2'.")
+                        .arg(blendIndex).arg(blend->mainTile);
+        }
+        ++blendIndex;
+    }
+
+    if (warnings != mWarnings) {
+        mWarnings = warnings;
+        emit warningsChanged();
+    }
 }
 
 QString BmpBlender::getNeighbouringTile(int x, int y)
@@ -394,7 +486,7 @@ BmpBlend *BmpBlender::getBlendRule(int x, int y, const QString &tileName,
 
         QStringList mainTiles(blend->mainTile);
         if (mAliasByName.contains(blend->mainTile))
-            mainTiles = mAliasByName[blend->mainTile]->tiles;
+            mainTiles = mAliasTiles[blend->mainTile];
 
         if (!mainTiles.contains(tileName)) {
             if (mBlendExcludes[blend].contains(tileName))
@@ -572,13 +664,13 @@ missingKV:
 
             QStringList tiles;
             if (block.keyValue("tiles", kv)) {
-                tiles = kv.values();
-                foreach (QString tileName, tiles) {
+                foreach (QString tileName, kv.values()) {
                     if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
                         mError = tr("Line %1: Invalid tile name '%2'")
                                 .arg(kv.lineNumber).arg(tileName);
                         return false;
                     }
+                    tiles += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
                 }
                 if (tiles.size() < 1) {
                     mError = tr("Line %1: Alias requires 1 or more tiles")
