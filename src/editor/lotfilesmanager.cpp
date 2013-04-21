@@ -220,8 +220,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
         lg->prepareDrawing2();
-        for (int y = 0; y < mapHeight; y++) {
-            for (int x = 0; x < mapWidth; x++) {
+        int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
+        d *= lg->level();
+        for (int y = d; y < mapHeight; y++) {
+            for (int x = d; x < mapWidth; x++) {
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
                 foreach (const Tiled::Cell *cell, cells) {
@@ -231,6 +233,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                         lx = x + lg->level() * 3;
                         ly = y + lg->level() * 3;
                     }
+                    if (lx >= mapWidth) continue;
+                    if (ly >= mapHeight) continue;
                     mGridData[lx][ly][lg->level()].Entries.append(e);
                     TileMap[e->gid]->used = true;
                 }
