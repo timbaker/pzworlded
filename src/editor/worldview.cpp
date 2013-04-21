@@ -27,7 +27,7 @@
 #include <QMouseEvent>
 
 WorldView::WorldView(QWidget *parent)
-    : BaseGraphicsView(parent)
+    : BaseGraphicsView(false, parent)
 {
     QVector<qreal> zoomFactors = zoomable()->zoomFactors();
     zoomable()->setZoomFactors(zoomFactors << 6.0 << 8.0);

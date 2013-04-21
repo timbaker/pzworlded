@@ -38,6 +38,8 @@ public:
 
     static IsoGridSquare *getNew(IsoCell *cell, SliceY *slice, int x, int y, int z);
 
+    void discard();
+
     void RecalcAllWithNeighbours(bool bDoReverse);
 
     void setX(int x) { this->x = x; }
@@ -78,6 +80,8 @@ public:
     IsoRoom *getRoom(int roomID);
     void ClearGridsquares();
     void reuseGridsquares();
+
+    void Save(bool bSaveQuit);
 
     QVector<QVector<QVector<IsoGridSquare*> > > squares;
     LotHeader *lotheader;
@@ -127,7 +131,7 @@ public:
 
     static const int ChunkDiv = 10;
     static const int ChunksPerWidth = 10;
-    static const int ChunkGridWidth = 10;
+    static const int ChunkGridWidth = 30;
     static const int CellSize = ChunksPerWidth * ChunkGridWidth;
     static const int MaxLevels = 16;
 

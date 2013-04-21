@@ -68,7 +68,7 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
     int y = point.y() - mWorld->CurrentCell->ChunkMap->getWorldYMinTiles();
     if (IsoGridSquare *sq = mWorld->CurrentCell->getGridSquare(point.x(), point.y(), level())) {
         foreach (QString tileName, sq->tiles) {
-            if (Tile *tile = BuildingEditor::BuildingTilesMgr::instance()->tileFor(tileName)) { // FIXME: way too slow
+            if (Tile *tile = mScene->mTileByName[tileName]/*BuildingEditor::BuildingTilesMgr::instance()->tileFor(tileName)*/) { // FIXME: way too slow
                 Cell *cell = const_cast<Cell*>(&mCells[x][y][cells.size()]);
                 cell->tile = tile;
                 cells += cell;
@@ -232,17 +232,26 @@ void LotPackScene::setWorld(IsoWorld *world)
 
     for (int z = 0; z < IsoChunkMap::MaxLevels/*mWorld->CurrentCell->MaxHeight*/; z++) {
         LotPackLayerGroup *lg = new LotPackLayerGroup(mWorld, mMap, z);
+        lg->mScene = this;
         LotPackLayerGroupItem *item = new LotPackLayerGroupItem(lg, mRenderer);
         addItem(item);
+        mItems += item;
     }
 
     addItem(new IsoWorldGridItem(mWorld, mRenderer));
 }
 
+void LotPackScene::setMaxLevel(int max)
+{
+    for (int z = 0; z <= max; z++) {
+        mItems[z]->setVisible(z <= max);
+    }
+}
+
 /////
 
 LotPackView::LotPackView(QWidget *parent) :
-    BaseGraphicsView(parent),
+    BaseGraphicsView(true, parent),
     mScene(new LotPackScene(this)),
     mWorld(0)
 {
@@ -264,6 +273,94 @@ void LotPackView::setWorld(IsoWorld *world)
     mWorld = world;
 
     mScene->setWorld(mWorld);
+}
+
+void LotPackView::scrollContentsBy(int dx, int dy)
+{
+    BaseGraphicsView::scrollContentsBy(dx, dy);
+
+    QPointF p = mapToScene(viewport()->rect().center());
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(p);
+    int wx = tilePos.x() / IsoChunkMap::ChunksPerWidth;
+    int wy = tilePos.y() / IsoChunkMap::ChunksPerWidth;
+    IsoChunkMap *cm = mWorld->CurrentCell->ChunkMap;
+    wx = qBound(cm->ChunkGridWidth / 2, wx, mWorld->getWidthInTiles() / cm->ChunksPerWidth - cm->ChunkGridWidth / 2);
+    wy = qBound(cm->ChunkGridWidth / 2, wy, mWorld->getHeightInTiles() / cm->ChunksPerWidth - cm->ChunkGridWidth / 2);
+//    qDebug() << "LotPackView::scrollContentsBy" << wx << wy;
+    if (wx != cm->WorldX || wy != cm->WorldY) {
+        QRegion current = QRect(cm->getWorldXMin(), cm->getWorldYMin(),
+                                cm->ChunkGridWidth, cm->ChunkGridWidth);
+        QRegion updated = QRect(wx - cm->ChunkGridWidth / 2, wy - cm->ChunkGridWidth / 2,
+                                cm->ChunkGridWidth, cm->ChunkGridWidth);
+
+        // Discard old chunks.
+        foreach (QRect r, (current - updated).rects()) {
+            for (int x = r.left(); x <= r.right(); x++) {
+                for (int y = r.top(); y <= r.bottom(); y++) {
+                    if (IsoChunk *c = cm->getChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin())) {
+                        c->Save(false);
+                        cm->setChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin(), 0);
+                        delete c;
+                    }
+                }
+            }
+        }
+
+        // Shift preserved chunks.
+        QVector<IsoChunk*> preserved;
+        foreach (QRect r, (current & updated).rects()) {
+            for (int x = r.left(); x <= r.right(); x++) {
+                for (int y = r.top(); y <= r.bottom(); y++) {
+                    if (IsoChunk *c = cm->getChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin())) {
+//                        c->wx -= (wx - cm->WorldX);
+//                        c->wy -= (wy - cm->WorldY);
+                        cm->setChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin(), 0);
+                        preserved += c;
+                    }
+                }
+            }
+        }
+
+        cm->WorldX = wx;
+        cm->WorldY = wy;
+        cm->XMinTiles = cm->YMinTiles = -1;
+
+        foreach (IsoChunk *c, preserved) {
+            cm->setChunk(c->wx - cm->getWorldXMin(), c->wy - cm->getWorldYMin(), c);
+        }
+
+        // Load new chunks;
+        foreach (QRect r, (updated - current).rects()) {
+            for (int x = r.left(); x <= r.right(); x++) {
+                for (int y = r.top(); y <= r.bottom(); y++) {
+//                    if (x < mWorld->MetaGrid->minx || x > mWorld->MetaGrid->maxx) continue;
+//                    if (y < mWorld->MetaGrid->miny || y > mWorld->MetaGrid->maxy) continue;
+                    cm->LoadChunkForLater(x, y, x - cm->getWorldXMin(), y - cm->getWorldYMin());
+                }
+            }
+        }
+
+        cm->UpdateCellCache();
+
+        for (int x = 0; x < cm->Chunks.size(); x++) {
+            for (int y = 0; y < cm->Chunks[x].size(); y++) {
+                if (IsoChunk *chunk = cm->Chunks[x][y]) {
+                    if (!mScene->mHeadersExamined.contains(chunk->lotheader)) {
+                        mScene->mHeadersExamined += chunk->lotheader;
+                        foreach (QString tileName, chunk->lotheader->tilesUsed) {
+                            if (!mScene->mTileByName.contains(tileName)) {
+                                if (Tile *tile = BuildingEditor::BuildingTilesMgr::instance()->tileFor(tileName)) {
+                                    mScene->mTileByName[tileName] = tile;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        mScene->setMaxLevel(mWorld->CurrentCell->MaxHeight);
+    }
 }
 
 /////
@@ -290,7 +387,7 @@ LotPackWindow::~LotPackWindow()
 
 void LotPackWindow::open()
 {
-#ifdef QT_NO_DEBUG
+#ifdef QT_NO_DEBUGxxx
     QString f = QFileDialog::getOpenFileName(this, tr("Open LotPack"));
     if (f.isEmpty())
         return;

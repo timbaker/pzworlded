@@ -40,6 +40,7 @@ namespace Ui {
 class LotPackWindow;
 }
 
+class LotPackScene;
 class LotPackLayerGroup : public Tiled::ZTileLayerGroup
 {
 public:
@@ -55,7 +56,7 @@ public:
 
     IsoWorld *mWorld;
     QVector<QVector<QVector<Tiled::Cell> > > mCells;
-    QMap<QString,Tiled::Tile*> mTileByName;
+    LotPackScene *mScene;
 };
 
 class LotPackLayerGroupItem : public QGraphicsItem
@@ -71,6 +72,8 @@ public:
     Tiled::MapRenderer *mRenderer;
 };
 
+class LotHeader;
+#include <QSet>
 class LotPackScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -80,10 +83,17 @@ public:
 
     void setWorld(IsoWorld *world);
 
+    Tiled::MapRenderer *renderer() const { return mRenderer; }
+
+    void setMaxLevel(int max);
+
+    QMap<QString,Tiled::Tile*> mTileByName;
+    QSet<LotHeader*> mHeadersExamined;
 private:
     IsoWorld *mWorld;
     Tiled::Map *mMap;
     Tiled::MapRenderer *mRenderer;
+    QVector<LotPackLayerGroupItem*> mItems;
 };
 
 class LotPackView : public BaseGraphicsView
@@ -97,6 +107,8 @@ public:
     { return mScene; }
 
     void setWorld(IsoWorld *world);
+
+    void scrollContentsBy(int dx, int dy);
 
 private:
     LotPackScene *mScene;

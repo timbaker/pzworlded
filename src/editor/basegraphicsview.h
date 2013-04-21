@@ -66,7 +66,7 @@ class BaseGraphicsView : public QGraphicsView
     Q_OBJECT
 
 public:
-    explicit BaseGraphicsView(QWidget *parent = 0);
+    explicit BaseGraphicsView(bool allowOpenGL = false, QWidget *parent = 0);
     
     void setHandScrolling(bool handScrolling);
 
@@ -94,6 +94,9 @@ signals:
 
 public slots:
     void adjustScale(qreal scale);
+
+private slots:
+    void setUseOpenGL(bool useOpenGL);
 
 protected:
     bool mHandScrolling;

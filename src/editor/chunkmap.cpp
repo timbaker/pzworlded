@@ -41,6 +41,18 @@ IsoGridSquare *IsoGridSquare::getNew(IsoCell *cell, SliceY *slice, int x, int y,
     return sq;
 }
 
+void IsoGridSquare::discard()
+{
+    chunk = 0;
+    roomID = -1;
+    room = 0;
+    ID = 0;
+
+    tiles.clear();
+
+    isoGridSquareCache += this;
+}
+
 void IsoGridSquare::RecalcAllWithNeighbours(bool bDoReverse)
 {
 }
@@ -122,6 +134,24 @@ void IsoChunk::ClearGridsquares()
 
 void IsoChunk::reuseGridsquares()
 {
+    for (int x = 0; x < squares.size(); x++) {
+        for (int y = 0; y < squares[x].size(); y++) {
+            for (int z = 0; z < squares[x][y].size(); z++) {
+                IsoGridSquare *sq = squares[x][y][z];
+                if (sq == 0)
+                    continue;
+                squares[x][y][z] = 0;
+                sq->discard();
+            }
+        }
+    }
+}
+
+void IsoChunk::Save(bool bSaveQuit)
+{
+    // save out to a .bin file here
+
+    reuseGridsquares();
 }
 
 /////
@@ -135,9 +165,9 @@ IsoChunkMap::IsoChunkMap(IsoCell *cell) :
     YMinTiles(-1),
     YMaxTiles(-1)
 {
-    Chunks.resize(ChunksPerWidth);
-    for (int x = 0; x < ChunksPerWidth; x++)
-        Chunks[x].resize(ChunksPerWidth);
+    Chunks.resize(ChunkGridWidth);
+    for (int x = 0; x < ChunkGridWidth; x++)
+        Chunks[x].resize(ChunkGridWidth);
 }
 
 void IsoChunkMap::update()
@@ -146,7 +176,7 @@ void IsoChunkMap::update()
 
 void IsoChunkMap::LoadChunk(int wx, int wy, int x, int y)
 {
-    qDebug() << "IsoChunkMap::LoadChunk" << x << y;
+//    qDebug() << "IsoChunkMap::LoadChunk" << x << y;
     IsoChunk *chunk = new IsoChunk(cell);
     setChunk(x, y, chunk);
 
@@ -156,7 +186,7 @@ void IsoChunkMap::LoadChunk(int wx, int wy, int x, int y)
 
 void IsoChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
 {
-    qDebug() << "IsoChunkMap::LoadChunkForLater" << x << y;
+//    qDebug() << "IsoChunkMap::LoadChunkForLater" << wx << wy;
     IsoChunk *chunk = new IsoChunk(cell);
     setChunk(x, y, chunk);
 
@@ -165,8 +195,8 @@ void IsoChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
 
 IsoChunk *IsoChunkMap::getChunkForGridSquare(int x, int y)
 {
-    x -= (WorldX - (ChunkGridWidth / 2)) * ChunksPerWidth;
-    y -= (WorldY - (ChunkGridWidth / 2)) * ChunksPerWidth;
+    x -= getWorldXMin() * ChunksPerWidth;
+    y -= getWorldYMin() * ChunksPerWidth;
 
     if ((x < 0) || (y < 0) || (x >= 300) || (y >= 300)) {
         return 0;
@@ -226,6 +256,12 @@ IsoChunk *IsoChunkMap::getChunk(int x, int y)
 
 void IsoChunkMap::setChunk(int x, int y, IsoChunk *c)
 {
+    if (x < 0 || x >= ChunkGridWidth || y < 0 || y >= ChunkGridWidth) return;
+    if (c && Chunks[x][y]) {
+        int i = 0;
+    }
+
+    Q_ASSERT(!c || (Chunks[x][y] == 0));
     Chunks[x][y] = c;
 }
 
@@ -330,38 +366,44 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
         QDataStream in(&fo);
         in.setByteOrder(QDataStream::LittleEndian);
 
-        qint32 skip = 0;
+//        qDebug() << "reading chunk" << wX << wY << "from" << filenamepack;
+
+        int skip = 0;
 
         int lwx = this->wx - (cX * 30);
         int lwy = this->wy - (cY * 30);
         int index = lwx * 30 + lwy;
         fo.seek(4 + index * 8);
-        qint32 pos;
+        qint64 pos;
         in >> pos;
         fo.seek(pos);
-        for (int z = 0; z < this->info->levels; ++z) {
+        for (int z = 0; z < info->levels; ++z) {
             for (int x = 0; x < IsoChunkMap::ChunksPerWidth; ++x) {
                 for (int y = 0; y < IsoChunkMap::ChunksPerWidth; ++y) {
                     if (skip > 0) {
                         --skip;
                     } else {
-                        qint32 count;
-                        in >> count;
+                        int count = readInt(in);
                         if (count == -1) {
-                            in >> skip;
+                            skip = readInt(in);
                             if (skip > 0) {
                                 --skip;
                             }
                         }  else {
+#if 0
                             if (count <= 1)
                                 continue;
+#endif
+                            int room = readInt(in);
 
-                            qint32 room;
-                            in >> room;
+                            if (count <= 1) {
+                                int brk = 1;
+                            }
+
+                            Q_ASSERT(count > 1 && count < 30);
 
                             for (int n = 1; n < count; ++n) {
-                                qint32 d;
-                                in >> d;
+                                int d = readInt(in);
 
                                 this->data[x][y][z] += d;
                             }
@@ -403,22 +445,26 @@ QString IsoLot::readString(QDataStream &in)
 
 void CellLoader::LoadCellBinaryChunk(IsoCell *cell, int wx, int wy, IsoChunk *chunk)
 {
-    int WX = wx / cell->width / IsoChunkMap::ChunkGridWidth;
-    int WY = wy / cell->height / IsoChunkMap::ChunkGridWidth;
+    int WX = wx / (cell->width / IsoChunkMap::ChunksPerWidth);
+    int WY = wy / (cell->height / IsoChunkMap::ChunksPerWidth);
 
     IsoLot *lot = new IsoLot(cell->World->Directory, WX, WY, wx, wy, chunk);
 
     cell->PlaceLot(lot, 0, 0, 0, chunk, wx, wy, false);
+
+    delete lot;
 }
 
 void CellLoader::LoadCellBinaryChunkForLater(IsoCell *cell, int wx, int wy, IsoChunk *chunk)
 {
-    int WX = wx / cell->width / IsoChunkMap::ChunkGridWidth;
-    int WY = wy / cell->height / IsoChunkMap::ChunkGridWidth;
+    int WX = wx / (cell->width / IsoChunkMap::ChunksPerWidth);
+    int WY = wy / (cell->height / IsoChunkMap::ChunksPerWidth);
 
     IsoLot *lot = new IsoLot(cell->World->Directory, WX, WY, wx, wy, chunk);
 
     cell->PlaceLot(lot, 0, 0, 0, chunk, wx, wy, true);
+
+    delete lot;
 }
 
 IsoCell *CellLoader::LoadCellBinaryChunk(IsoWorld *world, /*IsoSpriteManager &spr*/int wx, int wy)
@@ -617,7 +663,7 @@ void IsoCell::setCacheGridSquare(int wx, int wy, int x, int y, int z, IsoGridSqu
             || (x < 0) || (x >= ChunkMap->getWidthInTiles())
             || (y < 0) || (y >= ChunkMap->getWidthInTiles()))
         return;
-    if (square) qDebug() << "IsoCell::setCacheGridSquare" << x << y << z << square->tiles;
+//    if (square) qDebug() << "IsoCell::setCacheGridSquare" << x << y << z << square->tiles;
     gridSquares[x][y][z] = square;
 }
 
@@ -626,7 +672,7 @@ void IsoCell::setCacheGridSquareLocal(int x, int y, int z, IsoGridSquare *square
             || (x < 0) || (x >= ChunkMap->getWidthInTiles())
             || (y < 0) || (y >= ChunkMap->getWidthInTiles()))
         return;
-    if (square) qDebug() << "IsoCell::setCacheGridSquare" << x << y << z << square->tiles;
+//    if (square) qDebug() << "IsoCell::setCacheGridSquare" << x << y << z << square->tiles;
     gridSquares[x][y][z] = square;
 }
 
@@ -699,6 +745,10 @@ void IsoMetaGrid::Create(const QString &directory)
             info->width = IsoLot::readInt(in);
             info->height = IsoLot::readInt(in);
             info->levels = IsoLot::readInt(in);
+
+            Q_ASSERT(info->width == IsoChunkMap::ChunksPerWidth);
+            Q_ASSERT(info->height == IsoChunkMap::ChunksPerWidth);
+            Q_ASSERT(info->levels == 15);
 
             int numRooms = IsoLot::readInt(in);
 

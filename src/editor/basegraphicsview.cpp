@@ -23,10 +23,11 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QGLWidget>
 #include <QMouseEvent>
 #include <QScrollBar>
 
-BaseGraphicsView::BaseGraphicsView(QWidget *parent)
+BaseGraphicsView::BaseGraphicsView(bool allowOpenGL, QWidget *parent)
     : QGraphicsView(parent)
     , mHandScrolling(false)
     , mZoomable(new Zoomable(this))
@@ -56,6 +57,14 @@ BaseGraphicsView::BaseGraphicsView(QWidget *parent)
     connect(&mScrollTimer, SIGNAL(timeout()), SLOT(autoScrollTimeout()));
 
     mMiniMap = new MiniMap(this);
+
+#ifndef QT_NO_OPENGL
+    if (allowOpenGL) {
+        Preferences *prefs = Preferences::instance();
+        setUseOpenGL(prefs->useOpenGL());
+        connect(prefs, SIGNAL(useOpenGLChanged(bool)), SLOT(setUseOpenGL(bool)));
+    }
+#endif
 }
 
 void BaseGraphicsView::adjustScale(qreal scale)
@@ -66,6 +75,47 @@ void BaseGraphicsView::adjustScale(qreal scale)
 
     if (mScene)
         mScene->viewTransformChanged(this);
+}
+
+// I put this in BaseGraphicsView so WorldScene could use it, but the OpenGL
+// backend chokes on overly-large BMP images.  It uses QCache in the
+// QGLTextureCache::insert() method which *deletes the texture* and other
+// code doesn't test for that.
+void BaseGraphicsView::setUseOpenGL(bool useOpenGL)
+{
+#ifndef QT_NO_OPENGL
+    QWidget *oldViewport = viewport();
+    QWidget *newViewport = viewport();
+    if (useOpenGL && QGLFormat::hasOpenGL()) {
+        if (!qobject_cast<QGLWidget*>(viewport())) {
+            QGLFormat format = QGLFormat::defaultFormat();
+            format.setDepth(false); // No need for a depth buffer
+            format.setSampleBuffers(true); // Enable anti-aliasing
+            newViewport = new QGLWidget(format);
+        }
+    } else {
+        if (qobject_cast<QGLWidget*>(viewport()))
+            newViewport = 0;
+    }
+
+    if (newViewport != oldViewport) {
+        if (mMiniMap) {
+            mMiniMap->setVisible(false);
+            mMiniMap->setParent(static_cast<QWidget*>(parent()));
+        }
+        setViewport(newViewport);
+        if (mMiniMap) {
+            mMiniMap->setParent(this);
+            mMiniMap->setVisible(Preferences::instance()->showMiniMap());
+            if (scene())
+                mMiniMap->sceneRectChanged(scene()->sceneRect());
+        }
+    }
+
+    QWidget *v = viewport();
+    v->setAttribute(Qt::WA_StaticContents);
+    v->setMouseTracking(true);
+#endif
 }
 
 void BaseGraphicsView::autoScrollTimeout()
