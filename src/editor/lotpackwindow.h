@@ -68,22 +68,47 @@ public:
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 
+    int level() const { return mLayerGroup->level(); }
+
     QRectF mBoundingRect;
     LotPackLayerGroup *mLayerGroup;
     Tiled::MapRenderer *mRenderer;
 };
 
+/**
+  * Item that draws the grid-lines in a LotPackScene.
+  */
+class IsoWorldGridItem : public QGraphicsItem
+{
+public:
+    IsoWorldGridItem(LotPackScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+    void setWorld(IsoWorld *world);
+
+private:
+    LotPackScene *mScene;
+    QRectF mBoundingRect;
+};
+
 class LotPackMiniMapItem : public QGraphicsItem
 {
 public:
-    LotPackMiniMapItem(IsoWorld *world, Tiled::MapRenderer *renderer);
+    LotPackMiniMapItem(LotPackScene *scene);
 
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 
-    IsoWorld *mWorld;
-    Tiled::MapRenderer *mRenderer;
+    void setWorld(IsoWorld *world);
+
+    LotPackScene *mScene;
     QRectF mBoundingRect;
+    IsoWorldGridItem *mGridItem;
 };
 
 class LotHeader;
@@ -96,6 +121,7 @@ public:
     virtual void setTool(AbstractTool *tool) { Q_UNUSED(tool) }
 
     void setWorld(IsoWorld *world);
+    IsoWorld *world() const { return mWorld; }
 
     Tiled::MapRenderer *renderer() const { return mRenderer; }
 
@@ -103,11 +129,22 @@ public:
 
     QMap<QString,Tiled::Tile*> mTileByName;
     QSet<LotHeader*> mHeadersExamined;
+
+public slots:
+    void showRoomDefs(bool show);
+    void highlightCurrentLevel();
+    void levelAbove();
+    void levelBelow();
+
 private:
     IsoWorld *mWorld;
     Tiled::Map *mMap;
     Tiled::MapRenderer *mRenderer;
-    QVector<LotPackLayerGroupItem*> mItems;
+    QVector<LotPackLayerGroupItem*> mLayerGroupItems;
+    QVector<QGraphicsItem*> mRoomDefGroups;
+    bool mShowRoomDefs;
+    QGraphicsRectItem *mDarkRectangle;
+    int mCurrentLevel;
 };
 
 class LotPackView : public BaseGraphicsView
@@ -127,6 +164,7 @@ public:
 private:
     LotPackScene *mScene;
     IsoWorld *mWorld;
+    LotPackMiniMapItem *mMiniMapItem;
 };
 
 class LotPackWindow : public QMainWindow
@@ -136,13 +174,23 @@ class LotPackWindow : public QMainWindow
 public:
     explicit LotPackWindow(QWidget *parent = 0);
     ~LotPackWindow();
+
+    void addRecentDirectory(const QString &f);
+    void setRecentMenu();
     
 private slots:
     void open();
+    void openRecent();
+    void open(const QString &directory);
+    void zoomIn();
+    void zoomOut();
+    void zoomNormal();
+    void updateZoom();
 
 private:
     Ui::LotPackWindow *ui;
     LotPackView *mView;
+    IsoWorld *mWorld;
 };
 
 #endif // LOTPACKWINDOW_H

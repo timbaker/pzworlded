@@ -30,10 +30,14 @@ public:
     static Progress *instance();
     static void deleteInstance();
 
-    void setMainWindow(QWidget *mainWindow);
     void begin(const QString &text);
     void update(const QString &text);
     void end();
+
+    QWidget *mainWindow() const
+    { return mMainWindow; }
+
+    void setMainWindow(QWidget *parent);
 
 private:
     QWidget *mMainWindow;
@@ -49,8 +53,13 @@ private:
 class PROGRESS
 {
 public:
-    PROGRESS(const QString &text)
+    PROGRESS(const QString &text, QWidget *parent = 0) :
+        mMainWindow(0)
     {
+        if (parent) {
+            mMainWindow = Progress::instance()->mainWindow();
+            Progress::instance()->setMainWindow(parent);
+        }
         Progress::instance()->begin(text);
     }
 
@@ -62,7 +71,11 @@ public:
     ~PROGRESS()
     {
         Progress::instance()->end();
+        if (mMainWindow)
+            Progress::instance()->setMainWindow(mMainWindow);
     }
+
+    QWidget *mMainWindow;
 };
 
 #endif // PROGRESS_H

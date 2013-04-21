@@ -171,6 +171,12 @@ IsoChunkMap::IsoChunkMap(IsoCell *cell) :
         Chunks[x].resize(ChunkGridWidth);
 }
 
+IsoChunkMap::~IsoChunkMap()
+{
+    for (int x = 0; x < Chunks.size(); x++)
+        qDeleteAll(Chunks[x]);
+}
+
 void IsoChunkMap::update()
 {
 }
@@ -531,6 +537,13 @@ QBuffer *CellLoader::openLotPackFile(const QString &name)
     return b;
 }
 
+void CellLoader::reset()
+{
+    qDeleteAll(OpenLotPackFiles);
+    OpenLotPackFiles.clear();
+    BufferByName.clear();
+}
+
 /////
 
 int IsoCell::MaxHeight = -1; // FIXME: why static?
@@ -547,6 +560,11 @@ IsoCell::IsoCell(IsoWorld *world, /*IsoSpriteManager &spr, */int width, int heig
         for (int y = 0; y < IsoChunkMap::CellSize; y++)
             gridSquares[x][y].resize(IsoChunkMap::MaxLevels);
     }
+}
+
+IsoCell::~IsoCell()
+{
+    delete ChunkMap;
 }
 
 void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, bool bClearExisting)
@@ -623,9 +641,13 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
                         square->setRoomID(roomID);
                     }
 
-                    if ((s > 1) && (z > MaxHeight)) {
+#if 1 // BUG IN LEMMY'S???
+                    if ((s > 0) && (z > MaxHeight))
                         MaxHeight = z;
-                    }
+#else
+                    if ((s > 1) && (z > MaxHeight))
+                        MaxHeight = z;
+#endif
 
 #if 1
                     square->tiles.clear();
@@ -801,10 +823,13 @@ void IsoMetaGrid::Create(const QString &directory)
 
                 int rects = IsoLot::readInt(in);
                 for (int rc = 0; rc < rects; ++rc) {
-                    RoomRect *rect = new RoomRect(IsoLot::readInt(in) + wX * 300,
-                                                  IsoLot::readInt(in) + wY * 300,
-                                                  IsoLot::readInt(in),
-                                                  IsoLot::readInt(in));
+                    int x = IsoLot::readInt(in);
+                    int y = IsoLot::readInt(in);
+                    int w = IsoLot::readInt(in);
+                    int h = IsoLot::readInt(in);
+                    RoomRect *rect = new RoomRect(x + wX * 300,
+                                                  y + wY * 300,
+                                                  w, h);
 
                     def->rects += rect;
                 }
@@ -818,11 +843,12 @@ void IsoMetaGrid::Create(const QString &directory)
                     int e = IsoLot::readInt(in);
                     int x = IsoLot::readInt(in);
                     int y = IsoLot::readInt(in);
-
+#if 0
                     def->objects += new MetaObject(e,
                                                    x + wX * 300 - def->x,
                                                    y + wY * 300 - def->y,
                                                    def);
+#endif
                 }
 
             }
@@ -863,6 +889,12 @@ IsoWorld::IsoWorld(const QString &path) :
     Directory(path),
     CurrentCell(0)
 {
+}
+
+IsoWorld::~IsoWorld()
+{
+    delete MetaGrid;
+    delete CurrentCell;
 }
 
 void IsoWorld::init()

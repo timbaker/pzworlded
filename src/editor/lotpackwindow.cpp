@@ -19,6 +19,8 @@
 #include "ui_lotpackwindow.h"
 
 #include "chunkmap.h"
+#include "preferences.h"
+#include "progress.h"
 #include "tilemetainfomgr.h"
 #include "zoomable.h"
 
@@ -30,6 +32,7 @@
 
 #include <QDebug>
 #include <QFileDialog>
+#include <QSettings>
 
 using namespace Tiled;
 
@@ -105,31 +108,12 @@ void LotPackLayerGroupItem::paint(QPainter *painter,
 
 /////
 
-LotPackMiniMapItem::LotPackMiniMapItem(IsoWorld *world, MapRenderer *renderer) :
-    mWorld(world),
-    mRenderer(renderer)
+LotPackMiniMapItem::LotPackMiniMapItem(LotPackScene *scene) :
+    mScene(scene),
+    mGridItem(0)
 {
     setFlag(ItemHasNoContents);
-    mBoundingRect = mRenderer->boundingRect(QRect(world->MetaGrid->minx * world->CurrentCell->width,
-                                                  world->MetaGrid->miny * world->CurrentCell->height,
-                                                  world->getWidthInTiles(),
-                                                  world->getHeightInTiles()));
-    foreach (LotHeader *h, IsoLot::InfoHeaders) {
-        foreach (BuildingDef *bdef, h->Buildings) {
-            foreach (RoomDef *rdef, bdef->rooms) {
-                if (rdef->level) continue;
-                foreach (RoomRect *rr, rdef->rects) {
-                    QPolygonF p;
-                    p += mRenderer->tileToPixelCoords(rr->x, rr->y, rdef->level);
-                    p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y, rdef->level);
-                    p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y + rr->h, rdef->level);
-                    p += mRenderer->tileToPixelCoords(rr->x, rr->y + rr->h, rdef->level);
-                    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(this);
-                    item->setPolygon(p);
-                }
-            }
-        }
-    }
+    setWorld(scene->world());
 }
 
 QRectF LotPackMiniMapItem::boundingRect() const
@@ -141,38 +125,51 @@ void LotPackMiniMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
 {
 }
 
+void LotPackMiniMapItem::setWorld(IsoWorld *world)
+{
+    QPen pen(Qt::blue);
+    pen.setCosmetic(true);
+
+    if (mGridItem)
+        mGridItem->setParentItem(0);
+    qDeleteAll(children());
+
+    foreach (LotHeader *h, IsoLot::InfoHeaders) {
+        foreach (BuildingDef *bdef, h->Buildings) {
+            foreach (RoomDef *rdef, bdef->rooms) {
+                if (rdef->level) continue;
+                foreach (RoomRect *rr, rdef->rects) {
+                    QPolygonF p;
+                    p += mScene->renderer()->tileToPixelCoords(rr->x, rr->y, rdef->level);
+                    p += mScene->renderer()->tileToPixelCoords(rr->x + rr->w, rr->y, rdef->level);
+                    p += mScene->renderer()->tileToPixelCoords(rr->x + rr->w, rr->y + rr->h, rdef->level);
+                    p += mScene->renderer()->tileToPixelCoords(rr->x, rr->y + rr->h, rdef->level);
+                    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(this);
+                    item->setPen(pen);
+                    item->setBrush(Qt::NoBrush);
+                    item->setPolygon(p);
+                }
+            }
+        }
+    }
+
+    if (!mGridItem) {
+        mGridItem = new IsoWorldGridItem(mScene, this);
+    } else {
+        mGridItem->setWorld(world);
+        mGridItem->setParentItem(this);
+    }
+}
+
 ///// ///// ///// ///// /////
 
-/**
-  * Item that draws the grid-lines in a LotPackScene.
-  */
-class IsoWorldGridItem : public QGraphicsItem
-{
-public:
-    IsoWorldGridItem(IsoWorld *world, Tiled::MapRenderer *renderer);
 
-    QRectF boundingRect() const;
-
-    void paint(QPainter *painter,
-               const QStyleOptionGraphicsItem *option,
-               QWidget *widget = 0);
-
-private:
-    IsoWorld *mWorld;
-    MapRenderer *mRenderer;
-    QRectF mBoundingRect;
-};
-
-
-IsoWorldGridItem::IsoWorldGridItem(IsoWorld *world, Tiled::MapRenderer *renderer) :
-    QGraphicsItem(),
-    mWorld(world),
-    mRenderer(renderer)
+IsoWorldGridItem::IsoWorldGridItem(LotPackScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mScene(scene)
 {
     setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
-    mBoundingRect = mRenderer->boundingRect(QRect(0, 0,
-                                                  mWorld->getWidthInTiles(),
-                                                  mWorld->getHeightInTiles()));
+    setWorld(mScene->world());
 }
 
 QRectF IsoWorldGridItem::boundingRect() const
@@ -192,20 +189,20 @@ void IsoWorldGridItem::paint(QPainter *painter,
     gridPen.setCosmetic(true);
     painter->setPen(gridPen);
 
-    int startX = mWorld->MetaGrid->minx;
-    int endX = mWorld->MetaGrid->maxx + 1;
-    int startY = mWorld->MetaGrid->miny;
-    int endY = mWorld->MetaGrid->maxy + 1;
+    int startX = mScene->world()->MetaGrid->minx;
+    int endX = mScene->world()->MetaGrid->maxx + 1;
+    int startY = mScene->world()->MetaGrid->miny;
+    int endY = mScene->world()->MetaGrid->maxy + 1;
 
 
     for (int y = startY; y <= endY; ++y) {
-        const QPointF start = mRenderer->tileToPixelCoords(startX * 300, y * 300, 0);
-        const QPointF end = mRenderer->tileToPixelCoords(endX * 300, y * 300, 0);
+        const QPointF start = mScene->renderer()->tileToPixelCoords(startX * 300, y * 300, 0);
+        const QPointF end = mScene->renderer()->tileToPixelCoords(endX * 300, y * 300, 0);
         painter->drawLine(start, end);
     }
     for (int x = startX; x <= endX; ++x) {
-        const QPointF start = mRenderer->tileToPixelCoords(x * 300, startY * 300, 0);
-        const QPointF end = mRenderer->tileToPixelCoords(x * 300, endY * 300, 0);
+        const QPointF start = mScene->renderer()->tileToPixelCoords(x * 300, startY * 300, 0);
+        const QPointF end = mScene->renderer()->tileToPixelCoords(x * 300, endY * 300, 0);
         painter->drawLine(start, end);
     }
 #else
@@ -244,16 +241,42 @@ void IsoWorldGridItem::paint(QPainter *painter,
 #endif
 }
 
+void IsoWorldGridItem::setWorld(IsoWorld *world)
+{
+    prepareGeometryChange();
+    mBoundingRect = mScene->renderer()->boundingRect(QRect(0, 0,
+                                                  mScene->world()->getWidthInTiles(),
+                                                  mScene->world()->getHeightInTiles()));
+}
+
 /////
 
 LotPackScene::LotPackScene(QWidget *parent) :
-    BaseGraphicsScene(LotPackSceneType, parent)
+    BaseGraphicsScene(LotPackSceneType, parent),
+    mWorld(0),
+    mDarkRectangle(new QGraphicsRectItem),
+    mCurrentLevel(0)
 {
     setBackgroundBrush(Qt::lightGray);
+
+    mDarkRectangle->setPen(Qt::NoPen);
+    mDarkRectangle->setBrush(Qt::black);
+    mDarkRectangle->setOpacity(0.6);
+
+    connect(Preferences::instance(), SIGNAL(highlightCurrentLevelChanged(bool)),
+            SLOT(highlightCurrentLevel()));
 }
 
 void LotPackScene::setWorld(IsoWorld *world)
 {
+    if (mWorld) {
+        removeItem(mDarkRectangle);
+        clear();
+        delete mRenderer;
+        delete mMap;
+        mLayerGroupItems.clear();
+        mRoomDefGroups.clear();
+    }
     mWorld = world;
 
     mMap = new Map(Map::LevelIsometric,
@@ -267,17 +290,101 @@ void LotPackScene::setWorld(IsoWorld *world)
         LotPackLayerGroup *lg = new LotPackLayerGroup(mWorld, mMap, z);
         lg->mScene = this;
         LotPackLayerGroupItem *item = new LotPackLayerGroupItem(lg, mRenderer);
+        item->setZValue(z);
         addItem(item);
-        mItems += item;
+        mLayerGroupItems += item;
+
+        QGraphicsRectItem *item2 = new QGraphicsRectItem();
+        item2->setZValue(IsoChunkMap::MaxLevels + z);
+        mRoomDefGroups += item2;
     }
 
-    addItem(new IsoWorldGridItem(mWorld, mRenderer));
+    QVector<QColor> roomDefColors;
+    roomDefColors << QColor(255, 128, 128, 128)
+                  << QColor(128, 255, 255, 128)
+                  << QColor(128, 255, 128, 128)
+                  << QColor(255, 128, 255, 128);
+
+    foreach (LotHeader *h, IsoLot::InfoHeaders) {
+        foreach (BuildingDef *bdef, h->Buildings) {
+            foreach (RoomDef *rdef, bdef->rooms) {
+//                if (rdef->level) continue;
+                foreach (RoomRect *rr, rdef->rects) {
+                    QPolygonF p;
+                    p += mRenderer->tileToPixelCoords(rr->x, rr->y, rdef->level);
+                    p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y, rdef->level);
+                    p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y + rr->h, rdef->level);
+                    p += mRenderer->tileToPixelCoords(rr->x, rr->y + rr->h, rdef->level);
+                    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(mRoomDefGroups[rdef->level]);
+                    item->setPolygon(p);
+                    item->setBrush(roomDefColors[rdef->level % roomDefColors.size()]);
+
+                }
+            }
+        }
+    }
+
+    foreach (auto *item, mRoomDefGroups)
+        addItem(item);
+
+    setSceneRect(mRenderer->boundingRect(QRect(0, 0, mWorld->getWidthInTiles(),
+                                               mWorld->getHeightInTiles())));
+
+    mDarkRectangle->setRect(sceneRect());
+    addItem(mDarkRectangle);
+
+    IsoWorldGridItem *gridItem = new IsoWorldGridItem(this);
+    gridItem->setZValue(IsoChunkMap::MaxLevels * 2);
+    addItem(gridItem);
+
+    mCurrentLevel = 0;
+    highlightCurrentLevel();
 }
 
 void LotPackScene::setMaxLevel(int max)
 {
-    for (int z = 0; z <= max; z++) {
-        mItems[z]->setVisible(z <= max);
+    highlightCurrentLevel();
+}
+
+void LotPackScene::showRoomDefs(bool show)
+{
+    if (mShowRoomDefs == show)
+        return;
+    mShowRoomDefs = show;
+    foreach (auto *item, mRoomDefGroups)
+        item->setVisible(mShowRoomDefs);
+}
+
+void LotPackScene::highlightCurrentLevel()
+{
+    int max = mWorld->CurrentCell->MaxHeight;
+    bool hi = Preferences::instance()->highlightCurrentLevel();
+    if (hi)
+        max = qMin(max, mCurrentLevel);
+    mDarkRectangle->setVisible(hi);
+    foreach (LotPackLayerGroupItem *item, mLayerGroupItems) {
+        if (hi && item->level() == mCurrentLevel)
+            mDarkRectangle->setZValue(item->zValue() - 0.1);
+        item->setVisible(item->level() <= max);
+    }
+    for (int z = 0; z < mRoomDefGroups.size(); z++)
+        mRoomDefGroups[z]->setVisible(mShowRoomDefs &&
+                                      (!hi || (z == mCurrentLevel)));
+}
+
+void LotPackScene::levelAbove()
+{
+    if (mCurrentLevel < mWorld->CurrentCell->MaxHeight) {
+        ++mCurrentLevel;
+        highlightCurrentLevel();
+    }
+}
+
+void LotPackScene::levelBelow()
+{
+    if (mCurrentLevel > 0) {
+        --mCurrentLevel;
+        highlightCurrentLevel();
     }
 }
 
@@ -286,7 +393,8 @@ void LotPackScene::setMaxLevel(int max)
 LotPackView::LotPackView(QWidget *parent) :
     BaseGraphicsView(true, parent),
     mScene(new LotPackScene(this)),
-    mWorld(0)
+    mWorld(0),
+    mMiniMapItem(0)
 {
     setScene(mScene);
 
@@ -299,22 +407,25 @@ LotPackView::LotPackView(QWidget *parent) :
 
 LotPackView::~LotPackView()
 {
-    delete mWorld;
 }
 
 void LotPackView::setWorld(IsoWorld *world)
 {
-    if (mWorld)
-        delete mWorld;
+    if (mWorld) {
+    }
 
     mWorld = world;
 
     mScene->setWorld(mWorld);
 
-    LotPackMiniMapItem *item = new LotPackMiniMapItem(mWorld, mScene->renderer());
-    (new IsoWorldGridItem(mWorld, mScene->renderer()))->setParentItem(item);
+    if (!mMiniMapItem) {
+        mMiniMapItem = new LotPackMiniMapItem(mScene);
+        addMiniMapItem(mMiniMapItem);
+    } else {
+        mMiniMapItem->setWorld(mWorld);
+    }
 
-    addMiniMapItem(item);
+    centerOn(mScene->sceneRect().center());
 }
 
 void LotPackView::scrollContentsBy(int dx, int dy)
@@ -409,36 +520,171 @@ void LotPackView::scrollContentsBy(int dx, int dy)
 
 LotPackWindow::LotPackWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::LotPackWindow)
+    ui(new Ui::LotPackWindow),
+    mWorld(0)
 {
     ui->setupUi(this);
 
     mView = ui->view;
 
+    Preferences *prefs = Preferences::instance();
+
+    ui->actionShowRoomDefs->setChecked(true);
+    ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
+
+    // Make sure Ctrl+= also works for zooming in
+    QList<QKeySequence> keys = QKeySequence::keyBindings(QKeySequence::ZoomIn);
+    keys += QKeySequence(tr("Ctrl+="));
+    keys += QKeySequence(tr("+"));
+    keys += QKeySequence(tr("="));
+    ui->actionZoomIn->setShortcuts(keys);
+    keys = QKeySequence::keyBindings(QKeySequence::ZoomOut);
+    keys += QKeySequence(tr("-"));
+    ui->actionZoomOut->setShortcuts(keys);
+
+    mView->zoomable()->connectToComboBox(ui->scaleCombo);
+    connect(mView->zoomable(), SIGNAL(scaleChanged(qreal)), SLOT(updateZoom()));
+
     connect(ui->actionOpen_World, SIGNAL(triggered()), SLOT(open()));
+    connect(ui->actionClose, SIGNAL(triggered()), SLOT(hide()));
+
+    connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
+    connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
+    connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+
+    connect(ui->actionShowRoomDefs, SIGNAL(toggled(bool)),
+            mView->scene(), SLOT(showRoomDefs(bool)));
+
+    connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)),
+            prefs, SLOT(setHighlightCurrentLevel(bool)));
+    connect(ui->actionLevelUp, SIGNAL(triggered()), mView->scene(), SLOT(levelAbove()));
+    connect(ui->actionLevelDown, SIGNAL(triggered()), mView->scene(), SLOT(levelBelow()));
+
+    ui->actionRecent->setVisible(false);
+    setRecentMenu();
 
     TileMetaInfoMgr::instance()->loadTilesets();
-
-    open();
 }
 
 LotPackWindow::~LotPackWindow()
 {
+    delete mWorld;
     delete ui;
+}
+
+void LotPackWindow::addRecentDirectory(const QString &f)
+{
+    QSettings settings;
+    QStringList recentList = settings.value(QLatin1String("LotPackWindow/RecentList")).toStringList();
+    QFileInfo info(f);
+    QStringList newRecentList;
+    bool dup = false;
+    foreach (QString recent, recentList) {
+        QFileInfo recentInfo(recent);
+        if (recentInfo == info)
+            dup = true;
+        else if (recentInfo.exists())
+            newRecentList += recent;
+    }
+    newRecentList.prepend(f);
+    settings.setValue(QLatin1String("LotPackWindow/RecentList"), newRecentList);
+}
+
+void LotPackWindow::setRecentMenu()
+{
+    QSettings settings;
+    QStringList recentList = settings.value(QLatin1String("LotPackWindow/RecentList")).toStringList();
+
+    bool sawRecent = false;
+    QAction *separatorAfterRecent = 0;
+    foreach (QAction *action, ui->menuFile->actions()) {
+        if (action == ui->actionRecent)
+            sawRecent = true;
+        else if (sawRecent) {
+            if (action->isSeparator()) {
+                separatorAfterRecent = action;
+                break;
+            }
+            delete action;
+        }
+    }
+
+    foreach (QString recent, recentList) {
+        QFileInfo info(recent);
+        QAction *action = new QAction(info.fileName(), ui->menuFile);
+        if (info.exists()) {
+            action->setData(recent);
+            connect(action, SIGNAL(triggered()), SLOT(openRecent()));
+        } else
+            action->setEnabled(false);
+        ui->menuFile->insertAction(separatorAfterRecent, action);
+    }
 }
 
 void LotPackWindow::open()
 {
-#ifdef QT_NO_DEBUGxxx
-    QString f = QFileDialog::getOpenFileName(this, tr("Open LotPack"));
+#if 1
+    QSettings settings;
+    QString recent = settings.value(QLatin1String("LotPackWindow/LastOpenDirectory")).toString();
+    QString f = QFileDialog::getExistingDirectory(this, tr("Choose a world's directory"), recent);
     if (f.isEmpty())
         return;
 
-    IsoWorld *world = new IsoWorld(QFileInfo(f).absolutePath());
+    settings.setValue(QLatin1String("LotPackWindow/LastOpenDirectory"), f);
+
 #else
     IsoWorld *world = new IsoWorld(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/Project Zomboid Latest/media/maps/Muldraugh, KY"));
 #endif
-    world->init();
-    mView->setWorld(world);
+    open(f);
 }
 
+void LotPackWindow::openRecent()
+{
+    QAction *sender = dynamic_cast<QAction*>(this->sender());
+    if (sender)
+        open(sender->data().toString());
+}
+
+void LotPackWindow::open(const QString &directory)
+{
+    PROGRESS progress(tr("Loading %1").arg(QFileInfo(directory).fileName()), this);
+
+    qDeleteAll(IsoLot::InfoHeaders);
+    IsoLot::InfoHeaders.clear();
+
+    CellLoader::instance()->reset();
+
+    IsoWorld *world = new IsoWorld(directory);
+    world->init();
+    mView->setWorld(world);
+    if (mWorld)
+        delete mWorld;
+    mWorld = world;
+
+    addRecentDirectory(directory);
+    setRecentMenu();
+}
+
+void LotPackWindow::zoomIn()
+{
+    mView->zoomable()->zoomIn();
+}
+
+void LotPackWindow::zoomOut()
+{
+    mView->zoomable()->zoomOut();
+}
+
+void LotPackWindow::zoomNormal()
+{
+    mView->zoomable()->resetZoom();
+}
+
+void LotPackWindow::updateZoom()
+{
+    const qreal scale = mView->zoomable()->scale();
+
+    ui->actionZoomIn->setEnabled(mView->zoomable()->canZoomIn());
+    ui->actionZoomOut->setEnabled(mView->zoomable()->canZoomOut());
+    ui->actionZoomNormal->setEnabled(scale != 1);
+}

@@ -97,6 +97,7 @@ class IsoChunkMap
 {
 public:
     explicit IsoChunkMap(IsoCell *cell);
+    ~IsoChunkMap();
 
     void update();
     void LoadChunk(int wx, int wy, int x, int y);
@@ -149,16 +150,6 @@ public:
     int YMinTiles;
     int XMaxTiles;
     int YMaxTiles;
-#if 0
-    IsoChunkMap &operator=(const IsoChunkMap &other)
-    {
-        WorldCellX = other.WorldCellX;
-        WorldCellY = other.WorldCellY;
-        WorldX = other.WorldX;
-        Chunks = other.Chunks;
-        return *this;
-    }
-#endif
 };
 
 class RoomRect
@@ -280,6 +271,7 @@ class IsoCell
 {
 public:
     IsoCell(IsoWorld *world, /*IsoSpriteManager &spr, */int width, int height);
+    ~IsoCell();
 
     void PlaceLot(IsoLot *lot, int sx, int sy, int sz, bool bClearExisting);
     void PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX, int WY, bool bForLater);
@@ -307,6 +299,7 @@ public:
     static IsoCell *LoadCellBinaryChunk(IsoWorld *world, /*IsoSpriteManager &spr, */int wx, int wy);
 
     QBuffer *openLotPackFile(const QString &name);
+    void reset();
 
     QList<QBuffer*> OpenLotPackFiles;
     QMap<QString,QBuffer*> BufferByName;
@@ -331,6 +324,8 @@ class IsoWorld
 {
 public:
     IsoWorld(const QString &path);
+    ~IsoWorld();
+
     void init();
 
     int getWidthInTiles() { return (MetaGrid->maxx - MetaGrid->minx + 1) * CurrentCell->width; }

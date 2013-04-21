@@ -21,6 +21,30 @@
     <item row="0" column="0">
      <widget class="LotPackView" name="view"/>
     </item>
+    <item row="1" column="0">
+     <layout class="QHBoxLayout" name="statusBarLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QComboBox" name="scaleCombo">
+        <property name="editable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -37,12 +61,35 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_World"/>
+    <addaction name="separator"/>
+    <addaction name="actionRecent"/>
+    <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionCenterOnCell"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowRoomDefs"/>
+    <addaction name="separator"/>
+    <addaction name="actionHighlightCurrentLevel"/>
+    <addaction name="actionLevelUp"/>
+    <addaction name="actionLevelDown"/>
+    <addaction name="separator"/>
+    <addaction name="actionZoomIn"/>
+    <addaction name="actionZoomOut"/>
+    <addaction name="actionZoomNormal"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuView"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen_World">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-open.png</normaloff>:/images/16x16/document-open.png</iconset>
+   </property>
    <property name="text">
     <string>Open World...</string>
    </property>
@@ -50,6 +97,84 @@
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
+   </property>
+  </action>
+  <action name="actionZoomIn">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/zoom-in.png</normaloff>:/images/16x16/zoom-in.png</iconset>
+   </property>
+   <property name="text">
+    <string>Zoom In</string>
+   </property>
+  </action>
+  <action name="actionZoomOut">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/zoom-out.png</normaloff>:/images/16x16/zoom-out.png</iconset>
+   </property>
+   <property name="text">
+    <string>Zoom Out</string>
+   </property>
+  </action>
+  <action name="actionZoomNormal">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/zoom-original.png</normaloff>:/images/16x16/zoom-original.png</iconset>
+   </property>
+   <property name="text">
+    <string>Normal Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+0</string>
+   </property>
+  </action>
+  <action name="actionShowRoomDefs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show RoomDefs</string>
+   </property>
+   <property name="shortcut">
+    <string>R</string>
+   </property>
+  </action>
+  <action name="actionCenterOnCell">
+   <property name="text">
+    <string>Center On Cell...</string>
+   </property>
+  </action>
+  <action name="actionHighlightCurrentLevel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Highlight Current Level</string>
+   </property>
+   <property name="shortcut">
+    <string>H</string>
+   </property>
+  </action>
+  <action name="actionLevelUp">
+   <property name="text">
+    <string>Select Level Above</string>
+   </property>
+   <property name="shortcut">
+    <string>PgUp</string>
+   </property>
+  </action>
+  <action name="actionLevelDown">
+   <property name="text">
+    <string>Select Level Below</string>
+   </property>
+   <property name="shortcut">
+    <string>PgDown</string>
+   </property>
+  </action>
+  <action name="actionRecent">
+   <property name="text">
+    <string>Recent</string>
    </property>
   </action>
  </widget>
@@ -60,6 +185,8 @@
    <header>lotpackwindow.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="editor.qrc"/>
+ </resources>
  <connections/>
 </ui>
