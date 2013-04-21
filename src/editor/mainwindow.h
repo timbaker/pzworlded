@@ -131,6 +131,8 @@ public slots:
     void aboutToShowObjGrpMenu();
     void objGrpMenuTriggered(QAction *action);
 
+    void lotpackviewer();
+
 private:
     bool confirmSave();
     bool confirmAllSave();

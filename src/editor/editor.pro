@@ -109,7 +109,9 @@ SOURCES += main.cpp\
     BuildingEditor/buildingreader.cpp \
     BuildingEditor/buildingtemplates.cpp \
     threads.cpp \
-    bmpblender.cpp
+    bmpblender.cpp \
+    lotpackwindow.cpp \
+    chunkmap.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -177,7 +179,9 @@ HEADERS  += mainwindow.h \
     BuildingEditor/buildingreader.h \
     BuildingEditor/buildingtemplates.h \
     threads.h \
-    bmpblender.h
+    bmpblender.h \
+    lotpackwindow.h \
+    chunkmap.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -191,7 +195,8 @@ FORMS    += mainwindow.ui \
     generatelotsdialog.ui \
     bmptotmxconfirmdialog.ui \
     resizeworlddialog.ui \
-    newworlddialog.ui
+    newworlddialog.ui \
+    lotpackwindow.ui
 
 OTHER_FILES +=
 

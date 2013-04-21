@@ -278,11 +278,18 @@
     <addaction name="actionClearCell"/>
     <addaction name="actionClearMapOnly"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionLotPackViewer"/>
+   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
+   <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -653,6 +660,11 @@
    </property>
    <property name="text">
     <string>Resize World...</string>
+   </property>
+  </action>
+  <action name="actionLotPackViewer">
+   <property name="text">
+    <string>LotPack Viewer</string>
    </property>
   </action>
  </widget>

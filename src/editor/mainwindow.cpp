@@ -30,6 +30,7 @@
 #include "layersdock.h"
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
+#include "lotpackwindow.h"
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
@@ -244,6 +245,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+
+    connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -786,6 +789,12 @@ void MainWindow::objGrpMenuTriggered(QAction *action)
     const ObjectGroupList &groups = cellDoc->world()->objectGroups();
     index = groups.size() - index - 1;
     cellDoc->setCurrentObjectGroup(groups.at(index));
+}
+
+void MainWindow::lotpackviewer()
+{
+    LotPackWindow *win = new LotPackWindow(this);
+    win->show();
 }
 
 bool MainWindow::saveFile()
