@@ -121,6 +121,11 @@ public:
         return mEmptyCell;
     }
 
+    const Cell &at(int x, int y) const
+    {
+        return at(y * mWidth + x);
+    }
+
     void replace(int index, const Cell &cell)
     {
         if (mUseVector) {

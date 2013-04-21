@@ -7,6 +7,8 @@
 #include <QStringList>
 #include <QVector>
 
+class QBuffer;
+
 class BuildingDef;
 class IsoCell;
 class IsoChunk;
@@ -131,7 +133,7 @@ public:
 
     static const int ChunkDiv = 10;
     static const int ChunksPerWidth = 10;
-    static const int ChunkGridWidth = 30;
+    static const int ChunkGridWidth = 20;
     static const int CellSize = ChunksPerWidth * ChunkGridWidth;
     static const int MaxLevels = 16;
 
@@ -267,6 +269,7 @@ public:
     static QString readString(QDataStream &in);
 
     static QMap<QString,LotHeader*> InfoHeaders;
+    QVector<QVector<QVector<int> > > roomIDs;
     QVector<QVector<QVector<QList<int> > > > data;
     LotHeader *info;
     int wx;
@@ -298,9 +301,17 @@ public:
 class CellLoader
 {
 public:
+    static CellLoader *instance();
     static void LoadCellBinaryChunk(IsoCell *cell, int wx, int wy, IsoChunk *chunk);
     static void LoadCellBinaryChunkForLater(IsoCell *cell, int wx, int wy, IsoChunk *chunk);
     static IsoCell *LoadCellBinaryChunk(IsoWorld *world, /*IsoSpriteManager &spr, */int wx, int wy);
+
+    QBuffer *openLotPackFile(const QString &name);
+
+    QList<QBuffer*> OpenLotPackFiles;
+    QMap<QString,QBuffer*> BufferByName;
+
+    static CellLoader *mInstance;
 };
 
 class IsoMetaGrid

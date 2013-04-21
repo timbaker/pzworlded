@@ -39,13 +39,10 @@ LotPackLayerGroup::LotPackLayerGroup(IsoWorld *world, Map *map, int level) :
     ZTileLayerGroup(map, level),
     mWorld(world)
 {
-    mCells.resize(mWorld->CurrentCell->ChunkMap->getWidthInTiles());
-    for (int x = 0; x < mCells.size(); x++) {
-        mCells[x].resize(mCells.size());
-        for (int y = 0; y < mCells[x].size(); y++) {
-            mCells[x][y].resize(20);
-        }
-    }
+    mGrids.resize(20); // FIXME: max number of tiles in any cell on this level
+    for (int x = 0; x < mGrids.size(); x++)
+        mGrids[x] = new SparseTileGrid(mWorld->CurrentCell->ChunkMap->getWidthInTiles(),
+                                       mWorld->CurrentCell->ChunkMap->getWidthInTiles());
 }
 
 QRect LotPackLayerGroup::bounds() const
@@ -69,8 +66,8 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
     if (IsoGridSquare *sq = mWorld->CurrentCell->getGridSquare(point.x(), point.y(), level())) {
         foreach (QString tileName, sq->tiles) {
             if (Tile *tile = mScene->mTileByName[tileName]/*BuildingEditor::BuildingTilesMgr::instance()->tileFor(tileName)*/) { // FIXME: way too slow
-                Cell *cell = const_cast<Cell*>(&mCells[x][y][cells.size()]);
-                cell->tile = tile;
+                mGrids[cells.size()]->replace(x, y, Cell(tile));
+                const Cell *cell = &mGrids[cells.size()]->at(x, y);
                 cells += cell;
                 opacities += 1.0;
             }
@@ -107,6 +104,42 @@ void LotPackLayerGroupItem::paint(QPainter *painter,
 }
 
 /////
+
+LotPackMiniMapItem::LotPackMiniMapItem(IsoWorld *world, MapRenderer *renderer) :
+    mWorld(world),
+    mRenderer(renderer)
+{
+    setFlag(ItemHasNoContents);
+    mBoundingRect = mRenderer->boundingRect(QRect(world->MetaGrid->minx * world->CurrentCell->width,
+                                                  world->MetaGrid->miny * world->CurrentCell->height,
+                                                  world->getWidthInTiles(),
+                                                  world->getHeightInTiles()));
+    foreach (LotHeader *h, IsoLot::InfoHeaders) {
+        foreach (BuildingDef *bdef, h->Buildings) {
+            foreach (RoomDef *rdef, bdef->rooms) {
+                if (rdef->level) continue;
+                foreach (RoomRect *rr, rdef->rects) {
+                    QPolygonF p;
+                    p += mRenderer->tileToPixelCoords(rr->x, rr->y, rdef->level);
+                    p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y, rdef->level);
+                    p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y + rr->h, rdef->level);
+                    p += mRenderer->tileToPixelCoords(rr->x, rr->y + rr->h, rdef->level);
+                    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(this);
+                    item->setPolygon(p);
+                }
+            }
+        }
+    }
+}
+
+QRectF LotPackMiniMapItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+void LotPackMiniMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+}
 
 ///// ///// ///// ///// /////
 
@@ -257,7 +290,11 @@ LotPackView::LotPackView(QWidget *parent) :
 {
     setScene(mScene);
 
+    QVector<qreal> factors;
+    factors << 0.25 << 0.33 << 0.5 << 0.75 << 1.0 << 1.5 << 2.0;
+    zoomable()->setZoomFactors(factors);
     zoomable()->setScale(zoomable()->zoomFactors().first());
+
 }
 
 LotPackView::~LotPackView()
@@ -273,6 +310,11 @@ void LotPackView::setWorld(IsoWorld *world)
     mWorld = world;
 
     mScene->setWorld(mWorld);
+
+    LotPackMiniMapItem *item = new LotPackMiniMapItem(mWorld, mScene->renderer());
+    (new IsoWorldGridItem(mWorld, mScene->renderer()))->setParentItem(item);
+
+    addMiniMapItem(item);
 }
 
 void LotPackView::scrollContentsBy(int dx, int dy)

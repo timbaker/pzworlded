@@ -23,6 +23,7 @@
 #include "basegraphicsscene.h"
 #include "basegraphicsview.h"
 
+#include "tilelayer.h"
 #include "ztilelayergroup.h"
 
 #include <QGraphicsItem>
@@ -55,7 +56,7 @@ public:
     void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
 
     IsoWorld *mWorld;
-    QVector<QVector<QVector<Tiled::Cell> > > mCells;
+    QVector<Tiled::SparseTileGrid*> mGrids;
     LotPackScene *mScene;
 };
 
@@ -70,6 +71,19 @@ public:
     QRectF mBoundingRect;
     LotPackLayerGroup *mLayerGroup;
     Tiled::MapRenderer *mRenderer;
+};
+
+class LotPackMiniMapItem : public QGraphicsItem
+{
+public:
+    LotPackMiniMapItem(IsoWorld *world, Tiled::MapRenderer *renderer);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+
+    IsoWorld *mWorld;
+    Tiled::MapRenderer *mRenderer;
+    QRectF mBoundingRect;
 };
 
 class LotHeader;

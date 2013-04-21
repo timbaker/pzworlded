@@ -1,5 +1,6 @@
 #include "chunkmap.h"
 
+#include <QBuffer>
 #include <QDataStream>
 #include <QDebug>
 #include <QDir>
@@ -355,15 +356,20 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
             data[x][y].resize(info->levels);
     }
 
+    roomIDs.resize(IsoChunkMap::ChunksPerWidth);
+    for (int x = 0; x < data.size(); x++) {
+        roomIDs[x].resize(IsoChunkMap::ChunksPerWidth);
+        for (int y = 0; y < data[x].size(); y++)
+            roomIDs[x][y].fill(-1, info->levels);
+    }
+
     {
         QString filenamepack = QString::fromLatin1("%1/world_%2_%3.lotpack").arg(directory).arg(cX).arg(cY);
-        QFile fo(filenamepack);
-        if (!fo.exists())
-            return; // exception!
-        if (!fo.open(QFile::ReadOnly))
+        QBuffer *fo = CellLoader::instance()->openLotPackFile(filenamepack);
+        if (!fo)
             return; // exception!
 
-        QDataStream in(&fo);
+        QDataStream in(fo);
         in.setByteOrder(QDataStream::LittleEndian);
 
 //        qDebug() << "reading chunk" << wX << wY << "from" << filenamepack;
@@ -373,10 +379,10 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
         int lwx = this->wx - (cX * 30);
         int lwy = this->wy - (cY * 30);
         int index = lwx * 30 + lwy;
-        fo.seek(4 + index * 8);
+        fo->seek(4 + index * 8);
         qint64 pos;
         in >> pos;
-        fo.seek(pos);
+        fo->seek(pos);
         for (int z = 0; z < info->levels; ++z) {
             for (int x = 0; x < IsoChunkMap::ChunksPerWidth; ++x) {
                 for (int y = 0; y < IsoChunkMap::ChunksPerWidth; ++y) {
@@ -395,6 +401,7 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
                                 continue;
 #endif
                             int room = readInt(in);
+                            roomIDs[x][y][z] = room;
 
                             if (count <= 1) {
                                 int brk = 1;
@@ -442,6 +449,15 @@ QString IsoLot::readString(QDataStream &in)
 }
 
 /////
+
+CellLoader *CellLoader::mInstance = 0;
+
+CellLoader *CellLoader::instance()
+{
+    if (!mInstance)
+        mInstance = new CellLoader;
+    return mInstance;
+}
 
 void CellLoader::LoadCellBinaryChunk(IsoCell *cell, int wx, int wy, IsoChunk *chunk)
 {
@@ -491,6 +507,28 @@ IsoCell *CellLoader::LoadCellBinaryChunk(IsoWorld *world, /*IsoSpriteManager &sp
     cell->ChunkMap->UpdateCellCache();
 
     return cell;
+}
+
+QBuffer *CellLoader::openLotPackFile(const QString &name)
+{
+    if (BufferByName.contains(name))
+        return BufferByName[name];
+
+    while (OpenLotPackFiles.size() > 10) {
+        BufferByName.remove(BufferByName.key(OpenLotPackFiles.first()));
+        delete OpenLotPackFiles.takeFirst();
+    }
+    QFile f(name);
+    if (!f.open(QFile::ReadOnly))
+        return 0;
+
+    QBuffer *b = new QBuffer();
+    b->open(QBuffer::ReadWrite);
+    b->write(f.readAll());
+    b->seek(0);
+    OpenLotPackFiles += b;
+    BufferByName[name] = b;
+    return b;
 }
 
 /////
@@ -577,7 +615,11 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
                         square->setY(y);
                         square->setZ(z);
 
+#if 1
+                        int roomID = lot->roomIDs[x - WX][y - WY][z];
+#else
                         int roomID = ch->lotheader->getRoomAt(x, y, z);
+#endif
                         square->setRoomID(roomID);
                     }
 
