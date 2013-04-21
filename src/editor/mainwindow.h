@@ -29,6 +29,7 @@ class Document;
 class DocumentManager;
 class LayersDock;
 class LotsDock;
+class LotPackWindow;
 class MapsDock;
 class ObjectsDock;
 class PropertiesDock;
@@ -170,6 +171,7 @@ private:
     QMenu *mObjectGroupMenu;
     Zoomable *mZoomable;
     QSettings mSettings;
+    LotPackWindow *mLotPackWindow;
 
     static MainWindow *mInstance;
 };

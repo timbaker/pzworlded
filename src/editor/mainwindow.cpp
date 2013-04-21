@@ -100,6 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mCurrentLevelMenu(new QMenu(this))
     , mObjectGroupMenu(new QMenu(this))
     , mZoomable(0)
+    , mLotPackWindow(0)
 {
     ui->setupUi(this);
 
@@ -313,6 +314,9 @@ MainWindow::~MainWindow()
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     writeSettings();
+
+    if (mLotPackWindow)
+        mLotPackWindow->close();
 
     if (confirmAllSave())
         event->accept();
@@ -793,8 +797,13 @@ void MainWindow::objGrpMenuTriggered(QAction *action)
 
 void MainWindow::lotpackviewer()
 {
-    LotPackWindow *win = new LotPackWindow(this);
-    win->show();
+    if (!mLotPackWindow)
+        mLotPackWindow = new LotPackWindow(this);
+
+    mLotPackWindow->show();
+    mLotPackWindow->activateWindow();
+    mLotPackWindow->raise();
+
 }
 
 bool MainWindow::saveFile()
