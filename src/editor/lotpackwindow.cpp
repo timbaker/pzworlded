@@ -529,6 +529,8 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
 
     Preferences *prefs = Preferences::instance();
 
+    ui->actionCenterOnCell->setEnabled(false);
+    ui->actionShowMiniMap->setChecked(prefs->showMiniMap());
     ui->actionShowRoomDefs->setChecked(true);
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
 
@@ -552,6 +554,8 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
 
+    connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)),
+            prefs, SLOT(setShowMiniMap(bool)));
     connect(ui->actionShowRoomDefs, SIGNAL(toggled(bool)),
             mView->scene(), SLOT(showRoomDefs(bool)));
 

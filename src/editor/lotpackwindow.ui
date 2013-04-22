@@ -72,6 +72,7 @@
     </property>
     <addaction name="actionCenterOnCell"/>
     <addaction name="separator"/>
+    <addaction name="actionShowMiniMap"/>
     <addaction name="actionShowRoomDefs"/>
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
@@ -175,6 +176,17 @@
   <action name="actionRecent">
    <property name="text">
     <string>Recent</string>
+   </property>
+  </action>
+  <action name="actionShowMiniMap">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show MiniMap</string>
+   </property>
+   <property name="shortcut">
+    <string>M</string>
    </property>
   </action>
  </widget>
