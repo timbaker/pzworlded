@@ -399,9 +399,10 @@ LotPackView::LotPackView(QWidget *parent) :
     setScene(mScene);
 
     QVector<qreal> factors;
-    factors << 0.25 << 0.33 << 0.5 << 0.75 << 1.0 << 1.5 << 2.0;
+    factors << 0.12 << 0.25 << 0.33 << 0.5 << 0.75 << 1.0 << 1.5 << 2.0;
     zoomable()->setZoomFactors(factors);
-    zoomable()->setScale(zoomable()->zoomFactors().first());
+
+    zoomable()->setScale(0.25);
 
 }
 
@@ -582,12 +583,9 @@ void LotPackWindow::addRecentDirectory(const QString &f)
     QStringList recentList = settings.value(QLatin1String("LotPackWindow/RecentList")).toStringList();
     QFileInfo info(f);
     QStringList newRecentList;
-    bool dup = false;
     foreach (QString recent, recentList) {
         QFileInfo recentInfo(recent);
-        if (recentInfo == info)
-            dup = true;
-        else if (recentInfo.exists())
+        if (recentInfo != info && recentInfo.exists())
             newRecentList += recent;
     }
     newRecentList.prepend(f);
