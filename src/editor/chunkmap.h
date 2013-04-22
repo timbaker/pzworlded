@@ -133,22 +133,23 @@ public:
     int getWorldYMinTiles();
 
     static const int ChunkDiv = 10;
-    static const int ChunksPerWidth = 10;
-    static const int ChunkGridWidth = 20;
-    static const int CellSize = ChunksPerWidth * ChunkGridWidth;
+    static const int ChunksPerWidth = 10; // Number of tiles per chunk.
+    static const int ChunkGridWidth = 30; // Columns/Rows of chunks displayed.
+    static const int CellSize = ChunksPerWidth * ChunkGridWidth; // Columns/Rows of tiles displayed.
     static const int MaxLevels = 16;
+
+    IsoCell *cell;
 
     int WorldCellX;
     int WorldCellY;
     int WorldX;
     int WorldY;
 
-    IsoCell *cell;
     QVector<QVector<IsoChunk*> > Chunks;
 
     int XMinTiles;
-    int YMinTiles;
     int XMaxTiles;
+    int YMinTiles;
     int YMaxTiles;
 };
 

@@ -324,7 +324,7 @@ void LotPackScene::setWorld(IsoWorld *world)
         }
     }
 
-    foreach (auto *item, mRoomDefGroups)
+    foreach (QGraphicsItem *item, mRoomDefGroups)
         addItem(item);
 
     setSceneRect(mRenderer->boundingRect(QRect(0, 0, mWorld->getWidthInTiles(),

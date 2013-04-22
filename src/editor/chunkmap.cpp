@@ -589,7 +589,7 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
                     if (z < 0)
                         continue;
 
-                    auto ints = lot->data[(x - (WX + sx))][(y - (WY + sy))][(z - sz)];
+                    QList<int> ints = lot->data[(x - (WX + sx))][(y - (WY + sy))][(z - sz)];
                     IsoGridSquare *square = 0;
                     if (ints.isEmpty())
                         continue;
@@ -886,8 +886,8 @@ void IsoMetaGrid::Create(const QString &directory)
 
 IsoWorld::IsoWorld(const QString &path) :
     MetaGrid(new IsoMetaGrid),
-    Directory(path),
-    CurrentCell(0)
+    CurrentCell(0),
+    Directory(path)
 {
 }
 
