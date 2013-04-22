@@ -577,7 +577,7 @@ bool BMPToTMX::LoadRules()
     QString path = mWorldDoc->world()->getBMPToTMXSettings().rulesFile;
     if (path.isEmpty())
         path = defaultRulesFile();
-#if 1
+
     Tiled::Internal::BmpRulesFile file;
     if (!file.read(path)) {
         mError = file.errorString();
@@ -596,55 +596,6 @@ bool BMPToTMX::LoadRules()
     foreach (BmpRule *rule, file.rules())
         AddRule(rule->bitmapIndex, rule->color, rule->tileChoices,
                 rule->targetLayer, rule->condition);
-#else
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        mError = file.errorString();
-        return false;
-    }
-
-    Conversions.clear();
-
-    QTextStream sr(&file);
-    while (!sr.atEnd()) {
-        QString line = sr.readLine();
-
-        if (line.contains(QLatin1Char('#')))
-            continue;
-        if (line.trimmed().isEmpty())
-            continue;
-
-        QStringList lineSplit = line.split(QLatin1Char(','));
-        int bmp = lineSplit[0].trimmed().toInt();
-        QRgb col = qRgb(lineSplit[1].trimmed().toInt(),
-                        lineSplit[2].trimmed().toInt(),
-                        lineSplit[3].trimmed().toInt());
-        QStringList choices = lineSplit[4].split(QLatin1Char(' '));
-        int n = 0;
-        foreach (QString choice, choices) {
-            choices[n] = choice.trimmed();
-            if (choices[n] == QLatin1String("null"))
-                choices[n].clear();
-            n++;
-        }
-        QRgb con = qRgb(0, 0, 0);
-
-        QString layer = lineSplit[5].trimmed();
-        bool hasCon = false;
-        if (lineSplit.length() > 6) {
-            con = qRgb(lineSplit[6].trimmed().toInt(),
-                       lineSplit[7].trimmed().toInt(),
-                       lineSplit[8].trimmed().toInt());
-            hasCon = true;
-        }
-
-        if (hasCon) {
-            AddConversion(bmp, col, choices, layer, con);
-        } else {
-            AddConversion(bmp, col, choices, layer);
-        }
-    }
-#endif
 
     // Verify all the listed tiles exist.
     foreach (QList<BmpRule*> convs, mRulesByColor) {
@@ -674,7 +625,7 @@ bool BMPToTMX::LoadBlends()
     QString path = mWorldDoc->world()->getBMPToTMXSettings().blendsFile;
     if (path.isEmpty())
         path = defaultBlendsFile();
-#if 1
+
     Tiled::Internal::BmpBlendsFile file;
     if (!file.read(path, mAliases)) {
         mError = file.errorString();
@@ -696,61 +647,7 @@ bool BMPToTMX::LoadBlends()
         }
         mBlendExcludes[blend] = excludes;
     }
-#else
-    SimpleFile simpleFile;
-    if (!simpleFile.read(path)) {
-        mError = tr("Failed to read %1").arg(path);
-        return false;
-    }
 
-    QMap<QString,Blend::Direction> dirMap;
-    dirMap[QLatin1String("n")] = Blend::N;
-    dirMap[QLatin1String("s")] = Blend::S;
-    dirMap[QLatin1String("e")] = Blend::E;
-    dirMap[QLatin1String("w")] = Blend::W;
-    dirMap[QLatin1String("nw")] = Blend::NW;
-    dirMap[QLatin1String("sw")] = Blend::SW;
-    dirMap[QLatin1String("ne")] = Blend::NE;
-    dirMap[QLatin1String("se")] = Blend::SE;
-
-    foreach (SimpleFileBlock block, simpleFile.blocks) {
-        if (block.name == QLatin1String("blend")) {
-            foreach (SimpleFileKeyValue kv, block.values) {
-                if (kv.name != QLatin1String("layer") &&
-                        kv.name != QLatin1String("mainTile") &&
-                        kv.name != QLatin1String("blendTile") &&
-                        kv.name != QLatin1String("dir") &&
-                        kv.name != QLatin1String("exclude")) {
-                    mError = tr("Unknown blend attribute '%1'").arg(kv.name);
-                    return false;
-                }
-            }
-
-            Blend::Direction dir = Blend::Unknown;
-            QString dirName = block.value("dir");
-            if (dirMap.contains(dirName))
-                dir = dirMap[dirName];
-            else {
-                mError = tr("Unknown blend direction '%1'").arg(dirName);
-                return false;
-            }
-
-            QStringList excludes;
-            foreach (QString exclude, block.value("exclude").split(QLatin1String(" "), QString::SkipEmptyParts))
-                excludes += exclude;
-
-            Blend blend(block.value("layer"),
-                        block.value("mainTile"),
-                        block.value("blendTile"),
-                        dir, excludes);
-            blendList += blend;
-            mBlendsByLayer[blend.targetLayer] += blendList.count() - 1;
-        } else {
-            mError = tr("Unknown block name '%1'.\nProbable syntax error in Blends.txt.").arg(block.name);
-            return false;
-        }
-    }
-#endif
     QSet<QString> layers;
     foreach (BmpBlend *blend, mBlends)
         layers.insert(blend->targetLayer);
