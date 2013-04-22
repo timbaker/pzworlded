@@ -692,6 +692,52 @@ missingKV:
     return true;
 }
 
+bool BmpRulesFile::write(const QString &fileName)
+{
+    SimpleFile simpleFile;
+
+    foreach (BmpRule *rule, mRules) {
+        SimpleFileBlock ruleBlock;
+        ruleBlock.name = QLatin1String("rule");
+        ruleBlock.addValue("bitmap", QString::number(rule->bitmapIndex));
+        ruleBlock.addValue("color", QString::fromLatin1("%1 %2 %3")
+                           .arg(qRed(rule->color))
+                           .arg(qGreen(rule->color))
+                           .arg(qBlue(rule->color)));
+
+        QStringList tiles;
+        foreach (QString tileName, rule->tileChoices) {
+            QString tilesetName;
+            int tileID;
+            if (tileName.isEmpty())
+                tileName = QLatin1String("null");
+            else if (BuildingEditor::BuildingTilesMgr::parseTileName(
+                         tileName, tilesetName, tileID)) {
+                tileName = BuildingEditor::BuildingTilesMgr::nameForTile2(tilesetName, tileID);
+            }
+            tiles += tileName;
+        }
+        ruleBlock.addValue("tiles", tiles);
+
+        ruleBlock.addValue("layer", rule->targetLayer);
+
+        if (rule->condition != qRgb(0, 0, 0))
+            ruleBlock.addValue("condition", QString::fromLatin1("%1 %2 %3")
+                               .arg(qRed(rule->condition))
+                               .arg(qGreen(rule->condition))
+                               .arg(qBlue(rule->condition)));
+
+        simpleFile.blocks += ruleBlock;
+    }
+
+    simpleFile.setVersion(1);
+    if (!simpleFile.write(fileName)) {
+        mError = simpleFile.errorString();
+        return false;
+    }
+    return true;
+}
+
 QList<BmpAlias *> BmpRulesFile::aliasesCopy() const
 {
     QList<BmpAlias *> ret;
@@ -872,6 +918,9 @@ bool BmpRulesFile::readOldFormat(const QString &fileName)
             AddRule(bmpIndex, col, choices, layer);
         }
     }
+
+    file.close();
+    write(fileName);
 
     return true;
 }

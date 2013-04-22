@@ -164,6 +164,11 @@ QString BuildingTilesMgr::nameForTile(const QString &tilesetName, int index)
             QString(QLatin1String("%1")).arg(index, 3, 10, QLatin1Char('0'));
 }
 
+QString BuildingTilesMgr::nameForTile2(const QString &tilesetName, int index)
+{
+    return tilesetName + QLatin1Char('_') + QString::number(index);
+}
+
 QString BuildingTilesMgr::nameForTile(Tile *tile)
 {
     return nameForTile(tile->tileset()->name(), tile->id());

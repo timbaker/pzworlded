@@ -25,14 +25,24 @@
 class SimpleFileKeyValue
 {
 public:
-    SimpleFileKeyValue()
+    SimpleFileKeyValue() :
+        multiValue(false)
     {
 
     }
 
     SimpleFileKeyValue(const QString &name, const QString &value) :
         name(name),
-        value(value)
+        value(value),
+        multiValue(false)
+    {
+
+    }
+
+    SimpleFileKeyValue(const QString &name, const QStringList &values) :
+        name(name),
+        value(values.join(QLatin1String(" "))),
+        multiValue(true)
     {
 
     }
@@ -44,6 +54,7 @@ public:
 
     QString name;
     QString value;
+    bool multiValue;
     int lineNumber;
 };
 
@@ -76,8 +87,11 @@ public:
 
     void addValue(const char *key, const QString &value)
     { addValue(QLatin1String(key), value); }
+    void addValue(const char *key, const QStringList &values)
+    { addValue(QLatin1String(key), values); }
 
     void addValue(const QString &key, const QString &value);
+    void addValue(const QString &key, const QStringList &values);
 
     void renameValue(const char *key, const QString &newName)
     { renameValue(QLatin1String(key), newName); }

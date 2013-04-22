@@ -181,6 +181,15 @@ void SimpleFile::writeBlock(QTextStream &ts, const SimpleFileBlock &block)
 {
     INDENT indent(mIndent);
     foreach (SimpleFileKeyValue kv, block.values) {
+        if (kv.multiValue && kv.values().size() > 1) {
+            ts << indent.text() << kv.name << " = [\n";
+            foreach (QString value, kv.values()) {
+                INDENT indent2(mIndent);
+                ts << indent2.text() << value << "\n";
+            }
+            ts << indent.text() << "]\n";
+            continue;
+        }
         ts << indent.text() << kv.name << " = " << kv.value << "\n";
     }
     foreach (SimpleFileBlock child, block.blocks) {
@@ -243,6 +252,11 @@ void SimpleFileBlock::addValue(const QString &key, const QString &value)
     values += SimpleFileKeyValue(key, value);
 }
 
+void SimpleFileBlock::addValue(const QString &key, const QStringList &values)
+{
+    this->values += SimpleFileKeyValue(key, values);
+}
+
 void SimpleFileBlock::renameValue(const QString &key, const QString &newName)
 {
     for (int i = 0; i < values.count(); i++) {
@@ -286,6 +300,15 @@ void SimpleFileBlock::write(QTextStream &ts, int depth)
 {
     INDENT indent(depth);
     foreach (SimpleFileKeyValue kv, values) {
+        if (kv.multiValue && kv.values().size() > 1) {
+            ts << indent.text() << kv.name << " = [\n";
+            foreach (QString value, kv.values()) {
+                INDENT indent2(depth);
+                ts << indent2.text() << value << "\n";
+            }
+            ts << indent.text() << "]\n";
+            continue;
+        }
         ts << indent.text() << kv.name << " = " << kv.value << "\n";
     }
     foreach (SimpleFileBlock child, blocks) {
