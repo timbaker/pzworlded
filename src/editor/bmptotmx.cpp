@@ -635,9 +635,10 @@ bool BMPToTMX::LoadBlends()
     mBlendFileName = path;
 
     foreach (BmpBlend *blend, file.blends()) {
-        mBlends += new BmpBlend(blend->targetLayer, blend->mainTile, blend->blendTile,
-                                blend->dir, blend->ExclusionList);
-        mBlendsByLayer[blend->targetLayer] += mBlends.last();
+        BmpBlend *blendCopy = new BmpBlend(blend->targetLayer, blend->mainTile, blend->blendTile,
+                                           blend->dir, blend->ExclusionList);
+        mBlends += blendCopy;
+        mBlendsByLayer[blend->targetLayer] += blendCopy;
         QStringList excludes;
         foreach (QString tileName, blend->ExclusionList) {
             if (mAliasByName.contains(tileName))
@@ -645,7 +646,7 @@ bool BMPToTMX::LoadBlends()
             else
                 excludes += tileName;
         }
-        mBlendExcludes[blend] = excludes;
+        mBlendExcludes[blendCopy] = excludes;
     }
 
     QSet<QString> layers;
