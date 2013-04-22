@@ -254,6 +254,7 @@ void IsoWorldGridItem::setWorld(IsoWorld *world)
 LotPackScene::LotPackScene(QWidget *parent) :
     BaseGraphicsScene(LotPackSceneType, parent),
     mWorld(0),
+    mShowRoomDefs(true),
     mDarkRectangle(new QGraphicsRectItem),
     mCurrentLevel(0)
 {
@@ -351,8 +352,7 @@ void LotPackScene::showRoomDefs(bool show)
     if (mShowRoomDefs == show)
         return;
     mShowRoomDefs = show;
-    foreach (auto *item, mRoomDefGroups)
-        item->setVisible(mShowRoomDefs);
+    highlightCurrentLevel();
 }
 
 void LotPackScene::highlightCurrentLevel()
