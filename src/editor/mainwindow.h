@@ -141,6 +141,8 @@ private:
     void writeSettings();
     void readSettings();
 
+    void enableDeveloperFeatures();
+
     struct
     {
         qreal scale;

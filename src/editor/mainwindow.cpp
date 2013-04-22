@@ -290,6 +290,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->documentTabWidget, SIGNAL(tabCloseRequested(int)),
             SLOT(documentCloseRequested(int)));
 
+    enableDeveloperFeatures();
+
     Progress::instance()->setMainWindow(this);
 
     mViewHint.valid = false;
@@ -803,7 +805,18 @@ void MainWindow::lotpackviewer()
     mLotPackWindow->show();
     mLotPackWindow->activateWindow();
     mLotPackWindow->raise();
+}
 
+void MainWindow::enableDeveloperFeatures()
+{
+    // TOP SECRET: PLEASE DON'T LET PEOPLE KNOW ABOUT THIS BECAUSE THE DEVS
+    // DO NOT WANT MASSIVE SPOILERS FOR FANS OF THE GAME.
+    QString sourcePath = QCoreApplication::applicationDirPath()
+            + QLatin1Char('/') + QLatin1String("EnableDeveloperFeatures.txt");
+    if (!QFileInfo(sourcePath).exists()) {
+        ui->menuTools->menuAction()->setVisible(false);
+//        ui->actionLotPackViewer->setVisible(false);
+    }
 }
 
 bool MainWindow::saveFile()
