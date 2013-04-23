@@ -2205,36 +2205,23 @@ QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
 
 void CellScene::initAdjacentMaps()
 {
-    if (cell()->mapFilePath().isEmpty())
-        return;
-    QRegExp re(QLatin1String("(.+)_([0-9]+)_([0-9]+)"));
-    QFileInfo info(cell()->mapFilePath());
-    if (!re.exactMatch(info.baseName()))
-        return;
-
     connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
 
-    QString base = re.cap(1);
-    int X = re.cap(2).toInt();
-    int Y = re.cap(3).toInt();
-
-    for (int y = -1; y <= 1; y++) {
-        if (Y + y < 0) continue;
-        for (int x = -1; x <= 1; x++) {
-            if (X + x < 0) continue;
-            if (!x && !y) continue;
-            QFileInfo info2(info.dir(), QString::fromLatin1("%1_%2_%3.tmx")
-                            .arg(base).arg(X + x).arg(Y + y));
-            if (info2.exists()) {
-                MapInfo *mapInfo = MapManager::instance()->loadMap(
-                            info2.absoluteFilePath(), QString(), true);
-                if (mapInfo) {
-                    if (mapInfo->isLoading())
-                        mAdjacentMapsLoading += AdjacentMap(x, y, mapInfo);
-                    else
-                        mMapComposite->setAdjacentMap(x, y, mapInfo);
-                }
+    int X = cell()->x(), Y = cell()->y();
+    for (int y = Y - 1; y <= Y + 1; y++) {
+        for (int x = X - 1; x <= X + 1; x++) {
+            WorldCell *cell2 = world()->cellAt(x, y);
+            if (!cell2 || cell2 == cell() || cell2->mapFilePath().isEmpty()) continue;
+            QFileInfo info(cell2->mapFilePath());
+            if (!info.exists()) continue;
+            MapInfo *mapInfo = MapManager::instance()->loadMap(
+                        info.absoluteFilePath(), QString(), true);
+            if (mapInfo) {
+                if (mapInfo->isLoading())
+                    mAdjacentMapsLoading += AdjacentMap(x - X, y - Y, mapInfo);
+                else
+                    mMapComposite->setAdjacentMap(x - X, y - Y, mapInfo);
             }
         }
     }
@@ -2248,7 +2235,7 @@ void CellScene::mapLoaded(MapInfo *info)
             mMapComposite->setAdjacentMap(am.pos.x(), am.pos.y(), am.info);
             mAdjacentMapsLoading.removeAt(i);
             doLater(AllGroups | Bounds | Synch);
-            return;
+            // Keep going, could be duplicate submaps to load
         }
     }
 }
