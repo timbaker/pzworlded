@@ -762,7 +762,7 @@ QString BMPToTMX::resolveAlias(const QString &tileName, int randForPos) const
 
 bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
 {
-    Map map(Map::Isometric, 300, 300, 64, 32); // FIXME: or LevelIsometric
+    Map map(Map::LevelIsometric, 300, 300, 64, 32);
     foreach (Tiled::Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
         map.addTileset(ts);
     }
