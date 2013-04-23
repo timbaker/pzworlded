@@ -254,6 +254,8 @@ void IsoWorldGridItem::setWorld(IsoWorld *world)
 LotPackScene::LotPackScene(QWidget *parent) :
     BaseGraphicsScene(LotPackSceneType, parent),
     mWorld(0),
+    mMap(0),
+    mRenderer(0),
     mShowRoomDefs(true),
     mDarkRectangle(new QGraphicsRectItem),
     mCurrentLevel(0)
@@ -517,6 +519,21 @@ void LotPackView::scrollContentsBy(int dx, int dy)
     }
 }
 
+#include <QMouseEvent>
+bool LotPackView::viewportEvent(QEvent *event)
+{
+    if (event->type() == QEvent::MouseMove && mScene && mScene->renderer()) {
+        QMouseEvent *e = dynamic_cast<QMouseEvent*>(event);
+        QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(mapToScene(e->pos()));
+        if (tilePos != mTilePos) {
+            mTilePos = tilePos;
+            emit tilePositionChanged(mTilePos);
+        }
+    }
+
+    return BaseGraphicsView::viewportEvent(event);
+}
+
 /////
 
 LotPackWindow::LotPackWindow(QWidget *parent) :
@@ -564,6 +581,8 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
             prefs, SLOT(setHighlightCurrentLevel(bool)));
     connect(ui->actionLevelUp, SIGNAL(triggered()), mView->scene(), SLOT(levelAbove()));
     connect(ui->actionLevelDown, SIGNAL(triggered()), mView->scene(), SLOT(levelBelow()));
+
+    connect(mView, SIGNAL(tilePositionChanged(QPoint)), SLOT(tilePositionChanged(QPoint)));
 
     ui->actionRecent->setVisible(false);
     setRecentMenu();
@@ -689,4 +708,15 @@ void LotPackWindow::updateZoom()
     ui->actionZoomIn->setEnabled(mView->zoomable()->canZoomIn());
     ui->actionZoomOut->setEnabled(mView->zoomable()->canZoomOut());
     ui->actionZoomNormal->setEnabled(scale != 1);
+}
+
+void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
+{
+    int x = tilePos.x() / 300;
+    int y = tilePos.y() / 300;
+    if (x >= 0 && x < mWorld->getWidthInTiles() &&
+            y >= 0 && y <= mWorld->getHeightInTiles())
+        ui->coords->setText(tr("Cell %1,%2").arg(x).arg(y));
+    else
+        ui->coords->setText(QString());
 }

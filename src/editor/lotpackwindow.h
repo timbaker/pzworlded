@@ -161,10 +161,16 @@ public:
 
     void scrollContentsBy(int dx, int dy);
 
+    bool viewportEvent(QEvent *event);
+
+signals:
+    void tilePositionChanged(const QPoint &tilePos);
+
 private:
     LotPackScene *mScene;
     IsoWorld *mWorld;
     LotPackMiniMapItem *mMiniMapItem;
+    QPoint mTilePos;
 };
 
 class LotPackWindow : public QMainWindow
@@ -186,6 +192,8 @@ private slots:
     void zoomOut();
     void zoomNormal();
     void updateZoom();
+
+    void tilePositionChanged(const QPoint &tilePos);
 
 private:
     Ui::LotPackWindow *ui;
