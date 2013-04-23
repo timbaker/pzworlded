@@ -72,7 +72,9 @@ void MapManager::deleteInstance()
 
 MapManager::MapManager() :
     mFileSystemWatcher(new FileSystemWatcher(this)),
-    mNextThreadForJob(0)
+    mNextThreadForJob(0),
+    mDeferralDepth(0),
+    mDeferralQueued(false)
 #ifdef WORLDED
     , mReferenceEpoch(0)
 #endif
@@ -173,6 +175,12 @@ protected:
 
 MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, bool asynch)
 {
+    // Do not emit mapLoaded() as a result of worker threads finishing
+    // loading any maps while we are loading this one.
+    // Any time QCoreApplication::processEvents() gets called,
+    // a worker-thread's signal to us may be processed.
+    MapManagerDeferral deferral;
+
     QString mapFilePath = pathForMap(mapName, relativeTo);
     if (mapFilePath.isEmpty()) {
         mError = tr("A map file couldn't be found!\n%1").arg(mapName);
@@ -193,9 +201,9 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
             while (mapInfo->mLoading) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
+            if (!mapInfo->map())
+                return 0;
         }
-        if (!mapInfo->map())
-            return 0;
         return mapInfo;
     }
     mapInfo->mLoading = true;
@@ -653,7 +661,11 @@ void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
     // FIXME: add a reference and let the caller deal with it.
     mapInfo->mReferenceEpoch = mReferenceEpoch;
 #endif
-    emit mapLoaded(mapInfo);
+
+    if (mDeferralDepth > 0)
+        mDeferredMapInfos += mapInfo;
+    else
+        emit mapLoaded(mapInfo);
 }
 
 void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
@@ -684,6 +696,32 @@ void MapManager::failedToLoadByThread(const QString error, MapInfo *mapInfo)
     mapInfo->mLoading = false;
     mError = error;
     emit mapFailedToLoad(mapInfo);
+}
+
+void MapManager::deferThreadResults(bool defer)
+{
+    if (defer) {
+        ++mDeferralDepth;
+//        noise() << "MapManager::deferThreadResults depth++ =" << mDeferralDepth;
+    } else {
+        Q_ASSERT(mDeferralDepth > 0);
+//        noise() << "MapManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
+        if (--mDeferralDepth == 0) {
+            if (!mDeferralQueued && mDeferredMapInfos.size()) {
+                QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
+                mDeferralQueued = true;
+            }
+        }
+    }
+}
+
+void MapManager::processDeferrals()
+{
+    QList<MapInfo*> mapInfos = mDeferredMapInfos;
+    mDeferredMapInfos.clear();
+    mDeferralQueued = false;
+    foreach (MapInfo *mapInfo, mapInfos)
+        emit mapLoaded(mapInfo);
 }
 
 /////

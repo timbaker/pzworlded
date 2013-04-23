@@ -181,6 +181,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     MapComposite staticMapComposite(mapInfo);
     MapComposite *mapComposite = &staticMapComposite;
+    while (mapComposite->waitingForMapsToLoad())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
                                      cell->world()->roads());
 

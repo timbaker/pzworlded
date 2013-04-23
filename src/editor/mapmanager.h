@@ -212,6 +212,8 @@ private slots:
     void buildingLoadedByThread(Building *building, MapInfo *mapInfo);
     void failedToLoadByThread(const QString error, MapInfo *mapInfo);
 
+    void processDeferrals();
+
 private:
     Q_DISABLE_COPY(MapManager)
     static MapManager *mInstance;
@@ -224,6 +226,12 @@ private:
     QSet<QString> mChangedFiles;
     QTimer mChangedFilesTimer;
 
+    friend class MapManagerDeferral;
+    void deferThreadResults(bool defer);
+    int mDeferralDepth;
+    QList<MapInfo*> mDeferredMapInfos;
+    bool mDeferralQueued;
+
     QVector<InterruptibleThread*> mMapReaderThread;
     QVector<MapReaderWorker*> mMapReaderWorker;
     int mNextThreadForJob;
@@ -231,6 +239,31 @@ private:
     int mReferenceEpoch;
 #endif
     QString mError;
+};
+
+class MapManagerDeferral
+{
+public:
+    MapManagerDeferral() :
+        mReleased(false)
+    {
+        MapManager::instance()->deferThreadResults(true);
+    }
+
+    ~MapManagerDeferral()
+    {
+        if (!mReleased)
+            MapManager::instance()->deferThreadResults(false);
+    }
+
+    void release()
+    {
+        MapManager::instance()->deferThreadResults(false);
+        mReleased = true;
+    }
+
+private:
+    bool mReleased;
 };
 
 #endif // MAPMANAGER_H

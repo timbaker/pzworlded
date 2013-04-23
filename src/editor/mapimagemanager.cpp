@@ -648,6 +648,7 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
     mExpectMapImage = 0;
 
     mRenderMapComposite = new MapComposite(mapInfo);
+    Q_ASSERT(mRenderMapComposite->waitingForMapsToLoad() == false);
 #ifdef WORLDED
     // Now that mapComposite is referencing the maps...
     foreach (MapInfo *mapInfo, mReferencedMaps)
