@@ -383,6 +383,7 @@ public:
 
     QList<Road*> roadsInRect(const QRectF &bounds);
 
+    static const int ZVALUE_GRID;
     static const int ZVALUE_ROADITEM_CREATING;
     static const int ZVALUE_ROADITEM_SELECTED;
     static const int ZVALUE_ROADITEM_UNSELECTED;
@@ -398,6 +399,7 @@ public slots:
 
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapChanged(MapInfo *mapInfo);
+    void mapLoaded(MapInfo *mapInfo);
 
     void cellMapFileChanged();
     void cellContentsChanged();
@@ -458,6 +460,17 @@ public:
 private:
     void synchLayerGroupsLater();
 
+    struct AdjacentMap {
+        AdjacentMap(int x, int y, MapInfo *info) :
+            pos(x, y),
+            info(info)
+        {}
+        QPoint pos;
+        MapInfo *info;
+    };
+    QList<AdjacentMap> mAdjacentMapsLoading;
+    void initAdjacentMaps();
+
     Tiled::Map *mMap;
     MapInfo *mMapInfo;
     MapComposite *mMapComposite;
@@ -476,6 +489,7 @@ private:
     CellGridItem *mGridItem;
     bool mHighlightCurrentLevel;
     bool mWasHighlightCurrentLevel;
+    QGraphicsPolygonItem *mMapBordersItem;
 
     void doLater(PendingFlags flags);
     PendingFlags mPendingFlags;

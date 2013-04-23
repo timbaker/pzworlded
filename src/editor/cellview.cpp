@@ -43,3 +43,10 @@ void CellView::mouseMoveEvent(QMouseEvent *event)
 
     BaseGraphicsView::mouseMoveEvent(event);
 }
+
+QRectF CellView::sceneRectForMiniMap() const
+{
+    if (!scene() || !scene()->renderer())
+        return QRectF();
+    return scene()->renderer()->boundingRect(QRect(0, 0, 300, 300));
+}

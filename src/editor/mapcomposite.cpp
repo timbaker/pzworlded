@@ -1316,6 +1316,29 @@ void MapComposite::synch()
     }
 }
 
+void MapComposite::setAdjacentMap(int x, int y, MapInfo *mapInfo)
+{
+    int index = (x + 1) + (y + 1) * 3;
+    if (index < 0 || index == 4 || index > 8) {
+        Q_ASSERT(false);
+        return;
+    }
+    if (mAdjacentMaps.isEmpty())
+        mAdjacentMaps.resize(9);
+    if (mAdjacentMaps[index])
+        delete mAdjacentMaps[index];
+    QPoint pos;
+    switch (x) {
+    case -1: pos.setX(-mapInfo->width()); break;
+    case 1: pos.setX(mMapInfo->width()); break;
+    }
+    switch (y) {
+    case -1: pos.setY(-mapInfo->height()); break;
+    case 1: pos.setY(mMapInfo->height()); break;
+    }
+    mAdjacentMaps[index] = addMap(mapInfo, pos, 0, false);
+}
+
 void MapComposite::recreate()
 {
     qDeleteAll(mSubMaps);

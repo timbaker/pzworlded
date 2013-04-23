@@ -31,6 +31,8 @@ public:
     CellScene *scene() const;
 
     void mouseMoveEvent(QMouseEvent *event);
+
+    QRectF sceneRectForMiniMap() const;
 };
 
 #endif // CELLVIEW_H

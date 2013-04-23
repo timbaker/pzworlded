@@ -277,6 +277,11 @@ public:
     MapComposite *blendOverMap() const
     { return mBlendOverMap; }
 #endif // BUILDINGED
+
+    void setAdjacentMap(int x, int y, MapInfo *mapInfo);
+    bool isAdjacentMap()/* const*/
+    { return mParent ? mParent->mAdjacentMaps.contains(this) : false; }
+
 #if 1 // ROAD_CRUD
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
     Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
@@ -326,6 +331,9 @@ private:
     bool mSavedShowMapTiles;
 
     Tiled::Internal::BmpBlender *mBmpBlender;
+
+    QVector<MapComposite*> mAdjacentMaps;
+
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer1;
     Tiled::TileLayer *mRoadLayer0;

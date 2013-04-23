@@ -188,8 +188,16 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
     MapInfo *mapInfo = this->mapInfo(mapFilePath);
     if (!mapInfo)
         return 0;
-    if (mapInfo->mLoading)
+    if (mapInfo->mLoading) {
+        if (!asynch) {
+            while (mapInfo->mLoading) {
+                qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            }
+        }
+        if (!mapInfo->map())
+            return 0;
         return mapInfo;
+    }
     mapInfo->mLoading = true;
     QMetaObject::invokeMethod(mMapReaderWorker[mNextThreadForJob], "addJob",
                               Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo));

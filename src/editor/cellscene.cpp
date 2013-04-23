@@ -1005,6 +1005,7 @@ public:
 
 #define DARKENING_FACTOR 0.6
 
+const int CellScene::ZVALUE_GRID = 10000;
 const int CellScene::ZVALUE_ROADITEM_CREATING = 20002;
 const int CellScene::ZVALUE_ROADITEM_SELECTED = 20001;
 const int CellScene::ZVALUE_ROADITEM_UNSELECTED = 20000;
@@ -1021,6 +1022,7 @@ CellScene::CellScene(QObject *parent)
     , mPendingFlags(None)
     , mPendingActive(false)
     , mActiveTool(0)
+    , mMapBordersItem(new QGraphicsPolygonItem)
 {
     setBackgroundBrush(Qt::darkGray);
 
@@ -1038,6 +1040,13 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, SIGNAL(showObjectNamesChanged(bool)), SLOT(showObjectNamesChanged(bool)));
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
+
+    QPen pen(QColor(128, 128, 128, 128));
+    pen.setWidth(28); // only good for isometric 64x32 tiles!
+    pen.setJoinStyle(Qt::MiterJoin);
+    mMapBordersItem->setPen(pen);
+    mMapBordersItem->setZValue(ZVALUE_GRID - 1);
+    addItem(mMapBordersItem);
 }
 
 CellScene::~CellScene()
@@ -1259,7 +1268,7 @@ void CellScene::setGraphicsSceneZOrder()
                         + objectIndex);
     }
 
-    mGridItem->setZValue(10000);
+    mGridItem->setZValue(ZVALUE_GRID);
 }
 
 void CellScene::setSubMapVisible(WorldCellLot *lot, bool visible)
@@ -1305,6 +1314,7 @@ void CellScene::loadMap()
     if (mMap) {
         removeItem(mDarkRectangle);
         removeItem(mGridItem);
+        removeItem(mMapBordersItem);
 
         clear();
         setSceneRect(QRectF());
@@ -1388,11 +1398,22 @@ void CellScene::loadMap()
     // all the items in the scene (without getting smaller, ever).
     setSceneRect(0, 0, 1, 1);
 
+    initAdjacentMaps();
+    QPolygonF polygon;
+    QRectF rect(0 - 0.5, 0 - 0.5,
+                mMapInfo->width() + 1.0, mMapInfo->height() + 1.0);
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.topLeft()));
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.topRight()));
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomRight()));
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomLeft()));
+    mMapBordersItem->setPolygon(polygon);
+
     mPendingFlags |= AllGroups | Bounds | Synch | ZOrder;
     handlePendingUpdates();
 
     addItem(mDarkRectangle);
     addItem(mGridItem);
+    addItem(mMapBordersItem);
 
     updateCurrentLevelHighlight();
 
@@ -2180,4 +2201,54 @@ QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
             result += roadItem->road();
     }
     return result;
+}
+
+void CellScene::initAdjacentMaps()
+{
+    if (cell()->mapFilePath().isEmpty())
+        return;
+    QRegExp re(QLatin1String("(.+)_([0-9]+)_([0-9]+)"));
+    QFileInfo info(cell()->mapFilePath());
+    if (!re.exactMatch(info.baseName()))
+        return;
+
+    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+            SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
+
+    QString base = re.cap(1);
+    int X = re.cap(2).toInt();
+    int Y = re.cap(3).toInt();
+
+    for (int y = -1; y <= 1; y++) {
+        if (Y + y < 0) continue;
+        for (int x = -1; x <= 1; x++) {
+            if (X + x < 0) continue;
+            if (!x && !y) continue;
+            QFileInfo info2(info.dir(), QString::fromLatin1("%1_%2_%3.tmx")
+                            .arg(base).arg(X + x).arg(Y + y));
+            if (info2.exists()) {
+                MapInfo *mapInfo = MapManager::instance()->loadMap(
+                            info2.absoluteFilePath(), QString(), true);
+                if (mapInfo) {
+                    if (mapInfo->isLoading())
+                        mAdjacentMapsLoading += AdjacentMap(x, y, mapInfo);
+                    else
+                        mMapComposite->setAdjacentMap(x, y, mapInfo);
+                }
+            }
+        }
+    }
+}
+
+void CellScene::mapLoaded(MapInfo *info)
+{
+    for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
+        AdjacentMap &am = mAdjacentMapsLoading[i];
+        if (am.info == info) {
+            mMapComposite->setAdjacentMap(am.pos.x(), am.pos.y(), am.info);
+            mAdjacentMapsLoading.removeAt(i);
+            doLater(AllGroups | Bounds | Synch);
+            return;
+        }
+    }
 }

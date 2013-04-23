@@ -86,6 +86,7 @@ public:
     void scrollContentsBy(int dx, int dy);
 
     void addMiniMapItem(QGraphicsItem *item);
+    virtual QRectF sceneRectForMiniMap() const;
 
     void ensureRectVisible(const QRectF &rect, int xmargin = 50, int ymargin = 50);
 

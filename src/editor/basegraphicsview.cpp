@@ -316,6 +316,11 @@ void BaseGraphicsView::addMiniMapItem(QGraphicsItem *item)
     mMiniMap->addItem(item);
 }
 
+QRectF BaseGraphicsView::sceneRectForMiniMap() const
+{
+    return mScene->sceneRect();
+}
+
 // Wrapper around QGraphicsView::ensureVisible.  In ensureVisible, when the rectangle to
 // view is larger than the viewport, the final position is often undesirable with multiple
 // scrolls taking place.  In this implementation, when the rectangle to view (plus margins)
@@ -444,8 +449,10 @@ void MiniMap::addItem(QGraphicsItem *item)
     scene()->addItem(mExtraItem);
 }
 
-void MiniMap::sceneRectChanged(const QRectF &sceneRect)
+void MiniMap::sceneRectChanged(const QRectF &_sceneRect)
 {
+    QRectF sceneRect = mParentView->sceneRectForMiniMap();
+
     qreal scale = this->scale();
     QSizeF size = sceneRect.size();
     // No idea where the extra 3 pixels is coming from...
@@ -517,7 +524,7 @@ void MiniMap::mouseReleaseEvent(QMouseEvent *event)
 
 qreal MiniMap::scale()
 {
-    QRectF sceneRect = mScene->sceneRect();
+    QRectF sceneRect = mParentView->sceneRectForMiniMap();
     QSizeF size = sceneRect.size();
     if (size.isEmpty())
         return 1.0;
