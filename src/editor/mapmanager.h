@@ -36,7 +36,7 @@ class MapReaderWorker : public BaseWorker
 {
     Q_OBJECT
 public:
-    MapReaderWorker(InterruptibleThread *thread);
+    MapReaderWorker(InterruptibleThread *thread, int id);
     ~MapReaderWorker();
 
     typedef Tiled::Map Map;
@@ -49,7 +49,8 @@ signals:
 
 public slots:
     void work();
-    void addJob(MapInfo *mapInfo);
+    void addJob(MapInfo *mapInfo, int priority);
+    void possiblyRaisePriority(MapInfo *mapInfo, int priority);
 
 private:
     Map *loadMap(MapInfo *mapInfo);
@@ -57,16 +58,19 @@ private:
 
     class Job {
     public:
-        Job(MapInfo *mapInfo) :
-            mapInfo(mapInfo)
+        Job(MapInfo *mapInfo, int priority) :
+            mapInfo(mapInfo),
+            priority(priority)
         {
         }
 
         MapInfo *mapInfo;
+        int priority;
     };
     QList<Job> mJobs;
 
-    bool mWorkPending;
+    int mID;
+    void debugJobs(const char *msg);
 
     QString mError;
 };
@@ -100,6 +104,7 @@ public:
     int width() const { return mWidth; }
     int height() const { return mHeight; }
     QSize size() const { return QSize(mWidth, mHeight); }
+    QRect bounds() const { return QRect(0, 0, mWidth, mHeight); }
     int tileWidth() const { return mTileWidth; }
     int tileHeight() const { return mTileHeight; }
 
@@ -146,9 +151,15 @@ public:
      */
     QString pathForMap(const QString &mapName, const QString &relativeTo);
 
+    enum LoadPriority {
+        PriorityLow,
+        PriorityMedium,
+        PriorityHigh
+    };
+
     MapInfo *loadMap(const QString &mapName,
                      const QString &relativeTo = QString(),
-                     bool asynch = false);
+                     bool asynch = false, LoadPriority priority = PriorityHigh);
 
     MapInfo *newFromMap(Tiled::Map *map, const QString &mapFilePath = QString());
 

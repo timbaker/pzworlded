@@ -804,7 +804,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 #if 1
                     MapInfo *subMapInfo = MapManager::instance()->loadMap(
                                 object->type(), QFileInfo(mMapInfo->path()).absolutePath(),
-                                true);
+                                true, MapManager::PriorityLow);
 
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
@@ -1525,6 +1525,7 @@ void MapComposite::mapLoaded(MapInfo *mapInfo)
         if (mSubMapsLoading[i].mapInfo == mapInfo) {
             addMap(mapInfo, mSubMapsLoading[i].pos, mSubMapsLoading[i].level);
             mSubMapsLoading.removeAt(i);
+            --i;
             // Keep going, could be duplicate submaps to load
         }
     }
@@ -1535,6 +1536,7 @@ void MapComposite::mapFailedToLoad(MapInfo *mapInfo)
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         if (mSubMapsLoading[i].mapInfo == mapInfo) {
             mSubMapsLoading.removeAt(i);
+            --i;
             // Keep going, could be duplicate submaps to load
         }
     }

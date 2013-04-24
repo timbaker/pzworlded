@@ -525,7 +525,8 @@ void MapImageManager::renderThreadNeedsMap(MapImage *mapImage)
     bool asynch = true;
     Q_ASSERT(mExpectMapImage == 0);
     MapInfo *mapInfo = MapManager::instance()->loadMap(mapImage->mapInfo()->path(),
-                                                       QString(), asynch);
+                                                       QString(), asynch,
+                                                       MapManager::PriorityLow);
     if (!mapInfo) {
         // The map file went away since MapImage's MapInfo was created.
         QMetaObject::invokeMethod(mImageRenderWorker,
@@ -608,7 +609,8 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
 #endif
         foreach (const QString &path, getSubMapFileNames(mapInfo)) {
             bool async = true;
-            if (MapInfo *subMapInfo = MapManager::instance()->loadMap(path, QString(), async)) {
+            if (MapInfo *subMapInfo = MapManager::instance()->loadMap(path, QString(), async,
+                                                                      MapManager::PriorityLow)) {
                 if (!mExpectSubMaps.contains(subMapInfo)) {
                     if (subMapInfo->isLoading())
                         mExpectSubMaps += subMapInfo;
@@ -626,7 +628,8 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
         mExpectSubMaps.removeAll(mapInfo);
         foreach (const QString &path, getSubMapFileNames(mapInfo)) {
             bool async = true;
-            if (MapInfo *subMapInfo = MapManager::instance()->loadMap(path, QString(), async)) {
+            if (MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                        path, QString(), async, MapManager::PriorityLow)) {
                 if (!mExpectSubMaps.contains(subMapInfo)) {
                     if (subMapInfo->isLoading())
                         mExpectSubMaps += subMapInfo;

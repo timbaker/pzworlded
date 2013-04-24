@@ -400,6 +400,7 @@ public slots:
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapChanged(MapInfo *mapInfo);
     void mapLoaded(MapInfo *mapInfo);
+    void mapFailedToLoad(MapInfo *mapInfo);
 
     void cellMapFileChanged();
     void cellContentsChanged();
@@ -444,6 +445,8 @@ public slots:
     void selectedRoadsChanged();
     void roadsChanged();
 
+    void handleDelayedMapLoading();
+
 public:
     enum Pending {
         None = 0,
@@ -460,6 +463,16 @@ public:
 private:
     void synchLayerGroupsLater();
 
+    struct LoadingSubMap {
+        LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
+            lot(lot),
+            mapInfo(mapInfo)
+        {}
+        WorldCellLot *lot;
+        MapInfo *mapInfo;
+    };
+    QList<LoadingSubMap> mSubMapsLoading;
+
     struct AdjacentMap {
         AdjacentMap(int x, int y, MapInfo *info) :
             pos(x, y),
@@ -470,6 +483,8 @@ private:
     };
     QList<AdjacentMap> mAdjacentMapsLoading;
     void initAdjacentMaps();
+
+    bool mHandleDelayedMapLoadingScheduled;
 
     Tiled::Map *mMap;
     MapInfo *mMapInfo;

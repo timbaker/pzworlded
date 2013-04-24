@@ -1023,6 +1023,7 @@ CellScene::CellScene(QObject *parent)
     , mPendingActive(false)
     , mActiveTool(0)
     , mMapBordersItem(new QGraphicsPolygonItem)
+    , mHandleDelayedMapLoadingScheduled(false)
 {
     setBackgroundBrush(Qt::darkGray);
 
@@ -1046,7 +1047,7 @@ CellScene::CellScene(QObject *parent)
     pen.setJoinStyle(Qt::MiterJoin);
     mMapBordersItem->setPen(pen);
     mMapBordersItem->setZValue(ZVALUE_GRID - 1);
-    addItem(mMapBordersItem);
+//    addItem(mMapBordersItem);
 }
 
 CellScene::~CellScene()
@@ -1435,12 +1436,35 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
 {
     if (_cell == cell()) {
         WorldCellLot *lot = cell()->lots().at(index);
+#if 1
+        MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                    lot->mapName(), QString(), true, MapManager::PriorityLow);
+#else
         MapInfo *subMapInfo = MapManager::instance()->loadMap(lot->mapName());
+#endif
         if (!subMapInfo) {
             qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
             subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
+#if 1
+            if (subMapInfo->isLoading())
+                mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
+            else {
+                MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
+
+                SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
+                addItem(item);
+                mSubMapItems.append(item);
+
+                // Update with most recent information
+                lot->setMapName(subMapInfo->path());
+                lot->setWidth(subMapInfo->width());
+                lot->setHeight(subMapInfo->height());
+
+                doLater(AllGroups | Bounds | Synch | ZOrder);
+            }
+#else
             MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
 
             SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
@@ -1453,6 +1477,7 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
             lot->setHeight(subMapInfo->height());
 
             doLater(AllGroups | Bounds | Synch | ZOrder);
+#endif
         }
     }
 }
@@ -1930,6 +1955,12 @@ void CellScene::roadsChanged()
             mTileLayerGroupItems[0]->update();
 }
 
+void CellScene::handleDelayedMapLoading()
+{
+    mHandleDelayedMapLoadingScheduled = false;
+    doLater(AllGroups | Bounds | Synch | ZOrder);
+}
+
 void CellScene::updateCurrentLevelHighlight()
 {
     int currentLevel = mDocument->currentLevel();
@@ -2207,6 +2238,8 @@ void CellScene::initAdjacentMaps()
 {
     connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
+    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+            SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
 
     int X = cell()->x(), Y = cell()->y();
     for (int y = Y - 1; y <= Y + 1; y++) {
@@ -2216,7 +2249,8 @@ void CellScene::initAdjacentMaps()
             QFileInfo info(cell2->mapFilePath());
             if (!info.exists()) continue;
             MapInfo *mapInfo = MapManager::instance()->loadMap(
-                        info.absoluteFilePath(), QString(), true);
+                        info.absoluteFilePath(), QString(), true,
+                        MapManager::PriorityMedium);
             if (mapInfo) {
                 if (mapInfo->isLoading())
                     mAdjacentMapsLoading += AdjacentMap(x - X, y - Y, mapInfo);
@@ -2227,15 +2261,66 @@ void CellScene::initAdjacentMaps()
     }
 }
 
-void CellScene::mapLoaded(MapInfo *info)
+void CellScene::mapLoaded(MapInfo *mapInfo)
 {
     for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
         AdjacentMap &am = mAdjacentMapsLoading[i];
-        if (am.info == info) {
+        if (am.info == mapInfo) {
             mMapComposite->setAdjacentMap(am.pos.x(), am.pos.y(), am.info);
             mAdjacentMapsLoading.removeAt(i);
-            doLater(AllGroups | Bounds | Synch);
+            if (!mHandleDelayedMapLoadingScheduled) {
+                mHandleDelayedMapLoadingScheduled = true;
+                QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
+            }
             // Keep going, could be duplicate submaps to load
+            --i;
+        }
+    }
+
+    for (int i = 0; i < mSubMapsLoading.size(); i++) {
+        LoadingSubMap &sm = mSubMapsLoading[i];
+        if (sm.mapInfo == mapInfo) {
+            MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, sm.lot->pos(),
+                                                         sm.lot->level());
+
+            SubMapItem *item = new SubMapItem(subMap, sm.lot, mRenderer);
+            addItem(item);
+            int index = cell()->lots().indexOf(sm.lot); // for correct ZOrder
+            mSubMapItems.insert(index, item);
+
+            // Update with most-recent information
+            sm.lot->setMapName(sm.mapInfo->path());
+            sm.lot->setWidth(sm.mapInfo->width());
+            sm.lot->setHeight(sm.mapInfo->height());
+
+            mSubMapsLoading.removeAt(i);
+
+            if (!mHandleDelayedMapLoadingScheduled) {
+                mHandleDelayedMapLoadingScheduled = true;
+                QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
+            }
+
+            --i;
+        }
+    }
+}
+
+void CellScene::mapFailedToLoad(MapInfo *mapInfo)
+{
+    for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
+        AdjacentMap &am = mAdjacentMapsLoading[i];
+        if (am.info == mapInfo) {
+            mAdjacentMapsLoading.removeAt(i);
+            // Keep going, could be duplicate submaps to load
+            --i;
+        }
+    }
+
+    for (int i = 0; i < mSubMapsLoading.size(); i++) {
+        LoadingSubMap &sm = mSubMapsLoading[i];
+        if (sm.mapInfo == mapInfo) {
+            mSubMapsLoading.removeAt(i);
+            --i;
         }
     }
 }

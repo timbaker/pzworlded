@@ -93,7 +93,7 @@ MapManager::MapManager() :
     mMapReaderWorker.resize(mMapReaderThread.size());
     for (int i = 0; i < mMapReaderThread.size(); i++) {
         mMapReaderThread[i] = new InterruptibleThread;
-        mMapReaderWorker[i] = new MapReaderWorker(mMapReaderThread[i]);
+        mMapReaderWorker[i] = new MapReaderWorker(mMapReaderThread[i], i);
         mMapReaderWorker[i]->moveToThread(mMapReaderThread[i]);
         connect(mMapReaderWorker[i], SIGNAL(loaded(Map*,MapInfo*)),
                 SLOT(mapLoadedByThread(Map*,MapInfo*)));
@@ -173,7 +173,8 @@ protected:
     }
 };
 
-MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, bool asynch)
+MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
+                             bool asynch, LoadPriority priority)
 {
     // Do not emit mapLoaded() as a result of worker threads finishing
     // loading any maps while we are loading this one.
@@ -197,7 +198,12 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
     if (!mapInfo)
         return 0;
     if (mapInfo->mLoading) {
+        foreach (MapReaderWorker *w, mMapReaderWorker)
+            QMetaObject::invokeMethod(w, "possiblyRaisePriority",
+                                      Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
+                                      Q_ARG(int,priority));
         if (!asynch) {
+            noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
             while (mapInfo->mLoading) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
@@ -208,13 +214,18 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo, 
     }
     mapInfo->mLoading = true;
     QMetaObject::invokeMethod(mMapReaderWorker[mNextThreadForJob], "addJob",
-                              Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo));
+                              Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
+                              Q_ARG(int,priority));
     mNextThreadForJob = (mNextThreadForJob + 1) % mMapReaderThread.size();
 
     if (asynch)
         return mapInfo;
 
     PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
+    foreach (MapReaderWorker *w, mMapReaderWorker)
+        QMetaObject::invokeMethod(w, "possiblyRaisePriority",
+                                  Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
+                                  Q_ARG(int,priority));
     while (mapInfo->mLoading) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
@@ -593,7 +604,8 @@ void MapManager::fileChangedTimeout()
                     if (!mapInfo->isLoading()) {
                         mapInfo->mLoading = true; // FIXME: seems weird to change this for a loaded map
                         QMetaObject::invokeMethod(mMapReaderWorker[mNextThreadForJob], "addJob",
-                                                  Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo));
+                                                  Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
+                                                  Q_ARG(int,PriorityLow));
                         mNextThreadForJob = (mNextThreadForJob + 1) % mMapReaderThread.size();
                     }
                 }
@@ -625,6 +637,8 @@ void MapManager::metaTilesetRemoved(Tileset *tileset)
 
 void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
 {
+    noise() << "MAP LOADED BY THREAD" << mapInfo->path();
+
     Tile *missingTile = TilesetManager::instance()->missingTile();
     foreach (Tileset *tileset, map->missingTilesets()) {
         if (tileset->tileHeight() == 128 && tileset->tileWidth() == 64) {
@@ -726,8 +740,9 @@ void MapManager::processDeferrals()
 
 /////
 
-MapReaderWorker::MapReaderWorker(InterruptibleThread *thread) :
-    BaseWorker(thread)
+MapReaderWorker::MapReaderWorker(InterruptibleThread *thread, int id) :
+    BaseWorker(thread),
+    mID(id)
 {
 }
 
@@ -739,13 +754,14 @@ void MapReaderWorker::work()
 {
     IN_WORKER_THREAD
 
-    while (mJobs.size()) {
+    if (mJobs.size()) {
         if (aborted()) {
             mJobs.clear();
             return;
         }
 
-        Job job = mJobs.takeAt(0);
+        Job job = mJobs.takeFirst();
+        debugJobs("take job");
 
         if (job.mapInfo->path().endsWith(QLatin1String(".tbx"))) {
             Building *building = loadBuilding(job.mapInfo);
@@ -762,15 +778,41 @@ void MapReaderWorker::work()
             else
                 emit failedToLoad(mError, job.mapInfo);
         }
+
+//        QCoreApplication::processEvents(); // handle changing job priority
     }
+
+    if (mJobs.size()) scheduleWork();
 }
 
-void MapReaderWorker::addJob(MapInfo *mapInfo)
+void MapReaderWorker::addJob(MapInfo *mapInfo, int priority)
 {
     IN_WORKER_THREAD
 
-    mJobs += Job(mapInfo);
+    int index = 0;
+    while ((index < mJobs.size()) && (mJobs[index].priority >= priority))
+        ++index;
+
+    mJobs.insert(index, Job(mapInfo, priority));
+    debugJobs("add job");
     scheduleWork();
+}
+
+void MapReaderWorker::possiblyRaisePriority(MapInfo *mapInfo, int priority)
+{
+    IN_WORKER_THREAD
+
+    for (int i = 0; i < mJobs.size(); i++) {
+        if (mJobs[i].mapInfo == mapInfo && mJobs[i].priority < priority) {
+            Job job = mJobs.takeAt(i);
+            while (i > 0 && mJobs[i].priority < priority)
+                i--;
+            job.priority = priority;
+            mJobs.insert(i, job);
+            debugJobs("raise priority");
+            break;
+        }
+    }
 }
 
 class MapReaderWorker_MapReader : public MapReader
@@ -807,4 +849,13 @@ MapReaderWorker::Building *MapReaderWorker::loadBuilding(MapInfo *mapInfo)
     if (!building)
         mError = reader.errorString();
     return building;
+}
+
+void MapReaderWorker::debugJobs(const char *msg)
+{
+    QStringList out;
+    foreach (Job job, mJobs) {
+        out += QString::fromLatin1("    %1 priority=%2\n").arg(QFileInfo(job.mapInfo->path()).fileName()).arg(job.priority);
+    }
+    noise() << "MRW #" << mID << ": " << msg << "\n" << out;
 }
