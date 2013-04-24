@@ -320,7 +320,10 @@ void LotPackScene::setWorld(IsoWorld *world)
                     p += mRenderer->tileToPixelCoords(rr->x, rr->y + rr->h, rdef->level);
                     QGraphicsPolygonItem *item = new QGraphicsPolygonItem(mRoomDefGroups[rdef->level]);
                     item->setPolygon(p);
-                    item->setBrush(roomDefColors[rdef->level % roomDefColors.size()]);
+                    QColor color = roomDefColors[rdef->level % roomDefColors.size()];
+                    if (rdef->name.isEmpty() || rdef->name == QLatin1String("newroom"))
+                        color = QColor(255, 0, 0, 200);
+                    item->setBrush(color);
 
                 }
             }
