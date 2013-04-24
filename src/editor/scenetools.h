@@ -36,6 +36,7 @@ class CellRoadItem;
 class CellScene;
 class DnDItem;
 class ObjectItem;
+class MapComposite;
 class Road;
 class SubMapItem;
 class TrafficLines;
@@ -270,6 +271,9 @@ public:
     explicit SubMapTool();
     ~SubMapTool() {}
 
+    void activate();
+    void deactivate();
+
     virtual void keyPressEvent(QKeyEvent *event);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
@@ -309,6 +313,8 @@ private:
     SubMapItem *mClickedItem;
     QSet<SubMapItem*> mMovingItems;
     QList<DnDItem*> mDnDItems;
+    QGraphicsPolygonItem *mMapHighlightItem;
+    MapComposite *mHighlightedMap;
     static SubMapTool *mInstance;
 };
 

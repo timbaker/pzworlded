@@ -755,6 +755,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mGroupVisible(true)
     , mHiddenDuringDrag(false)
     , mShowMapTiles(true)
+    , mIsAdjacentMap(false)
     , mBmpBlender(new Tiled::Internal::BmpBlender(mMap, this))
 {
 #ifdef WORLDED
@@ -1368,6 +1369,7 @@ void MapComposite::setAdjacentMap(int x, int y, MapInfo *mapInfo)
     case 1: pos.setY(mMapInfo->height()); break;
     }
     mAdjacentMaps[index] = addMap(mapInfo, pos, 0, false);
+    mAdjacentMaps[index]->mIsAdjacentMap = true;
 }
 
 bool MapComposite::waitingForMapsToLoad() const

@@ -178,6 +178,28 @@ public:
     inline QPointF tileToPixelCoords(const QPointF &point, int level = 0) const
     { return tileToPixelCoords(point.x(), point.y(), level); }
 
+#ifdef ZOMBOID
+    QPolygonF tileToPixelCoords(const QRect &rect, int level = 0) const
+    {
+        QPolygonF polygon;
+        polygon << QPointF(tileToPixelCoords(rect.topLeft(), level));
+        polygon << QPointF(tileToPixelCoords(rect.topRight() + QPoint(1, 0), level));
+        polygon << QPointF(tileToPixelCoords(rect.bottomRight() + QPoint(1, 1), level));
+        polygon << QPointF(tileToPixelCoords(rect.bottomLeft() + QPoint(0, 1), level));
+        return polygon;
+    }
+
+    QPolygonF tileToPixelCoords(const QRectF &rect, int level = 0) const
+    {
+        QPolygonF polygon;
+        polygon << QPointF(tileToPixelCoords(rect.topLeft(), level));
+        polygon << QPointF(tileToPixelCoords(rect.topRight(), level));
+        polygon << QPointF(tileToPixelCoords(rect.bottomRight(), level));
+        polygon << QPointF(tileToPixelCoords(rect.bottomLeft(), level));
+        return polygon;
+    }
+#endif
+
     QPolygonF tileToPixelCoords(const QPolygonF &polygon, int level = 0) const
     {
         QPolygonF screenPolygon(polygon.size());

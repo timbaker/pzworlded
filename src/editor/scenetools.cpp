@@ -499,7 +499,22 @@ SubMapTool::SubMapTool()
     , mMode(NoMode)
     , mMousePressed(false)
     , mClickedItem(0)
+    , mMapHighlightItem(new QGraphicsPolygonItem)
+    , mHighlightedMap(0)
 {
+    mMapHighlightItem->setPen(Qt::NoPen);
+    mMapHighlightItem->setBrush(QColor(128, 128, 128, 128));
+    mMapHighlightItem->setZValue(CellScene::ZVALUE_GRID - 1);
+}
+
+void SubMapTool::activate()
+{
+        mScene->addItem(mMapHighlightItem);
+}
+
+void SubMapTool::deactivate()
+{
+    mScene->removeItem(mMapHighlightItem);
 }
 
 void SubMapTool::keyPressEvent(QKeyEvent *event)
@@ -541,8 +556,45 @@ void SubMapTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
+static MapComposite *mapUnderPoint(MapComposite *mc, MapRenderer *renderer,
+                                   const QPointF &scenePos)
+{
+    foreach (MapComposite *subMap, mc->subMaps()) {
+        if (subMap->isAdjacentMap()) {
+            MapComposite *subSubMap = mapUnderPoint(subMap, renderer, scenePos);
+            if (subSubMap)
+                subMap = subSubMap;
+        }
+        QRect tileBounds = subMap->mapInfo()->bounds().translated(subMap->originRecursive());
+        QPolygonF scenePolygon = renderer->tileToPixelCoords(tileBounds);
+        if (scenePolygon.containsPoint(scenePos, Qt::WindingFill))
+            return subMap;
+    }
+    return 0;
+}
+
 void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    // Do mouse-over highlighting of Lots that are baked into a map.
+    SubMapItem *item = topmostItemAt(event->scenePos());
+    MapComposite *highlight = 0;
+    if (!item && !mMousePressed) {
+        if (MapComposite *mc = mapUnderPoint(mScene->mapComposite(), mScene->renderer(), event->scenePos())) {
+            if (mc->isAdjacentMap())
+                mc = 0;
+            highlight = mc;
+        }
+    }
+    if (highlight != mHighlightedMap) {
+        if (highlight) {
+            QRect tileBounds = highlight->mapInfo()->bounds().translated(highlight->originRecursive());
+            QPolygonF polygon = mScene->renderer()->tileToPixelCoords(tileBounds);
+            mMapHighlightItem->setPolygon(polygon);
+        }
+        mMapHighlightItem->setVisible(highlight != 0);
+        mHighlightedMap = highlight;
+    }
+
     if (mMode == NoMode && mMousePressed) {
         const int dragDistance = (mStartScenePos - event->scenePos()).manhattanLength();
         if (dragDistance >= QApplication::startDragDistance()) {
@@ -708,17 +760,16 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
 {
     SubMapItem *item = topmostItemAt(scenePos);
     if (!item) {
-        foreach (MapComposite *subMap, mScene->mapComposite()->subMaps()) {
-            if (subMap->boundingRect(mScene->renderer()).contains(scenePos)) {
-                QMenu menu;
-                QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
-                QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
-                QAction *action = menu.exec(screenPos);
-                if (action == openAction) {
-                    QUrl url = QUrl::fromLocalFile(subMap->mapInfo()->path());
-                    QDesktopServices::openUrl(url);
-                }
-                return;
+        if (MapComposite *subMap = mapUnderPoint(mScene->mapComposite(),
+                                                 mScene->renderer(),
+                                                 scenePos)) {
+            QMenu menu;
+            QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
+            QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
+            QAction *action = menu.exec(screenPos);
+            if (action == openAction) {
+                QUrl url = QUrl::fromLocalFile(subMap->mapInfo()->path());
+                QDesktopServices::openUrl(url);
             }
         }
         return;
