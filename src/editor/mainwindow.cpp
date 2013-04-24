@@ -303,6 +303,13 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+#if 1
+    // MapComposite's destructor calls MapManager::removeReferenceToMap().
+    // But the MapComposite's aren't deleted till the base constructor has
+    // run, which causes MapManager to be *recreated* and recreate its threads.
+    // I think this leads to the application not terminating promptly.
+    ToolManager::instance()->toolBar()->setParent(0);
+#else
     DocumentManager::deleteInstance();
     ToolManager::deleteInstance();
     Preferences::deleteInstance();
@@ -310,6 +317,7 @@ MainWindow::~MainWindow()
     MapManager::deleteInstance();
     TileMetaInfoMgr::deleteInstance();
     TilesetManager::deleteInstance();
+#endif
     delete ui;
 }
 

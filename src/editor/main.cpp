@@ -18,6 +18,18 @@
 #include <QtGui/QApplication>
 #include "mainwindow.h"
 
+#ifdef ZOMBOID
+#include "documentmanager.h"
+#include "toolmanager.h"
+#include "preferences.h"
+#include "mapimagemanager.h"
+#include "mapmanager.h"
+#include "tilemetainfomgr.h"
+#include "tilesetmanager.h"
+using namespace Tiled;
+using namespace Tiled::Internal;
+#endif
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -47,5 +59,19 @@ int main(int argc, char *argv[])
 
     w.openLastFiles();
 
+#if 1
+    int ret = a.exec();
+
+    DocumentManager::deleteInstance();
+    ToolManager::deleteInstance();
+    Preferences::deleteInstance();
+    MapImageManager::deleteInstance();
+    MapManager::deleteInstance();
+    TileMetaInfoMgr::deleteInstance();
+    TilesetManager::deleteInstance();
+
+    return ret;
+#else
     return a.exec();
+#endif
 }
