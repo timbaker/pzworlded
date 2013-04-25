@@ -74,7 +74,8 @@ MapManager::MapManager() :
     mFileSystemWatcher(new FileSystemWatcher(this)),
     mNextThreadForJob(0),
     mDeferralDepth(0),
-    mDeferralQueued(false)
+    mDeferralQueued(false),
+    mWaitingForMapInfo(0)
 #ifdef WORLDED
     , mReferenceEpoch(0)
 #endif
@@ -204,9 +205,12 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
                                       Q_ARG(int,priority));
         if (!asynch) {
             noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
+            Q_ASSERT(mWaitingForMapInfo == 0);
+            mWaitingForMapInfo = mapInfo;
             while (mapInfo->mLoading) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
+            mWaitingForMapInfo = 0;
             if (!mapInfo->map())
                 return 0;
         }
@@ -226,9 +230,12 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
         QMetaObject::invokeMethod(w, "possiblyRaisePriority",
                                   Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
                                   Q_ARG(int,priority));
+    Q_ASSERT(mWaitingForMapInfo == 0);
+    mWaitingForMapInfo = mapInfo;
     while (mapInfo->mLoading) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
+    mWaitingForMapInfo = 0;
     if (mapInfo->map())
         return mapInfo;
     return 0;
@@ -637,7 +644,19 @@ void MapManager::metaTilesetRemoved(Tileset *tileset)
 
 void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
 {
+    if (mapInfo != mWaitingForMapInfo && mDeferralDepth > 0) {
+        noise() << "MAP LOADED BY THREAD - DEFERR" << mapInfo->path();
+        mDeferredMaps += MapDeferral(mapInfo, map);
+        if (!mDeferralQueued) {
+            QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
+            mDeferralQueued = true;
+        }
+        return;
+    }
+
     noise() << "MAP LOADED BY THREAD" << mapInfo->path();
+
+    MapManagerDeferral deferral;
 
     Tile *missingTile = TilesetManager::instance()->missingTile();
     foreach (Tileset *tileset, map->missingTilesets()) {
@@ -676,14 +695,13 @@ void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
     mapInfo->mReferenceEpoch = mReferenceEpoch;
 #endif
 
-    if (mDeferralDepth > 0)
-        mDeferredMapInfos += mapInfo;
-    else
-        emit mapLoaded(mapInfo);
+    emit mapLoaded(mapInfo);
 }
 
 void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
 {
+    MapManagerDeferral deferral;
+
     BuildingReader reader;
     reader.fix(building);
 
@@ -716,12 +734,12 @@ void MapManager::deferThreadResults(bool defer)
 {
     if (defer) {
         ++mDeferralDepth;
-//        noise() << "MapManager::deferThreadResults depth++ =" << mDeferralDepth;
+        noise() << "MapManager::deferThreadResults depth++ =" << mDeferralDepth;
     } else {
         Q_ASSERT(mDeferralDepth > 0);
-//        noise() << "MapManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
+        noise() << "MapManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
         if (--mDeferralDepth == 0) {
-            if (!mDeferralQueued && mDeferredMapInfos.size()) {
+            if (!mDeferralQueued && mDeferredMaps.size()) {
                 QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
                 mDeferralQueued = true;
             }
@@ -731,11 +749,16 @@ void MapManager::deferThreadResults(bool defer)
 
 void MapManager::processDeferrals()
 {
-    QList<MapInfo*> mapInfos = mDeferredMapInfos;
-    mDeferredMapInfos.clear();
+    if (mDeferralDepth > 0) {
+        noise() << "processDeferrals deferred - FML";
+        mDeferralQueued = false;
+        return;
+    }
+    QList<MapDeferral> deferrals = mDeferredMaps;
+    mDeferredMaps.clear();
     mDeferralQueued = false;
-    foreach (MapInfo *mapInfo, mapInfos)
-        emit mapLoaded(mapInfo);
+    foreach (MapDeferral md, deferrals)
+        mapLoadedByThread(md.map, md.mapInfo);
 }
 
 /////

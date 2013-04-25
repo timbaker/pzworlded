@@ -240,8 +240,19 @@ private:
     friend class MapManagerDeferral;
     void deferThreadResults(bool defer);
     int mDeferralDepth;
-    QList<MapInfo*> mDeferredMapInfos;
+    struct MapDeferral
+    {
+        MapDeferral(MapInfo *mapInfo, Map *map) :
+            mapInfo(mapInfo),
+            map(map)
+        {}
+
+        MapInfo *mapInfo;
+        Map *map;
+    };
+    QList<MapDeferral> mDeferredMaps;
     bool mDeferralQueued;
+    MapInfo *mWaitingForMapInfo;
 
     QVector<InterruptibleThread*> mMapReaderThread;
     QVector<MapReaderWorker*> mMapReaderWorker;
