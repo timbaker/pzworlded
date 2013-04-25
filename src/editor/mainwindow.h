@@ -134,7 +134,12 @@ public slots:
 
     void lotpackviewer();
 
+    void FromToAll();
+    void FromToSelected();
+
 private:
+    void FromToAux(bool selectedOnly);
+
     bool confirmSave();
     bool confirmAllSave();
 

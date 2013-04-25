@@ -111,7 +111,9 @@ SOURCES += main.cpp\
     threads.cpp \
     bmpblender.cpp \
     lotpackwindow.cpp \
-    chunkmap.cpp
+    chunkmap.cpp \
+    fromtodialog.cpp \
+    unknowncolorsdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -181,7 +183,9 @@ HEADERS  += mainwindow.h \
     threads.h \
     bmpblender.h \
     lotpackwindow.h \
-    chunkmap.h
+    chunkmap.h \
+    fromtodialog.h \
+    unknowncolorsdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -196,7 +200,9 @@ FORMS    += mainwindow.ui \
     bmptotmxconfirmdialog.ui \
     resizeworlddialog.ui \
     newworlddialog.ui \
-    lotpackwindow.ui
+    lotpackwindow.ui \
+    fromtodialog.ui \
+    unknowncolorsdialog.ui
 
 OTHER_FILES +=
 

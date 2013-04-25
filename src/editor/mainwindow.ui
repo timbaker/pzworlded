@@ -282,7 +282,15 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <widget class="QMenu" name="menuAlias_Fixup">
+     <property name="title">
+      <string>Tiles From -&gt; To</string>
+     </property>
+     <addaction name="actionFromToAll"/>
+     <addaction name="actionFromToSelected"/>
+    </widget>
     <addaction name="actionLotPackViewer"/>
+    <addaction name="menuAlias_Fixup"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -665,6 +673,16 @@
   <action name="actionLotPackViewer">
    <property name="text">
     <string>LotPack Viewer</string>
+   </property>
+  </action>
+  <action name="actionFromToAll">
+   <property name="text">
+    <string>All Cells...</string>
+   </property>
+  </action>
+  <action name="actionFromToSelected">
+   <property name="text">
+    <string>Selected Cells Only...</string>
    </property>
   </action>
  </widget>

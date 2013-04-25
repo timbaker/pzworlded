@@ -18,6 +18,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "fromtodialog.h"
 #include "bmptotmx.h"
 #include "bmptotmxdialog.h"
 #include "celldocument.h"
@@ -211,6 +212,10 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(BMPToTMXAll()));
     connect(ui->actionBMPToTMXSelected, SIGNAL(triggered()),
             SLOT(BMPToTMXSelected()));
+    connect(ui->actionFromToAll, SIGNAL(triggered()),
+            SLOT(FromToAll()));
+    connect(ui->actionFromToSelected, SIGNAL(triggered()),
+            SLOT(FromToSelected()));
     connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
@@ -813,6 +818,201 @@ void MainWindow::lotpackviewer()
     mLotPackWindow->show();
     mLotPackWindow->activateWindow();
     mLotPackWindow->raise();
+}
+
+class FromToFile
+{
+public:
+    bool read(const QString &fileName);
+
+    QString errorString() const { return mError; }
+
+    class FromTo
+    {
+    public:
+        QStringList layers;
+        QStringList from;
+        QStringList to;
+    };
+    QList<FromTo> fromtos;
+
+    QString mError;
+};
+
+bool FromToFile::read(const QString &fileName)
+{
+    SimpleFile simple;
+    if (!simple.read(fileName)) {
+        mError = simple.errorString();
+        return false;
+    }
+
+    foreach (SimpleFileBlock b, simple.blocks) {
+        SimpleFileKeyValue kv;
+        if (b.name == QLatin1String("fromto")) {
+            if (!b.hasValue("layers") || !b.hasValue("from") || !b.hasValue("to")) {
+                mError = simple.tr("Line %1: Missing layers/from/to value.").arg(b.lineNumber);
+                return false;
+            }
+            FromTo fromto;
+            if (b.keyValue("layers", kv))
+                fromto.layers = kv.values();
+            if (b.keyValue("from", kv))
+                fromto.from = kv.values();
+            if (b.keyValue("to", kv))
+                fromto.to = kv.values();
+            foreach (QString tileName, fromto.from + fromto.to) {
+                if (!BuildingTilesMgr::legalTileName(tileName)) {
+                    mError = simple.tr("Invalid tile name '%1'").arg(tileName);
+                    return false;
+                }
+            }
+
+            fromtos += fromto;
+        }
+    }
+
+    return true;
+}
+
+void MainWindow::FromToAll()
+{
+    FromToAux(false);
+}
+
+void MainWindow::FromToSelected()
+{
+    FromToAux(true);
+}
+
+#include "mapwriter.h"
+void MainWindow::FromToAux(bool selectedOnly)
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        return;
+    FromToDialog dialog(worldDoc, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QString f = dialog.rulesFile();
+    if (f.isEmpty()) return;
+    FromToFile file;
+    if (!file.read(f)) {
+        QMessageBox::warning(this, tr("Error reading from-to file"),
+                             file.errorString());
+        return;
+    }
+
+    if (file.fromtos.size() == 0) {
+        QMessageBox::information(this, tr("Alias Fixup Error"),
+                                 tr("That file has no fromto definitions!"));
+        return;
+    }
+
+    QStringList fileNames;
+    if (selectedOnly) {
+        foreach (WorldCell *cell, worldDoc->selectedCells()) {
+            f = cell->mapFilePath();
+            if (f.isEmpty()) continue;
+            if (fileNames.contains(f)) continue;
+            fileNames += f;
+        }
+    } else {
+        World *world = worldDoc->world();
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                WorldCell *cell = world->cellAt(x, y);
+                f = cell->mapFilePath();
+                if (f.isEmpty()) continue;
+                if (fileNames.contains(f)) continue;
+                fileNames += f;
+            }
+        }
+    }
+
+    PROGRESS progress(tr("Making a mess of things"));
+
+    foreach (QString fileName, fileNames) {
+        if (MapInfo *mapInfo = MapManager::instance()->loadMap(fileName)) {
+            Map *map = /*info->map(); */mapInfo->map()->clone();
+
+            QMap<QString,TileLayer*> layerMapping;
+            foreach (FromToFile::FromTo fromto, file.fromtos) {
+                foreach (QString layerName, fromto.layers) {
+                    int index = mapInfo->map()->indexOfLayer(layerName, Layer::TileLayerType);
+                    if (index == -1) continue;
+                    TileLayer *tl = map->layerAt(index)->asTileLayer();
+                    layerMapping[layerName] = tl;
+                }
+            }
+
+            QMap<QString,Tileset*> tilesetByName;
+            foreach (Tileset *ts, map->tilesets()) {
+                tilesetByName[ts->name()] = ts;
+            }
+
+            QMap<QPair<TileLayer*,Tile*>,QList<Tile*> > tileMapping;
+            foreach (FromToFile::FromTo fromto, file.fromtos) {
+                QString tilesetName;
+                int tileID;
+
+                QList<Tile*> fromTiles;
+                foreach (QString tileName, fromto.from) {
+                    BuildingTilesMgr::parseTileName(tileName, tilesetName, tileID);
+                    if (tilesetByName.contains(tilesetName) && tilesetByName[tilesetName]->tileAt(tileID)) {
+                        fromTiles += tilesetByName[tilesetName]->tileAt(tileID);
+                    }
+                }
+                QList<Tile*> toTiles;
+                foreach (QString tileName, fromto.to) {
+                    BuildingTilesMgr::parseTileName(tileName, tilesetName, tileID);
+                    if (tilesetByName.contains(tilesetName) && tilesetByName[tilesetName]->tileAt(tileID)) {
+                        toTiles += tilesetByName[tilesetName]->tileAt(tileID);
+                    }
+                }
+                foreach (QString layerName, fromto.layers) {
+                    if (!layerMapping.contains(layerName)) continue;
+                    TileLayer *tl = layerMapping[layerName];
+                    foreach (Tile *tile, fromTiles)
+                        tileMapping[qMakePair(tl,tile)] = toTiles;
+                }
+
+            }
+
+            foreach (TileLayer *tl, layerMapping.values()) {
+                for (int x = 0; x < tl->width(); x++) {
+                    for (int y = 0; y < tl->height(); y++) {
+                        Cell cell = tl->cellAt(x, y);
+                        if (!cell.tile) continue;
+                        if (tileMapping.contains(qMakePair(tl,cell.tile))) {
+                            QList<Tile*> &choices = tileMapping[qMakePair(tl,cell.tile)];
+                            tl->setCell(x, y, Cell(choices[qrand() % choices.size()]));
+                        }
+                    }
+                }
+            }
+
+            if (!dialog.backupDir().isEmpty()) {
+            }
+
+            if (!dialog.destDir().isEmpty()) {
+            }
+
+            MapWriter writer;
+            MapWriter::LayerDataFormat format = MapWriter::CSV;
+            if (worldDoc->world()->getBMPToTMXSettings().compress)
+                format = MapWriter::Base64Zlib;
+            writer.setLayerDataFormat(format);
+            writer.setDtdEnabled(false);
+            if (!writer.writeMap(map, mapInfo->path())) {
+                QMessageBox::warning(this, tr("Error writing TMX"), writer.errorString());
+                delete map;
+                return;
+            }
+            delete map;
+        }
+    }
 }
 
 void MainWindow::enableDeveloperFeatures()
