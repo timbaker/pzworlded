@@ -321,7 +321,9 @@ void LotPackScene::setWorld(IsoWorld *world)
                     QGraphicsPolygonItem *item = new QGraphicsPolygonItem(mRoomDefGroups[rdef->level]);
                     item->setPolygon(p);
                     QColor color = roomDefColors[rdef->level % roomDefColors.size()];
-                    if (rdef->name.isEmpty() || rdef->name == QLatin1String("newroom"))
+                    if (rdef->name.isEmpty()
+                            || rdef->name.contains(QLatin1String("newroom"))
+                             || rdef->name.startsWith(QLatin1String("room")))
                         color = QColor(255, 0, 0, 200);
                     item->setBrush(color);
 
