@@ -145,7 +145,7 @@ private:
 
     struct UnknownColor {
         QRgb rgb;
-        QPoint xy;
+        QList<QPoint> xy;
     };
     QMap<QString,QMap<QRgb,UnknownColor> > mUnknownColors;
     QMap<QString,QMap<QRgb,UnknownColor> > mUnknownVegColors;

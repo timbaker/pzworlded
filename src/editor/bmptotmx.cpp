@@ -26,6 +26,7 @@
 #include "simplefile.h"
 #include "tilemetainfomgr.h"
 #include "undoredo.h"
+#include "unknowncolorsdialog.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 #include "world.h"
@@ -221,8 +222,10 @@ bool BMPToTMX::generateCell(WorldCell *cell)
     int sy = cell->y() * 300;
     for (int y = sy; y < sy + 300; y++) {
         for (int x = sx; x < sx + 300; x++) {
-            QRgb col = bmp.pixel(x - images->mBounds.x() * 300, y - images->mBounds.y() * 300);
-            QRgb col2 = bmpVeg.pixel(x - images->mBounds.x() * 300, y - images->mBounds.y() * 300);
+            int px = x - images->mBounds.x() * 300;
+            int py = y - images->mBounds.y() * 300;
+            QRgb col = bmp.pixel(px, py);
+            QRgb col2 = bmpVeg.pixel(px, py);
 
             if (mRulesByColor.contains(col)) {
                 QList<BmpRule*> rules = mRulesByColor[col];
@@ -243,9 +246,9 @@ bool BMPToTMX::generateCell(WorldCell *cell)
                     Entries[x - sx][y - sy][index] = tileName;
                 }
             } else {
-                if (!mUnknownColors[images->mPath].contains(col)) {
+                if (mUnknownColors[images->mPath][col].xy.size() < 50) {
                     mUnknownColors[images->mPath][col].rgb = col;
-                    mUnknownColors[images->mPath][col].xy = QPoint(x, y);
+                    mUnknownColors[images->mPath][col].xy += QPoint(px, py);
                 }
             }
 
@@ -270,9 +273,9 @@ bool BMPToTMX::generateCell(WorldCell *cell)
                     Entries[x - sx][y - sy][index] = tileName;
                 }
             } else {
-                if (col2 != qRgb(0, 0, 0) && !mUnknownVegColors[images->mPath].contains(col2)) {
+                if (col2 != qRgb(0, 0, 0) && mUnknownVegColors[images->mPath][col2].xy.size() < 50) {
                     mUnknownVegColors[images->mPath][col2].rgb = col2;
-                    mUnknownVegColors[images->mPath][col2].xy = QPoint(x, y);
+                    mUnknownVegColors[images->mPath][col2].xy += QPoint(px, py);
                 }
             }
         }
@@ -466,45 +469,35 @@ void BMPToTMX::reportUnknownColors()
     foreach (BMPToTMXImages *images, mImages) {
         QMap<QRgb,UnknownColor> &map = mUnknownColors[images->mPath];
         if (map.size()) {
-            QString msg = tr("Some unknown colors were found in %1:\n")
-                    .arg(QFileInfo(images->mPath).fileName());
-            int i = 0;
+            QStringList unknown;
             foreach (QRgb rgb, map.keys()) {
-                msg += tr("RGB=%1,%2,%3 at x,y=%4,%5\n")
-                        .arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb))
-                        .arg(map[rgb].xy.x())
-                        .arg(map[rgb].xy.y());
-                if (++i == 5) {
-                    if (map.size() > i)
-                        msg += tr("...plus %1 more").arg(map.size() - i);
-                    break;
-                }
+                unknown += tr("RGB=%1,%2,%3")
+                        .arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb));
+                for (int i = 0; i < map[rgb].xy.size(); i++)
+                    unknown += tr("             at x,y=%4,%5")
+                            .arg(map[rgb].xy[i].x())
+                            .arg(map[rgb].xy[i].y());
             }
-            QMessageBox::warning(MainWindow::instance(), tr("Unknown colors used"),
-                                 msg);
+            UnknownColorsDialog dialog(QFileInfo(images->mPath).fileName(),
+                                       unknown, MainWindow::instance());
+            dialog.exec();
         }
         QMap<QRgb,UnknownColor> &mapVeg = mUnknownVegColors[images->mPath];
         if (mapVeg.size()) {
-            QString suffix = QFileInfo(images->mPath).suffix();
-            QString msg = tr("Some unknown colors were found in %1:\n")
-                    .arg(QFileInfo(images->mPath).completeBaseName()
-                         + QLatin1String("_veg.") + suffix);
-            int i = 0;
+            QStringList unknown;
             foreach (QRgb rgb, mapVeg.keys()) {
-                msg += tr("RGB=%1,%2,%3 at x,y=%4,%5\n")
-                        .arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb))
-                        .arg(mapVeg[rgb].xy.x())
-                        .arg(mapVeg[rgb].xy.y());
-                if (++i == 5) {
-                    if (mapVeg.size() > i)
-                        msg += tr("...plus %1 more").arg(mapVeg.size() - i);
-                    break;
-                }
+                unknown += tr("RGB=%1,%2,%3")
+                        .arg(qRed(rgb)).arg(qGreen(rgb)).arg(qBlue(rgb));
+                for (int i = 0; i < mapVeg[rgb].xy.size(); i++)
+                    unknown += tr("             at x,y=%4,%5")
+                            .arg(mapVeg[rgb].xy[i].x())
+                            .arg(mapVeg[rgb].xy[i].y());
             }
-            QMessageBox::warning(MainWindow::instance(), tr("Unknown colors used"),
-                                 msg);
-            if (i == 5)
-                break;
+            QString suffix = QFileInfo(images->mPath).suffix();
+            QString fileName = QFileInfo(images->mPath).completeBaseName()
+                         + QLatin1String("_veg.") + suffix;
+            UnknownColorsDialog dialog(fileName, unknown, MainWindow::instance());
+            dialog.exec();
         }
     }
 }
