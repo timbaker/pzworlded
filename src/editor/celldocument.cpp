@@ -42,23 +42,6 @@ CellDocument::CellDocument(WorldDocument *worldDoc, WorldCell *cell)
     , mCurrentObjectGroup(world()->nullObjectGroup())
 {
     mUndoStack = worldDoc->undoStack();
-
-    connect(mWorldDocument, SIGNAL(cellContentsAboutToChange(WorldCell*)), SLOT(cellContentsAboutToChange(WorldCell*)));
-    connect(mWorldDocument, SIGNAL(cellContentsChanged(WorldCell*)), SLOT(cellContentsChanged(WorldCell*)));
-    connect(mWorldDocument, SIGNAL(cellMapFileAboutToChange(WorldCell*)), SLOT(cellMapFileAboutToChange(WorldCell*)));
-    connect(mWorldDocument, SIGNAL(cellMapFileChanged(WorldCell*)), SLOT(cellMapFileChanged(WorldCell*)));
-
-    connect(mWorldDocument, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
-    connect(mWorldDocument, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(mWorldDocument, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
-
-    connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
-            SLOT(objectGroupAboutToBeRemoved(int)));
-
-    connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
-            SLOT(mapAboutToChange(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
-            SLOT(mapChanged(MapInfo*)));
 }
 
 void CellDocument::setFileName(const QString &fileName)
@@ -90,6 +73,23 @@ void CellDocument::setScene(CellScene *scene)
 
     if (mCurrentLayerIndex == -1)
         setCurrentLevel(0);
+
+    connect(mWorldDocument, SIGNAL(cellContentsAboutToChange(WorldCell*)), SLOT(cellContentsAboutToChange(WorldCell*)));
+    connect(mWorldDocument, SIGNAL(cellContentsChanged(WorldCell*)), SLOT(cellContentsChanged(WorldCell*)));
+    connect(mWorldDocument, SIGNAL(cellMapFileAboutToChange(WorldCell*)), SLOT(cellMapFileAboutToChange(WorldCell*)));
+    connect(mWorldDocument, SIGNAL(cellMapFileChanged(WorldCell*)), SLOT(cellMapFileChanged(WorldCell*)));
+
+    connect(mWorldDocument, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
+    connect(mWorldDocument, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
+    connect(mWorldDocument, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
+
+    connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
+            SLOT(objectGroupAboutToBeRemoved(int)));
+
+    connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
+            SLOT(mapAboutToChange(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
+            SLOT(mapChanged(MapInfo*)));
 }
 
 void CellDocument::setSelectedLots(const QList<WorldCellLot *> &selected)
