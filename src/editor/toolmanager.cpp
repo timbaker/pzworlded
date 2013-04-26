@@ -150,6 +150,18 @@ void ToolManager::setScene(BaseGraphicsScene *scene)
     }
 }
 
+void ToolManager::beginClearScene(BaseGraphicsScene *scene)
+{
+    if ((scene == mSceneWithTool) && mSelectedTool)
+        mSelectedTool->beginClearScene();
+}
+
+void ToolManager::endClearScene(BaseGraphicsScene *scene)
+{
+    if ((scene == mSceneWithTool) && mSelectedTool)
+        mSelectedTool->endClearScene();
+}
+
 void ToolManager::actionTriggered(QAction *action)
 {
     setSelectedTool(action->data().value<AbstractTool*>());

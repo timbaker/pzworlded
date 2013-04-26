@@ -18,6 +18,7 @@
 #include "basegraphicsscene.h"
 
 #include "cellscene.h"
+#include "toolmanager.h"
 #include "worldscene.h"
 
 BaseGraphicsScene::BaseGraphicsScene(SceneType type, QObject *parent)
@@ -35,4 +36,12 @@ WorldScene *BaseGraphicsScene::asWorldScene()
 CellScene *BaseGraphicsScene::asCellScene()
 {
     return isCellScene() ? static_cast<CellScene*>(this) : 0;
+}
+
+
+void BaseGraphicsScene::clearScene()
+{
+    ToolManager::instance()->beginClearScene(this);
+    clear();
+    ToolManager::instance()->endClearScene(this);
 }

@@ -53,6 +53,8 @@ public:
     CellScene *asCellScene();
     LotPackScene *asLotPackScene();
 
+    void clearScene();
+
 protected:
     BaseGraphicsView *mEventView;
     SceneType mType;

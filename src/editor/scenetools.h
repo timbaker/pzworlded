@@ -69,6 +69,9 @@ public:
 
     virtual ~AbstractTool() {}
 
+    virtual void activate() {}
+    virtual void deactivate() {}
+
     QString name() const { return mName; }
     void setName(const QString &name) { mName = name; }
 
@@ -98,6 +101,9 @@ public:
     virtual void languageChanged() = 0;
 
     virtual void setScene(BaseGraphicsScene *scene) = 0;
+
+    virtual void beginClearScene() { Q_ASSERT(mScene); deactivate(); }
+    virtual void endClearScene() { Q_ASSERT(mScene); activate(); }
 
 signals:
     void statusInfoChanged(const QString &statusInfo);
@@ -133,9 +139,6 @@ public:
     ~BaseCellSceneTool();
 
     void setScene(BaseGraphicsScene *scene);
-
-    virtual void activate();
-    virtual void deactivate();
 
     virtual void keyPressEvent(QKeyEvent *event) { Q_UNUSED(event) }
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }

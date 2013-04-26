@@ -115,14 +115,6 @@ void BaseCellSceneTool::setEventView(BaseGraphicsView *view)
     mEventView = view;
 }
 
-void BaseCellSceneTool::activate()
-{
-}
-
-void BaseCellSceneTool::deactivate()
-{
-}
-
 /////
 
 CreateObjectTool *CreateObjectTool::mInstance = 0;

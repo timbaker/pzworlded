@@ -1317,7 +1317,7 @@ void CellScene::loadMap()
         removeItem(mGridItem);
         removeItem(mMapBordersItem);
 
-        clear();
+        clearScene();
         setSceneRect(QRectF());
 
         delete mMapComposite;

@@ -102,6 +102,9 @@ public:
 
     void setScene(BaseGraphicsScene *scene);
 
+    void beginClearScene(BaseGraphicsScene *scene);
+    void endClearScene(BaseGraphicsScene *scene);
+
 signals:
     void selectedToolChanged(AbstractTool *tool);
 
