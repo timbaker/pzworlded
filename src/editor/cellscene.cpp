@@ -1374,6 +1374,8 @@ void CellScene::loadMap()
             SLOT(layerGroupAdded(int)));
     connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
             mDocument, SIGNAL(layerGroupAdded(int)));
+    connect(mMapComposite, SIGNAL(needsSynch()),
+            SLOT(mapCompositeNeedsSynch()));
 
     for (int i = 0; i < cell()->lots().size(); i++)
         cellLotAdded(cell(), i);
@@ -1462,7 +1464,10 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
                 lot->setWidth(subMapInfo->width());
                 lot->setHeight(subMapInfo->height());
 
-                doLater(AllGroups | Bounds | Synch | ZOrder);
+                if (!mHandleDelayedMapLoadingScheduled) {
+                    mHandleDelayedMapLoadingScheduled = true;
+                    QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
+                }
             }
 #else
             MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
@@ -1959,6 +1964,15 @@ void CellScene::handleDelayedMapLoading()
 {
     mHandleDelayedMapLoadingScheduled = false;
     doLater(AllGroups | Bounds | Synch | ZOrder);
+}
+
+// Called when our MapComposite adds a sub-map asynchronously.
+void CellScene::mapCompositeNeedsSynch()
+{
+    if (!mHandleDelayedMapLoadingScheduled) {
+        mHandleDelayedMapLoadingScheduled = true;
+        QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
+    }
 }
 
 void CellScene::updateCurrentLevelHighlight()

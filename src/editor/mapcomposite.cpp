@@ -1542,6 +1542,8 @@ void MapComposite::mapLoaded(MapInfo *mapInfo)
             mSubMapsLoading.removeAt(i);
             --i;
             // Keep going, could be duplicate submaps to load
+
+            emit needsSynch();
         }
     }
 }

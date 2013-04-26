@@ -297,6 +297,8 @@ signals:
     void layerRemovedFromGroup(int index, CompositeLayerGroup *oldGroup);
     void layerLevelChanged(int index, int oldLevel);
 
+    void needsSynch();
+
 private slots:
     void bmpBlenderLayersRecreated();
     void mapLoaded(MapInfo *mapInfo);

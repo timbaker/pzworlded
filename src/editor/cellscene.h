@@ -446,6 +446,7 @@ public slots:
     void roadsChanged();
 
     void handleDelayedMapLoading();
+    void mapCompositeNeedsSynch();
 
 public:
     enum Pending {
