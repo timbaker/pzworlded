@@ -1397,6 +1397,7 @@ void MapComposite::recreate()
 #endif // ROAD_CRUD
     mMap = mMapInfo->map();
     mOrientAdjustPos = mOrientAdjustTiles = QPoint();
+    mAdjacentMaps.clear();
 
     ///// FIXME: everything below here is copied from our constructor
 
@@ -1435,12 +1436,15 @@ void MapComposite::recreate()
     // by the LotManager).
     if (!mMapInfo->isBeingEdited()) {
         foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
+            int levelOffset;
+            (void) levelForLayer(objectGroup, &levelOffset);
             foreach (MapObject *object, objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
                     MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
-                                                                          QFileInfo(mMapInfo->path()).absolutePath());
+                                                                          QFileInfo(mMapInfo->path()).absolutePath(),
+                                                                          true, MapManager::PriorityLow);
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
 #if 1 // FIXME: attempt to load this if mapsDirectory changes
@@ -1449,11 +1453,20 @@ void MapComposite::recreate()
 #endif
                     }
                     if (subMapInfo) {
-                        int levelOffset;
-                        (void) levelForLayer(objectGroup, &levelOffset);
-                        addMap(subMapInfo, object->position().toPoint()
-                               + mOrientAdjustPos * levelOffset,
-                               levelOffset, true);
+                        if (subMapInfo->isLoading()) {
+                            connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+                                    SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
+                            connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+                                    SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
+                            mSubMapsLoading += SubMapLoading(subMapInfo,
+                                                             object->position().toPoint()
+                                                             + mOrientAdjustPos * levelOffset,
+                                                             levelOffset);
+                        } else {
+                            addMap(subMapInfo, object->position().toPoint()
+                                   + mOrientAdjustPos * levelOffset,
+                                   levelOffset, true);
+                        }
                     }
                 }
             }
