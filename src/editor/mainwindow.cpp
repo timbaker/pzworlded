@@ -886,6 +886,7 @@ void MainWindow::FromToSelected()
 }
 
 #include "mapwriter.h"
+#include <QScopedPointer>
 void MainWindow::FromToAux(bool selectedOnly)
 {
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
@@ -935,7 +936,7 @@ void MainWindow::FromToAux(bool selectedOnly)
 
     foreach (QString fileName, fileNames) {
         if (MapInfo *mapInfo = MapManager::instance()->loadMap(fileName)) {
-            Map *map = /*info->map(); */mapInfo->map()->clone();
+            QScopedPointer<Map> map(mapInfo->map()->clone());
 
             QMap<QString,TileLayer*> layerMapping;
             foreach (FromToFile::FromTo fromto, file.fromtos) {
@@ -962,6 +963,18 @@ void MainWindow::FromToAux(bool selectedOnly)
                     BuildingTilesMgr::parseTileName(tileName, tilesetName, tileID);
                     if (tilesetByName.contains(tilesetName) && tilesetByName[tilesetName]->tileAt(tileID)) {
                         fromTiles += tilesetByName[tilesetName]->tileAt(tileID);
+                    } else if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName)) {
+                        TileMetaInfoMgr::instance()->loadTilesets(QList<Tileset*>() << ts);
+                        if (Tile *tile = ts->tileAt(tileID)) {
+                            map->addTileset(ts);
+                            tilesetByName[tilesetName] = ts;
+                            fromTiles += tile;
+                        }
+                    } else {
+                        QString mError = tr("Map '%1' is missing tileset '%2' needed by the FromTo.txt file.\nThe tileset is not one of those in Tilesets.txt.")
+                                .arg(QFileInfo(fileName).fileName()).arg(tilesetName);
+                        QMessageBox::warning(this, tr("From/To Failed"), mError);
+                        return;
                     }
                 }
                 QList<Tile*> toTiles;
@@ -969,6 +982,18 @@ void MainWindow::FromToAux(bool selectedOnly)
                     BuildingTilesMgr::parseTileName(tileName, tilesetName, tileID);
                     if (tilesetByName.contains(tilesetName) && tilesetByName[tilesetName]->tileAt(tileID)) {
                         toTiles += tilesetByName[tilesetName]->tileAt(tileID);
+                    } else if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName)) {
+                        TileMetaInfoMgr::instance()->loadTilesets(QList<Tileset*>() << ts);
+                        if (Tile *tile = ts->tileAt(tileID)) {
+                            map->addTileset(ts);
+                            tilesetByName[tilesetName] = ts;
+                            toTiles += tile;
+                        }
+                    } else {
+                        QString mError = tr("Map '%1' is missing tileset '%2' needed by the FromTo.txt file.\nThe tileset is not one of those in Tilesets.txt.")
+                                .arg(QFileInfo(fileName).fileName()).arg(tilesetName);
+                        QMessageBox::warning(this, tr("From/To Failed"), mError);
+                        return;
                     }
                 }
                 foreach (QString layerName, fromto.layers) {
@@ -1005,12 +1030,10 @@ void MainWindow::FromToAux(bool selectedOnly)
                 format = MapWriter::Base64Zlib;
             writer.setLayerDataFormat(format);
             writer.setDtdEnabled(false);
-            if (!writer.writeMap(map, mapInfo->path())) {
+            if (!writer.writeMap(map.data(), mapInfo->path())) {
                 QMessageBox::warning(this, tr("Error writing TMX"), writer.errorString());
-                delete map;
                 return;
             }
-            delete map;
         }
     }
 }
