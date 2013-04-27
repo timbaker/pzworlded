@@ -225,13 +225,18 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
     if (asynch)
         return mapInfo;
 
+    // Wow.  Had a map *finish loading* after the PROGRESS call below displayed
+    // the dialog and started processing events but before the qApp->processEvents()
+    // call below, resulting in a hang because mWaitingForMapInfo wasn't set till
+    // after the PROGRESS call.
+    Q_ASSERT(mWaitingForMapInfo == 0);
+    mWaitingForMapInfo = mapInfo;
+
     PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
     foreach (MapReaderWorker *w, mMapReaderWorker)
         QMetaObject::invokeMethod(w, "possiblyRaisePriority",
                                   Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
                                   Q_ARG(int,priority));
-    Q_ASSERT(mWaitingForMapInfo == 0);
-    mWaitingForMapInfo = mapInfo;
     while (mapInfo->mLoading) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
@@ -239,7 +244,6 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
     if (mapInfo->map())
         return mapInfo;
     return 0;
-
 }
 
 MapInfo *MapManager::newFromMap(Map *map, const QString &mapFilePath)
