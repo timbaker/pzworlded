@@ -865,6 +865,9 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         if (layerGroup->level() > mMaxLevel)
             mMaxLevel = layerGroup->level();
     }
+    foreach (MapComposite *subMap, mSubMaps)
+        if (subMap->mLevelOffset + subMap->mMaxLevel > mMaxLevel)
+            mMaxLevel = subMap->mLevelOffset + subMap->mMaxLevel;
 
     if (mMinLevel == 10000)
         mMinLevel = 0;
@@ -1484,6 +1487,9 @@ void MapComposite::recreate()
         if (layerGroup->level() > mMaxLevel)
             mMaxLevel = layerGroup->level();
     }
+    foreach (MapComposite *subMap, mSubMaps)
+        if (subMap->mLevelOffset + subMap->mMaxLevel > mMaxLevel)
+            mMaxLevel = subMap->mLevelOffset + subMap->mMaxLevel;
 
     if (mMinLevel == 10000)
         mMinLevel = 0;
@@ -1536,15 +1542,26 @@ void MapComposite::bmpBlenderLayersRecreated()
 
 void MapComposite::mapLoaded(MapInfo *mapInfo)
 {
+    bool synch = false;
+
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         if (mSubMapsLoading[i].mapInfo == mapInfo) {
             addMap(mapInfo, mSubMapsLoading[i].pos, mSubMapsLoading[i].level);
             mSubMapsLoading.removeAt(i);
             --i;
             // Keep going, could be duplicate submaps to load
-
-            emit needsSynch();
+            synch = true;
         }
+    }
+
+    // Let the scene know it needs to synch.
+    if (synch) {
+        MapComposite *mc = mParent;
+        while (mc) {
+            mc->ensureMaxLevels(mLevelOffset + mMaxLevel);
+            mc = mc->mParent;
+        }
+        emit needsSynch();
     }
 }
 
