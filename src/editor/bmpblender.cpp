@@ -189,7 +189,10 @@ void BmpBlender::fromMap()
             if (!mAliasByName.contains(blend->mainTile))
                 tileNames += blend->mainTile;
         }
-        tileNames += blend->blendTile;
+        if (BuildingEditor::BuildingTilesMgr::legalTileName(blend->blendTile)) {
+            if (!mAliasByName.contains(blend->blendTile))
+                tileNames += blend->blendTile;
+        }
     }
     mBlendLayers = layers.values();
 
@@ -343,8 +346,11 @@ void BmpBlender::blend(int x1, int y1, int x2, int y2)
             if (tileName.isEmpty())
                 tileName = mFakeTileGrid->at(x, y);
             foreach (QString layerName, mBlendLayers) {
-                BmpBlend *blend = getBlendRule(x, y, tileName, layerName);
-                mTileNameGrids[layerName]->replace(x, y, blend ? blend->blendTile : QString());
+                if (BmpBlend *blend = getBlendRule(x, y, tileName, layerName)) {
+                    QString tileName = resolveAlias(blend->blendTile, mMap->bmp(0).rand(x, y));
+                    mTileNameGrids[layerName]->replace(x, y, tileName);
+                } else
+                    mTileNameGrids[layerName]->replace(x, y, QString());
             }
         }
     }
@@ -443,14 +449,19 @@ void BmpBlender::updateWarnings()
         foreach (QString tileName, blend->ExclusionList) {
             if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
                 if (!mAliasByName.contains(tileName))
-                    warnings += tr("Blend %1 uses unknown alias '%2'.")
+                    warnings += tr("Blend %1 uses unknown alias '%2' for exclude.")
                             .arg(blendIndex).arg(tileName);
             }
         }
         if (!BuildingEditor::BuildingTilesMgr::legalTileName(blend->mainTile)) {
             if (!mAliasByName.contains(blend->mainTile))
-                warnings += tr("Blend %1 uses unknown alias '%2'.")
+                warnings += tr("Blend %1 uses unknown alias '%2' for mainTile.")
                         .arg(blendIndex).arg(blend->mainTile);
+        }
+        if (!BuildingEditor::BuildingTilesMgr::legalTileName(blend->blendTile)) {
+            if (!mAliasByName.contains(blend->blendTile))
+                warnings += tr("Blend %1 uses unknown alias '%2' for blendTile.")
+                        .arg(blendIndex).arg(blend->blendTile);
         }
         ++blendIndex;
     }
@@ -999,12 +1010,14 @@ missingKV:
             QString blendTile;
             if (block.keyValue("blendTile", kv)) {
                 blendTile = kv.value;
-                if (!BuildingEditor::BuildingTilesMgr::legalTileName(blendTile)) {
-                    mError = tr("Line %1: Invalid tile name '%2'")
-                            .arg(kv.lineNumber).arg(blendTile);
-                    return false;
+                if (!aliasToName.contains(blendTile)) {
+                    if (!BuildingEditor::BuildingTilesMgr::legalTileName(blendTile)) {
+                        mError = tr("Line %1: Invalid tile name '%2'")
+                                .arg(kv.lineNumber).arg(blendTile);
+                        return false;
+                    }
+                    blendTile = BuildingEditor::BuildingTilesMgr::normalizeTileName(blendTile);
                 }
-                blendTile = BuildingEditor::BuildingTilesMgr::normalizeTileName(blendTile);
             } else
                 goto missingKV;
 
