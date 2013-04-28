@@ -63,10 +63,8 @@ public:
     QList<BmpRule*> rulesCopy() const;
 
 private:
-    void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
-                 QString layer, QRgb condition);
-    void AddRule(int bitmapIndex, QRgb col, QStringList tiles,
-                 QString layer);
+    void AddRule(const QString &label, int bitmapIndex, QRgb col, const QStringList &tiles,
+                 const QString &layer, QRgb condition);
 
     QRgb rgbFromString(const QString &string, bool &ok);
     QRgb rgbFromStringList(const QStringList &rgb, bool &ok);

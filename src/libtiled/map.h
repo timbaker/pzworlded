@@ -111,6 +111,7 @@ public:
 class TILEDSHARED_EXPORT BmpRule
 {
 public:
+    QString label;
     int bitmapIndex;
     QRgb color;
     QStringList tileChoices;
@@ -118,28 +119,24 @@ public:
     QRgb condition;
 
     BmpRule(const BmpRule *other) :
+        label(other->label),
         bitmapIndex(other->bitmapIndex),
         color(other->color),
         tileChoices(other->tileChoices),
         targetLayer(other->targetLayer),
         condition(other->condition)
     {}
-    BmpRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition) :
+    BmpRule(const QString &label, int bitmapIndex, QRgb col,
+            const QStringList &tiles, const QString &layer, QRgb condition) :
+        label(label),
         bitmapIndex(bitmapIndex),
         color(col),
         tileChoices(tiles),
         targetLayer(layer),
         condition(condition)
     {}
-    BmpRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer) :
-        bitmapIndex(bitmapIndex),
-        color(col),
-        tileChoices(tiles),
-        targetLayer(layer),
-        condition(qRgb(0,0,0))
-    {}
-    BmpRule(int bitmapIndex, QRgb col, QString tile, QString layer);
-    BmpRule(int bitmapIndex, QRgb col, QString tile, QString layer, QRgb condition);
+    BmpRule(const QString &label, int bitmapIndex, QRgb col, QString tile,
+            QString layer, QRgb condition);
 };
 
 class TILEDSHARED_EXPORT BmpBlend

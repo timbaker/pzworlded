@@ -587,8 +587,7 @@ bool BMPToTMX::LoadRules()
     foreach (BmpAlias *alias, mAliases)
         mAliasByName[alias->name] = alias;
     foreach (BmpRule *rule, file.rules())
-        AddRule(rule->bitmapIndex, rule->color, rule->tileChoices,
-                rule->targetLayer, rule->condition);
+        AddRule(rule);
 
     // Verify all the listed tiles exist.
     foreach (QList<BmpRule*> convs, mRulesByColor) {
@@ -650,16 +649,10 @@ bool BMPToTMX::LoadBlends()
     return true;
 }
 
-void BMPToTMX::AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition)
+void BMPToTMX::AddRule(BmpRule *rule)
 {
-    mRules += new BmpRule(bitmapIndex, col, tiles, layer, condition);
-    mRulesByColor[col] += mRules.last();
-}
-
-void BMPToTMX::AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer)
-{
-    mRules += new BmpRule(bitmapIndex, col, tiles, layer);
-    mRulesByColor[col] += mRules.last();
+    mRules += new BmpRule(rule);
+    mRulesByColor[rule->color] += mRules.last();
 }
 
 bool BMPToTMX::BlendMap()

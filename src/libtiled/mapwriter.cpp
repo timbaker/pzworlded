@@ -616,6 +616,7 @@ void MapWriterPrivate::writeBmpSettings(QXmlStreamWriter &w,
     w.writeStartElement(QLatin1String("rules"));
     foreach (BmpRule *rule, settings->rules()) {
         w.writeStartElement(QLatin1String("rule"));
+        w.writeAttribute(QLatin1String("label"), rule->label);
         w.writeAttribute(QLatin1String("bitmapIndex"), QString::number(rule->bitmapIndex));
         w.writeAttribute(QLatin1String("color"), rgbString(rule->color));
         QStringList tileChoices;

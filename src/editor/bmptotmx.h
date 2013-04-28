@@ -79,8 +79,7 @@ private:
     bool LoadRules();
     bool LoadBlends();
 
-    void AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer, QRgb condition);
-    void AddRule(int bitmapIndex, QRgb col, QStringList tiles, QString layer);
+    void AddRule(Tiled::BmpRule *rule);
 
     bool BlendMap();
     QString getNeighbouringTile(int x, int y);

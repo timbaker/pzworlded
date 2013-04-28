@@ -572,7 +572,8 @@ bool BmpRulesFile::read(const QString &fileName)
         SimpleFileKeyValue kv;
         if (block.name == QLatin1String("rule")) {
             foreach (kv, block.values) {
-                if (kv.name != QLatin1String("bitmap") &&
+                if (kv.name != QLatin1String("label") &&
+                        kv.name != QLatin1String("bitmap") &&
                         kv.name != QLatin1String("color") &&
                         kv.name != QLatin1String("tiles") &&
                         kv.name != QLatin1String("condition") &&
@@ -598,6 +599,8 @@ missingKV:
                         .arg(block.lineNumber).arg(kv.name);
                 return false;
             }
+
+            QString label = block.value("label");
 
 
             QRgb col;
@@ -647,16 +650,17 @@ missingKV:
             } else
                 goto missingKV;
 
+            QRgb condition = qRgb(0, 0, 0);
             if (block.keyValue("condition", kv)) {
-                QRgb condition = rgbFromString(kv.value, ok);
+                condition = rgbFromString(kv.value, ok);
                 if (!ok) {
                     mError = tr("Line %1: Invalid rule condition '%2'")
                             .arg(kv.lineNumber).arg(kv.value);
                     return false;
                 }
-                AddRule(bitmapIndex, col, choices, layer, condition);
-            } else
-                AddRule(bitmapIndex, col, choices, layer);
+            }
+
+            AddRule(label, bitmapIndex, col, choices, layer, condition);
         } else if (block.name == QLatin1String("alias")) {
             QString name;
             if (block.keyValue("name", kv)) {
@@ -765,8 +769,9 @@ QList<BmpRule *> BmpRulesFile::rulesCopy() const
     return ret;
 }
 
-void BmpRulesFile::AddRule(int bitmapIndex, QRgb col, QStringList tiles,
-                         QString layer, QRgb condition)
+void BmpRulesFile::AddRule(const QString &label, int bitmapIndex, QRgb col,
+                           const QStringList &tiles,
+                           const QString &layer, QRgb condition)
 {
     QStringList normalizedTileNames;
     foreach (QString tileName, tiles) {
@@ -776,21 +781,7 @@ void BmpRulesFile::AddRule(int bitmapIndex, QRgb col, QStringList tiles,
             normalizedTileNames += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
     }
 
-    mRules += new BmpRule(bitmapIndex, col, normalizedTileNames, layer, condition);
-}
-
-void BmpRulesFile::AddRule(int bitmapIndex, QRgb col, QStringList tiles,
-                         QString layer)
-{
-    QStringList normalizedTileNames;
-    foreach (QString tileName, tiles) {
-        if (mAliasByName.contains(tileName))
-            normalizedTileNames += tileName;
-        else
-            normalizedTileNames += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
-    }
-
-    mRules += new BmpRule(bitmapIndex, col, normalizedTileNames, layer);
+    mRules += new BmpRule(label, bitmapIndex, col, normalizedTileNames, layer, condition);
 }
 
 QRgb BmpRulesFile::rgbFromString(const QString &string, bool &ok)
@@ -923,11 +914,7 @@ bool BmpRulesFile::readOldFormat(const QString &fileName)
             hasCon = true;
         }
 
-        if (hasCon) {
-            AddRule(bmpIndex, col, choices, layer, con);
-        } else {
-            AddRule(bmpIndex, col, choices, layer);
-        }
+        AddRule(QString(), bmpIndex, col, choices, layer, con);
     }
 
     file.close();
