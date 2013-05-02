@@ -590,22 +590,32 @@ bool BMPToTMX::LoadRules()
         AddRule(rule);
 
     // Verify all the listed tiles exist.
-    foreach (QList<BmpRule*> convs, mRulesByColor) {
-        foreach (BmpRule *conv, convs) {
-            foreach (QString tileName, conv->tileChoices) {
-                if (mAliasByName.contains(tileName))
-                    continue;
-                if (!tileName.isEmpty() && getTileFromTileName(tileName) == 0) {
-                    mError = tr("A tile listed in Rules.txt could not be found.\n");
-                    mError += tr("The missing tile is called '%1'.\n\n").arg(tileName);
-                    mError += tr("Please fix the invalid tile index or add the tileset\nif it is missing using the Tilesets dialog in TileZed.\n");
-                    return false;
-                }
+    QString tileName;
+    foreach (BmpAlias *alias, mAliases) {
+        foreach (tileName, alias->tiles) {
+            if (getTileFromTileName(tileName) == 0) {
+                goto bogusTile;
+            }
+        }
+    }
+
+    foreach (BmpRule *rule, mRules) {
+        foreach (tileName, rule->tileChoices) {
+            if (mAliasByName.contains(tileName))
+                continue;
+            if (!tileName.isEmpty() && getTileFromTileName(tileName) == 0) {
+                goto bogusTile;
             }
         }
     }
 
     return true;
+
+bogusTile:
+    mError = tr("A tile listed in Rules.txt could not be found.\n");
+    mError += tr("The missing tile is called '%1'.\n\n").arg(tileName);
+    mError += tr("Please fix the invalid tile index or add the tileset\nif it is missing using the Tilesets dialog in TileZed.\n");
+    return false;
 }
 
 bool BMPToTMX::LoadBlends()
@@ -627,8 +637,7 @@ bool BMPToTMX::LoadBlends()
     mBlendFileName = path;
 
     foreach (BmpBlend *blend, file.blends()) {
-        BmpBlend *blendCopy = new BmpBlend(blend->targetLayer, blend->mainTile, blend->blendTile,
-                                           blend->dir, blend->ExclusionList);
+        BmpBlend *blendCopy = new BmpBlend(blend);
         mBlends += blendCopy;
         mBlendsByLayer[blend->targetLayer] += blendCopy;
         QStringList excludes;
@@ -646,7 +655,28 @@ bool BMPToTMX::LoadBlends()
         layers.insert(blend->targetLayer);
     mBlendLayers = layers.values();
 
+    // Verify all the listed tiles exist.
+    QString tileName;
+    foreach (BmpBlend *blend, mBlends) {
+        tileName = blend->blendTile;
+        if (!mAliasByName.contains(tileName) && !getTileFromTileName(tileName))
+            goto bogusTile;
+        tileName = blend->mainTile;
+        if (!mAliasByName.contains(tileName) && !getTileFromTileName(tileName))
+            goto bogusTile;
+        foreach (tileName, blend->ExclusionList) {
+            if (!mAliasByName.contains(tileName) && !getTileFromTileName(tileName))
+                goto bogusTile;
+        }
+    }
+
     return true;
+
+bogusTile:
+    mError = tr("A tile listed in Blends.txt could not be found.\n");
+    mError += tr("The missing tile is called '%1'.\n\n").arg(tileName);
+    mError += tr("Please fix the invalid tile index or add the tileset\nif it is missing using the Tilesets dialog in TileZed.\n");
+    return false;
 }
 
 void BMPToTMX::AddRule(BmpRule *rule)
@@ -663,8 +693,10 @@ bool BMPToTMX::BlendMap()
 
             for (int i = 0; i < mBlendLayers.size(); i++) {
                 BmpBlend *blend = getBlendRule(x, y, tile, mBlendLayers[i]);
-                if (blend != 0)
-                    Entries[x][y][2+i] = blend->blendTile;
+                if (blend != 0) {
+                    QString tileName = resolveAlias(blend->blendTile, qrand());
+                    Entries[x][y][2+i] = tileName;
+                }
             }
         }
 
@@ -813,11 +845,24 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
     return true;
 }
 
+#include "BuildingEditor/buildingtiles.h"
 Tile *BMPToTMX::getTileFromTileName(const QString &tileName)
 {
+#if 1
+    if (tileName.isEmpty())
+        return 0;
+    QString tilesetName;
+    int tileID;
+    if (BuildingEditor::BuildingTilesMgr::parseTileName(tileName, tilesetName, tileID)) {
+        if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName))
+            return ts->tileAt(tileID);
+    }
+    return 0;
+#else
     QString tilesetName = tileName.mid(0, tileName.lastIndexOf(QLatin1Char('_')));
     int index = tileName.mid(tileName.lastIndexOf(QLatin1Char('_')) + 1).toInt();
     if (Tileset *ts = TileMetaInfoMgr::instance()->tileset(tilesetName))
         return ts->tileAt(index);
     return 0;
+#endif
 }
