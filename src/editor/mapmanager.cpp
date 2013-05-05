@@ -522,8 +522,10 @@ void MapManager::purgeUnreferencedMaps()
 {
     int unpurged = 0;
     foreach (MapInfo *mapInfo, mMapInfo) {
-        if (mapInfo->mMap && mapInfo->mMapRefCount <= 0 &&
-                (mapInfo->mReferenceEpoch <= mReferenceEpoch - 50)) {
+        bool bigMap = mapInfo->size() == QSize(300, 300);
+        if ((mapInfo->mMap && mapInfo->mMapRefCount <= 0) &&
+                ((bigMap && (mapInfo->mReferenceEpoch <= mReferenceEpoch - 10)) ||
+                (mapInfo->mReferenceEpoch <= mReferenceEpoch - 50))) {
             noise() << "MapManager purging" << mapInfo->mFilePath;
             TilesetManager *tilesetMgr = TilesetManager::instance();
             tilesetMgr->removeReferences(mapInfo->mMap->tilesets());

@@ -147,14 +147,15 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         return false;
     }
 
+    // Try to free up some memory before loading large images.
+    MapManager::instance()->purgeUnreferencedMaps();
+
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
-    qDeleteAll(mImages);
-    mImages.clear();
     foreach (WorldBMP *bmp, world->bmps()) {
         BMPToTMXImages *images = getImages(bmp->filePath(), bmp->pos());
         if (!images) {
-            return false;
+            goto errorExit;
         }
         mImages += images;
     }
@@ -168,15 +169,18 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
             if (!generateCell(cell))
-                return false;
+                goto errorExit;
     } else {
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 if (!generateCell(world->cellAt(x, y)))
-                    return false;
+                    goto errorExit;
             }
         }
     }
+
+    qDeleteAll(mImages);
+    mImages.clear();
 
     reportUnknownColors();
 
@@ -191,8 +195,12 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
     QMessageBox::information(MainWindow::instance(),
                              tr("BMP To TMX"), tr("Finished!"));
-
     return true;
+
+errorExit:
+    qDeleteAll(mImages);
+    mImages.clear();
+    return false;
 }
 
 bool BMPToTMX::generateCell(WorldCell *cell)
@@ -506,7 +514,8 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)
 {
     QImage image;
     if (!image.load(path)) {
-        mError = tr("The image%1 file couldn't be loaded.").arg(suffix);
+        mError = tr("The image%1 file couldn't be loaded.\n%2\n\nThere might not be enough memory.  Try closing any open Cells or restart the application.")
+                .arg(suffix).arg(QDir::toNativeSeparators(path));
         return QImage();
     }
 
