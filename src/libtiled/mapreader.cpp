@@ -1099,7 +1099,10 @@ void MapReaderPrivate::readBmpBlends()
             BmpBlend::Direction dir = dirMap[dirString];
             QStringList ExclusionList = atts.value(QLatin1String("ExclusionList"))
                     .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
-            blends += new BmpBlend(targetLayer, mainTile, blendTile, dir, ExclusionList);
+            QStringList exclude2 = atts.value(QLatin1String("exclude2"))
+                    .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+            blends += new BmpBlend(targetLayer, mainTile, blendTile, dir,
+                                   ExclusionList, exclude2);
             xml.skipCurrentElement();
         } else {
             readUnknownElement();

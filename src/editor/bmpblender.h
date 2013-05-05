@@ -134,6 +134,12 @@ public:
         return ret;
     }
 
+    void setHack(bool hack) { mHack = hack; }
+    QSet<Tile*> knownBlendTiles()
+    { return mKnownBlendTiles; }
+    void tilesToPixels(int x1, int y1, int x2, int y2);
+    bool expectTile(const QString &layerName, int x, int y, Tile *tile);
+
 signals:
     void layersRecreated();
     void regionAltered(const QRegion &region);
@@ -143,6 +149,7 @@ public slots:
     void updateWarnings();
 
 private:
+    QList<Tile *> tileNamesToTiles(const QStringList &names);
     void initTiles();
     void imagesToTileNames(int x1, int y1, int x2, int y2);
     void blend(int x1, int y1, int x2, int y2);
@@ -167,14 +174,24 @@ private:
 
     QList<BmpRule*> mRules;
     QMap<QRgb,QList<BmpRule*> > mRuleByColor;
+    QMap<BmpRule*,QStringList> mRuleTileNames;
     QStringList mRuleLayers;
     QList<BmpRule*> mFloor0Rules;
     QList<QStringList> mFloor0RuleTiles;
+    QMap<Tile*,BmpRule*> mFloorTileToRule;
 
     QList<BmpBlend*> mBlendList;
     QStringList mBlendLayers;
     QMap<QString,QList<BmpBlend*> > mBlendsByLayer;
     QMap<BmpBlend*,QStringList> mBlendExcludes;
+    QMap<BmpBlend*,QList<QList<Tile*> > > mBlendExclude2;
+    QSet<QString> mBlendExclude2Layers;
+
+    QSet<Tile*> mKnownBlendTiles;
+    QMap<BmpBlend*,QList<Tile*> > mBlendTiles;
+    bool mHack;
+    typedef QHash<int,BmpBlend*> BlendGrid;
+    QMap<QString,BlendGrid> mBlendGrids; // blend at each x,y
 
     QSet<QString> mWarnings;
 

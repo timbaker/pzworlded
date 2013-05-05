@@ -640,6 +640,7 @@ void MapWriterPrivate::writeBmpSettings(QXmlStreamWriter &w,
         w.writeAttribute(QLatin1String("blendTile"), blend->blendTile);
         w.writeAttribute(QLatin1String("dir"), blend->dirAsString());
         w.writeAttribute(QLatin1String("ExclusionList"), blend->ExclusionList.join(QLatin1String(" ")));
+        w.writeAttribute(QLatin1String("exclude2"), blend->exclude2.join(QLatin1String(" ")));
         w.writeEndElement(); // <blend>
     }
     w.writeEndElement(); // <blends>

@@ -162,6 +162,9 @@ void Map::adoptLayer(Layer *layer)
 Layer *Map::takeLayerAt(int index)
 {
     Layer *layer = mLayers.takeAt(index);
+#ifdef ZOMBOID
+    Q_ASSERT(layer->map() == this);
+#endif
     layer->setMap(0);
 #ifdef ZOMBOID
     foreach (Tileset *ts, layer->usedTilesets())

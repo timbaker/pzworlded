@@ -159,18 +159,20 @@ public:
     QString blendTile;
     Direction dir;
     QStringList ExclusionList;
+    QStringList exclude2;
 
     BmpBlend(const BmpBlend *other) :
         targetLayer(other->targetLayer),
         mainTile(other->mainTile),
         blendTile(other->blendTile),
         dir(other->dir),
-        ExclusionList(other->ExclusionList)
+        ExclusionList(other->ExclusionList),
+        exclude2(other->exclude2)
     {}
     BmpBlend(const QString &layer, const QString &main, const QString &blend,
-          Direction dir, const QStringList &exclusions) :
+          Direction dir, const QStringList &exclusions, const QStringList &exclude2) :
         targetLayer(layer), mainTile(main), blendTile(blend), dir(dir),
-        ExclusionList(exclusions)
+        ExclusionList(exclusions), exclude2(exclude2)
     {}
 
     QString dirAsString() const;

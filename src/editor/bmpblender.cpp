@@ -41,7 +41,8 @@ using namespace Tiled::Internal;
 BmpBlender::BmpBlender(QObject *parent) :
     QObject(parent),
     mMap(0),
-    mFakeTileGrid(0)
+    mFakeTileGrid(0),
+    mHack(false)
 {
 }
 
@@ -51,7 +52,8 @@ BmpBlender::BmpBlender(Map *map, QObject *parent) :
     mFakeTileGrid(0),
     mAliases(map->bmpSettings()->aliases()),
     mRules(map->bmpSettings()->rules()),
-    mBlendList(map->bmpSettings()->blends())
+    mBlendList(map->bmpSettings()->blends()),
+    mHack(false)
 {
     fromMap();
 }
@@ -86,9 +88,11 @@ void BmpBlender::recreate()
 
 void BmpBlender::update(int x1, int y1, int x2, int y2)
 {
+    x1 -= 2, x2 += 2, y1 -= 2, y2 += 2;
+
     imagesToTileNames(x1, y1, x2, y2);
-    blend(x1 - 1, y1 - 1, x2 + 1, y2 + 1);
-    tileNamesToLayers(x1 - 1, y1 - 1, x2 + 1, y2 + 1);
+    blend(x1, y1, x2, y2);
+    tileNamesToLayers(x1, y1, x2, y2);
 }
 
 void BmpBlender::tilesetAdded(Tileset *ts)
@@ -105,6 +109,54 @@ void BmpBlender::tilesetRemoved(const QString &tilesetName)
         initTiles();
         tileNamesToLayers(0, 0, mMap->width(), mMap->height());
     }
+}
+
+void BmpBlender::tilesToPixels(int x1, int y1, int x2, int y2)
+{
+    int index = mMap->indexOfLayer(QLatin1String("0_Floor"), Layer::TileLayerType);
+    if (index == -1) return;
+    TileLayer *floorLayer = mMap->layerAt(index)->asTileLayer();
+
+    x1 = qBound(0, x1, mMap->width() - 1);
+    x2 = qBound(0, x2, mMap->width() - 1);
+    y1 = qBound(0, y1, mMap->height() - 1);
+    y2 = qBound(0, y2, mMap->height() - 1);
+
+    for (int y = y1; y <= y2; y++) {
+        for (int x = x1; x <= x2; x++) {
+            QRgb col = mMap->rbmpMain().pixel(x, y);
+            if (col != qRgb(0, 0, 0))
+                continue;
+
+            if (Tile *tile = floorLayer->cellAt(x, y).tile) {
+#if 1
+                if (mFloorTileToRule.contains(tile))
+                    mMap->rbmp(0).setPixel(x, y, mFloorTileToRule[tile]->color);
+#else
+                QString tileName = BuildingEditor::BuildingTilesMgr::nameForTile(tile);
+                for (int i = 0; i < mFloor0Rules.size(); i++) {
+                    if (mFloor0RuleTiles[i].contains(tileName)) {
+                        mMap->rbmp(0).setPixel(x, y, mFloor0Rules[i]->color);
+                    }
+                }
+#endif
+            }
+        }
+    }
+}
+
+// See if the given tile in the given layer should be there based on the rules
+// and blends.
+bool BmpBlender::expectTile(const QString &layerName, int x, int y, Tile *tile)
+{
+    if (mBlendGrids.contains(layerName)) {
+        int index = x + y * mMap->width();
+        if (mBlendGrids[layerName].contains(index)) {
+            BmpBlend *blend = mBlendGrids[layerName][index];
+            return mBlendTiles[blend].contains(tile);
+        }
+    }
+    return false;
 }
 
 static QStringList normalizeTileNames(const QStringList &tileNames)
@@ -162,7 +214,7 @@ void BmpBlender::fromMap()
                 } else
                     tiles += tileName;
             }
-            mFloor0RuleTiles += normalizeTileNames(tiles);
+            mFloor0RuleTiles += (mRuleTileNames[rule] = normalizeTileNames(tiles));
         }
     }
 
@@ -184,6 +236,12 @@ void BmpBlender::fromMap()
                 tileNames += tileName;
             }
         }
+        foreach (QString tileName, blend->exclude2) {
+            if (BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                tileNames += tileName;
+            }
+        }
+
         mBlendExcludes[blend] = normalizeTileNames(excludes);
         if (BuildingEditor::BuildingTilesMgr::legalTileName(blend->mainTile)) {
             if (!mAliasByName.contains(blend->mainTile))
@@ -199,6 +257,18 @@ void BmpBlender::fromMap()
     mTileNames = normalizeTileNames(tileNames.values());
 
     initTiles();
+}
+
+QList<Tile*> BmpBlender::tileNamesToTiles(const QStringList &names)
+{
+    QList<Tile*> ret;
+    foreach (QString name, names) {
+        if (mAliasByName.contains(name)) {
+            ret += tileNamesToTiles(mAliasByName[name]->tiles);
+        } else if (mTileByName.contains(name))
+            ret += mTileByName[name];
+    }
+    return ret;
 }
 
 void BmpBlender::initTiles()
@@ -220,15 +290,61 @@ void BmpBlender::initTiles()
         }
     }
 
+
+    foreach (BmpRule *rule, mRules) {
+        if (rule->targetLayer != QLatin1String("0_Floor"))
+            continue;
+        foreach (QString tileName, mRuleTileNames[rule]) {
+            if (mTileByName.contains(tileName))
+                mFloorTileToRule[mTileByName[tileName]] = rule;
+        }
+    }
+
+    mBlendExclude2.clear();
+    mBlendExclude2Layers.clear();
+    foreach (BmpBlend *blend, mBlendList) {
+        for (int i = 0; i < blend->exclude2.size(); i += 2) {
+            mBlendExclude2[blend] += tileNamesToTiles(QStringList(blend->exclude2[i]));
+            mBlendExclude2Layers += blend->exclude2[i + 1];
+        }
+    }
+
     updateWarnings();
+
+    // This list is for the benefit of PaintBMP().
+    // It is a list of all known blend tiles.
+    if (true/*mHack*/) {
+        mKnownBlendTiles.clear();
+        mBlendTiles.clear();
+        foreach (BmpBlend *blend, mBlendList) {
+#if 1
+            QList<Tile*> tiles = tileNamesToTiles(QStringList(blend->blendTile));
+            mKnownBlendTiles += tiles.toSet();
+            mBlendTiles[blend] += tiles;
+#else
+            QStringList tileNames;
+            if (!BuildingEditor::BuildingTilesMgr::legalTileName(blend->blendTile)) {
+                if (mAliasByName.contains(blend->blendTile))
+                    tileNames += mAliasByName[blend->blendTile]->tiles;
+            } else
+                tileNames += blend->blendTile;
+            foreach (QString tileName, tileNames) {
+                if (mTileByName.contains(tileName)) {
+                    mKnownBlendTiles += mTileByName[tileName];
+                    mBlendTiles[blend] += mTileByName[tileName];
+                }
+            }
+#endif
+        }
+    }
 }
 
 static bool adjacentToNonBlack(const QImage &image1, const QImage &image2, int x1, int y1)
 {
     const QRgb black = qRgb(0, 0, 0);
     QRect r(0, 0, image1.width(), image1.height());
-    for (int y = y1 - 1; y <= y1 + 1; y++) {
-        for (int x = x1 - 1; x <= x1 + 1; x++) {
+    for (int y = y1 - 2; y <= y1 + 2; y++) {
+        for (int x = x1 - 2; x <= x1 + 2; x++) {
             if (!r.contains(x, y)) continue;
             if (image1.pixel(x, y) != black || image2.pixel(x, y) != black)
                 return true;
@@ -255,7 +371,6 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
 
     // Hack - If a pixel is black, and the user-drawn map tile in 0_Floor is
     // one of the Rules.txt tiles, pretend that that pixel exists in the image.
-    x1 -= 1, x2 += 1, y1 -= 1, y2 += 1;
     int index = mMap->indexOfLayer(QLatin1String("0_Floor"), Layer::TileLayerType);
     TileLayer *floorLayer = (index == -1) ? 0 : mMap->layerAt(index)->asTileLayer();
 
@@ -269,6 +384,8 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
             foreach (QString layerName, mRuleLayers)
                 mTileNameGrids[layerName]->replace(x, y, QString());
             mFakeTileGrid->replace(x, y, QString());
+            foreach (QString layerName, mBlendGrids.keys())
+                mBlendGrids[layerName].remove(x + y * mMap->width());
 
             QRgb col = mMap->rbmpMain().pixel(x, y);
             QRgb col2 = mMap->rbmpVeg().pixel(x, y);
@@ -290,10 +407,20 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
 
             // Hack - If a pixel is black, and the user-drawn map tile in 0_Floor is
             // one of the Rules.txt tiles, pretend that that pixel exists in the image.
-            if (floorLayer && col == black && adjacentToNonBlack(mMap->rbmpMain().rimage(),
+            if (floorLayer && col == black /*&& adjacentToNonBlack(mMap->rbmpMain().rimage(),
                                                                  mMap->rbmpVeg().rimage(),
-                                                                 x, y)) {
+                                                                 x, y)*/) {
                 if (Tile *tile = floorLayer->cellAt(x, y).tile) {
+#if 1
+                    if (mFloorTileToRule.contains(tile)) {
+                        BmpRule *rule = mFloorTileToRule[tile];
+                        // FIXME: may not be normalized
+                        QString tileName = rule->tileChoices[mMap->bmp(0).rand(x, y) % rule->tileChoices.count()];
+                        tileName = resolveAlias(tileName, mMap->bmp(0).rand(x, y));
+                        mFakeTileGrid->replace(x, y, tileName);
+                        col = rule->color;
+                    }
+#else
                     QString tileName = BuildingEditor::BuildingTilesMgr::nameForTile(tile);
                     for (int i = 0; i < mFloor0Rules.size(); i++) {
                         BmpRule *rule = mFloor0Rules[i];
@@ -306,6 +433,7 @@ void BmpBlender::imagesToTileNames(int x1, int y1, int x2, int y2)
                             col = rule->color;
                         }
                     }
+#endif
                 }
             }
 
@@ -340,17 +468,55 @@ void BmpBlender::blend(int x1, int y1, int x2, int y2)
             = mTileNameGrids[QLatin1String("0_Floor")];
     if (!grid)
         return;
+
+    QMap<QString,TileLayer*> mapLayers;
+    foreach (QString layerName, mBlendExclude2Layers) {
+        int n = mMap->indexOfLayer(layerName, Layer::TileLayerType);
+        if (n != -1)
+            mapLayers[layerName] = mMap->layerAt(n)->asTileLayer();
+    }
+
     for (int y = y1; y <= y2; y++) {
         for (int x = x1; x <= x2; x++) {
             QString tileName = grid->at(x, y);
-            if (tileName.isEmpty())
+            if (tileName.isEmpty() && adjacentToNonBlack(mMap->rbmpMain().rimage(),
+                                                         mMap->rbmpVeg().rimage(),
+                                                         x, y))
                 tileName = mFakeTileGrid->at(x, y);
             foreach (QString layerName, mBlendLayers) {
                 if (BmpBlend *blend = getBlendRule(x, y, tileName, layerName)) {
+
+                    for (int i = 0; i < blend->exclude2.size(); i += 2) {
+                        if (mapLayers.contains(blend->exclude2[i + 1])) {
+                            TileLayer *mapLayer = mapLayers[blend->exclude2[i + 1]];
+                            if (Tile *tile = mapLayer->cellAt(x, y).tile) {
+                                if (mBlendExclude2[blend][i/2].contains(tile)) {
+                                    blend = 0;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!blend) {
+                        mTileNameGrids[layerName]->replace(x, y, QString());
+                        int index = x + y * mMap->width();
+                        mBlendGrids[layerName].remove(index);
+                        continue;
+                    }
+
                     QString tileName = resolveAlias(blend->blendTile, mMap->bmp(0).rand(x, y));
                     mTileNameGrids[layerName]->replace(x, y, tileName);
-                } else
+                    if (true/*mHack*/) {
+                        int index = x + y * mMap->width();
+                        mBlendGrids[layerName][index] = blend;
+                    }
+                } else {
                     mTileNameGrids[layerName]->replace(x, y, QString());
+                    if (true/*mHack*/) {
+                        int index = x + y * mMap->width();
+                        mBlendGrids[layerName].remove(index);
+                    }
+                }
             }
         }
     }
@@ -377,12 +543,28 @@ void BmpBlender::tileNamesToLayers(int x1, int y1, int x2, int y2)
     foreach (QString layerName, mTileLayers.keys()) {
         BuildingEditor::FloorTileGrid *grid = mTileNameGrids[layerName];
         TileLayer *tl = mTileLayers[layerName];
+        int n = mMap->indexOfLayer(layerName, Layer::TileLayerType);
+        TileLayer *mapLayer = (n == -1) ? 0 : mMap->layerAt(n)->asTileLayer();
         for (int y = y1; y <= y2; y++) {
             for (int x = x1; x <= x2; x++) {
                 QString tileName = grid->at(x, y);
                 if (tileName.isEmpty()) {
                     tl->setCell(x, y, Cell(0));
                     continue;
+                }
+                // If the blend tile that is in the map is the expected one,
+                // don't override it.  This prevents a map tile which should
+                // be there from being overriden by this automatic one.
+                if (mapLayer) {
+                    int index = x + y * mMap->width();
+                    if (mBlendGrids[layerName].contains(index)) {
+                        BmpBlend *blend = mBlendGrids[layerName][index];
+                        Tile *tile = mapLayer->cellAt(x, y).tile;
+                        if (mBlendTiles[blend].contains(tile)) {
+                            tl->setCell(x, y, Cell(0));
+                            continue;
+                        }
+                    }
                 }
                 tl->setCell(x, y, Cell(mTileByName[tileName]));
             }
@@ -479,7 +661,9 @@ QString BmpBlender::getNeighbouringTile(int x, int y)
     BuildingEditor::FloorTileGrid *grid
             = mTileNameGrids[QLatin1String("0_Floor")];
     QString tileName = grid->at(x, y);
-    if (tileName.isEmpty())
+    if (tileName.isEmpty() /*&& adjacentToNonBlack(mMap->rbmpMain().rimage(),
+                                                 mMap->rbmpVeg().rimage(),
+                                                 x, y)*/)
         tileName = mFakeTileGrid->at(x, y);
     return tileName;
 }
@@ -969,7 +1153,8 @@ bool BmpBlendsFile::read(const QString &fileName, const QList<BmpAlias*> &aliase
                         kv.name != QLatin1String("mainTile") &&
                         kv.name != QLatin1String("blendTile") &&
                         kv.name != QLatin1String("dir") &&
-                        kv.name != QLatin1String("exclude")) {
+                        kv.name != QLatin1String("exclude") &&
+                        kv.name != QLatin1String("exclude2")) {
                     mError = tr("Unknown blend attribute '%1'").arg(kv.name);
                     return false;
                 }
@@ -1036,8 +1221,38 @@ missingKV:
                 }
             }
 
+            QStringList exclude2;
+            if (block.keyValue("exclude2", kv)) {
+                QStringList values = kv.values();
+                if (values.size() % 2) {
+                    mError = tr("Line %1: Expected tile,layer pairs in exclude2")
+                            .arg(kv.lineNumber);
+                    return false;
+                }
+                for (int i = 0; i < values.size(); i += 2) {
+                    QString tileName = values[i];
+                    QString layerName = values[i + 1];
+                    if (!MapComposite::levelForLayer(layerName)) {
+                        mError = tr("Line %1: Invalid layer name '%2'")
+                                .arg(kv.lineNumber).arg(layerName);
+                        return false;
+                    }
+                    if (aliasToName.contains(tileName)) {
+                        exclude2 += tileName;
+                    } else {
+                        if (!BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
+                            mError = tr("Line %1: Invalid tile name '%2'")
+                                    .arg(kv.lineNumber).arg(tileName);
+                            return false;
+                        }
+                        exclude2 += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
+                    }
+                    exclude2 += layerName;
+                }
+            }
+
             BmpBlend *blend = new BmpBlend(block.value("layer"), mainTile,
-                                           blendTile, dir, excludes);
+                                           blendTile, dir, excludes, exclude2);
             mBlends += blend;
         } else {
             mError = tr("Unknown block name '%1'.\nProbable syntax error in Blends.txt.").arg(block.name);
