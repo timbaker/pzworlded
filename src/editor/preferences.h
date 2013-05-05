@@ -62,6 +62,9 @@ public:
     QString openFileDirectory() const;
     void setOpenFileDirectory(const QString &path);
 
+    bool showAdjacentMaps() const { return mShowAdjacentMaps; }
+    void setShowAdjacentMaps(bool show);
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
@@ -83,6 +86,7 @@ signals:
     void highlightCurrentLevelChanged(bool highlight);
     void mapsDirectoryChanged();
     void tilesDirectoryChanged();
+    void showAdjacentMapsChanged(bool show);
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -118,6 +122,7 @@ private:
     QString mMapsDirectory;
     QString mTilesDirectory;
     QString mOpenFileDirectory;
+    bool mShowAdjacentMaps;
 
     static Preferences *mInstance;
 };

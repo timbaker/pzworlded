@@ -91,6 +91,7 @@ Preferences::Preferences()
                                               false).toBool();
     mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
     mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
+    mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
     mSettings->endGroup();
 
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
@@ -230,6 +231,17 @@ void Preferences::setOpenFileDirectory(const QString &path)
         return;
     mOpenFileDirectory = path;
     mSettings->setValue(QLatin1String("OpenFileDirectory"), mOpenFileDirectory);
+}
+
+void Preferences::setShowAdjacentMaps(bool show)
+{
+    if (mShowAdjacentMaps == show)
+        return;
+
+    mShowAdjacentMaps = show;
+    mSettings->setValue(QLatin1String("Interface/ShowAdjacentMaps"), mShowAdjacentMaps);
+
+    emit showAdjacentMapsChanged(mShowAdjacentMaps);
 }
 
 void Preferences::setShowObjectNames(bool show)

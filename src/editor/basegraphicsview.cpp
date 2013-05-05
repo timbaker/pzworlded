@@ -451,6 +451,8 @@ void MiniMap::addItem(QGraphicsItem *item)
 
 void MiniMap::sceneRectChanged(const QRectF &_sceneRect)
 {
+    Q_UNUSED(_sceneRect)
+
     QRectF sceneRect = mParentView->sceneRectForMiniMap();
 
     qreal scale = this->scale();
