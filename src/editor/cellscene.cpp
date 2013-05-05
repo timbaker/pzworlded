@@ -1456,8 +1456,18 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
                 MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
 
                 SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
+#if 1
+                QMap<int,SubMapItem*> zzz;
+                foreach (SubMapItem *item, mSubMapItems)
+                    zzz[cell()->lots().indexOf(item->lot())] = item;
+                zzz[cell()->lots().indexOf(lot)] = item;
+                item->setZValue(cell()->lots().indexOf(lot));
+                addItem(item);
+                mSubMapItems = zzz.values();
+#else
                 addItem(item);
                 mSubMapItems.append(item);
+#endif
 
                 // Update with most recent information
                 lot->setMapName(subMapInfo->path());
@@ -1733,8 +1743,10 @@ void CellScene::selectedLotsChanged()
     const QList<WorldCellLot*> &selection = document()->selectedLots();
 
     QSet<SubMapItem*> items;
-    foreach (WorldCellLot *lot, selection)
-        items.insert(itemForLot(lot));
+    foreach (WorldCellLot *lot, selection) {
+        if (SubMapItem *item = itemForLot(lot))
+            items.insert(item);
+    }
 
     foreach (SubMapItem *item, mSelectedSubMapItems - items)
         item->setEditable(false);
@@ -2250,12 +2262,13 @@ QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
 
 void CellScene::initAdjacentMaps()
 {
-    if (!Preferences::instance()->showAdjacentMaps()) return;
 
     connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
     connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
             SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
+
+    if (!Preferences::instance()->showAdjacentMaps()) return;
 
     int X = cell()->x(), Y = cell()->y();
     for (int y = Y - 1; y <= Y + 1; y++) {
@@ -2300,9 +2313,19 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
                                                          sm.lot->level());
 
             SubMapItem *item = new SubMapItem(subMap, sm.lot, mRenderer);
+#if 1
+            item->setZValue(cell()->lots().indexOf(sm.lot));
+            addItem(item);
+            QMap<int,SubMapItem*> zzz;
+            foreach (SubMapItem *item, mSubMapItems)
+                zzz[cell()->lots().indexOf(item->lot())] = item;
+            zzz[cell()->lots().indexOf(sm.lot)] = item;
+            mSubMapItems = zzz.values();
+#else
             addItem(item);
             int index = cell()->lots().indexOf(sm.lot); // for correct ZOrder
             mSubMapItems.insert(index, item);
+#endif
 
             // Update with most-recent information
             sm.lot->setMapName(sm.mapInfo->path());
