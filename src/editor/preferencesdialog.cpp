@@ -48,6 +48,7 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
 
     ui->openGL->setChecked(prefs->useOpenGL());
     ui->thumbnails->setChecked(prefs->worldThumbnails());
+    ui->showAdjacent->setChecked(prefs->showAdjacentMaps());
 }
 
 void PreferencesDialog::browseTilesDirectory()
@@ -72,6 +73,7 @@ void PreferencesDialog::accept()
     prefs->setUseOpenGL(ui->openGL->isChecked());
     prefs->setWorldThumbnails(ui->thumbnails->isChecked());
     prefs->setGridColor(mGridColor);
+    prefs->setShowAdjacentMaps(ui->showAdjacent->isChecked());
 
     QDialog::accept();
 }

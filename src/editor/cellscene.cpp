@@ -2250,6 +2250,8 @@ QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
 
 void CellScene::initAdjacentMaps()
 {
+    if (!Preferences::instance()->showAdjacentMaps()) return;
+
     connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
     connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),

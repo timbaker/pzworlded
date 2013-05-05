@@ -142,6 +142,13 @@ Don't check this if you are low on disk space or system memory.</string>
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="showAdjacent">
+            <property name="text">
+             <string>Show adjacent maps.  Reopen a cell to see changes.</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
