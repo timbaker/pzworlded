@@ -81,6 +81,8 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
 
 void LotPackLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect)
 {
+    Q_UNUSED(renderer)
+    Q_UNUSED(rect)
 }
 
 /////
@@ -103,6 +105,7 @@ void LotPackLayerGroupItem::paint(QPainter *painter,
                                   const QStyleOptionGraphicsItem *option,
                                   QWidget *widget)
 {
+    Q_UNUSED(widget)
     mRenderer->drawTileLayerGroup(painter, mLayerGroup, option->exposedRect);
 }
 
@@ -121,8 +124,13 @@ QRectF LotPackMiniMapItem::boundingRect() const
     return mBoundingRect;
 }
 
-void LotPackMiniMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void LotPackMiniMapItem::paint(QPainter *painter,
+                               const QStyleOptionGraphicsItem *option,
+                               QWidget *widget)
 {
+    Q_UNUSED(painter)
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
 }
 
 void LotPackMiniMapItem::setWorld(IsoWorld *world)
@@ -243,6 +251,8 @@ void IsoWorldGridItem::paint(QPainter *painter,
 
 void IsoWorldGridItem::setWorld(IsoWorld *world)
 {
+    Q_UNUSED(world)
+
     prepareGeometryChange();
     mBoundingRect = mScene->renderer()->boundingRect(QRect(0, 0,
                                                   mScene->world()->getWidthInTiles(),
