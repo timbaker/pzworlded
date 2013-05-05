@@ -103,6 +103,57 @@ QString BuildingMap::buildingTileAt(int x, int y, int level, const QString &laye
     return tileName;
 }
 
+QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevels)
+{
+    // x and y are scene coordinates
+    // Perform per-pixel hit detection
+    Tile *tile = 0;
+
+    for (int level = 0; level < mBuilding->floorCount(); level++) {
+        if (!visibleLevels[level]) continue;
+        CompositeLayerGroup *lgBlend = mBlendMapComposite->layerGroupForLevel(level);
+        CompositeLayerGroup *lg = mMapComposite->layerGroupForLevel(level);
+        QPoint tilePos = mMapRenderer->pixelToTileCoordsInt(QPoint(x, y), level);
+        for (int ty = tilePos.y() - 4; ty < tilePos.y() + 4; ty++) {
+            for (int tx = tilePos.x() - 4; tx < tilePos.x() + 4; tx++) {
+                QRectF tileBox = mMapRenderer->boundingRect(QRect(tx, ty, 1, 1), level);
+                for (int i = 0; i < lg->layerCount(); i++) {
+                    // Automatic building tiles first.
+                    // User-drawn tiles second.
+                    TileLayer *tlBlend = lgBlend->layers().at(i);
+                    TileLayer *tl = lg->layers().at(i);
+                    QString layerName = MapComposite::layerNameWithoutPrefix(tl->name());
+                    if (!mBuilding->floor(level)->layerVisibility(layerName))
+                        continue;
+                    if (!tl->contains(tx, ty)) continue;
+                    Tile *test = tl->cellAt(tx, ty).tile; // user tile
+                    if (!test)
+                        test = tlBlend->cellAt(tx, ty).tile; // building tile
+                    if (test) {
+                        QRect imageBox(QPoint(), test->image().size());
+                        QPoint p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, 128));
+                        // Hit test a small box around the cursor?
+                        QRect box(p - QPoint(0, 0), p + QPoint(0, 0));
+                        for (int px = box.left(); px <= box.right(); px++) {
+                            for (int py = box.top(); py <= box.bottom(); py++) {
+                                if (imageBox.contains(px, py)) {
+                                    QRgb pixel = test->image().pixel(px, py);
+                                    if (qAlpha(pixel) > 0)
+                                        tile = test;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (tile)
+        return BuildingTilesMgr::nameForTile(tile);
+    return QString();
+}
+
 // The order must match the BuildingFloor::Square::SquareSection constants.
 static const char *gLayerNames[] = {
     "Floor",

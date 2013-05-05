@@ -126,6 +126,7 @@ public:
     { return mMapRenderer; }
 
     QString buildingTileAt(int x, int y, int level, const QString &layerName);
+    QString buildingTileAt(int x, int y, const QList<bool> visibleLevels);
 
     static QStringList layerNames(int level);
     static QStringList requiredLayerNames();
