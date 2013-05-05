@@ -253,6 +253,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
+    connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -883,6 +884,14 @@ void MainWindow::FromToAll()
 void MainWindow::FromToSelected()
 {
     FromToAux(true);
+}
+
+#include "worldgen/mainwindow.h"
+void MainWindow::WorldGen()
+{
+    WorldGen::WorldGenWindow::instance()->show();
+    WorldGen::WorldGenWindow::instance()->raise();
+    WorldGen::WorldGenWindow::instance()->activateWindow();
 }
 
 #include "mapwriter.h"

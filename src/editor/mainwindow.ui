@@ -291,6 +291,7 @@
     </widget>
     <addaction name="actionLotPackViewer"/>
     <addaction name="menuAlias_Fixup"/>
+    <addaction name="actionWorldGen"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -683,6 +684,11 @@
   <action name="actionFromToSelected">
    <property name="text">
     <string>Selected Cells Only...</string>
+   </property>
+  </action>
+  <action name="actionWorldGen">
+   <property name="text">
+    <string>WorldGen</string>
    </property>
   </action>
  </widget>

@@ -137,6 +137,8 @@ public slots:
     void FromToAll();
     void FromToSelected();
 
+    void WorldGen();
+
 private:
     void FromToAux(bool selectedOnly);
 

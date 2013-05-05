@@ -1,5 +1,6 @@
 include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
+include(../worldgen/worldgen.pri)
 include(../qtlockedfile/qtlockedfile.pri)
 
 QT       += core gui xml
