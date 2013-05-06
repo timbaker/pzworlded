@@ -32,7 +32,7 @@ LSystem::LSystem() :
     m_iSegment(6),
     m_iMaxDepth(4),
     m_pszName(QString()),
-    m_iSP(0)
+    m_sStack(100)
 {
     InitRulesArray();
 
@@ -66,10 +66,10 @@ QRectF LSystem::boundingRect()
 
 void LSystem::reset()
 {
-    m_iSP = 0;
     currentPos = QPoint();
     mPointPairs.resize(0);
     mPointPairs.reserve(m_iSegments * 2);
+    m_sStack.resize(0);
     DrawLSystems(m_pszAxiom, m_fInitAngle, 0);
     mBounds = QRectF();
 }
@@ -210,26 +210,23 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
 
 bool LSystem::PushState(qreal angle, const QPointF &pos)
 {
-    Q_ASSERT(m_iSP + 1 <= LSYS_STACK_SIZE);
-    if (m_iSP++ > LSYS_STACK_SIZE) return false;
-
     _lstate branch;
     branch.angle = angle;
     branch.pos = pos;
 
-    m_sStack[m_iSP] = branch;
+    m_sStack.push_back(branch);
 
     return true;
 }
 
 void LSystem::PopState(qreal &angle, QPointF &point)
 {
-    Q_ASSERT(m_iSP > 0);
-    if (m_iSP == -1) return;
+    if (m_sStack.isEmpty()) return;
 
-    _lstate state = m_sStack[m_iSP--];
+    _lstate state = m_sStack.last();
     angle = state.angle;
     point = state.pos;
+    m_sStack.pop_back();
 }
 
 int LSystem::Round(double x)

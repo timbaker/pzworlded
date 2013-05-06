@@ -61,15 +61,13 @@ public:
     qreal m_fInitAngle;
     int m_iSegment;
     int m_iMaxDepth;
-    int m_iSP;
     int m_iSegments;
 
     bool m_bCalculating;
 
     QString m_pszName;
 
-    enum { LSYS_STACK_SIZE = 100 };
-    _lstate	m_sStack[LSYS_STACK_SIZE];
+    QVector<_lstate> m_sStack;
 
     QPoint m_cStartPoint;
     QString m_pszAxiom;
