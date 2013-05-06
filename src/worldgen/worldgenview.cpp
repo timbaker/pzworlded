@@ -29,7 +29,7 @@ LSystem::LSystem() :
     m_fAngle(90),
     m_fInitAngle(0),
     m_fStepSize(0.65f),
-    m_iSegment(6),
+    m_fSegment(6),
     m_iMaxDepth(4),
     m_pszName(QString()),
     m_sStack(100)
@@ -81,7 +81,7 @@ bool LSystem::LoadFile(const QString &fileName)
     m_fAngle = 90;
     m_fInitAngle = 0;
     m_fStepSize = 0.65f;
-    m_iSegment = 6;
+    m_fSegment = 6;
     m_iMaxDepth = 4;
     m_pszName.clear();
 
@@ -101,7 +101,7 @@ bool LSystem::LoadFile(const QString &fileName)
         QString key = line.mid(0, n).toLower();
         QString value = line.mid(n + 1);
         if (key == QLatin1String("axiom")) { m_pszAxiom = value; }
-        else if (key == QLatin1String("segment")) { m_iSegment = value.toInt(); }
+        else if (key == QLatin1String("segment")) { m_fSegment = value.toDouble(); }
         else if (key == QLatin1String("maxdepth")) { m_iMaxDepth = value.toInt(); }
         else if (key == QLatin1String("stepsize")) { m_fStepSize = value.toDouble(); }
         else if (key == QLatin1String("angle")) { m_fAngle = value.toDouble(); }
@@ -124,7 +124,6 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
     char at;									// Cache the character
     int number = 0;								// Number support
     int	len = lstring.length();				// Cache the length
-    int old;									// Old segment length
 
     QPointF start = currentPos;
 
@@ -132,15 +131,14 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
         at = lstring[i].toLatin1();
 
         if (depth < m_iMaxDepth && (at >= 'A' && at <= 'Z')) {
-            old = m_iSegment;
-            m_iSegment = int(m_iSegment * m_fStepSize);
-            if (m_iSegment % 2 != 0) m_iSegment--;
+            qreal old = m_fSegment;
+            m_fSegment = m_fSegment * m_fStepSize;
             DrawLSystems(Rule(at), angle, depth+1);
-            m_iSegment = old;
+            m_fSegment = old;
         } else if (at == 'F' || at == '|') {
 #if 1
-            start.setX(start.x() + (m_iSegment*cos(_deg2rad(angle))));
-            start.setY(start.y() + (m_iSegment*sin(_deg2rad(angle))));
+            start.setX(start.x() + (m_fSegment*cos(_deg2rad(angle))));
+            start.setY(start.y() + (m_fSegment*sin(_deg2rad(angle))));
 #else
             int mx = Round(start.x() + (m_iSegment*cos(_deg2rad(angle))));
             int my = Round(start.y() + (m_iSegment*sin(_deg2rad(angle))));
@@ -168,8 +166,8 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
             continue;
         } else if (at == 'f' || at == 'G') {
 #if 1
-            start.setX(start.x() + (m_iSegment*cos(_deg2rad(angle))));
-            start.setY(start.y() + (m_iSegment*sin(_deg2rad(angle))));
+            start.setX(start.x() + (m_fSegment*cos(_deg2rad(angle))));
+            start.setY(start.y() + (m_fSegment*sin(_deg2rad(angle))));
 #else
             int mx = Round(start.x() + (m_iSegment*cos(_deg2rad(angle))));
             int my = Round(start.y() + (m_iSegment*sin(_deg2rad(angle))));

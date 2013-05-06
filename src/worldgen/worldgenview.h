@@ -59,7 +59,7 @@ public:
     qreal m_fAngle;
     qreal m_fStepSize;
     qreal m_fInitAngle;
-    int m_iSegment;
+    qreal m_fSegment;
     int m_iMaxDepth;
     int m_iSegments;
 
