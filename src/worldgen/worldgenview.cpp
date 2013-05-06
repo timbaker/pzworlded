@@ -295,8 +295,10 @@ void LSystemItem::paint(QPainter *painter,
     painter->setPen(Qt::white);
     painter->drawLines(mLSystem->mPointPairs);
 
+#if 0
     painter->setPen(Qt::blue);
     painter->drawRect(boundingRect());
+#endif
 }
 
 void LSystemItem::LSystemChanged()
@@ -314,13 +316,17 @@ WorldGenScene::WorldGenScene(WorldGenView *view) :
     setBackgroundBrush(Qt::black);
 
     mLSystem = new LSystem();
+#if 0
     mLSystem->LoadFile(QLatin1String("C:\\Programming\\WorldGen\\Lse\\Examples\\fern-leaf.lse"));
     mLSystem->CalculateInfo();
     mLSystem->reset();
     setSceneRect(mLSystem->boundingRect());
+#endif
 
     mLSystemItem = new LSystemItem(mLSystem);
     addItem(mLSystemItem);
+
+    LoadFile(QLatin1String("C:\\Programming\\WorldGen\\Lse\\Examples\\fern-leaf.lse"));
 }
 
 bool WorldGenScene::LoadFile(const QString &fileName)
@@ -328,6 +334,8 @@ bool WorldGenScene::LoadFile(const QString &fileName)
     mLSystem->LoadFile(fileName);
     mLSystem->CalculateInfo();
     mLSystem->reset();
+
+    mMaxDepth = mLSystem->m_iMaxDepth;
 
     mLSystemItem->LSystemChanged();
     setSceneRect(mLSystem->boundingRect());
@@ -337,12 +345,14 @@ bool WorldGenScene::LoadFile(const QString &fileName)
 
 void WorldGenScene::depthIncr()
 {
-    mLSystem->m_iMaxDepth++;
-    mLSystem->CalculateInfo();
-    mLSystem->reset();
+    if (mLSystem->m_iMaxDepth < mMaxDepth) {
+        mLSystem->m_iMaxDepth++;
+        mLSystem->CalculateInfo();
+        mLSystem->reset();
 
-    mLSystemItem->LSystemChanged();
-    setSceneRect(mLSystem->boundingRect());
+        mLSystemItem->LSystemChanged();
+//        setSceneRect(mLSystem->boundingRect());
+    }
 }
 
 void WorldGenScene::depthDecr()
@@ -353,7 +363,7 @@ void WorldGenScene::depthDecr()
         mLSystem->reset();
 
         mLSystemItem->LSystemChanged();
-        setSceneRect(mLSystem->boundingRect());
+//        setSceneRect(mLSystem->boundingRect());
     }
 }
 

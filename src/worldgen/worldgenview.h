@@ -107,6 +107,7 @@ public slots:
 private:
     WorldGenView *mView;
     LSystem *mLSystem;
+    int mMaxDepth;
     LSystemItem *mLSystemItem;
 };
 
