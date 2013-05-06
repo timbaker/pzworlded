@@ -1,4 +1,24 @@
+/*
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "worldgenview.h"
+
+#include <QFile>
+#include <QTextStream>
 
 using namespace WorldGen;
 
@@ -16,13 +36,13 @@ LSystem::LSystem() :
 {
     InitRulesArray();
 
-#if 1 // fern_leaf.lse
+#if 0 // fern_leaf.lse
     m_pszName = QLatin1String("Fern Leaf #1");
     m_fAngle = 8;
     m_fInitAngle = 278;
     m_fStepSize = 0.5;
     m_iSegment = 100;
-    m_iMaxDepth = 4;
+    m_iMaxDepth = 1;
     m_pszAxiom = QLatin1String("F");
     m_pszRules['F'-'A'] = QLatin1String("|[5+F][7-F]-|[4+F][6-F]-|[3+F][5-F]-|F");
 #endif
@@ -31,16 +51,70 @@ LSystem::LSystem() :
 QRectF LSystem::boundingRect()
 {
     if (mBounds.isEmpty() && mPointPairs.size()) {
-        QRectF r(mPointPairs.first(), mPointPairs.first());
+        QPointF p = mPointPairs.first();
+        qreal minX = p.x(), maxX = p.x(), minY = p.y(), maxY = p.y();
         foreach (QPointF p, mPointPairs) {
-            r.setX(qMin(r.x(), p.x()));
-            r.setY(qMin(r.y(), p.y()));
-            r.setRight(qMax(r.x(), p.x()));
-            r.setBottom(qMax(r.y(), p.y()));
+            minX = qMin(minX, p.x());
+            minY = qMin(minY, p.y());
+            maxX = qMax(maxX, p.x());
+            maxY = qMax(maxY, p.y());
         }
-        mBounds = r;
+        mBounds = QRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
     return mBounds;
+}
+
+void LSystem::reset()
+{
+    m_iSP = 0;
+    currentPos = QPoint();
+    mPointPairs.resize(0);
+    mPointPairs.reserve(m_iSegments * 2);
+    DrawLSystems(m_pszAxiom, m_fInitAngle, 0);
+    mBounds = QRectF();
+}
+
+bool LSystem::LoadFile(const QString &fileName)
+{
+    InitRulesArray();
+
+    m_fAngle = 90;
+    m_fInitAngle = 0;
+    m_fStepSize = 0.65f;
+    m_iSegment = 6;
+    m_iMaxDepth = 4;
+    m_pszName.clear();
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return false;
+    }
+
+    QTextStream ts(&file);
+    while (!ts.atEnd()) {
+        QString line = ts.readLine();
+        if (line.isEmpty())
+            continue;
+        int n = line.indexOf(QLatin1Char('='));
+        if (n == -1)
+            continue;
+        QString key = line.mid(0, n).toLower();
+        QString value = line.mid(n + 1);
+        if (key == QLatin1String("axiom")) { m_pszAxiom = value; }
+        else if (key == QLatin1String("segment")) { m_iSegment = value.toInt(); }
+        else if (key == QLatin1String("maxdepth")) { m_iMaxDepth = value.toInt(); }
+        else if (key == QLatin1String("stepsize")) { m_fStepSize = value.toDouble(); }
+        else if (key == QLatin1String("angle")) { m_fAngle = value.toDouble(); }
+        else if (key == QLatin1String("initangle")) { m_fInitAngle = value.toDouble(); }
+        else if (key == QLatin1String("description")) { m_pszName = value; }
+        else if (key.size() == 1){
+            char rule = line.mid(0, n)[0].toLatin1();
+            if (rule >= 'A' && rule <= 'Z')
+                m_pszRules[rule-'A'] = value;
+        }
+    }
+
+    return true;
 }
 
 #define _deg2rad(a) (a * 3.141592653589793238462643) / 180.0
@@ -64,15 +138,21 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
             DrawLSystems(Rule(at), angle, depth+1);
             m_iSegment = old;
         } else if (at == 'F' || at == '|') {
+#if 1
+            start.setX(start.x() + (m_iSegment*cos(_deg2rad(angle))));
+            start.setY(start.y() + (m_iSegment*sin(_deg2rad(angle))));
+#else
             int mx = Round(start.x() + (m_iSegment*cos(_deg2rad(angle))));
             int my = Round(start.y() + (m_iSegment*sin(_deg2rad(angle))));
 
             start.setX(mx);
             start.setY(my);
+#endif
 
             if (!m_bCalculating) {
                 mPointPairs += currentPos;
                 mPointPairs += start;
+                currentPos = start;
 #if 0
                 m_dcr += m_dr;
                 m_dcg += m_dg;
@@ -87,11 +167,16 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
         } else if (m_bCalculating) {
             continue;
         } else if (at == 'f' || at == 'G') {
+#if 1
+            start.setX(start.x() + (m_iSegment*cos(_deg2rad(angle))));
+            start.setY(start.y() + (m_iSegment*sin(_deg2rad(angle))));
+#else
             int mx = Round(start.x() + (m_iSegment*cos(_deg2rad(angle))));
             int my = Round(start.y() + (m_iSegment*sin(_deg2rad(angle))));
 
             start.setX(mx);
             start.setY(my);
+#endif
 
             currentPos = start;
         } else if (at == '+') {
@@ -125,6 +210,7 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
 
 bool LSystem::PushState(qreal angle, const QPointF &pos)
 {
+    Q_ASSERT(m_iSP + 1 <= LSYS_STACK_SIZE);
     if (m_iSP++ > LSYS_STACK_SIZE) return false;
 
     _lstate branch;
@@ -138,6 +224,7 @@ bool LSystem::PushState(qreal angle, const QPointF &pos)
 
 void LSystem::PopState(qreal &angle, QPointF &point)
 {
+    Q_ASSERT(m_iSP > 0);
     if (m_iSP == -1) return;
 
     _lstate state = m_sStack[m_iSP--];
@@ -211,7 +298,14 @@ void LSystemItem::paint(QPainter *painter,
     painter->setPen(Qt::white);
     painter->drawLines(mLSystem->mPointPairs);
 
+    painter->setPen(Qt::blue);
     painter->drawRect(boundingRect());
+}
+
+void LSystemItem::LSystemChanged()
+{
+    prepareGeometryChange();
+    update();
 }
 
 /////
@@ -223,14 +317,47 @@ WorldGenScene::WorldGenScene(WorldGenView *view) :
     setBackgroundBrush(Qt::black);
 
     mLSystem = new LSystem();
+    mLSystem->LoadFile(QLatin1String("C:\\Programming\\WorldGen\\Lse\\Examples\\fern-leaf.lse"));
     mLSystem->CalculateInfo();
-    mLSystem->m_iSP = 0;
-    mLSystem->currentPos = QPoint();
-    mLSystem->DrawLSystems(mLSystem->m_pszAxiom, mLSystem->m_fInitAngle, 0);
+    mLSystem->reset();
     setSceneRect(mLSystem->boundingRect());
 
     mLSystemItem = new LSystemItem(mLSystem);
     addItem(mLSystemItem);
+}
+
+bool WorldGenScene::LoadFile(const QString &fileName)
+{
+    mLSystem->LoadFile(fileName);
+    mLSystem->CalculateInfo();
+    mLSystem->reset();
+
+    mLSystemItem->LSystemChanged();
+    setSceneRect(mLSystem->boundingRect());
+
+    return true;
+}
+
+void WorldGenScene::depthIncr()
+{
+    mLSystem->m_iMaxDepth++;
+    mLSystem->CalculateInfo();
+    mLSystem->reset();
+
+    mLSystemItem->LSystemChanged();
+    setSceneRect(mLSystem->boundingRect());
+}
+
+void WorldGenScene::depthDecr()
+{
+    if (mLSystem->m_iMaxDepth > 0) {
+        mLSystem->m_iMaxDepth--;
+        mLSystem->CalculateInfo();
+        mLSystem->reset();
+
+        mLSystemItem->LSystemChanged();
+        setSceneRect(mLSystem->boundingRect());
+    }
 }
 
 /////
@@ -240,4 +367,9 @@ WorldGenView::WorldGenView(QWidget *parent) :
 {
     mScene = new WorldGenScene(this);
     setScene(mScene);
+}
+
+bool WorldGenView::LoadFile(const QString &fileName)
+{
+    return mScene->LoadFile(fileName);
 }

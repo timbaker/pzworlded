@@ -12,13 +12,13 @@ DEFINES += QT_NO_CAST_FROM_ASCII \
     QT_NO_CAST_TO_ASCII
 
 HEADERS += \
-    mainwindow.h \
+    worldgenwindow.h \
     worldgenview.h
 
 SOURCES += \
-    mainwindow.cpp \
+    worldgenwindow.cpp \
     worldgenview.cpp
 
 FORMS += \
-    mainwindow.ui
+    worldgenwindow.ui
 
