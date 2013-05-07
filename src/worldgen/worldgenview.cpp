@@ -310,6 +310,40 @@ void LSystemItem::LSystemChanged()
 
 /////
 
+class NYGridItem : public QGraphicsItem
+{
+public:
+    NYGridItem(int x, int y, int w, int h, int gw, int gh) :
+        QGraphicsItem(),
+        x(x), y(y), w(w), h(h), gw(gw), gh(gh)
+    {
+
+    }
+
+    QRectF boundingRect() const
+    {
+        return QRectF(x, y, w * gw, h * gh);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
+    {
+        QPen pen(QColor(128,128,128,128), 1);
+        painter->setPen(pen);
+
+        for (int y = 0; y <= h * gh; y += gh)
+            painter->drawLine(x, this->y + y, x + w * gw, this->y + y);
+        for (int x = 0; x <= w * gw; x += gw)
+            painter->drawLine(this->x + x, this->y, this->x + x, this->y + h * gh);
+    }
+
+    int x, y, w, h, gw, gh;
+};
+
+/////
+
+#define GRID_WIDTH 35
+#define GRID_HEIGHT 20
+
 WorldGenScene::WorldGenScene(WorldGenView *view) :
     QGraphicsScene(view),
     mView(view),
@@ -321,6 +355,11 @@ WorldGenScene::WorldGenScene(WorldGenView *view) :
     mImage.convertToFormat(QImage::Format_ARGB32);
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(QPixmap::fromImage(mImage));
     addItem(item);
+
+    addItem(new NYGridItem(0, 0,
+                           (mImage.width() + GRID_WIDTH - 1) / GRID_WIDTH,
+                           (mImage.height() + GRID_HEIGHT - 1) / GRID_HEIGHT,
+                           GRID_WIDTH, GRID_HEIGHT));
 
     mRoadGroup = new QGraphicsItemGroup();
     addItem(mRoadGroup);
@@ -546,20 +585,44 @@ bool Quadtree::contains(Quadtree *child, Object *object) {
 #endif
 }
 
-WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qreal length, bool recursing)
+bool pointsClose(const QPointF &p1, const QPointF &p2)
 {
+    qreal epsilon = 0.1;
+    return QLineF(p1,p2).length() < epsilon;
+}
+
+WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qreal length, bool recursing)
+{    
+    QLineF line(start, start + QPointF(1,0)); line.setLength(length); line.setAngle(angle);
+    QPointF end = line.p2();
+
+#if 1
+    // globalGoals: align to new-york-style grid
+    int gw = GRID_WIDTH, gh = GRID_HEIGHT;
+    QPointF gridPt = end;
+    if ((angle < 45 || angle >= 315) || (angle >= 135 && angle < 225)) {
+        gridPt.setY(int((gridPt.y() + gh/2)/gh)*gh);
+        end.setY(end.y() + (gridPt.y() - end.y()) / 4);
+    } else {
+        gridPt.setX(int((gridPt.x() + gw/2)/gw)*gw);
+        end.setX(end.x() + (gridPt.x() - end.x()) / 4);
+    }
+
+#endif
+
+#if 0
     qreal endX = start.x() + (length * cos(_deg2rad(angle)));
     qreal endY = start.y() + (length * sin(_deg2rad(angle)));
     QPointF end(endX, endY);
+#endif
 
     // end point close to existing intersection? connect to it
     QRectF closeRect(end.x()-2,end.y()-2,4,4);
     QVector<Object*> closest = mPartition.GetObjectsAt(closeRect);
     foreach (Object *o, closest) {
         if ((QRectF(o->x,o->y,o->width,o->height).intersects(closeRect))) {
-            // FIXME: adjust the angle to reflect reality
             new QGraphicsRectItem(QRectF(o->x-1,o->y-1,2,2), mRoadGroup);
-            return Road(start, QPointF(o->x,o->y), angle, 1, true);
+            return Road(start, QPointF(o->x,o->y), 1, true);
         }
     }
 
@@ -567,7 +630,7 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
     // join it
 
     // segment crosses existing road? truncate and form intersection
-    qreal epsilon = 0.01;
+    qreal epsilon = 0.5;
     foreach (QGraphicsItem *item, items(QRectF(start, end).normalized().adjusted(-1,-1,1,1))) {
         if (QGraphicsLineItem *li = dynamic_cast<QGraphicsLineItem*>(item)) {
             QLineF line1(start, end);
@@ -575,6 +638,7 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
             QLineF line2 = li->line();
             // Don't intersect with the line we're branching from
             if (start == line2.p1() || start == line2.p2()) continue;
+
 #else
             /////
             // Stretch the existing segment a bit
@@ -594,8 +658,29 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
                 // This road was going along and hit another.  Sometime we'd
                 // like to continue on through or start another segment on the
                 // other side of the intersection.
-                return Road(start, p, angle, 1, true);
+                return Road(start, p, 1, true);
 
+            }
+        }
+    }
+
+    foreach (QGraphicsItem *item, items(QRectF(start, end).normalized().adjusted(-1,-1,1,1))) {
+        if (QGraphicsLineItem *li = dynamic_cast<QGraphicsLineItem*>(item)) {
+            QLineF line1(start, end);
+            QLineF line2 = li->line();
+            // Don't intersect with the line we're branching from
+            if (start == line2.p1() || start == line2.p2()) continue;
+
+            // Join roads that hit end-on-end
+            QLineF norm(end,start); norm = norm.normalVector(); norm.setLength(epsilon);
+            QLineF normRev(norm); normRev.setLength(-epsilon);
+            QLineF line3(norm.p2(),normRev.p2());
+            QPointF p;
+            if (line2.intersect(line3, &p) == QLineF::BoundedIntersection) {
+                QGraphicsRectItem *ri = new QGraphicsRectItem(QRectF(p.x()-epsilon,p.y()-epsilon,epsilon*2,epsilon*2), mRoadGroup);
+                ri->setBrush(QColor(128,128,128,128));
+                li->setPen(QColor(Qt::red));
+                return Road(start, p, 1, true);
             }
         }
     }
@@ -612,7 +697,7 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
                 QPointF p;
                 if (line1.intersect(line2, &p) == QLineF::BoundedIntersection) {
                     mPartition.AddObject(new Object(p.x(),p.y(),0.001f,0.001f));
-                    return Road(start, p, angle, 1, true);
+                    return Road(start, p, 1, true);
                 }
             }
         }
@@ -621,7 +706,7 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
 
     if (QRect(QPoint(),mImage.size()).contains(end.toPoint())
             && mImage.pixel(end.toPoint()) == qRgb(255,255,255)) {
-        return Road(start, end, angle, 1);
+        return Road(start, end, 1);
     }
 
     // pendulum out by a few degrees till we are in bounds / not in water
@@ -630,28 +715,37 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
         int sign = (qrand() & 1) ? 1 : -1;
 
         // +/-
+#if 1
+        line.setAngle((sign > 0) ? angle + i : angle - i);
+        end = line.p2();
+#else
         qreal angle2 = (sign > 0) ? LSystem::Increment(angle, i)
                                   : LSystem::Decrement(angle, i);
         endX = start.x() + (length * cos(_deg2rad(angle2)));
         endY = start.y() + (length * sin(_deg2rad(angle2)));
         end = QPointF(endX, endY);
-
+#endif
         if (QRect(QPoint(),mImage.size()).contains(end.toPoint())
                 && mImage.pixel(end.toPoint()) == qRgb(255,255,255)) {
-            return tryRoadSegment(start, angle2, length, true);
+            return tryRoadSegment(start, line.angle(), length, true);
 //            return Road(start, end, angle2, 1);
         }
 
         // -/+
+#if 1
+        line.setAngle((sign > 0) ? angle - i : angle + i);
+        end = line.p2();
+#else
         angle2 = (sign > 0) ? LSystem::Decrement(angle, i)
                             : LSystem::Increment(angle, i);
         endX = start.x() + (length * cos(_deg2rad(angle2)));
         endY = start.y() + (length * sin(_deg2rad(angle2)));
         end = QPointF(endX, endY);
+#endif
 
         if (QRect(QPoint(),mImage.size()).contains(end.toPoint())
                 && mImage.pixel(end.toPoint()) == qRgb(255,255,255)) {
-            return tryRoadSegment(start, angle2, length, true);
+            return tryRoadSegment(start, line.angle(), length, true);
 //            return Road(start, end, angle2, 1);
         }
     }
@@ -662,7 +756,7 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
 #include <QCoreApplication>
 void WorldGenScene::addRoad(int depth, QPointF start, qreal angle, qreal length)
 {
-    int branch = qMax(2, qrand() % 4) * 4;
+    int branch = qMax(2, qrand() % 6);
     struct Branch {
         Branch(QPointF start, qreal angle) :
             start(start), angle(angle)
@@ -673,35 +767,58 @@ void WorldGenScene::addRoad(int depth, QPointF start, qreal angle, qreal length)
     QList<Branch> branches;
 
     qreal width = 0.25; //(mMaxRoadDepth - depth);
-    QPen pen(Qt::black, width);
+    QPen pen1(Qt::black, width);
+    QPen pen2(Qt::black, 3);
 
-    int segments = 20 + (qrand() % 40);
+    QList<QGraphicsLineItem*> items;
+
+    int segments = (20 + (qrand() % 40));
     for (int i = 0; i < segments; i++) {
         Road road = tryRoadSegment(start, angle, length);
-        if (road.width == 0 || QLineF(road.start, road.end).length() < 1) break;
-        QGraphicsLineItem *item = new QGraphicsLineItem(QLineF(road.start, road.end));
-        item->setPen(pen);
+        if (road.width == 0 || road.line.length() < 1) break;
+
+        QGraphicsLineItem *item = new QGraphicsLineItem(road.line);
+        item->setPen(pen2);
         item->setGroup(mRoadGroup);
 //        addItem(item);
+        items += item;
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
         if (road.terminal) break;
 
-        start = road.end;
-#if 1 // curve the road
+        start = road.line.p2();
+#if 0 // curve the road
         if (qrand() & 1)
-            angle = LSystem::Increment(road.angle, qrand() % 10);
+            angle = LSystem::Increment(road.line.angle(), qrand() % 10);
         else
-            angle = LSystem::Decrement(road.angle, qrand() % 10);
+            angle = LSystem::Decrement(road.line.angle(), qrand() % 10);
 #endif
-        // branch
-        if ((depth < mMaxRoadDepth) && !(--branch)) {
-//            mIntersections += road.end; // remove this
+        // branch every so often or at the end of roads
+        if ((depth < mMaxRoadDepth) && (!(--branch) || (i == segments-1))) {
+#if 0
+            // NY grid: branch only at grid points
+            bool insideGridZone = true;
+            if (insideGridZone) {
+                QPointF end = road.line.p2();
+                QPointF gridPt = end;
+                gridPt.setX(int((gridPt.x() + GRID_WIDTH/2)/GRID_WIDTH)*GRID_WIDTH);
+                gridPt.setY(int((gridPt.y() + GRID_HEIGHT/2)/GRID_HEIGHT)*GRID_HEIGHT);
+            }
+#endif
             int sign = (qrand() % 2) ? 1 : -1;
-            branches += Branch(road.end, (qrand() % 2) ? LSystem::Increment(angle, 90) : LSystem::Decrement(angle, 90));
-            branch = qMax(2, qrand() % 8);
+            branches += Branch(road.line.p2(), (sign == 1) ? LSystem::Increment(angle, 90)
+                                                       : LSystem::Decrement(angle, 90));
+            // sometimes branch in both directions
+            if (qrand() % 3) {
+                branches += Branch(road.line.p2(), (sign == 1) ? LSystem::Decrement(angle, 90)
+                                                           : LSystem::Increment(angle, 90));
+            }
+            branch = qMax(2, qrand() % 6);
         }
     }
+
+    foreach (QGraphicsLineItem *item, items)
+        item->setPen(pen1);
 
     foreach (Branch b, branches)
         addRoad(depth + 1, b.start, b.angle, length);
@@ -717,6 +834,8 @@ WorldGenView::WorldGenView(QWidget *parent) :
     mScene = new WorldGenScene(this);
     setScene(mScene);
 //    setTransform(QTransform::fromScale(1.75,1.75));
+
+    viewport()->setMouseTracking(true);
 
     mZoomable->setZoomFactors(QVector<qreal>() << 0.25 << 0.33 << 0.5 << 0.75 << 1.0 << 1.5 << 2.0 << 3.0 << 4.0 << 6.0 << 10.0);
     connect(mZoomable, SIGNAL(scaleChanged(qreal)), SLOT(adjustScale(qreal)));
@@ -734,7 +853,7 @@ void WorldGenView::adjustScale(qreal scale)
 {
     setTransform(QTransform::fromScale(scale, scale));
     setRenderHint(QPainter::SmoothPixmapTransform,
-                  mZoomable->smoothTransform());
+                  mZoomable->smoothTransform() && false);
 }
 
 bool WorldGenView::LoadFile(const QString &fileName)

@@ -151,14 +151,12 @@ private:
     class Road
     {
     public:
-        Road(QPointF start, QPointF end, qreal angle, qreal width, bool terminal = false) :
-            start(start), end(end), angle(angle), width(width), terminal(terminal)
+        Road(QPointF start, QPointF end, qreal width, bool terminal = false) :
+            line(start, end), width(width), terminal(terminal)
         {}
         Road() : width(0) {}
 
-        QPointF start;
-        QPointF end;
-        qreal angle;
+        QLineF line;
         qreal width;
         bool terminal;
     };
