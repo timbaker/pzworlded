@@ -22,6 +22,8 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 
+class Zoomable;
+
 namespace WorldGen {
 
 class WorldGenView;
@@ -53,8 +55,8 @@ public:
     QString Rule(char c) { return m_pszRules[c - 'A']; }
 
     inline int Round(double x);
-    inline qreal Increment(qreal init, qreal inc);
-    inline qreal Decrement(qreal init, qreal inc);
+    static qreal Increment(qreal init, qreal inc);
+    static qreal Decrement(qreal init, qreal inc);
 
     qreal m_fAngle;
     qreal m_fStepSize;
@@ -92,6 +94,45 @@ public:
     LSystem *mLSystem;
 };
 
+class Object {
+public:
+    float					x;
+    float					y;
+    float					width;
+    float					height;
+
+                            Object( float x, float y, float width, float height );
+};
+
+class Quadtree {
+public:
+                        Quadtree(float x, float y, float width, float height, int level, int maxLevel);
+
+                        ~Quadtree();
+
+    void					AddObject(Object *object);
+    QVector<Object*>				GetObjectsAt(float x, float y);
+    QVector<Object*> GetObjectsAt(QRectF r);
+    void					Clear();
+
+private:
+    float					x;
+    float					y;
+    float					width;
+    float					height;
+    int					level;
+    int					maxLevel;
+    QVector<Object*>				objects;
+
+    Quadtree *				parent;
+    Quadtree *				NW;
+    Quadtree *				NE;
+    Quadtree *				SW;
+    Quadtree *				SE;
+
+    bool					contains(Quadtree *child, Object *object);
+};
+
 class WorldGenScene : public QGraphicsScene
 {
     Q_OBJECT
@@ -100,15 +141,41 @@ public:
 
     bool LoadFile(const QString &fileName);
 
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+
 public slots:
     void depthIncr();
     void depthDecr();
+
+private:
+    class Road
+    {
+    public:
+        Road(QPointF start, QPointF end, qreal angle, qreal width, bool terminal = false) :
+            start(start), end(end), angle(angle), width(width), terminal(terminal)
+        {}
+        Road() : width(0) {}
+
+        QPointF start;
+        QPointF end;
+        qreal angle;
+        qreal width;
+        bool terminal;
+    };
+
+    Road tryRoadSegment(QPointF start, qreal angle, qreal length, bool recurse = false);
+    void addRoad(int depth, QPointF start, qreal angle, qreal length);
+    int mMaxRoadDepth;
+    QGraphicsItemGroup *mRoadGroup;
+    QList<QPointF> mIntersections;
+    Quadtree mPartition;
 
 private:
     WorldGenView *mView;
     LSystem *mLSystem;
     int mMaxDepth;
     LSystemItem *mLSystemItem;
+    QImage mImage;
 };
 
 class WorldGenView : public QGraphicsView
@@ -117,14 +184,22 @@ class WorldGenView : public QGraphicsView
 public:
     explicit WorldGenView(QWidget *parent = 0);
     
+    void mouseMoveEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *event);
+
     bool LoadFile(const QString &fileName);
 
 signals:
     
 public slots:
-    
+    void adjustScale(qreal scale);
+
 private:
     WorldGenScene *mScene;
+
+    QPoint mLastMouseGlobalPos;
+    QPointF mLastMouseScenePos;
+    Zoomable *mZoomable;
 };
 
 } // namespace WorldGen
