@@ -149,6 +149,8 @@ public slots:
     void depthIncr();
     void depthDecr();
 
+    void showGrids(bool show);
+
 private:
     class Road
     {
@@ -178,6 +180,15 @@ private:
     QImage mImage;
     NYGridItem *mGridItem;
     NYGridItem *mGridItem2;
+
+    struct Branch {
+        Branch(QPointF start, qreal angle) :
+            start(start), angle(angle)
+        {}
+        QPointF start;
+        qreal angle;
+    };
+    QMap<int,QList<Branch> > mBranchByDepth;
 };
 
 class WorldGenView : public QGraphicsView

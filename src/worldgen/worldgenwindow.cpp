@@ -45,6 +45,10 @@ WorldGenWindow::WorldGenWindow(QWidget *parent) :
             ui->view->scene(), SLOT(depthIncr()));
     connect(ui->actionDecreaseDepth, SIGNAL(triggered()),
             ui->view->scene(), SLOT(depthDecr()));
+
+    ui->actionShowGrids->setChecked(true);
+    connect(ui->actionShowGrids, SIGNAL(toggled(bool)),
+            ui->view->scene(), SLOT(showGrids(bool)));
 }
 
 WorldGenWindow::~WorldGenWindow()
