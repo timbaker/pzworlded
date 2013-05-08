@@ -133,6 +133,8 @@ private:
     bool					contains(Quadtree *child, Object *object);
 };
 
+class NYGridItem;
+
 class WorldGenScene : public QGraphicsScene
 {
     Q_OBJECT
@@ -174,6 +176,8 @@ private:
     int mMaxDepth;
     LSystemItem *mLSystemItem;
     QImage mImage;
+    NYGridItem *mGridItem;
+    NYGridItem *mGridItem2;
 };
 
 class WorldGenView : public QGraphicsView

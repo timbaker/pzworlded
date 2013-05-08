@@ -310,6 +310,8 @@ void LSystemItem::LSystemChanged()
 
 /////
 
+namespace WorldGen {
+
 class NYGridItem : public QGraphicsItem
 {
 public:
@@ -317,7 +319,7 @@ public:
         QGraphicsItem(),
         x(x), y(y), w(w), h(h), gw(gw), gh(gh)
     {
-
+        setTransformOriginPoint(x, y);
     }
 
     QRectF boundingRect() const
@@ -336,13 +338,31 @@ public:
             painter->drawLine(this->x + x, this->y, this->x + x, this->y + h * gh);
     }
 
+    QPointF nearestGridPoint(const QPointF &scenePos, bool local = false)
+    {
+        QPointF localP = mapFromScene(scenePos);
+        int x = localP.x() - this->x;
+        int y = localP.y() - this->y;
+        x = (x + gw / 2) / gw;
+        y = (y + gh / 2) / gh;
+        QPointF gridPt(this->x + x * gw, this->y + y * gh);
+        return local ? gridPt : mapToScene(gridPt);
+    }
+
+    bool containsScenePt(const QPointF &pt)
+    {
+        return QRectF(x, y, w * gw, h * gh).contains(mapFromScene(pt));
+    }
+
     int x, y, w, h, gw, gh;
 };
 
+} // namespace WorldGen
+
 /////
 
-#define GRID_WIDTH 35
-#define GRID_HEIGHT 20
+#define GRID_WIDTH (35/3)
+#define GRID_HEIGHT (20/3)
 
 WorldGenScene::WorldGenScene(WorldGenView *view) :
     QGraphicsScene(view),
@@ -356,10 +376,17 @@ WorldGenScene::WorldGenScene(WorldGenView *view) :
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(QPixmap::fromImage(mImage));
     addItem(item);
 
-    addItem(new NYGridItem(0, 0,
-                           (mImage.width() + GRID_WIDTH - 1) / GRID_WIDTH,
-                           (mImage.height() + GRID_HEIGHT - 1) / GRID_HEIGHT,
-                           GRID_WIDTH, GRID_HEIGHT));
+    addItem(mGridItem = new NYGridItem(mImage.width() / 2, 66,
+                                       (mImage.width() / 2 + GRID_WIDTH - 1) / GRID_WIDTH,
+                                       (mImage.height() + GRID_HEIGHT - 1) / GRID_HEIGHT,
+                                       GRID_WIDTH, GRID_HEIGHT));
+    mGridItem->setRotation(5);
+    addItem(mGridItem2 = new NYGridItem(150, 100,
+                                        15,
+                                        10,
+                                        GRID_WIDTH, GRID_HEIGHT));
+    mGridItem2->setRotation(-5);
+
 
     mRoadGroup = new QGraphicsItemGroup();
     addItem(mRoadGroup);
@@ -595,19 +622,36 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
 {    
     QLineF line(start, start + QPointF(1,0)); line.setLength(length); line.setAngle(angle);
     QPointF end = line.p2();
+    angle = line.angle();
 
 #if 1
     // globalGoals: align to new-york-style grid
-    int gw = GRID_WIDTH, gh = GRID_HEIGHT;
-    QPointF gridPt = end;
-    if ((angle < 45 || angle >= 315) || (angle >= 135 && angle < 225)) {
-        gridPt.setY(int((gridPt.y() + gh/2)/gh)*gh);
-        end.setY(end.y() + (gridPt.y() - end.y()) / 4);
-    } else {
-        gridPt.setX(int((gridPt.x() + gw/2)/gw)*gw);
-        end.setX(end.x() + (gridPt.x() - end.x()) / 4);
-    }
+    foreach (NYGridItem *gi, QList<NYGridItem*>() << mGridItem << mGridItem2) {
+        if (gi->containsScenePt(end)) {
+            QPointF gridPt = gi->nearestGridPoint(end, true); // in grid coords
+            QPointF gridPt2(gridPt.x() + gi->gw, gridPt.y()); // in grid coords
+            QLineF gridHLine(gridPt, gridPt2); // horizontal line to align to
+            QLineF roadInGridCoords(gi->mapFromScene(start), gi->mapFromScene(end));
+            // Align horizontal-ish roads with the nearest horizontal grid line
+            qreal localAngle = roadInGridCoords.angleTo(gridHLine);
+            if ((localAngle < 45 || localAngle >= 315) || (localAngle >= 135 && localAngle < 225)) {
+                qreal d = (gridPt.y() - roadInGridCoords.p2().y()) / 4;
+                if (d < 0 && d > -1) d = -qMin(1.0, roadInGridCoords.p2().y() - gridPt.y());
+                else if (d > 0 && d < 1) d = qMin(1.0, gridPt.y() - roadInGridCoords.p2().y());
+                end.setY(gi->mapToScene(roadInGridCoords.p2().x(),
+                                        roadInGridCoords.p2().y() + d).y());
 
+                // Align vertical-ish roads with the nearest vertical grid line
+            } else {
+                qreal d = (gridPt.x() - roadInGridCoords.p2().x()) / 4;
+                if (d < 0 && d > -1) d = -qMin(1.0,roadInGridCoords.p2().x() - gridPt.x());
+                else if (d > 0 && d < 1) d = qMin(1.0, gridPt.x() - roadInGridCoords.p2().x());
+                end.setX(gi->mapToScene(roadInGridCoords.p2().x() + d,
+                                        roadInGridCoords.p2().y()).x());
+            }
+            break;
+        }
+    }
 #endif
 
 #if 0
@@ -658,6 +702,7 @@ WorldGenScene::Road WorldGenScene::tryRoadSegment(QPointF start, qreal angle, qr
                 // This road was going along and hit another.  Sometime we'd
                 // like to continue on through or start another segment on the
                 // other side of the intersection.
+                li->setPen(QColor(Qt::green));
                 return Road(start, p, 1, true);
 
             }
@@ -787,11 +832,14 @@ void WorldGenScene::addRoad(int depth, QPointF start, qreal angle, qreal length)
         if (road.terminal) break;
 
         start = road.line.p2();
-#if 0 // curve the road
-        if (qrand() & 1)
-            angle = LSystem::Increment(road.line.angle(), qrand() % 10);
-        else
-            angle = LSystem::Decrement(road.line.angle(), qrand() % 10);
+        angle = road.line.angle();
+#if 1 // curve the road
+        if (!mGridItem->containsScenePt(start) && !mGridItem2->containsScenePt(start)) {
+            if (qrand() & 1)
+                angle = LSystem::Increment(angle, qrand() % 10);
+            else
+                angle = LSystem::Decrement(angle, qrand() % 10);
+        }
 #endif
         // branch every so often or at the end of roads
         if ((depth < mMaxRoadDepth) && (!(--branch) || (i == segments-1))) {
@@ -807,11 +855,11 @@ void WorldGenScene::addRoad(int depth, QPointF start, qreal angle, qreal length)
 #endif
             int sign = (qrand() % 2) ? 1 : -1;
             branches += Branch(road.line.p2(), (sign == 1) ? LSystem::Increment(angle, 90)
-                                                       : LSystem::Decrement(angle, 90));
+                                                           : LSystem::Decrement(angle, 90));
             // sometimes branch in both directions
             if (qrand() % 3) {
                 branches += Branch(road.line.p2(), (sign == 1) ? LSystem::Decrement(angle, 90)
-                                                           : LSystem::Increment(angle, 90));
+                                                               : LSystem::Increment(angle, 90));
             }
             branch = qMax(2, qrand() % 6);
         }
