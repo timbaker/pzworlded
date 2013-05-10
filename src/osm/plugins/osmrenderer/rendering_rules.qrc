@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>rendering_rules/default.qrr</file>
+    </qresource>
+</RCC>

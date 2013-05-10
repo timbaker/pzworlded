@@ -886,7 +886,7 @@ void MainWindow::FromToSelected()
     FromToAux(true);
 }
 
-#include "worldgen/mainwindow.h"
+#include "worldgen/worldgenwindow.h"
 void MainWindow::WorldGen()
 {
     WorldGen::WorldGenWindow::instance()->show();

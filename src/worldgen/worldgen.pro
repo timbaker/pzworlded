@@ -1,5 +1,6 @@
 include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
+include(../osm/osm.pri)
 
 TARGET = worldgen
 TEMPLATE = lib

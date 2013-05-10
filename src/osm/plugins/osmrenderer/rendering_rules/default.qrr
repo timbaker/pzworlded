@@ -1,0 +1,63 @@
+#Default qtile rendering rules
+Colour: WHITE         0xff 0xff 0xff
+Colour: GRAY_LIGHT       196  196  196
+Colour: BLACK            0    0    0
+Colour: C_ROAD_YELLOW  253  253  179
+Colour: B_ROAD_ORANGE  253  214  164
+Colour: A_ROAD_RED     236  152  154
+Colour: A_ROAD_GREEN   168  218  168
+Colour: MOTORWAY_BLUE  126  126  200
+Colour: WATER_BLUE    0xb5 0xd0 0xd0
+Colour: RAILWAY_BLACK  100  100  100
+
+#     Line types                   zooms rgbColour  Width  2ndColour 2ndWidth
+Line: HW_PRIMARY      HW_PRIMARY    6 11 A_ROAD_RED 2
+Line: HW_TRUNK        HW_TRUNK      6 11 A_ROAD_GREEN 3
+Line: HW_MOTORWAY     HW_MOTORWAY   6 11 MOTORWAY_BLUE 4
+#Higher level zooms
+Line: HW_PATH         HW_PATH       12 20 BLACK 2.5       GRAY_LIGHT 2.2
+Line: HW_PEDESTRIAN   HW_UNSURFACED 12 20 BLACK 3         GRAY_LIGHT 2.7
+Line: HW_UNCLASSIFIED HW_SERVICE    13 13 BLACK 2         WHITE 1.5
+Line: HW_UNCLASSIFIED HW_SERVICE    14 14 BLACK 3.5       WHITE 2.5
+Line: HW_UNCLASSIFIED HW_SERVICE    15 20 BLACK 5         WHITE 4
+Line: HW_TERTIARY     HW_TERTIARY   13 13 C_ROAD_YELLOW 3
+#Big roads without lines
+Line: HW_SECONDARY    HW_SECONDARY  12 13 B_ROAD_ORANGE 3
+Line: HW_PRIMARY      HW_PRIMARY    12 13 A_ROAD_RED 4
+Line: HW_TRUNK        HW_TRUNK      12 13 A_ROAD_GREEN 5
+Line: HW_MOTORWAY     HW_MOTORWAY   12 13 MOTORWAY_BLUE 5
+#Big roads at medium zoom levels
+Line: HW_TERTIARY     HW_TERTIARY   14 20 BLACK 5        C_ROAD_YELLOW 4
+Line: HW_SECONDARY    HW_SECONDARY  14 20 BLACK 6        B_ROAD_ORANGE 5
+Line: HW_PRIMARY      HW_PRIMARY    14 15 BLACK 8        A_ROAD_RED 7
+Line: HW_TRUNK        HW_TRUNK      14 15 BLACK 10       A_ROAD_GREEN 9
+Line: HW_MOTORWAY     HW_MOTORWAY   14 15 BLACK 10       MOTORWAY_BLUE 9
+#Big roads with lines at high zoom levels.
+Line: HW_PRIMARY      HW_PRIMARY    16 20 A_ROAD_RED 7    BLACK 1
+Line: HW_TRUNK        HW_TRUNK      16 20 A_ROAD_GREEN 9  BLACK 1
+Line: HW_MOTORWAY     HW_MOTORWAY   16 20 MOTORWAY_BLUE 9 BLACK 1
+#Water/rail
+Line: WATERWAY        WATERWAY      14 20 WATER_BLUE 4
+Line: RW_RAIL         RW_RAIL       12 13 RAILWAY_BLACK 1
+Line: RW_RAIL         RW_RAIL       14 20 RAILWAY_BLACK 2
+
+#Areas
+Area: AREA_PARK        6 20 0xb6 0xfd 0xb6
+Area: AREA_CAMPSITE    6 20 0xcc 0xff 0x99
+Area: AREA_NATURE      6 20 0xab 0xdf 0x96
+Area: AREA_CEMETERY    6 20 0xaa 0xcb 0xaf
+Area: AREA_RESIDENTIAL 6 20  220  220  220
+Area: AREA_BARRACKS    6 20 0xff 0x8f 0x8f
+Area: AREA_MILITARY    6 20 0xff 0xa8 0xa8
+Area: AREA_FIELD       6 20 0x66 0x66 0x00
+Area: AREA_DANGER_AREA 6 20 0xf6 0xa8 0xb6
+Area: AREA_MEADOW      6 20 0xcd 0xf6 0xc9
+Area: AREA_COMMON      6 20 0xcd 0xf6 0xc9
+Area: AREA_FOREST      6 20 0x8d 0xc5 0x6c
+Area: AREA_WOOD        6 20 0xae 0xd1 0xa0
+Area: AREA_WATER       6 20 WATER_BLUE
+Area: AREA_RETAIL      6 20 0xde 0xd1 0xd5
+Area: AREA_PARKING     6 20 0xf7 0xef 0xb7
+Area: AREA_INDUSTRIAL  6 20 0xdf 0xd1 0xd6
+Area: AREA_BUILDING    6 20 0xbc 0xa9 0xa9
+

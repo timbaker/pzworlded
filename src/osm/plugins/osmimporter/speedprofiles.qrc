@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>speed profiles/bicycle.spp</file>
+        <file>speed profiles/foot.spp</file>
+        <file>speed profiles/motorcar.spp</file>
+        <file>speed profiles/accessTree</file>
+    </qresource>
+</RCC>

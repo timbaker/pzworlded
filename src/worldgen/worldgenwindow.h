@@ -38,6 +38,7 @@ public:
     
 private slots:
     void open();
+    void osm();
 
 private:
     Q_DISABLE_COPY(WorldGenWindow)

@@ -1,4 +1,4 @@
 TEMPLATE  = subdirs
 CONFIG   += ordered
 
-SUBDIRS = libtiled worldgen editor
+SUBDIRS = libtiled worldgen osm editor

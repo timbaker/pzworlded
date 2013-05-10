@@ -19,6 +19,7 @@
 
 #include "../editor/zoomable.h"
 
+#include <qmath.h>
 #include <QFile>
 #include <QTextStream>
 #include <QWheelEvent>
@@ -140,8 +141,8 @@ void LSystem::DrawLSystems(QString lstring, qreal angle, int depth)
             m_fSegment = old;
         } else if (at == 'F' || at == '|') {
 #if 1
-            start.setX(start.x() + (m_fSegment*cos(_deg2rad(angle))));
-            start.setY(start.y() + (m_fSegment*sin(_deg2rad(angle))));
+            start.setX(start.x() + (m_fSegment*qCos(_deg2rad(angle))));
+            start.setY(start.y() + (m_fSegment*qSin(_deg2rad(angle))));
 #else
             int mx = Round(start.x() + (m_iSegment*cos(_deg2rad(angle))));
             int my = Round(start.y() + (m_iSegment*sin(_deg2rad(angle))));
@@ -369,7 +370,7 @@ WorldGenScene::WorldGenScene(WorldGenView *view) :
     mView(view),
     mPartition(0,0,1000,1000,0,4)
 {
-    setBackgroundBrush(Qt::black);
+//    setBackgroundBrush(Qt::black);
 
     mImage = QImage(QLatin1String("C:\\Programming\\Tiled\\PZWorldEd\\newyork.png"));
     mImage.convertToFormat(QImage::Format_ARGB32);
@@ -965,7 +966,7 @@ void WorldGenView::adjustScale(qreal scale)
 {
     setTransform(QTransform::fromScale(scale, scale));
     setRenderHint(QPainter::SmoothPixmapTransform,
-                  mZoomable->smoothTransform() && false);
+                  /*mZoomable->smoothTransform() &&*/ true);
 }
 
 bool WorldGenView::LoadFile(const QString &fileName)
