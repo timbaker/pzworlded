@@ -75,7 +75,7 @@ class Way {
     Way() {ncoords=0;}
     bool init(QFile *fp);
     void print();
-    bool draw(QGraphicsScene &scene, DrawingRules & rules,
+    bool draw(QPainter *painter, DrawingRules & rules,
               unsigned long tilex, unsigned long tiley,
               int zoom, int magnification, int pass, int posX, int posY);
     static bool sort_by_type(Way w1, Way w2) {return w1.type<w2.type;}
@@ -122,43 +122,45 @@ bool Way::init(QFile *fp)
         allcoords.push_back(c);
         ncoords++;
     }
+
     return true;
 }
 
-#define TILE_SIZE 256*4
-#define TILE_POWER (8+2)
+#define TILE_SIZE (256*2)
+#define TILE_POWER (8+1)
 
 static int g_nways=0, g_ndrawnways=0;
 //Draw this way to an img tile.
-bool Way::draw(QGraphicsScene &scene, DrawingRules & rules,
+bool Way::draw(QPainter *painter, DrawingRules & rules,
               unsigned long tilex, unsigned long tiley,
               int zoom, int magnification, int pass, int posX, int posY)
 {
 #if 1
+//    posX = posY = 0;
+
     int r, g, b;
     double width;
     bool polygon;
     if(!rules.get_rule(type, zoom, pass, &r, &g, &b, &width, &polygon)) return false;
 
-    QGraphicsPolygonItem *p = polygon ?  new QGraphicsPolygonItem : 0;
-    QPainterPath path;
-    QGraphicsPathItem *item = polygon ? 0 : new QGraphicsPathItem(path);
     if (width > 0) {
-        if (polygon) p->setPen(QPen(QColor(r,g,b), width * magnification));
-        else item->setPen(QPen(QColor(r,g,b), width * magnification));
+        painter->setPen(QPen(QColor(r,g,b,128), width * magnification));
     } else {
-        if (polygon) p->setPen(Qt::NoPen);
+//        painter->setPen(QColor(255,0,0,128));
     }
     if (polygon)
-        p->setBrush(QColor(r,g,b));
+        painter->setBrush(QColor(r,g,b,128));
+    else
+        painter->setBrush(Qt::NoBrush);
     QPolygonF pf;
+    QPainterPath path;
 
     int oldx=0, oldy=0;
 
     int j=0;
     for(std::vector<coord>::iterator i=allcoords.begin() + coordi;
         i!=allcoords.begin() + coordi + ncoords; i++){
-        int newx, newy;
+        double newx, newy;
         if(zoom<10 && i!=allcoords.begin() + coordi)
             i = allcoords.begin() + coordi + ncoords -1;
         //The coords are in the range 0 to 1ULL<<31
@@ -169,32 +171,74 @@ bool Way::draw(QGraphicsScene &scene, DrawingRules & rules,
         //(i->x - tilex) >> (31-8-zoom) as if(tilex>i->x) we'll be shifting
         //a negative number. We shift each part separately, and then cast to a
         //signed number before subtracting.
+#if 1
         newx = (long) ((i->x) >> (31-TILE_POWER-zoom)) - (long) (tilex >> (31-TILE_POWER-zoom));
         newy = (long) ((i->y) >> (31-TILE_POWER-zoom)) - (long) (tiley >> (31-TILE_POWER-zoom));
-          newx *= magnification;
-          newy *= magnification;
-          if(!polygon && (i==allcoords.begin()+coordi))
-              path.moveTo(newx, newy);//start pt
-        if(!polygon && i!=allcoords.begin() + coordi) {
-            path.lineTo(newx, newy);
+#else
+        newx = (long) ((i->x) >> (31-TILE_POWER-zoom)) - (long) (tilex >> (31-TILE_POWER-zoom));
+        newy = (long) ((i->y) >> (31-TILE_POWER-zoom)) - (long) (tiley >> (31-TILE_POWER-zoom));
+#endif
+        newx *= magnification;
+        newy *= magnification;
+
+        if (polygon) {
+            if (!pf.size() || pf.last() != QPointF(newx,newy))
+                pf += QPointF(newx, newy);
+        } else {
+            if (i == allcoords.begin() + coordi) {
+                path.moveTo(newx, newy);//start pt
+                pf += QPointF(newx, newy); // debug
+            } else {
+                if (oldx != newx || oldy != newy) {
+                    path.lineTo(newx, newy);
+                    pf += QPointF(newx, newy); // debug
+                }
+            }
+
         }
-        if(polygon) {pf += QPointF(newx, newy);}
+#if 0
+        if (posX+newx >= 1500 && posX+newx <= 1520 && posY+newy>=890 && posY+newy <= 910) {
+            int i = 0;
+        }
+#endif
         oldx=newx; oldy=newy;
     }
     if(polygon) {
-        if (pf.size() < 2 || !pf.boundingRect().intersects(QRectF(0,0,TILE_SIZE*magnification,TILE_SIZE*magnification))) {
-            delete p;
-            return false;
+        if (pf.size() <= 2 /*|| !pf.boundingRect().intersects(QRectF(0,0,TILE_SIZE*magnification,TILE_SIZE*magnification))*/) {
+            return true;
         }
+
         if (pf.last() != pf.first())
             pf += pf.first();
-        p->setPolygon(pf.translated(posX, posY));
-        scene.addItem(p);
-//        delete [] c;
+        pf.translate(posX, posY);
+#if 0
+        bool bogus = false;
+        for (int i = 0; i < pf.size() - 1; i += 2) {
+            if (QLineF(pf[i],pf[i+1]).length() > 1536) {
+                bogus = true;
+                break;
+            }
+        }
+//        if (!bogus) return true;
+#endif
+        painter->drawPolygon(pf, Qt::OddEvenFill);
     } else {
+        if (path.elementCount() < 2)
+            return true;
+
         path.translate(posX, posY);
-        item->setPath(path);
-        scene.addItem(item);
+#if 0
+        qreal maxLen = 0;
+        for (int i = 0; i < pf.size() - 1; i += 2) {
+            maxLen = qMax(maxLen, QLineF(pf[i],pf[i+1]).length());
+        }
+        if (maxLen > 256)
+            qDebug() << "max non-poly segment length " << maxLen;
+        if (path.boundingRect().width() > 1536) {
+            int i = 0;
+        }
+#endif
+        painter->drawPath(path);
     }
 #else
     g_nways++;
@@ -596,6 +640,197 @@ void WorldGenWindow::open()
     ui->view->LoadFile(f);
 }
 
+namespace WorldGen {
+
+#define BERLIN 1
+
+class OpenStreetMapItem : public QGraphicsItem
+{
+public:
+    OpenStreetMapItem(QString dir) :
+        QGraphicsItem(),
+         dr(fileInDirectory(dir, QLatin1String("rendering.qrr"))),
+         zoom(13)
+    {
+        setFlag(ItemUsesExtendedStyleOption);
+
+
+        QString filename[3];
+        db[0].setFileName(fileInDirectory( dir, QLatin1String("ways.all.pqdb") ));
+        db[1].setFileName(filename[1] = fileInDirectory( dir, QLatin1String("ways.motorway.pqdb") ));
+        db[2].setFileName(filename[2] = fileInDirectory( dir, QLatin1String("places.pqdb") ));
+        for(int i=0;i<3;i++) {
+            if (db[i].open(QIODevice::ReadOnly)) {
+                qidx[i] = qindex::load(db[i]);
+            } else {
+                qidx[i] = 0;
+            }
+        }
+    }
+
+    // longitude -> east/west (0 at Prime Meridian -> 180 east, -180 west)
+    // latitude -> north/south (0 equator -> 90 poles)
+    QRectF boundingRect() const
+    {
+#if BERLIN
+        UnsignedCoordinate uc1(575273140, 350191409);
+        UnsignedCoordinate uc2(577977756, 353551012); // Berlin
+        ProjectedCoordinate topLeft = uc1.ToProjectedCoordinate();
+        ProjectedCoordinate botRight = uc2.ToProjectedCoordinate();
+#else
+        qreal latMax = 49.00000, longMin = -123.31000, latMin = 49.42000, longMax = -122.67000; // Vancouver
+        ProjectedCoordinate topLeft(GPSCoordinate(latMin, longMin));
+        ProjectedCoordinate botRight(GPSCoordinate(latMax, longMax));
+#endif
+        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+        return QRectF(0/*topLeft.x * tileFactor*/, 0/*topLeft.y * tileFactor*/,
+                      (botRight.x - topLeft.x) * worldInPixels,
+                      (botRight.y - topLeft.y) * worldInPixels);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+    {
+        qreal scale = painter->transform().m22(); // vertical scale
+
+        ///// RendererBase::Paint
+
+        int sizeX = painter->device()->width();
+        int sizeY = painter->device()->height();
+
+        int m_tileSize = TILE_SIZE;
+        double tileFactor = 1u << zoom; // 2^zoom tiles across the whole world
+//        double zoomFactor = tileFactor * m_tileSize;
+
+        QTransform inverseTransform = painter->worldTransform().inverted();
+
+        const int xWidth = 1 << zoom;
+        const int yWidth = 1 << zoom;
+
+#if BERLIN // Berlin
+        UnsignedCoordinate uc1(575273140, 350191409);
+        UnsignedCoordinate uc2(577977756, 353551012);
+        ProjectedCoordinate topLeft = uc1.ToProjectedCoordinate();
+        ProjectedCoordinate botRight = uc2.ToProjectedCoordinate();
+#else // Vancouver
+        qreal latMax = 49.00000, longMin = -123.31000, latMin = 49.42000, longMax = -122.67000;
+        ProjectedCoordinate topLeft(GPSCoordinate(latMin, longMin));
+        ProjectedCoordinate botRight(GPSCoordinate(latMax, longMax));
+#endif
+#if 1
+        int tileMinX = option->exposedRect.x() / TILE_SIZE;
+        int tileMinY = option->exposedRect.y() / TILE_SIZE;
+        int tileMaxX = (option->exposedRect.right() + TILE_SIZE - 1) / TILE_SIZE;
+        int tileMaxY = (option->exposedRect.bottom() + TILE_SIZE - 1) / TILE_SIZE;
+
+        qDebug() << tileMinX << "->" << tileMaxX << "," << tileMinY << "->" << tileMaxY;
+
+
+        int minX = topLeft.x * tileFactor + tileMinX;
+        int maxX = minX + (tileMaxX - tileMinX);
+        int minY = topLeft.y * tileFactor + tileMinY;
+        int maxY = minY + (tileMaxY - tileMinY);
+
+        qDebug() << minX << "->" << maxX << "," << minY << "->" << maxY;
+#else
+        QRect boundingBox = inverseTransform.mapRect( QRect( 0, 0, sizeX, sizeY ) );
+
+        ProjectedCoordinate pc(GPSCoordinate(latMin + (latMax - latMin) / 2,
+                                             longMin + (longMax - longMin) / 2));
+        QPointF request_center(pc.x, pc.y); // x && y  0->1.0
+
+        int minX = floor( ( double ) boundingBox.x() / m_tileSize + request_center.x() * tileFactor );
+        int maxX = ceil( ( double ) boundingBox.right() / m_tileSize + request_center.x() * tileFactor );
+        int minY = floor( ( double ) boundingBox.y() / m_tileSize + request_center.y() * tileFactor );
+        int maxY = ceil( ( double ) boundingBox.bottom() / m_tileSize + request_center.y() * tileFactor );
+#endif
+
+//        int scaledTileSize = m_tileSize * request.virtualZoom;
+        int posX = tileMinX * TILE_SIZE;
+        for ( int x = minX; x < maxX; ++x ) {
+            int posY = tileMinY * TILE_SIZE;
+            for ( int y = minY; y < maxY; ++y ) {
+                drawTile(painter, x, y, posX, posY);
+                posY += m_tileSize;
+            }
+            posX += m_tileSize;
+        }
+    }
+
+    void drawTile(QPainter *painter, int x, int y, int posX, int posY)
+    {
+
+        int cur_db = (zoom > 12) ? 0 : 1;
+        int magnification=1;
+
+        ///// TileWriter::query_index
+        //Work out which quadtile to load.
+        long z = 1UL << zoom;
+        double xf = ((double)x)/z;
+        double yf = ((double)y)/z;
+        quadtile qmask, q;
+        qmask = 0x3FFFFFFFFFFFFFFFLL >> (((zoom > qidx[cur_db]->max_safe_zoom) ? qidx[cur_db]->max_safe_zoom : zoom)*2);
+        //binary_printf(qmask); binary_printf(q);
+        q = xy2q(xf, yf);
+
+        //Seek to the relevant point in the db.
+        int nways;
+        long offset = qidx[cur_db]->get_index(q & ~qmask, zoom, &nways);
+        qDebug() << "tile " << x << "," << y << " nways=" << nways;
+        if (nways==1) return;/////////// end-of-file with nways==1 in Vancouver2
+        if(nways == 0) return;
+        if(offset==-1 || !db[cur_db].seek(offset)) {
+            return; //error
+        }
+
+        ///// TileWriter::draw
+        Way::new_tile();
+        std::vector<Way> waylist;
+        for(int i=0; i<nways;i++) {
+            Way s;
+            if (!s.init(&db[cur_db])) continue;
+            waylist.push_back(s);
+        }
+
+        std::sort(waylist.begin(), waylist.end(), Way::sort_by_type);
+
+        //                    painter->translate(posX,posY);
+        painter->setClipRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
+
+        Q_ASSERT(x >= 0 && y >= 0);
+        unsigned long itilex = ((unsigned long)x) << (31-zoom);
+        unsigned long itiley = ((unsigned long)y) << (31-zoom);
+        //This is a pain. We have to do both passes of one type before moving on to
+        //the next type.
+        int current_type = waylist.begin()->type;
+        std::vector<Way>::iterator cur_type_start, i, j;
+        cur_type_start = waylist.begin();
+        for(i=waylist.begin(); i!=waylist.end(); i++) {
+            if(need_next_pass(i->type, current_type)) { //Do the second pass.
+                for(j=cur_type_start; j!=i; j++)
+                    if(!j->draw(painter, dr, itilex, itiley, zoom, magnification, 1, posX, posY)) break;
+                current_type = i->type;
+                cur_type_start = i;
+            }
+            i->draw(painter, dr, itilex, itiley, zoom, magnification, 0, posX, posY);
+        }
+        //Do second pass for the last type.
+        for(j=cur_type_start; j!=waylist.end(); j++)
+            if(!j->draw(painter, dr, itilex, itiley, zoom, magnification, 1, posX, posY)) break;
+
+        painter->setPen(Qt::black);
+        painter->drawRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
+
+        //                    painter->translate(-posX,-posY);
+    }
+
+    DrawingRules dr;
+    QFile db[3];
+    qindex *qidx[3];
+    int zoom;
+};
+
+} // namespace WorldGen
+
 void WorldGenWindow::osm()
 {
     ui->view->scene()->clear();
@@ -612,99 +847,13 @@ void WorldGenWindow::osm()
     ren.LoadSettings(&settings);
     ren.Preprocess(&imp, QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver2"));
 #endif
-    DrawingRules dr(fileInDirectory( QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver"),
-                                     QLatin1String("rendering.qrr") ));
-    QFile db(QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver\\ways.all.pqdb"));
-    if (db.open(QIODevice::ReadOnly)) {
-        qindex *qidx = qindex::load(db); // FIXME: free it
 
-        ///// RendererBase::Paint
-        int zoom = 13, magnification=1;
-
-        int sizeX = ui->view->viewport()->width();
-        int sizeY = ui->view->viewport()->height();
-
-        int m_tileSize = TILE_SIZE;
-        double tileFactor = 1u << zoom;
-        double zoomFactor = tileFactor * m_tileSize;
-
-        QTransform inverseTransform = ui->view->viewportTransform().inverted();
-
-        const int xWidth = 1 << zoom;
-        const int yWidth = 1 << zoom;
-
-        QRect boundingBox = inverseTransform.mapRect( QRect( 0, 0, sizeX, sizeY ) );
-
-        ProjectedCoordinate pc(GPSCoordinate(49.25000,-123.25));
-        QPointF request_center(pc.x, pc.y);
-
-        int minX = floor( ( double ) boundingBox.x() / m_tileSize + request_center.x() * tileFactor );
-        int maxX = ceil( ( double ) boundingBox.right() / m_tileSize + request_center.x() * tileFactor );
-        int minY = floor( ( double ) boundingBox.y() / m_tileSize + request_center.y() * tileFactor );
-        int maxY = ceil( ( double ) boundingBox.bottom() / m_tileSize + request_center.y() * tileFactor );
-
-//        int scaledTileSize = m_tileSize * request.virtualZoom;
-        int posX = ( minX - request_center.x() * tileFactor ) * m_tileSize * magnification;
-        for ( int x = minX; x < maxX; ++x ) {
-            int posY = ( minY - request_center.y() * tileFactor ) * m_tileSize * magnification;
-            for ( int y = minY; y < maxY; ++y ) {
-                if ( x >= 0 && x < xWidth && y >= 0 && y < yWidth ) {
-                    ///// TileWriter::query_index
-                    //Work out which quadtile to load.
-                    long z = 1UL << zoom;
-                    double xf = ((double)x)/z;
-                    double yf = ((double)y)/z;
-                    quadtile qmask, q;
-                    qmask = 0x3FFFFFFFFFFFFFFFLL >> ((zoom>qidx->max_safe_zoom ? qidx->max_safe_zoom : zoom)*2);
-                    //binary_printf(qmask); binary_printf(q);
-                    q = xy2q(xf, yf);
-
-                    //Seek to the relevant point in the db.
-                    int nways;
-                    long offset = qidx->get_index(q & ~qmask, zoom, &nways);
-                    qDebug() << "tile " << x << "," << y << " nways=" << nways;
-                    if (nways==1) continue;/////////// end-of-file with nways==1 in Vancouver2
-                    if(nways == 0) continue;
-                    if(offset==-1 || !db.seek(offset)) {
-                        continue; //error
-                    }
-
-                    ///// TileWriter::draw
-                    Way::new_tile();
-                    std::vector<Way> waylist;
-                    for(int i=0; i<nways;i++) {
-                        Way s;
-                        if(!s.init(&db)) continue;
-                        waylist.push_back(s);
-                    }
-
-                    std::sort(waylist.begin(), waylist.end(), Way::sort_by_type);
-
-                    unsigned long itilex = x << (31-zoom), itiley = y << (31-zoom);
-                    //This is a pain. We have to do both passes of one type before moving on to
-                    //the next type.
-                    int current_type = waylist.begin()->type;
-                    std::vector<Way>::iterator cur_type_start, i, j;
-                    cur_type_start = waylist.begin();
-                    for(i=waylist.begin(); i!=waylist.end(); i++) {
-                        if(need_next_pass(i->type, current_type)) { //Do the second pass.
-                            for(j=cur_type_start; j!=i; j++)
-                                if(!j->draw(*ui->view->scene(), dr, itilex, itiley, zoom, magnification, 1, posX, posY)) break;
-                            current_type = i->type;
-                            cur_type_start = i;
-                        }
-                        i->draw(*ui->view->scene(), dr, itilex, itiley, zoom, magnification, 0, posX, posY);
-                    }
-                    //Do second pass for the last type.
-                    for(j=cur_type_start; j!=waylist.end(); j++)
-                        if(!j->draw(*ui->view->scene(), dr, itilex, itiley, zoom, magnification, 1, posX, posY)) break;
-
-                    ui->view->scene()->addRect(posX,posY,m_tileSize*magnification,m_tileSize*magnification);
-                }
-                posY += m_tileSize;
-            }
-            posX += m_tileSize;
-        }
-    }
+#if BERLIN
+    QString dir = QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Berlin\\rendering_vector_(no_internet_required)");
+#else
+    QString dir = QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver");
+#endif
+    OpenStreetMapItem *item = new OpenStreetMapItem(dir);
+    ui->view->scene()->addItem(item);
     ui->view->scene()->setSceneRect(QRectF());
 }

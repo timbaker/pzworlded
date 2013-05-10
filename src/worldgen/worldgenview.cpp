@@ -20,6 +20,7 @@
 #include "../editor/zoomable.h"
 
 #include <qmath.h>
+#include <QDebug>
 #include <QFile>
 #include <QTextStream>
 #include <QWheelEvent>
@@ -960,10 +961,12 @@ void WorldGenView::mouseMoveEvent(QMouseEvent *event)
 
     mLastMouseGlobalPos = event->globalPos();
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
+
+    qDebug() << "WorldGenView::mouseMoveEvent" << mLastMouseScenePos;
 }
 
 void WorldGenView::adjustScale(qreal scale)
-{
+{    
     setTransform(QTransform::fromScale(scale, scale));
     setRenderHint(QPainter::SmoothPixmapTransform,
                   /*mZoomable->smoothTransform() &&*/ true);

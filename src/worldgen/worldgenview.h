@@ -203,7 +203,8 @@ public:
     bool LoadFile(const QString &fileName);
 
 signals:
-    
+    void scaleChanged(qreal scale);
+
 public slots:
     void adjustScale(qreal scale);
 
