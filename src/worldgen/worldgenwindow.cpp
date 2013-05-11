@@ -640,9 +640,12 @@ void WorldGenWindow::open()
     ui->view->LoadFile(f);
 }
 
+#include "osmfile.h"
+#include "osmlookup.h"
+
 namespace WorldGen {
 
-#define BERLIN 1
+#define BERLIN 0
 
 class OpenStreetMapItem : public QGraphicsItem
 {
@@ -829,6 +832,113 @@ public:
     int zoom;
 };
 
+class SceneCoordinate
+{
+public:
+    SceneCoordinate(const GPSCoordinate &gps)
+    {
+        ProjectedCoordinate pc(gps);
+        x = pc.x;
+        y = 1.0 - pc.y;
+    }
+
+    double x, y;
+};
+
+class OpenStreetMapItem2 : public QGraphicsItem
+{
+public:
+    OpenStreetMapItem2(QString osmFile) :
+        QGraphicsItem(),
+        zoom(13),
+        magnification(1)
+    {
+        setFlag(ItemUsesExtendedStyleOption);
+
+        if (mFile.read(osmFile))
+            mLookup.fromFile(mFile);
+    }
+
+    QRectF boundingRect() const
+    {
+        ProjectedCoordinate botLeft(mFile.minGPS());
+        ProjectedCoordinate topRight(mFile.maxGPS());
+
+        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+        return QRectF(0, 0,
+                      (topRight.x - botLeft.x) * worldInPixels,
+                      (botLeft.y - topRight.y) * worldInPixels);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+    {
+        int tileMinX = option->exposedRect.x() / TILE_SIZE;
+        int tileMinY = option->exposedRect.y() / TILE_SIZE;
+        int tileMaxX = (option->exposedRect.right() + TILE_SIZE - 1) / TILE_SIZE;
+        int tileMaxY = (option->exposedRect.bottom() + TILE_SIZE - 1) / TILE_SIZE;
+
+        qDebug() << tileMinX << "->" << tileMaxX << "," << tileMinY << "->" << tileMaxY;
+
+        double tileFactor = 1u << zoom; // 2^zoom tiles across the whole world
+
+        GPSCoordinate topLeft(mFile.northMostLatitude(), mFile.westMostLongitude());
+        int minX = ProjectedCoordinate(topLeft).x * tileFactor + tileMinX;
+        int maxX = minX + (tileMaxX - tileMinX);
+        int minY = ProjectedCoordinate(topLeft).y * tileFactor + tileMinY;
+        int maxY = minY + (tileMaxY - tileMinY);
+
+        qDebug() << minX << "->" << maxX << "," << minY << "->" << maxY;
+
+        int posX = tileMinX * TILE_SIZE;
+        for ( int x = minX; x < maxX; ++x ) {
+            int posY = tileMinY * TILE_SIZE;
+            for ( int y = minY; y < maxY; ++y ) {
+                drawTile(painter, x, y, posX, posY);
+                posY += TILE_SIZE;
+            }
+            posX += TILE_SIZE;
+        }
+    }
+
+    void drawTile(QPainter *painter, int x, int y, int posX, int posY)
+    {
+//        painter->setClipRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
+
+        double tileFactor = 1u << zoom; // 2^zoom tiles across the whole world
+
+        ProjectedCoordinate min(x / tileFactor, y / tileFactor);
+        ProjectedCoordinate max((x+1) / tileFactor, (y+1) / tileFactor);
+        foreach (OSM::Way *way, mLookup.ways(min, max)) {
+            QPainterPath p;
+            int i = 0;
+            foreach (OSM::Node *node, way->nodes) {
+                if (i++ == 0)
+                    p.moveTo(gpsToPixels(node->gps));
+                else
+                    p.lineTo(gpsToPixels(node->gps));
+            }
+            painter->drawPath(p);
+        }
+
+        painter->setPen(Qt::black);
+        painter->drawRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
+    }
+
+    QPointF gpsToPixels(const GPSCoordinate &gps)
+    {
+        ProjectedCoordinate botLeft(mFile.minGPS());
+        ProjectedCoordinate topRight(mFile.maxGPS());
+        ProjectedCoordinate pc(gps); // given coord in Mercator Projection
+        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+        return QPointF((pc.x - botLeft.x) * worldInPixels, (pc.y - topRight.y) * worldInPixels);
+    }
+
+    OSM::File mFile;
+    OSM::Lookup mLookup;
+    int zoom;
+    int magnification;
+};
+
 } // namespace WorldGen
 
 void WorldGenWindow::osm()
@@ -837,15 +947,17 @@ void WorldGenWindow::osm()
 #if 0
     OSMImporter imp;
     imp.Preprocess(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm"));
+#endif
 
+#if 0
     QtileRenderer ren;
     QSettings settings;
     settings.beginGroup( QLatin1String("Qtile Renderer") );
-    settings.setValue(QLatin1String("input"), QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm"));
+    settings.setValue(QLatin1String("input"), QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver.osm"));
     settings.setValue(QLatin1String("rulesFile"), QLatin1String(":/rendering_rules/default.qrr"));
     settings.endGroup();
     ren.LoadSettings(&settings);
-    ren.Preprocess(&imp, QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver2"));
+    ren.Preprocess(0, QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver"));
 #endif
 
 #if BERLIN
@@ -853,7 +965,8 @@ void WorldGenWindow::osm()
 #else
     QString dir = QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver");
 #endif
-    OpenStreetMapItem *item = new OpenStreetMapItem(dir);
+
+    OpenStreetMapItem2 *item = new OpenStreetMapItem2(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm"));
     ui->view->scene()->addItem(item);
     ui->view->scene()->setSceneRect(QRectF());
 }

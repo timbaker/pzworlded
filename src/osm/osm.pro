@@ -15,7 +15,9 @@ DEFINES += \
 SOURCES += \
     plugins/osmimporter/types.cpp \
     plugins/osmimporter/osmimporter.cpp \
-    plugins/osmrenderer/rendererbase.cpp
+    plugins/osmrenderer/rendererbase.cpp \
+    osmfile.cpp \
+    osmlookup.cpp
 
 HEADERS += \
     plugins/osmimporter/xmlreader.h \
@@ -23,7 +25,9 @@ HEADERS += \
     plugins/osmimporter/statickdtree.h \
     plugins/osmimporter/osmimporter.h \
     plugins/osmimporter/ientityreader.h \
-    plugins/osmimporter/bz2input.h
+    plugins/osmimporter/bz2input.h \
+    osmfile.h \
+    osmlookup.h
 
 RESOURCES += \
     plugins/osmimporter/speedProfiles.qrc
