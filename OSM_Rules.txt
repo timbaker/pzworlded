@@ -18,8 +18,8 @@ rule_id = [
     AREA_PARKING
     AREA_BUILDING
     
-    AREA_COASTLINE
     AREA_BEACH
+    AREA_COASTLINE
     
     HW_PEDESTRIAN
     HW_PATH
@@ -258,6 +258,13 @@ line
     width = 2 
 }
 
+line
+{
+    rule_id = AREA_COASTLINE AREA_COASTLINE
+    zoom = 6 20
+    color = 0 255 0
+    width = 1
+}
 
 
 area
@@ -389,13 +396,6 @@ area
 
 area
 {
-    rule_id = AREA_COASTLINE
-    zoom = 6 20
-    color = 232 232 232
-}
-
-area
-{
     rule_id = AREA_BEACH
     zoom = 6 20
     color = 255 255 150
@@ -456,6 +456,7 @@ way_kv_to_rule
     pitch = AREA_COMMON
     park = AREA_PARK
     nature_reserve = AREA_NATURE
+    golf_course = AREA_PARK
 }
 
 way_kv_to_rule

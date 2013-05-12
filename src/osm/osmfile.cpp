@@ -95,13 +95,21 @@ bool File::readOSM()
     mPCMax = ProjectedCoordinate(topRight.x, botLeft.y);
 
     foreach (Relation *relation, mRelations) {
+        GPSCoordinate min( std::numeric_limits< double >::max(), std::numeric_limits< double >::max() );
+        GPSCoordinate max( -std::numeric_limits< double >::max(), -std::numeric_limits< double >::max() );
         for (int i = 0; i < relation->members.size(); i++) {
             Relation::Member &m = relation->members[i];
             if (m.wayId && mWayByID.contains(m.wayId)) {
                 m.way = mWayByID[m.wayId];
+                min.latitude = std::min(min.latitude, m.way->minGPS.latitude);
+                min.longitude = std::min(min.longitude, m.way->minGPS.longitude);
+                max.latitude = std::max(max.latitude, m.way->maxGPS.latitude);
+                max.longitude = std::max(max.longitude, m.way->maxGPS.longitude);
             } else if (m.nodeId && mNodeByID.contains(m.nodeId))
                 m.node = mNodeByID[m.nodeId];
         }
+        relation->minGPS = min;
+        relation->maxGPS = max;
         if (relation->type == Relation::MultiPolygon) {
             QList<Way*> outer, inner;
             foreach (Relation::Member m, relation->members) {
@@ -112,6 +120,7 @@ bool File::readOSM()
             relation->inner = makeChains(inner);
             qDebug() << "relation" << relation->id << relation->outer.size() << relation->inner.size();
         }
+
     }
 
 //    LoadCoastlines();
@@ -218,9 +227,12 @@ bool File::readRelation(QXmlStreamReader &xml)
                 if (k == QLatin1String("type")) {
                     if (v == QLatin1String("boundary"))
                         relation->type = Relation::Boundary;
-                    else if (v == QLatin1String("multipolygon"))
-                        relation->type = Relation::MultiPolygon;
-                    else if (v == QLatin1String("restriction"))
+                    else if (v == QLatin1String("multipolygon")) {
+                        if (!atts.value(QLatin1String("boundary")).isEmpty()) // GERMANY
+                            relation->type = Relation::Boundary;
+                        else
+                            relation->type = Relation::MultiPolygon;
+                    } else if (v == QLatin1String("restriction"))
                         relation->type = Relation::Restriction;
                     else if (v == QLatin1String("route"))
                         relation->type = Relation::Route;

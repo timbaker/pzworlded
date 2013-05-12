@@ -2,6 +2,7 @@
 
 #include "osmfile.h"
 
+#include <QDebug>
 #include <QSet>
 
 using namespace OSM;
@@ -62,40 +63,73 @@ void Lookup::fromFile(const File &file)
         mTree->AddObject(new QuadTreeObject(way));
     }
 
+    // FIXME: preserve order of ways/relations?
+    foreach (Relation *relation, file.relations()) {
+        if (relation->type == Relation::MultiPolygon) /////
+            mTree->AddObject(new QuadTreeObject(relation));
+    }
+
     {
     int max = 0;
     foreach (QuadTree *t, mTree->nonEmptyQuads())
         max = qMax(max, t->count());
-    return;
+    qDebug() << "OSM::Lookup quadtree max objects = " << max;
     }
 }
 
-QList<Way *> Lookup::ways(const ProjectedCoordinate &min, const ProjectedCoordinate &max)
+QList<Lookup::Object> Lookup::objects(const ProjectedCoordinate &min, const ProjectedCoordinate &max)
 {
     Q_ASSERT(min.x <= max.x && min.y <= max.y);
 
     LookupCoordinate lmin(min), lmax(max);
 
-    QList<Way*> ways;
-    foreach (QuadTreeObject *qto, mTree->GetObjectsAt(lmin.x, lmin.y, lmax.x - lmin.x, lmax.y - lmin.y))
-        ways += qto->way;
-    return ways;
+    QList<Lookup::Object> ret;
+    foreach (QuadTreeObject *qto, mTree->GetObjectsAt(lmin.x, lmin.y,
+                                                      lmax.x - lmin.x,
+                                                      lmax.y - lmin.y))
+        ret += Object(qto->way, qto->node, qto->relation);
+    return ret;
+}
+
+QList<Lookup::Object> Lookup::objects(const ProjectedCoordinate &pc)
+{
+    LookupCoordinate lc(pc);
+
+    QList<Lookup::Object> ret;
+    foreach (QuadTreeObject *qto, mTree->GetObjectsAt(lc.x, lc.y))
+        ret += Object(qto->way, qto->node, qto->relation);
+    return ret;
+}
+
+QList<Way *> Lookup::ways(const ProjectedCoordinate &min, const ProjectedCoordinate &max)
+{
+    QList<Way*> ret;
+    foreach (Object o, objects(min, max)) {
+        if (o.way)
+            ret += o.way;
+    }
+    return ret;
 }
 
 QList<Way *> Lookup::ways(const ProjectedCoordinate &pc)
 {
-    LookupCoordinate lc(pc);
-
-    QList<Way*> ways;
-    foreach (QuadTreeObject *qto, mTree->GetObjectsAt(lc.x, lc.y))
-        ways += qto->way;
-    return ways;
+    QList<Way*> ret;
+    foreach (Object o, objects(pc)) {
+        if (o.way)
+            ret += o.way;
+    }
+    return ret;
 }
 
 /////
 
+QuadTreeObject::QuadTreeObject(Node *node) :
+    node(node), way(0), relation(0)
+{
+}
+
 QuadTreeObject::QuadTreeObject(Way *way) :
-    node(0), way(way)
+    node(0), way(way), relation(0)
 {
     x = LookupCoordinate(way->minGPS).x;
     y = LookupCoordinate(way->maxGPS).y;
@@ -103,11 +137,32 @@ QuadTreeObject::QuadTreeObject(Way *way) :
     height = LookupCoordinate(way->minGPS).y - y;
 }
 
+QuadTreeObject::QuadTreeObject(Relation *relation) :
+    node(0), way(0), relation(relation)
+{
+    x = LookupCoordinate(relation->minGPS).x;
+    y = LookupCoordinate(relation->maxGPS).y;
+    width = LookupCoordinate(relation->maxGPS).x - x;
+    height = LookupCoordinate(relation->minGPS).y - y;
+}
+
 #include <QPolygonF>
+#include <QPainterPath>
 bool QuadTreeObject::contains(LookupCoordType x, LookupCoordType y)
 {
     if (x >= this->x && x < this->x + this->width
             && y >= this->y && y < this->y + this->height) {
+
+        if (relation) {
+            QPainterPath path;
+            foreach (WayChain *wc, relation->outer) {
+                QPolygonF pf;
+                foreach (Node *node, wc->toPolygon())
+                    pf += QPointF(node->pc.x * FUDGE, node->pc.y * FUDGE);
+                path.addPolygon(pf);
+            }
+            return path.contains(QPointF(x, y));
+        }
         if (way->nodes.size() < 2 || !way->polygon)
             return true;
         QPolygonF pf;

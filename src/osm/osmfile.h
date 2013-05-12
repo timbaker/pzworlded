@@ -142,6 +142,9 @@ public:
 
     QMap<QString,QString> tags;
 
+    GPSCoordinate minGPS;
+    GPSCoordinate maxGPS;
+
     QList<WayChain*> outer, inner; // MultiPolygon
 };
 

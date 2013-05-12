@@ -643,8 +643,10 @@ void WorldGenWindow::open()
 #include "osmfile.h"
 #include "osmlookup.h"
 #include "osmrulefile.h"
+
 #include <qmath.h>
 #include <QGraphicsSceneHoverEvent>
+#include <QMultiMap>
 
 namespace WorldGen {
 
@@ -840,7 +842,7 @@ class OpenStreetMapItem2 : public QGraphicsItem
 public:
     OpenStreetMapItem2(QString osmFile) :
         QGraphicsItem(),
-        zoom(13),
+        zoom(14),
         magnification(1)
     {
         setFlag(ItemUsesExtendedStyleOption);
@@ -862,12 +864,11 @@ public:
         foreach (OSM::RuleFile::Area area, mRuleFile.mAreas)
             mAreaByRuleID[area.rule_id] = area;
 
-        QMap<OSM::Way*,OSM::Relation*> relationMap;
         foreach (OSM::Relation *relation, mFile.relations()) {
             if (relation->type != OSM::Relation::MultiPolygon)
                 continue;
             foreach (OSM::Relation::Member m, relation->members) {
-                if (m.way) relationMap[m.way] = relation;
+                if (m.way) mWayToRelations.insert(m.way, relation);
             }
             foreach (QString tagKey, relation->tags.keys()) {
                 QString tagValue = relation->tags[tagKey];
@@ -880,7 +881,6 @@ public:
                     if (mLineByRuleID.contains(rule_id)) {
                         mRelationToLine[relation] = &mLineByRuleID[rule_id];
                         break;
-
                     }
                 }
             }
@@ -889,17 +889,25 @@ public:
         foreach (OSM::Way *way, mFile.ways() + mFile.coastlines()) {
             // Get tags from relations if any
             QMap<QString,QString> tags = way->tags;
-            if (relationMap.contains(way)) {
-                tags = relationMap[way]->tags; // FIXME: this isn't always correct
+            if (mWayToRelations.contains(way)) {
+                bool ignore = false;
+                foreach (OSM::Relation *relation, mWayToRelations.values(way)) {
+                    if (mRelationToArea.contains(relation) ||
+                            mRelationToLine.contains(relation)) {
+                        ignore = true;
+                        break;
+                    }
+                    if (ignore) continue;
+                }
             }
             foreach (QString tagKey, tags.keys()) {
                 if (mRuleFile.mWayToRule.contains(tagKey)) {
                     QString tagValue = tags[tagKey];
                     if (mRuleFile.mWayToRule[tagKey].valueToRule.contains(tagValue)) {
                         QString rule_id = mRuleFile.mWayToRule[tagKey].valueToRule[tagValue];
-                        if (mAreaByRuleID.contains(rule_id)) {
+                        if (mAreaByRuleID.contains(rule_id) && way->isClosed()) {
                             mWayToArea[way] = &mAreaByRuleID[rule_id];
-                            way->polygon = way->isClosed();
+                            way->polygon = true;
                             break;
                         }
                         if (mLineByRuleID.contains(rule_id)) {
@@ -952,9 +960,154 @@ public:
             }
             posX += TILE_SIZE;
         }
+    }
 
-        painter->setClipping(false);
-        foreach (OSM::Relation *relation, mFile.relations()) {
+    void drawTile(QPainter *painter, int x, int y, int posX, int posY)
+    {
+        painter->setClipRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
+
+        double tileFactor = 1u << zoom; // 2^zoom tiles across the whole world
+
+        ProjectedCoordinate min(x / tileFactor, y / tileFactor);
+        ProjectedCoordinate max((x+1) / tileFactor, (y+1) / tileFactor);
+
+        QMultiMap<int,OSM::Lookup::Object> drawThis;
+        foreach (OSM::Lookup::Object lo, mLookup.objects(min, max)) {
+            QString rule_id;
+            if (OSM::Way *way = lo.way) {
+                if (way->polygon)
+                    rule_id = mWayToArea[way]->rule_id;
+                else if (mWayToLine.contains(way))
+                    rule_id = mWayToLine[way]->rule1;
+            }
+            if (OSM::Relation *relation = lo.relation) {
+                if (relation->type == OSM::Relation::MultiPolygon) {
+                    if (mRelationToArea.contains(relation))
+                        rule_id = mRelationToArea[relation]->rule_id;
+                    else if (mRelationToLine.contains(relation))
+                        rule_id = mRelationToLine[relation]->rule1;
+                }
+            }
+            if (!rule_id.isEmpty())
+                drawThis.insert(mRuleFile.mRuleIDs.indexOf(rule_id), lo);
+            else
+                drawThis.insert(1000, lo);
+        }
+#if 1
+        foreach (OSM::Lookup::Object lo, drawThis) {
+            if (OSM::Way *way = lo.way) {
+                QPainterPath p;
+                int i = 0;
+                foreach (OSM::Node *node, way->nodes) {
+                    if (i++ == 0)
+                        p.moveTo(projectedCoordToPixels(node->pc));
+                    else
+                        p.lineTo(projectedCoordToPixels(node->pc));
+
+                    if (node == mClosestNode) {
+                        painter->setPen(Qt::blue);
+                        painter->setBrush(Qt::NoBrush);
+                        painter->drawEllipse(projectedCoordToPixels(node->pc), 8, 8);
+                    }
+                }
+                if (way->polygon) {
+                    painter->setBrush(mWayToArea[way]->color);
+                    painter->setPen(Qt::NoPen);
+                } else {
+                    painter->setBrush(Qt::NoBrush);
+                    if (mWayToLine.contains(way)) {
+                        if (mWayToLine[way]->color1 == QColor(6,6,6,200)) // hack nature_reserve
+                            painter->setPen(Qt::NoPen);
+                        else
+                            painter->setPen(QPen(mWayToLine[way]->color1, mWayToLine[way]->width1 * 0));
+                    } else if (mWayToRelations.contains(way)) {
+                        painter->setPen(Qt::red);
+                        bool willDrawLater = false;
+                        foreach (OSM::Relation *relation, mWayToRelations.values(way)) {
+                             if (mRelationToArea.contains(relation)
+                                     || mRelationToLine.contains(relation)) {
+                                 willDrawLater = true;
+                                 break;
+                             }
+                        }
+                        if (willDrawLater) continue;
+                    } else
+                        painter->setPen(Qt::red);
+                }
+                painter->drawPath(p);
+                if (mHoverObjects.contains(OSM::Lookup::Object(way,0,0)) && way->isClosed())
+                    painter->fillPath(p, QColor(128,128,128,128));
+            }
+            if (OSM::Relation *relation = lo.relation) {
+                QPainterPath path;
+                foreach (OSM::WayChain *chain, relation->outer) {
+                    QPolygonF poly;
+                    foreach (OSM::Node *node, chain->toPolygon())
+                        poly += projectedCoordToPixels(node->pc);
+                    path.addPolygon(poly);
+                }
+                foreach (OSM::WayChain *chain, relation->inner) {
+                    QPolygonF poly;
+                    foreach (OSM::Node *node, chain->toPolygon())
+                        poly += projectedCoordToPixels(node->pc);
+                    path.addPolygon(poly);
+                }
+                if (mRelationToArea.contains(relation)) {
+                    painter->setPen(Qt::NoPen);
+                    if (mRelationToArea[relation]->color == QColor(6,6,6,200)) // hack nature_reserve
+                        painter->setBrush(Qt::CrossPattern);
+                    else
+                        painter->setBrush(mRelationToArea[relation]->color);
+                } else if (mRelationToLine.contains(relation)) {
+                    painter->setBrush(Qt::NoBrush);
+                    if (mRelationToLine[relation]->color1 == QColor(6,6,6,200)) // hack nature_reserve
+                        continue;
+                    painter->setPen(QPen(mRelationToLine[relation]->color1, mRelationToLine[relation]->width1 * 0));
+                } else {
+                    if (relation->tags.contains(QLatin1String("amenity"))) continue;
+                    painter->setBrush(QColor(128,0,0,128));
+                    qDebug() << "*** multipolygon with no color" << relation->id << relation->tags;
+                    continue;
+                }
+                painter->drawPath(path);
+                if (mHoverObjects.contains(OSM::Lookup::Object(0,0,relation)))
+                    painter->fillPath(path, QColor(128,128,128,128));
+            }
+        }
+
+#else
+        foreach (OSM::Way *way, mLookup.ways(min, max)) {
+            QPainterPath p;
+            int i = 0;
+            foreach (OSM::Node *node, way->nodes) {
+                if (i++ == 0)
+                    p.moveTo(projectedCoordToPixels(node->pc));
+                else
+                    p.lineTo(projectedCoordToPixels(node->pc));
+
+                if (node == mClosestNode) {
+                    painter->setPen(Qt::blue);
+                    painter->drawEllipse(projectedCoordToPixels(node->pc), 8, 8);
+                }
+            }
+            if (way->polygon) {
+                painter->setBrush(mWayToArea[way]->color);
+                painter->setPen(Qt::NoPen);
+            } else {
+                painter->setBrush(Qt::NoBrush);
+                if (mWayToLine.contains(way))
+                    painter->setPen(QPen(mWayToLine[way]->color1, 0/*mWayToLine[way]->width1*/));
+                else
+                    painter->setPen(Qt::red);
+            }
+            painter->drawPath(p);
+            if (mHoverWays.contains(way) && way->isClosed())
+                painter->fillPath(p, QColor(128,128,128,128));
+        }
+
+        foreach (OSM::Lookup::Object lo, mLookup.objects(min, max)) {
+            if (!lo.relation) continue;
+            OSM::Relation *relation = lo.relation;
             if (relation->type != OSM::Relation::MultiPolygon) continue;
             QPainterPath path;
             foreach (OSM::WayChain *chain, relation->outer) {
@@ -985,45 +1138,7 @@ public:
             }
             painter->drawPath(path);
         }
-    }
-
-    void drawTile(QPainter *painter, int x, int y, int posX, int posY)
-    {
-        painter->setClipRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
-
-        double tileFactor = 1u << zoom; // 2^zoom tiles across the whole world
-
-        ProjectedCoordinate min(x / tileFactor, y / tileFactor);
-        ProjectedCoordinate max((x+1) / tileFactor, (y+1) / tileFactor);
-        foreach (OSM::Way *way, mLookup.ways(min, max)) {
-            QPainterPath p;
-            int i = 0;
-            foreach (OSM::Node *node, way->nodes) {
-                if (i++ == 0)
-                    p.moveTo(projectedCoordToPixels(node->pc));
-                else
-                    p.lineTo(projectedCoordToPixels(node->pc));
-
-                if (node == mClosestNode) {
-                    painter->setPen(Qt::blue);
-                    painter->drawEllipse(projectedCoordToPixels(node->pc), 8, 8);
-                }
-            }
-            if (way->polygon) {
-                painter->setBrush(mWayToArea[way]->color);
-                painter->setPen(Qt::NoPen);
-            } else {
-                painter->setBrush(Qt::NoBrush);
-                if (mWayToLine.contains(way))
-                    painter->setPen(QPen(mWayToLine[way]->color1, 0/*mWayToLine[way]->width1*/));
-                else
-                    painter->setPen(Qt::red);
-            }
-            painter->drawPath(p);
-            if (mHoverWays.contains(way))
-                painter->fillPath(p, QColor(128,128,128,128));
-        }
-
+#endif
         painter->setPen(Qt::black);
         painter->setBrush(Qt::NoBrush);
         painter->drawRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
@@ -1059,31 +1174,42 @@ public:
     {
         ProjectedCoordinate pc = itemToProjected(event->pos());
 
-        QSet<OSM::Way *> ways = mLookup.ways(pc).toSet();
-        if (ways != mHoverWays) {
-            qDebug() << "hoverMoveEvent #ways=" << ways.size();
-            foreach (OSM::Way *way, ways) {
-                if (mWayToArea.contains(way))
-                    qDebug() << "way-area rule_id is" << mWayToArea[way]->rule_id << way->tags;
-                if (mWayToLine.contains(way))
-                    qDebug() << "way-line" << way->tags;
-                if (!mWayToArea.contains(way) && !mWayToLine.contains(way))
-                    qDebug() << "way NO LINE/AREA" << way->tags;
-
+        QSet<OSM::Lookup::Object> objects = mLookup.objects(pc).toSet();
+        if (objects != mHoverObjects) {
+            qDebug() << "hoverMoveEvent #objects=" << objects.size();
+            foreach (OSM::Lookup::Object lo, objects) {
+                if (OSM::Way *way = lo.way) {
+                    if (mWayToArea.contains(way))
+                        qDebug() << "way-area" << way->id << way->tags;
+                    if (mWayToLine.contains(way))
+                        qDebug() << "way-line" << way->id << way->tags;
+                    if (!mWayToArea.contains(way) && !mWayToLine.contains(way))
+                        qDebug() << "way NO LINE/AREA" << way->id << way->tags;
+                }
+                if (OSM::Relation *relation = lo.relation) {
+                    if (mRelationToArea.contains(relation))
+                        qDebug() << "relation-area" << relation->id << relation->tags;
+                    if (mRelationToLine.contains(relation))
+                        qDebug() << "relation-line" << relation->id << relation->tags;
+                    if (!mRelationToArea.contains(relation) && !mRelationToLine.contains(relation))
+                        qDebug() << "relation NO LINE/AREA" << relation->id << relation->tags;
+                }
             }
-            mHoverWays = ways;
+            mHoverObjects = objects;
             update();
         }
 
         qreal minDist = 100000;
         OSM::Node *closest = 0;
-        foreach (OSM::Way *way, ways) {
-            foreach (OSM::Node *node, way->nodes) {
-                qreal dist = QLineF(event->pos(), gpsToPixels(node->gps)).length();
-                if (dist < minDist) {
-                    closest = node;
-                    minDist = dist;
-                }
+        QSet<OSM::Node*> nodes;
+        foreach (OSM::Lookup::Object lo, objects) {
+            if (lo.way) nodes += lo.way->nodes.toSet();
+        }
+        foreach (OSM::Node *node, nodes) {
+            qreal dist = QLineF(event->pos(), gpsToPixels(node->gps)).length();
+            if (dist < minDist) {
+                closest = node;
+                minDist = dist;
             }
         }
         if (closest != mClosestNode) {
@@ -1099,7 +1225,7 @@ public:
     OSM::RuleFile mRuleFile;
     int zoom;
     int magnification;
-    QSet<OSM::Way *> mHoverWays;
+    QSet<OSM::Lookup::Object> mHoverObjects;
     OSM::Node *mClosestNode;
     QMap<QString,OSM::RuleFile::Area> mAreaByRuleID;
     QMap<OSM::Way*,OSM::RuleFile::Area*> mWayToArea;
@@ -1107,6 +1233,7 @@ public:
     QMap<OSM::Way*,OSM::RuleFile::Line*> mWayToLine;
     QMap<OSM::Relation*,OSM::RuleFile::Area*> mRelationToArea;
     QMap<OSM::Relation*,OSM::RuleFile::Line*> mRelationToLine;
+    QMultiMap<OSM::Way*,OSM::Relation*> mWayToRelations; // can be > 1 relation per way
 };
 
 } // namespace WorldGen
@@ -1151,7 +1278,7 @@ void WorldGenWindow::osm()
     foreach (OSM::WayChain *chain, chains) chain->print(); qDeleteAll(chains);
 //    return;
 
-    OpenStreetMapItem2 *item = new OpenStreetMapItem2(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver.osm"));
+    OpenStreetMapItem2 *item = new OpenStreetMapItem2(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm"));
     ui->view->scene()->addItem(item);
     ui->view->scene()->setSceneRect(QRectF());
 }

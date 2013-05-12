@@ -3,6 +3,7 @@
 
 #include "utils/coordinates.h"
 
+#include <QHash>
 #include <QRect>
 #include <QVector>
 
@@ -10,6 +11,7 @@ namespace OSM {
 
 class File;
 class Node;
+class Relation;
 class Way;
 
 typedef unsigned long LookupCoordType;
@@ -17,18 +19,15 @@ typedef unsigned long LookupCoordType;
 class QuadTreeObject
 {
 public:
-    QuadTreeObject(Node *node) :
-        node(node), way(0)
-    {
-
-    }
+    QuadTreeObject(Node *node);
+    QuadTreeObject(Way *way);
+    QuadTreeObject(Relation *relation);
 
     bool contains(LookupCoordType x, LookupCoordType y);
 
-    QuadTreeObject(Way *way);
-
     Node *node;
     Way *way;
+    Relation *relation;
     LookupCoordType x, y, width, height;
 };
 
@@ -75,11 +74,40 @@ public:
 
     void fromFile(const File &file);
 
+    struct Object
+    {
+        Object(Way *w, Node *n, Relation *r) :
+            way(w), node(n), relation(r)
+        {}
+
+        Way *way;
+        Node *node;
+        Relation *relation;
+    };
+
+    QList<Object> objects(const ProjectedCoordinate &min, const ProjectedCoordinate &max);
+    QList<Object> objects(const ProjectedCoordinate &pc);
+
     QList<Way*> ways(const ProjectedCoordinate &min, const ProjectedCoordinate &max);
     QList<Way*> ways(const ProjectedCoordinate &pc);
 
     QuadTree *mTree;
 };
+
+inline bool operator==(const Lookup::Object &o1, const Lookup::Object &o2)
+{
+    return o1.way == o2.way &&
+            o1.node == o2.node &&
+            o1.relation == o2.relation;
+}
+
+inline uint qHash(const Lookup::Object &key)
+{
+    if (key.node) return ::qHash(key.node);
+    if (key.way) return ::qHash(key.way);
+    if (key.relation) return ::qHash(key.relation);
+    return ::qHash(0);
+}
 
 } // namespace OSM
 

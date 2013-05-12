@@ -51,8 +51,12 @@ bool RuleFile::read(const QString &fileName)
                 }
             }
             if (block.keyValue("color", kv)) {
-                l.color1 = resolveColor(kv.values()[0]);
-                if (kv.values().size() > 1)
+                QStringList values = kv.values();
+                if (values.size() == 3)
+                    l.color1 = parseColor(values);
+                else
+                    l.color1 = resolveColor(kv.values()[0]);
+                if (kv.values().size() == 2)
                     l.color2 = resolveColor(kv.values()[1]);
             }
             if (block.keyValue("width", kv)) {
