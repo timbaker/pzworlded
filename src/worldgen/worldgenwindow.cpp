@@ -642,6 +642,9 @@ void WorldGenWindow::open()
 
 #include "osmfile.h"
 #include "osmlookup.h"
+#include "osmrulefile.h"
+#include <qmath.h>
+#include <QGraphicsSceneHoverEvent>
 
 namespace WorldGen {
 
@@ -832,19 +835,6 @@ public:
     int zoom;
 };
 
-class SceneCoordinate
-{
-public:
-    SceneCoordinate(const GPSCoordinate &gps)
-    {
-        ProjectedCoordinate pc(gps);
-        x = pc.x;
-        y = 1.0 - pc.y;
-    }
-
-    double x, y;
-};
-
 class OpenStreetMapItem2 : public QGraphicsItem
 {
 public:
@@ -854,20 +844,84 @@ public:
         magnification(1)
     {
         setFlag(ItemUsesExtendedStyleOption);
+        setAcceptHoverEvents(true);
 
         if (mFile.read(osmFile))
             mLookup.fromFile(mFile);
+
+        if (!mRuleFile.read(QLatin1String("C:/Programming/Tiled/PZWorldEd/PZWorldEd/OSM_Rules.txt")))
+            qDebug() << mRuleFile.errorString();
+
+        foreach (OSM::RuleFile::Line line, mRuleFile.mLines) {
+            // range from rule1 to rule2
+            int s = mRuleFile.mRuleIDs.indexOf(line.rule1);
+            int e = mRuleFile.mRuleIDs.indexOf(line.rule2);
+            for (int i = s; i <= e; i++)
+                mLineByRuleID[mRuleFile.mRuleIDs[i]] = line;
+        }
+        foreach (OSM::RuleFile::Area area, mRuleFile.mAreas)
+            mAreaByRuleID[area.rule_id] = area;
+
+        QMap<OSM::Way*,OSM::Relation*> relationMap;
+        foreach (OSM::Relation *relation, mFile.relations()) {
+            if (relation->type != OSM::Relation::MultiPolygon)
+                continue;
+            foreach (OSM::Relation::Member m, relation->members) {
+                if (m.way) relationMap[m.way] = relation;
+            }
+            foreach (QString tagKey, relation->tags.keys()) {
+                QString tagValue = relation->tags[tagKey];
+                if (mRuleFile.mWayToRule[tagKey].valueToRule.contains(tagValue)) {
+                    QString rule_id = mRuleFile.mWayToRule[tagKey].valueToRule[tagValue];
+                    if (mAreaByRuleID.contains(rule_id)) {
+                        mRelationToArea[relation] = &mAreaByRuleID[rule_id];
+                        break;
+                    }
+                    if (mLineByRuleID.contains(rule_id)) {
+                        mRelationToLine[relation] = &mLineByRuleID[rule_id];
+                        break;
+
+                    }
+                }
+            }
+        }
+
+        foreach (OSM::Way *way, mFile.ways() + mFile.coastlines()) {
+            // Get tags from relations if any
+            QMap<QString,QString> tags = way->tags;
+            if (relationMap.contains(way)) {
+                tags = relationMap[way]->tags; // FIXME: this isn't always correct
+            }
+            foreach (QString tagKey, tags.keys()) {
+                if (mRuleFile.mWayToRule.contains(tagKey)) {
+                    QString tagValue = tags[tagKey];
+                    if (mRuleFile.mWayToRule[tagKey].valueToRule.contains(tagValue)) {
+                        QString rule_id = mRuleFile.mWayToRule[tagKey].valueToRule[tagValue];
+                        if (mAreaByRuleID.contains(rule_id)) {
+                            mWayToArea[way] = &mAreaByRuleID[rule_id];
+                            way->polygon = way->isClosed();
+                            break;
+                        }
+                        if (mLineByRuleID.contains(rule_id)) {
+                            mWayToLine[way] = &mLineByRuleID[rule_id];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     QRectF boundingRect() const
     {
-        ProjectedCoordinate botLeft(mFile.minGPS());
-        ProjectedCoordinate topRight(mFile.maxGPS());
+        int worldGridX1 = qFloor(mFile.minProjected().x * (1U << zoom));
+        int worldGridY1 = qFloor(mFile.minProjected().y * (1U << zoom));
+        int worldGridX2 = qCeil(mFile.maxProjected().x * (1U << zoom));
+        int worldGridY2 = qCeil(mFile.maxProjected().y * (1U << zoom));
 
-        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
         return QRectF(0, 0,
-                      (topRight.x - botLeft.x) * worldInPixels,
-                      (botLeft.y - topRight.y) * worldInPixels);
+                      (worldGridX2 - worldGridX1) * TILE_SIZE,
+                      (worldGridY2 - worldGridY1) * TILE_SIZE);
     }
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
@@ -898,11 +952,44 @@ public:
             }
             posX += TILE_SIZE;
         }
+
+        painter->setClipping(false);
+        foreach (OSM::Relation *relation, mFile.relations()) {
+            if (relation->type != OSM::Relation::MultiPolygon) continue;
+            QPainterPath path;
+            foreach (OSM::WayChain *chain, relation->outer) {
+                QPolygonF poly;
+                foreach (OSM::Node *node, chain->toPolygon())
+                    poly += projectedCoordToPixels(node->pc);
+                path.addPolygon(poly);
+            }
+            foreach (OSM::WayChain *chain, relation->inner) {
+                QPolygonF poly;
+                foreach (OSM::Node *node, chain->toPolygon())
+                    poly += projectedCoordToPixels(node->pc);
+                path.addPolygon(poly);
+            }
+            if (mRelationToArea.contains(relation)) {
+                if (mRelationToArea[relation]->color == QColor(6,6,6,200)) // hack nature_reserve
+                    painter->setBrush(Qt::CrossPattern);
+                else
+                    painter->setBrush(mRelationToArea[relation]->color);
+            } else if (mRelationToLine.contains(relation)) {
+                painter->setBrush(Qt::NoBrush);
+                if (mRelationToLine.contains(relation))
+                    painter->setPen(QPen(mRelationToLine[relation]->color1, 0));
+            } else {
+                if (relation->tags.contains(QLatin1String("amenity"))) continue;
+                painter->setBrush(QColor(128,0,0,128));
+                qDebug() << "*** multipolygon with no color" << relation->id << relation->tags;
+            }
+            painter->drawPath(path);
+        }
     }
 
     void drawTile(QPainter *painter, int x, int y, int posX, int posY)
     {
-//        painter->setClipRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
+        painter->setClipRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
 
         double tileFactor = 1u << zoom; // 2^zoom tiles across the whole world
 
@@ -913,30 +1000,113 @@ public:
             int i = 0;
             foreach (OSM::Node *node, way->nodes) {
                 if (i++ == 0)
-                    p.moveTo(gpsToPixels(node->gps));
+                    p.moveTo(projectedCoordToPixels(node->pc));
                 else
-                    p.lineTo(gpsToPixels(node->gps));
+                    p.lineTo(projectedCoordToPixels(node->pc));
+
+                if (node == mClosestNode) {
+                    painter->setPen(Qt::blue);
+                    painter->drawEllipse(projectedCoordToPixels(node->pc), 8, 8);
+                }
+            }
+            if (way->polygon) {
+                painter->setBrush(mWayToArea[way]->color);
+                painter->setPen(Qt::NoPen);
+            } else {
+                painter->setBrush(Qt::NoBrush);
+                if (mWayToLine.contains(way))
+                    painter->setPen(QPen(mWayToLine[way]->color1, 0/*mWayToLine[way]->width1*/));
+                else
+                    painter->setPen(Qt::red);
             }
             painter->drawPath(p);
+            if (mHoverWays.contains(way))
+                painter->fillPath(p, QColor(128,128,128,128));
         }
 
         painter->setPen(Qt::black);
+        painter->setBrush(Qt::NoBrush);
         painter->drawRect(posX,posY,TILE_SIZE*magnification,TILE_SIZE*magnification);
     }
 
     QPointF gpsToPixels(const GPSCoordinate &gps)
     {
-        ProjectedCoordinate botLeft(mFile.minGPS());
-        ProjectedCoordinate topRight(mFile.maxGPS());
-        ProjectedCoordinate pc(gps); // given coord in Mercator Projection
+        ProjectedCoordinate pc(gps);
+        return projectedCoordToPixels(pc);
+    }
+
+    QPointF projectedCoordToPixels(const ProjectedCoordinate &pc)
+    {
+        int worldGridX1 = qFloor(mFile.minProjected().x * (1U << zoom)) * TILE_SIZE;
+        int worldGridY1 = qFloor(mFile.minProjected().y * (1U << zoom)) * TILE_SIZE;
+
         double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
-        return QPointF((pc.x - botLeft.x) * worldInPixels, (pc.y - topRight.y) * worldInPixels);
+        return QPointF(pc.x * worldInPixels - worldGridX1,
+                       pc.y * worldInPixels - worldGridY1);
+    }
+
+    ProjectedCoordinate itemToProjected(const QPointF &itemPos)
+    {
+        int worldGridX1 = qFloor(mFile.minProjected().x * (1U << zoom)) * TILE_SIZE;
+        int worldGridY1 = qFloor(mFile.minProjected().y * (1U << zoom)) * TILE_SIZE;
+
+        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+        return ProjectedCoordinate((itemPos.x() + worldGridX1) / worldInPixels,
+                (itemPos.y() + worldGridY1) / worldInPixels);
+    }
+
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event)
+    {
+        ProjectedCoordinate pc = itemToProjected(event->pos());
+
+        QSet<OSM::Way *> ways = mLookup.ways(pc).toSet();
+        if (ways != mHoverWays) {
+            qDebug() << "hoverMoveEvent #ways=" << ways.size();
+            foreach (OSM::Way *way, ways) {
+                if (mWayToArea.contains(way))
+                    qDebug() << "way-area rule_id is" << mWayToArea[way]->rule_id << way->tags;
+                if (mWayToLine.contains(way))
+                    qDebug() << "way-line" << way->tags;
+                if (!mWayToArea.contains(way) && !mWayToLine.contains(way))
+                    qDebug() << "way NO LINE/AREA" << way->tags;
+
+            }
+            mHoverWays = ways;
+            update();
+        }
+
+        qreal minDist = 100000;
+        OSM::Node *closest = 0;
+        foreach (OSM::Way *way, ways) {
+            foreach (OSM::Node *node, way->nodes) {
+                qreal dist = QLineF(event->pos(), gpsToPixels(node->gps)).length();
+                if (dist < minDist) {
+                    closest = node;
+                    minDist = dist;
+                }
+            }
+        }
+        if (closest != mClosestNode) {
+            mClosestNode = closest;
+            if (mClosestNode)
+                qDebug() << "closest node is" << mClosestNode->id;
+            update();
+        }
     }
 
     OSM::File mFile;
     OSM::Lookup mLookup;
+    OSM::RuleFile mRuleFile;
     int zoom;
     int magnification;
+    QSet<OSM::Way *> mHoverWays;
+    OSM::Node *mClosestNode;
+    QMap<QString,OSM::RuleFile::Area> mAreaByRuleID;
+    QMap<OSM::Way*,OSM::RuleFile::Area*> mWayToArea;
+    QMap<QString,OSM::RuleFile::Line> mLineByRuleID;
+    QMap<OSM::Way*,OSM::RuleFile::Line*> mWayToLine;
+    QMap<OSM::Relation*,OSM::RuleFile::Area*> mRelationToArea;
+    QMap<OSM::Relation*,OSM::RuleFile::Line*> mRelationToLine;
 };
 
 } // namespace WorldGen
@@ -966,7 +1136,22 @@ void WorldGenWindow::osm()
     QString dir = QLatin1String("C:\\Programming\\OpenStreetMap\\monav-data\\Vancouver");
 #endif
 
-    OpenStreetMapItem2 *item = new OpenStreetMapItem2(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm"));
+    OSM::Node n1; n1.id = 1;
+    OSM::Node n2; n2.id = 2;
+    OSM::Node n3; n3.id = 3;
+    OSM::Node n4; n4.id = 4;
+    OSM::Way w1; w1.id = 1; w1.nodes << &n2 << &n3;
+    OSM::Way w2; w2.id = 2; w2.nodes << &n1 << &n2;
+    OSM::Way w3; w3.id = 3; w3.nodes << &n3 << &n4;
+    QList<OSM::WayChain*> chains = OSM::File::makeChains(QList<OSM::Way*>() << &w1 << &w2 << &w3);
+    foreach (OSM::WayChain *chain, chains) chain->print(); qDeleteAll(chains);
+
+    w2.nodes.clear(); w2.nodes << &n2 << &n1;
+    chains = OSM::File::makeChains(QList<OSM::Way*>() << &w1 << &w2 << &w3);
+    foreach (OSM::WayChain *chain, chains) chain->print(); qDeleteAll(chains);
+//    return;
+
+    OpenStreetMapItem2 *item = new OpenStreetMapItem2(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver.osm"));
     ui->view->scene()->addItem(item);
     ui->view->scene()->setSceneRect(QRectF());
 }

@@ -12,6 +12,8 @@ class File;
 class Node;
 class Way;
 
+typedef unsigned long LookupCoordType;
+
 class QuadTreeObject
 {
 public:
@@ -21,30 +23,33 @@ public:
 
     }
 
+    bool contains(LookupCoordType x, LookupCoordType y);
+
     QuadTreeObject(Way *way);
 
     Node *node;
     Way *way;
-    unsigned int x, y, width, height;
+    LookupCoordType x, y, width, height;
 };
 
 class QuadTree {
 public:
-    QuadTree(unsigned int x, unsigned int y, unsigned int w, unsigned int h,
+    QuadTree(LookupCoordType x, LookupCoordType y, LookupCoordType w, LookupCoordType h,
              int level, int maxLevel);
 
     ~QuadTree();
 
     void AddObject(QuadTreeObject *object);
-    QList<QuadTreeObject *> GetObjectsAt(unsigned int x, unsigned int y,
-                                         unsigned int width, unsigned int height);
+    QList<QuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y,
+                                         LookupCoordType width, LookupCoordType height);
+    QList<QuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y);
     void Clear();
 
     int count();
     QList<QuadTree*> nonEmptyQuads();
 
 private:
-    unsigned int x, y, width, height;
+    LookupCoordType x, y, width, height;
     int level;
     int maxLevel;
     QVector<QuadTreeObject*> objects;
@@ -55,8 +60,9 @@ private:
     QuadTree *SW;
     QuadTree *SE;
 
-    bool contains(unsigned int x, unsigned int y,
-                  unsigned int width, unsigned int height);
+    bool contains(LookupCoordType x, LookupCoordType y,
+                  LookupCoordType width, LookupCoordType height);
+    bool contains(LookupCoordType x, LookupCoordType y);
     bool contains(QuadTree *child, QuadTreeObject *object);
 
 };
@@ -70,6 +76,7 @@ public:
     void fromFile(const File &file);
 
     QList<Way*> ways(const ProjectedCoordinate &min, const ProjectedCoordinate &max);
+    QList<Way*> ways(const ProjectedCoordinate &pc);
 
     QuadTree *mTree;
 };

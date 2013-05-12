@@ -1,5 +1,7 @@
 include(../../PZWorldEd.pri)
 
+INCLUDEPATH += ../editor
+
 TARGET = osm
 TEMPLATE = lib
 CONFIG += static
@@ -17,7 +19,8 @@ SOURCES += \
     plugins/osmimporter/osmimporter.cpp \
     plugins/osmrenderer/rendererbase.cpp \
     osmfile.cpp \
-    osmlookup.cpp
+    osmlookup.cpp \
+    osmrulefile.cpp
 
 HEADERS += \
     plugins/osmimporter/xmlreader.h \
@@ -27,7 +30,8 @@ HEADERS += \
     plugins/osmimporter/ientityreader.h \
     plugins/osmimporter/bz2input.h \
     osmfile.h \
-    osmlookup.h
+    osmlookup.h \
+    osmrulefile.h
 
 RESOURCES += \
     plugins/osmimporter/speedProfiles.qrc

@@ -1,0 +1,534 @@
+rule_id = [
+    AREA_PARK
+    AREA_CAMPSITE
+    AREA_NATURE
+    AREA_CEMETERY
+    AREA_RESIDENTIAL
+    AREA_BARRACKS
+    AREA_MILITARY
+    AREA_FIELD
+    AREA_DANGER_AREA
+    AREA_MEADOW
+    AREA_COMMON
+    AREA_FOREST
+    AREA_WATER
+    AREA_WOOD
+    AREA_RETAIL
+    AREA_INDUSTRIAL
+    AREA_PARKING
+    AREA_BUILDING
+    
+    AREA_COASTLINE
+    AREA_BEACH
+    
+    HW_PEDESTRIAN
+    HW_PATH
+    HW_FOOTWAY
+    HW_STEPS
+    HW_BRIDLEWAY
+    HW_CYCLEWAY
+    HW_PRIVATE
+    HW_UNSURFACED
+    HW_UNCLASSIFIED
+    HW_RESIDENTIAL
+    HW_LIVING_STREET
+    HW_SERVICE
+    HW_TERTIARY
+    HW_SECONDARY
+    HW_PRIMARY
+    HW_TRUNK
+    HW_MOTORWAY
+    
+    RW_RAIL
+    
+    WATERWAY
+    
+    PLACE_TOWN
+]
+
+colors
+{
+    WHITE = 0xff 0xff 0xff
+    GRAY_LIGHT = 196  196  196
+    BLACK = 0    0    0
+    C_ROAD_YELLOW = 253  253  179
+    B_ROAD_ORANGE = 253  214  164
+    A_ROAD_RED = 236  152  154
+    A_ROAD_GREEN = 168  218  168
+    MOTORWAY_BLUE = 126  126  200
+    WATER_BLUE = 0xb5 0xd0 0xd0
+    RAILWAY_BLACK = 100  100  100
+}
+
+
+line
+{
+    rule_id = HW_PRIMARY HW_PRIMARY
+    zoom = 6 11
+    color = A_ROAD_RED 
+    width = 2 
+}
+
+line
+{
+    rule_id = HW_TRUNK HW_TRUNK
+    zoom = 6 11
+    color = A_ROAD_GREEN 
+    width = 3 
+}
+
+line
+{
+    rule_id = HW_MOTORWAY HW_MOTORWAY
+    zoom = 6 11
+    color = MOTORWAY_BLUE 
+    width = 4 
+}
+
+
+line
+{
+    rule_id = HW_PATH HW_PATH
+    zoom = 12 20
+    color = BLACK GRAY_LIGHT
+    width = 2.5 2.2
+}
+
+line
+{
+    rule_id = HW_PEDESTRIAN HW_UNSURFACED
+    zoom = 12 20
+    color = BLACK GRAY_LIGHT
+    width = 3 2.7
+}
+
+line
+{
+    rule_id = HW_UNCLASSIFIED HW_SERVICE
+    zoom = 13 13
+    color = BLACK WHITE
+    width = 2 1.5
+}
+
+line
+{
+    rule_id = HW_UNCLASSIFIED HW_SERVICE
+    zoom = 14 14
+    color = BLACK WHITE
+    width = 3.5 2.5
+}
+
+line
+{
+    rule_id = HW_UNCLASSIFIED HW_SERVICE
+    zoom = 15 20
+    color = BLACK WHITE
+    width = 5 4
+}
+
+line
+{
+    rule_id = HW_TERTIARY HW_TERTIARY
+    zoom = 13 13
+    color = C_ROAD_YELLOW 
+    width = 3 
+}
+
+
+line
+{
+    rule_id = HW_SECONDARY HW_SECONDARY
+    zoom = 12 13
+    color = B_ROAD_ORANGE 
+    width = 3 
+}
+
+line
+{
+    rule_id = HW_PRIMARY HW_PRIMARY
+    zoom = 12 13
+    color = A_ROAD_RED 
+    width = 4 
+}
+
+line
+{
+    rule_id = HW_TRUNK HW_TRUNK
+    zoom = 12 13
+    color = A_ROAD_GREEN 
+    width = 5 
+}
+
+line
+{
+    rule_id = HW_MOTORWAY HW_MOTORWAY
+    zoom = 12 13
+    color = MOTORWAY_BLUE 
+    width = 5 
+}
+
+
+line
+{
+    rule_id = HW_TERTIARY HW_TERTIARY
+    zoom = 14 20
+    color = BLACK C_ROAD_YELLOW
+    width = 5 4
+}
+
+line
+{
+    rule_id = HW_SECONDARY HW_SECONDARY
+    zoom = 14 20
+    color = BLACK B_ROAD_ORANGE
+    width = 6 5
+}
+
+line
+{
+    rule_id = HW_PRIMARY HW_PRIMARY
+    zoom = 14 15
+    color = BLACK A_ROAD_RED
+    width = 8 7
+}
+
+line
+{
+    rule_id = HW_TRUNK HW_TRUNK
+    zoom = 14 15
+    color = BLACK A_ROAD_GREEN
+    width = 10 9
+}
+
+line
+{
+    rule_id = HW_MOTORWAY HW_MOTORWAY
+    zoom = 14 15
+    color = BLACK MOTORWAY_BLUE
+    width = 10 9
+}
+
+
+line
+{
+    rule_id = HW_PRIMARY HW_PRIMARY
+    zoom = 16 20
+    color = A_ROAD_RED BLACK
+    width = 7 1
+}
+
+line
+{
+    rule_id = HW_TRUNK HW_TRUNK
+    zoom = 16 20
+    color = A_ROAD_GREEN BLACK
+    width = 9 1
+}
+
+line
+{
+    rule_id = HW_MOTORWAY HW_MOTORWAY
+    zoom = 16 20
+    color = MOTORWAY_BLUE BLACK
+    width = 9 1
+}
+
+
+line
+{
+    rule_id = WATERWAY WATERWAY
+    zoom = 14 20
+    color = WATER_BLUE 
+    width = 4 
+}
+
+line
+{
+    rule_id = RW_RAIL RW_RAIL
+    zoom = 12 13
+    color = RAILWAY_BLACK 
+    width = 1 
+}
+
+line
+{
+    rule_id = RW_RAIL RW_RAIL
+    zoom = 14 20
+    color = RAILWAY_BLACK 
+    width = 2 
+}
+
+
+
+area
+{
+    rule_id = AREA_PARK
+    zoom = 6 20
+    color = 0xb6 0xfd 0xb6
+}
+
+area
+{
+    rule_id = AREA_CAMPSITE
+    zoom = 6 20
+    color = 0xcc 0xff 0x99
+}
+
+area
+{
+    rule_id = AREA_NATURE
+    zoom = 6 20
+    color = 6 6 6
+    color = 0xab 0xdf 0x96
+}
+
+area
+{
+    rule_id = AREA_CEMETERY
+    zoom = 6 20
+    color = 0xaa 0xcb 0xaf
+}
+
+area
+{
+    rule_id = AREA_RESIDENTIAL
+    zoom = 6 20
+    color = 220 220 220
+}
+
+area
+{
+    rule_id = AREA_BARRACKS
+    zoom = 6 20
+    color = 0xff 0x8f 0x8f
+}
+
+area
+{
+    rule_id = AREA_MILITARY
+    zoom = 6 20
+    color = 0xff 0xa8 0xa8
+}
+
+area
+{
+    rule_id = AREA_FIELD
+    zoom = 6 20
+    color = 0x66 0x66 0x00
+}
+
+area
+{
+    rule_id = AREA_DANGER_AREA
+    zoom = 6 20
+    color = 0xf6 0xa8 0xb6
+}
+
+area
+{
+    rule_id = AREA_MEADOW
+    zoom = 6 20
+    color = 0xcd 0xf6 0xc9
+}
+
+area
+{
+    rule_id = AREA_COMMON
+    zoom = 6 20
+    color = 0xcd 0xf6 0xc9
+}
+
+area
+{
+    rule_id = AREA_FOREST
+    zoom = 6 20
+    color = 0x8d 0xc5 0x6c
+}
+
+area
+{
+    rule_id = AREA_WOOD
+    zoom = 6 20
+    color = 0xae 0xd1 0xa0
+}
+
+area
+{
+    rule_id = AREA_WATER
+    zoom = 6 20
+    color = WATER_BLUE  
+}
+
+area
+{
+    rule_id = AREA_RETAIL
+    zoom = 6 20
+    color = 0xde 0xd1 0xd5
+}
+
+area
+{
+    rule_id = AREA_PARKING
+    zoom = 6 20
+    color = 0xf7 0xef 0xb7
+}
+
+area
+{
+    rule_id = AREA_INDUSTRIAL
+    zoom = 6 20
+    color = 0xdf 0xd1 0xd6
+}
+
+area
+{
+    rule_id = AREA_BUILDING
+    zoom = 6 20
+    color = 0xbc 0xa9 0xa9
+}
+
+area
+{
+    rule_id = AREA_COASTLINE
+    zoom = 6 20
+    color = 232 232 232
+}
+
+area
+{
+    rule_id = AREA_BEACH
+    zoom = 6 20
+    color = 255 255 150
+}
+
+
+
+
+way_kv_to_rule
+{
+    osm_key = waterway
+    stream = WATERWAY
+    river = WATERWAY
+    canal = WATERWAY
+    ditch = WATERWAY
+    drain = WATERWAY
+    riverbank = AREA_WATER
+}
+
+way_kv_to_rule
+{
+    osm_key = railway
+    rail = RW_RAIL
+    light_rail = RW_RAIL
+    narrow_gauge = RW_RAIL
+    tram = RW_RAIL
+    monorail = RW_RAIL
+    subway = RW_RAIL
+    preserved = RW_RAIL
+}
+
+way_kv_to_rule
+{
+    osm_key = landuse
+    vineyard = AREA_NATURE
+    cemetery = AREA_CEMETERY
+    grave_yard = AREA_CEMETERY
+    residential = AREA_RESIDENTIAL
+    military = AREA_MILITARY
+    field = AREA_FIELD
+    meadow = AREA_MEADOW
+    grass = AREA_MEADOW
+    conservation = AREA_COMMON
+    recreation_ground = AREA_COMMON
+    forest = AREA_FOREST
+    wood = AREA_WOOD
+    retail = AREA_RETAIL
+    commercial = AREA_RETAIL
+    industrial = AREA_INDUSTRIAL
+    railway = AREA_INDUSTRIAL
+}
+
+way_kv_to_rule
+{
+    osm_key = leisure
+    common = AREA_COMMON
+    garden = AREA_COMMON
+    pitch = AREA_COMMON
+    park = AREA_PARK
+    nature_reserve = AREA_NATURE
+}
+
+way_kv_to_rule
+{
+    osm_key = amenity
+    parking = AREA_PARKING
+}
+
+way_kv_to_rule
+{
+    osm_key = tourism
+    camp_site = AREA_CAMPSITE
+    attraction = AREA_CAMPSITE
+    picnic_site = AREA_CAMPSITE
+}
+
+way_kv_to_rule
+{
+    osm_key = military
+    barracks = AREA_BARRACKS
+    danger_area = AREA_DANGER_AREA
+}
+
+way_kv_to_rule
+{
+    osm_key = natural
+    wood = AREA_WOOD
+    water = AREA_WATER
+    heath = AREA_COMMON
+    field = AREA_FIELD
+    
+    coastline = AREA_COASTLINE
+    beach = AREA_BEACH
+}
+
+way_kv_to_rule
+{
+    osm_key = building
+    yes = AREA_BUILDING
+}
+
+way_kv_to_rule
+{
+    osm_key = highway
+    pedestrian = HW_PEDESTRIAN
+    path = HW_PATH
+    footway = HW_FOOTWAY
+    steps = HW_STEPS
+    bridleway = HW_BRIDLEWAY
+    cycleway = HW_CYCLEWAY
+    private = HW_PRIVATE
+    unsurfaced = HW_UNSURFACED
+    unclassified = HW_UNCLASSIFIED
+    residential = HW_RESIDENTIAL
+    living_street = HW_LIVING_STREET
+    service = HW_SERVICE
+    tertiary = HW_TERTIARY
+    tertiary_link = HW_TERTIARY
+    secondary = HW_SECONDARY
+    secondary_link = HW_SECONDARY
+    primary = HW_PRIMARY
+    primary_link = HW_PRIMARY
+    trunk = HW_TRUNK
+    trunk_link = HW_TRUNK
+    motorway = HW_MOTORWAY
+    motorway_link = HW_MOTORWAY
+}
+
+way_kv_to_rule
+{
+    osm_key = tracktype
+    grade1 = HW_SERVICE
+    grade2 = HW_UNSURFACED
+    grade3 = HW_PATH
+}
+

@@ -16,7 +16,8 @@ Lookup::~Lookup()
     delete mTree;
 }
 
-#define FUDGE 10e10
+#define FUDGE 10e6
+#define QTREE_DEPTH 6
 
 class LookupCoordinate
 {
@@ -38,7 +39,7 @@ public:
         y = pc.y * FUDGE;
     }
 
-    unsigned int x, y;
+    LookupCoordType x, y;
 };
 
 void Lookup::fromFile(const File &file)
@@ -47,10 +48,19 @@ void Lookup::fromFile(const File &file)
     LookupCoordinate topRight(file.maxGPS());
 
     Q_ASSERT(bottomLeft.x <= topRight.x && topRight.y <= bottomLeft.y);
-    mTree = new QuadTree(bottomLeft.x, topRight.y, topRight.x - bottomLeft.x, bottomLeft.y - topRight.y, 0, 4);
+    mTree = new QuadTree(bottomLeft.x, topRight.y,
+                         topRight.x - bottomLeft.x,
+                         bottomLeft.y - topRight.y,
+                         0, QTREE_DEPTH);
 
-    foreach (Way *way, file.ways())
+    foreach (Way *way, file.coastlines())
         mTree->AddObject(new QuadTreeObject(way));
+
+    foreach (Way *way, file.ways()) {
+        if (way->ignore)
+            continue; // coastline
+        mTree->AddObject(new QuadTreeObject(way));
+    }
 
     {
     int max = 0;
@@ -72,6 +82,16 @@ QList<Way *> Lookup::ways(const ProjectedCoordinate &min, const ProjectedCoordin
     return ways;
 }
 
+QList<Way *> Lookup::ways(const ProjectedCoordinate &pc)
+{
+    LookupCoordinate lc(pc);
+
+    QList<Way*> ways;
+    foreach (QuadTreeObject *qto, mTree->GetObjectsAt(lc.x, lc.y))
+        ways += qto->way;
+    return ways;
+}
+
 /////
 
 QuadTreeObject::QuadTreeObject(Way *way) :
@@ -83,10 +103,26 @@ QuadTreeObject::QuadTreeObject(Way *way) :
     height = LookupCoordinate(way->minGPS).y - y;
 }
 
+#include <QPolygonF>
+bool QuadTreeObject::contains(LookupCoordType x, LookupCoordType y)
+{
+    if (x >= this->x && x < this->x + this->width
+            && y >= this->y && y < this->y + this->height) {
+        if (way->nodes.size() < 2 || !way->polygon)
+            return true;
+        QPolygonF pf;
+        foreach (Node *node, way->nodes)
+            pf += QPointF(node->pc.x * FUDGE, node->pc.y * FUDGE);
+        return pf.containsPoint(QPointF(x, y), Qt::WindingFill);
+    }
+    return false;
+}
+
+
 /////
 
-QuadTree::QuadTree(unsigned int _x, unsigned int _y,
-                   unsigned int _width, unsigned int _height,
+QuadTree::QuadTree(LookupCoordType _x, LookupCoordType _y,
+                   LookupCoordType _width, LookupCoordType _height,
                    int _level, int _maxLevel) :
     x		(_x),
     y		(_y),
@@ -101,8 +137,8 @@ QuadTree::QuadTree(unsigned int _x, unsigned int _y,
 
     NW = new QuadTree(x, y, width / 2, height / 2, level+1, maxLevel);
     NE = new QuadTree(x + width / 2, y, width - width / 2, height / 2, level+1, maxLevel);
-    SW = new QuadTree(x, y + height / 2, width / 2, height / 2, level+1, maxLevel);
-    SE = new QuadTree(x + width / 2, y + height / 2, width / 2, height / 2, level+1, maxLevel);
+    SW = new QuadTree(x, y + height / 2, width / 2, height - height / 2, level+1, maxLevel);
+    SE = new QuadTree(x + width / 2, y + height / 2, width - width / 2, height - height / 2, level+1, maxLevel);
 }
 
 QuadTree::~QuadTree()
@@ -136,8 +172,8 @@ void QuadTree::AddObject(QuadTreeObject *object) {
     }
 }
 
-QList<QuadTreeObject *> QuadTree::GetObjectsAt(unsigned int x, unsigned int y,
-                                               unsigned int width, unsigned int height)
+QList<QuadTreeObject *> QuadTree::GetObjectsAt(LookupCoordType x, LookupCoordType y,
+                                               LookupCoordType width, LookupCoordType height)
 {
     QList<QuadTreeObject*> ret;
     if (level == maxLevel)
@@ -151,6 +187,29 @@ QList<QuadTreeObject *> QuadTree::GetObjectsAt(unsigned int x, unsigned int y,
         ret += SW->GetObjectsAt(x, y, width, height);
     if (SE->contains(x, y, width, height))
         ret += SE->GetObjectsAt(x, y, width, height);
+
+    return ret.toSet().toList();
+}
+
+QList<QuadTreeObject *> QuadTree::GetObjectsAt(LookupCoordType x, LookupCoordType y)
+{
+    QList<QuadTreeObject*> ret;
+    if (level == maxLevel) {
+        foreach (QuadTreeObject *qto, objects) {
+            if (qto->contains(x, y))
+                ret += qto;
+        }
+        return ret;
+    }
+
+    if (NW->contains(x, y))
+        ret += NW->GetObjectsAt(x, y);
+    if (NE->contains(x, y))
+        ret += NE->GetObjectsAt(x, y);
+    if (SW->contains(x, y))
+        ret += SW->GetObjectsAt(x, y);
+    if (SE->contains(x, y))
+        ret += SE->GetObjectsAt(x, y);
 
     return ret.toSet().toList();
 }
@@ -172,8 +231,7 @@ void QuadTree::Clear() {
 }
 
 bool QuadTree::contains(QuadTree *child, QuadTreeObject *object) {
-    return QRect(child->x, child->y, child->width, child->height)
-            .intersects(QRect(object->x,object->y,object->width,object->height));
+    return child->contains(object->x,object->y,object->width,object->height);
 }
 
 int QuadTree::count()
@@ -192,8 +250,15 @@ QList<QuadTree *> QuadTree::nonEmptyQuads()
 }
 
 
-bool QuadTree::contains(unsigned int x, unsigned int y, unsigned int width, unsigned int height)
+bool QuadTree::contains(LookupCoordType x, LookupCoordType y,
+                        LookupCoordType width, LookupCoordType height)
 {
-    return x + width >= this->x && x < this->x + this->width &&
-            y + height >= this->y && y < this->y + this->height;
+    return (x + width > this->x) && (x < this->x + this->width) &&
+            (y + height > this->y) && (y < this->y + this->height);
+}
+
+bool QuadTree::contains(LookupCoordType x, LookupCoordType y)
+{
+    return (x >= this->x) && (x < this->x + this->width) &&
+            (y >= this->y) && (y < this->y + this->height);
 }
