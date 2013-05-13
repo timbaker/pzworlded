@@ -23,6 +23,7 @@
 #include "documentmanager.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
+#include "path.h"
 #include "preferences.h"
 #include "scenetools.h"
 #include "toolmanager.h"
@@ -275,6 +276,19 @@ QList<WorldBMP *> WorldScene::bmpsInRect(const QRectF &cellRect)
             result += bmpItem->bmp();
     }
     return result;
+}
+
+QPointF WorldScene::worldToScene(const QPointF &worldPos)
+{
+    return cellToPixelCoords(QPointF(worldPos) / 300.0);
+}
+
+QPolygonF WorldScene::worldToScene(const QPolygonF &worldPoly)
+{
+    QPolygonF scenePoly;
+    foreach (QPointF worldPos, worldPoly)
+        scenePoly += worldToScene(worldPos);
+    return scenePoly;
 }
 
 void WorldScene::pasteCellsFromClipboard()
@@ -1249,6 +1263,19 @@ void WorldGridItem::paint(QPainter *painter,
         const QPointF end = mScene->cellToPixelCoords(x, (qreal)endY);
         painter->drawLine(start, end);
     }
+
+#if 1
+    WorldPath::Rect bounds = option->exposedRect;
+    foreach (WorldPath::Layer *layer, mScene->world()->layers()) {
+        foreach (WorldPath::Path *path, layer->paths(bounds)) {
+            QPolygonF pf = path->polygon();
+            if (path->isClosed())
+                painter->drawPolygon(mScene->worldToScene(pf/*, mLayer->level()*/));
+            else
+                painter->drawPolyline(mScene->worldToScene(pf/*, mLayer->level()*/));
+        }
+    }
+#endif
 }
 
 void WorldGridItem::updateBoundingRect()

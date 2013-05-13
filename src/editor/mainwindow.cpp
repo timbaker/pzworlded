@@ -358,6 +358,8 @@ void MainWindow::retranslateUi()
     setWindowTitle(tr("PZWorldEd"));
 }
 
+#include "path.h"
+#include "osmfile.h"
 void MainWindow::newWorld()
 {
     NewWorldDialog dialog(this);
@@ -366,6 +368,46 @@ void MainWindow::newWorld()
     QSize size = dialog.worldSize();
 
     World *newWorld = new World(size.width(), size.height());
+
+#if 1
+    OSM::File osm;
+    QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
+    if (osm.read(f)) {
+        WorldPath::Layer *pathLayer = new WorldPath::Layer();
+        int i = 0;
+        int zoom = 15;
+        int TILE_SIZE = 512;
+        int worldGridX1 = qFloor(osm.minProjected().x * (1U << zoom)) * TILE_SIZE;
+        int worldGridY1 = qFloor(osm.minProjected().y * (1U << zoom)) * TILE_SIZE;
+        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+
+        foreach (OSM::Node *n, osm.nodes())
+            pathLayer->insertNode(i++, new WorldPath::Node(n->id,
+                                                           n->pc.x * worldInPixels - worldGridX1,
+                                                           n->pc.y * worldInPixels - worldGridY1));
+
+        i = 0;
+        foreach (OSM::Way *w, osm.ways()) {
+            WorldPath::Path *path = new WorldPath::Path(w->id);
+            int j = 0;
+            foreach (OSM::Node *nd, w->nodes)
+                path->insertNode(j++, pathLayer->node(nd->id));
+            pathLayer->insertPath(i++, path);
+        }
+        newWorld->insertLayer(0, pathLayer);
+    }
+#else
+    WorldPath::Node *n1 = new WorldPath::Node(1, 10, 10);
+    WorldPath::Node *n2 = new WorldPath::Node(2, 10, 20);
+    WorldPath::Node *n3 = new WorldPath::Node(3, 20, 20);
+    WorldPath::Path *p1 = new WorldPath::Path(1);
+    p1->insertNode(0, n1); p1->insertNode(1, n2); p1->insertNode(2, n3);
+    WorldPath::Layer *pathLayer = new WorldPath::Layer();
+    pathLayer->insertNode(0, n1); pathLayer->insertNode(1, n2); pathLayer->insertNode(2, n3);
+    pathLayer->insertPath(0, p1);
+    newWorld->insertLayer(0, pathLayer);
+#endif
+
     WorldDocument *newDoc = new WorldDocument(newWorld);
     docman()->addDocument(newDoc);
 }

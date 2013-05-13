@@ -30,6 +30,10 @@ class WorldObjectGroup;
 class ObjectType;
 class WorldCell;
 
+namespace WorldPath {
+class Layer;
+}
+
 class ObjectGroupList : public QList<WorldObjectGroup*>
 {
 public:
@@ -225,6 +229,13 @@ public:
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
+    void insertLayer(int index, WorldPath::Layer *layer);
+    WorldPath::Layer *removeLayer(int index);
+    const QList<WorldPath::Layer*> &layers() const
+    { return mLayers; }
+    WorldPath::Layer *layerAt(int index);
+    int layerCount() const;
+
 private:
     int mWidth;
     int mHeight;
@@ -239,6 +250,7 @@ private:
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
+    QList<WorldPath::Layer*> mLayers;
 };
 
 #endif // WORLD_H

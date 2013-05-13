@@ -403,6 +403,9 @@ public:
 
     QList<WorldBMP*> bmpsInRect(const QRectF &cellRect);
 
+    QPointF worldToScene(const QPointF &worldPos);
+    QPolygonF worldToScene(const QPolygonF &worldPoly);
+
     void pasteCellsFromClipboard();
 
 signals:

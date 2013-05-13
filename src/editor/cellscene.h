@@ -46,6 +46,11 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
+namespace WorldPath {
+class Layer;
+class Path;
+}
+
 namespace Tiled {
 class MapRenderer;
 class Layer;
@@ -315,6 +320,23 @@ private:
     QRectF mBoundingRect;
 };
 
+/**
+ * Represents a path Layer whose child items are the paths in the layer.
+ */
+class PathLayerItem : public QGraphicsItem
+{
+public:
+    PathLayerItem(WorldPath::Layer *layer, CellScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
+
+private:
+    WorldPath::Layer *mLayer;
+    CellScene *mScene;
+};
+
+
 class CellScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -513,6 +535,8 @@ private:
     QList<CompositeLayerGroupItem*> mPendingGroupItems;
 
     BaseCellSceneTool *mActiveTool;
+
+    QList<PathLayerItem*> mPathLayerItems;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

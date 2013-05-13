@@ -22,6 +22,15 @@
 
 #include <QFileDialog>
 
+#ifdef Q_OS_WIN
+// Hmmmm.  libtiled.dll defines the Properties class as so:
+// class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QMap<QString, QString>;
+#endif
+
 using namespace WorldGen;
 
 WorldGenWindow *WorldGenWindow::mInstance = 0;
@@ -84,6 +93,51 @@ void WorldGenWindow::open()
 #include <QMultiMap>
 
 namespace WorldGen {
+
+class GridItem : public QGraphicsItem
+{
+public:
+    GridItem(int x, int y, int w, int h, int gw, int gh) :
+        QGraphicsItem(),
+        x(x), y(y), w(w), h(h), gw(gw), gh(gh)
+    {
+//        setTransformOriginPoint(x, y);
+    }
+
+    QRectF boundingRect() const
+    {
+        return QRectF(x, y, w * gw, h * gh);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
+    {
+        QPen pen(QColor(128,128,128,128), 1);
+        painter->setPen(pen);
+
+        for (int y = 0; y <= h * gh; y += gh)
+            painter->drawLine(x, this->y + y, x + w * gw, this->y + y);
+        for (int x = 0; x <= w * gw; x += gw)
+            painter->drawLine(this->x + x, this->y, this->x + x, this->y + h * gh);
+    }
+
+    QPointF nearestGridPoint(const QPointF &scenePos, bool local = false)
+    {
+        QPointF localP = mapFromScene(scenePos);
+        int x = localP.x() - this->x;
+        int y = localP.y() - this->y;
+        x = (x + gw / 2) / gw;
+        y = (y + gh / 2) / gh;
+        QPointF gridPt(this->x + x * gw, this->y + y * gh);
+        return local ? gridPt : mapToScene(gridPt);
+    }
+
+    bool containsScenePt(const QPointF &pt)
+    {
+        return QRectF(x, y, w * gw, h * gh).contains(mapFromScene(pt));
+    }
+
+    int x, y, w, h, gw, gh;
+};
 
 class OpenStreetMapItem2 : public QGraphicsItem
 {
@@ -444,4 +498,7 @@ void WorldGenWindow::osm()
     OpenStreetMapItem2 *item = new OpenStreetMapItem2(QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm"));
     ui->view->scene()->addItem(item);
     ui->view->scene()->setSceneRect(QRectF());
+
+    GridItem *gridItem = new GridItem(0, 0, item->boundingRect().width() / 300, item->boundingRect().height() / 300, 300, 300);
+    ui->view->scene()->addItem(gridItem);
 }

@@ -155,6 +155,9 @@ public:
 
     bool read(const QString &fileName);
 
+    const QList<Node*> &nodes() const
+    { return mNodes; }
+
     const QList<Way*> &ways() const
     { return mWays; }
 

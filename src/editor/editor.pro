@@ -115,7 +115,8 @@ SOURCES += main.cpp\
     lotpackwindow.cpp \
     chunkmap.cpp \
     fromtodialog.cpp \
-    unknowncolorsdialog.cpp
+    unknowncolorsdialog.cpp \
+    path.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -187,7 +188,8 @@ HEADERS  += mainwindow.h \
     lotpackwindow.h \
     chunkmap.h \
     fromtodialog.h \
-    unknowncolorsdialog.h
+    unknowncolorsdialog.h \
+    path.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

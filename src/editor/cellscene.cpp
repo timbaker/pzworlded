@@ -23,6 +23,7 @@
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
+#include "path.h"
 #include "preferences.h"
 #include "progress.h"
 #include "scenetools.h"
@@ -1330,6 +1331,7 @@ void CellScene::loadMap()
         mSubMapItems.clear();
         mSelectedSubMapItems.clear();
         mRoadItems.clear();
+        mPathLayerItems.clear();
 
         // mMap, mMapInfo are shared, don't destroy
         mMap = 0;
@@ -1395,6 +1397,12 @@ void CellScene::loadMap()
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
         mRoadItems += item;
+    }
+
+    foreach (WorldPath::Layer *layer, world()->layers()) {
+        PathLayerItem *item = new PathLayerItem(layer, this);
+        addItem(item);
+        mLayerItems += item;
     }
 
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
@@ -2361,5 +2369,37 @@ void CellScene::mapFailedToLoad(MapInfo *mapInfo)
             mSubMapsLoading.removeAt(i);
             --i;
         }
+    }
+}
+
+/////
+
+PathLayerItem::PathLayerItem(WorldPath::Layer *layer, CellScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mLayer(layer),
+    mScene(scene)
+{
+    setFlag(ItemUsesExtendedStyleOption);
+}
+
+QRectF PathLayerItem::boundingRect() const
+{
+    return mScene->renderer()->boundingRect(QRect(0, 0, 300, 300), mLayer->mLevel);
+}
+
+void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
+{
+    WorldPath::Rect bounds = option->exposedRect
+            .translated(mScene->cell()->x() * 300,
+                        mScene->cell()->y() * 300);
+    foreach (WorldPath::Path *path, mLayer->paths(bounds)) {
+        QPolygonF pf = path->polygon().translated(-mScene->cell()->x() * 300,
+                                                  -mScene->cell()->y() * 300);
+        if (path->isClosed())
+            painter->drawPolygon(mScene->renderer()->tileToPixelCoords(
+                                     pf, mLayer->level()));
+        else
+            painter->drawPolyline(mScene->renderer()->tileToPixelCoords(
+                                      pf, mLayer->level()));
     }
 }

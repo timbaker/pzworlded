@@ -50,6 +50,7 @@ World::~World()
     qDeleteAll(mPropertyDefs);
     qDeleteAll(mObjectTypes);
     qDeleteAll(mBMPs);
+    qDeleteAll(mLayers);
 }
 
 void World::swapCells(QVector<WorldCell *> &cells)
@@ -106,6 +107,26 @@ void World::insertBmp(int index, WorldBMP *bmp)
 WorldBMP *World::removeBmp(int index)
 {
     return mBMPs.takeAt(index);
+}
+
+void World::insertLayer(int index, WorldPath::Layer *layer)
+{
+    mLayers.insert(index, layer);
+}
+
+WorldPath::Layer *World::removeLayer(int index)
+{
+    return mLayers.takeAt(index);
+}
+
+WorldPath::Layer *World::layerAt(int index)
+{
+    return mLayers.at(index);
+}
+
+int World::layerCount() const
+{
+    return mLayers.size();
 }
 
 /////

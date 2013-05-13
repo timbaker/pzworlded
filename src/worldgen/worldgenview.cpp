@@ -429,6 +429,7 @@ bool WorldGenScene::LoadFile(const QString &fileName)
 
 void WorldGenScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    return;
     if (event->button() == Qt::LeftButton) {
         QPointF start = event->scenePos();
         qreal angle = 0; //qrand() % 360;
@@ -962,7 +963,7 @@ void WorldGenView::mouseMoveEvent(QMouseEvent *event)
     mLastMouseGlobalPos = event->globalPos();
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 
-    qDebug() << "WorldGenView::mouseMoveEvent" << mLastMouseScenePos;
+//    qDebug() << "WorldGenView::mouseMoveEvent" << mLastMouseScenePos;
 }
 
 void WorldGenView::adjustScale(qreal scale)
