@@ -1,7 +1,7 @@
 #ifndef OSMLOOKUP_H
 #define OSMLOOKUP_H
 
-#include "utils/coordinates.h"
+#include "coordinates.h"
 
 #include <QHash>
 #include <QRect>

@@ -228,10 +228,7 @@ bool File::readRelation(QXmlStreamReader &xml)
                     if (v == QLatin1String("boundary"))
                         relation->type = Relation::Boundary;
                     else if (v == QLatin1String("multipolygon")) {
-                        if (!atts.value(QLatin1String("boundary")).isEmpty()) // GERMANY
-                            relation->type = Relation::Boundary;
-                        else
-                            relation->type = Relation::MultiPolygon;
+                        relation->type = Relation::MultiPolygon;
                     } else if (v == QLatin1String("restriction"))
                         relation->type = Relation::Restriction;
                     else if (v == QLatin1String("route"))

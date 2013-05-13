@@ -1,7 +1,7 @@
 #ifndef OSMFILE_H
 #define OSMFILE_H
 
-#include "utils/coordinates.h"
+#include "coordinates.h"
 
 #include <QMap>
 #include <QPolygon>
