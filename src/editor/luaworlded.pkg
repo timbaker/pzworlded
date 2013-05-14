@@ -1,0 +1,9 @@
+$#include "luaworlded.h"
+
+class LuaPath @ Path
+{
+    LuaRegion region();
+};
+
+QPolygonF strokePath(LuaPath *path, qreal thickness);
+LuaRegion polygonRegion(QPolygonF polygon);

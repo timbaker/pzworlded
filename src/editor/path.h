@@ -21,6 +21,7 @@
 #include <QList>
 #include <QMap>
 #include <QRectF>
+#include <QRegion>
 #include <QPolygonF>
 #include <QString>
 
@@ -72,13 +73,18 @@ public:
     Rect bounds();
     Polygon polygon();
 
+    QRegion region();
+
     id_t id;
     QList<Node*> nodes;
-    QList<Tag> tags;
+    QMap<QString,QString> tags;
 
     Rect mBounds;
     Polygon mPolygon;
 };
+
+QPolygonF strokePath(Path *path, qreal thickness);
+QRegion polygonRegion(const QPolygonF &poly);
 
 class Layer
 {

@@ -146,6 +146,7 @@ tolua_lerror:
 
 LuaScript::LuaScript(Map *map) :
     mMap(map),
+    mPath(0),
     L(0)
 {
 }
@@ -213,6 +214,11 @@ bool LuaScript::dofile(const QString &f, QString &output)
     tolua_pushusertype(L, &mMap, "LuaMap");
     lua_setglobal(L, "map");
 
+    if (mPath) {
+        tolua_pushusertype(L, mPath, "LuaPath");
+        lua_setglobal(L, "path");
+    }
+
     int status = luaL_loadfile(L, cstring(f));
     if (status == LUA_OK) {
         int base = lua_gettop(L);
@@ -233,14 +239,16 @@ bool LuaScript::dofile(const QString &f, QString &output)
 
 LuaLayer::LuaLayer() :
     mClone(0),
-    mOrig(0)
+    mOrig(0),
+    mMap(0)
 {
 }
 
-LuaLayer::LuaLayer(Layer *orig) :
+LuaLayer::LuaLayer(Layer *orig, LuaMap *map) :
     mClone(0),
     mOrig(orig),
-    mName(orig->name())
+    mName(orig->name()),
+    mMap(map)
 {
 }
 
@@ -272,17 +280,15 @@ void LuaLayer::cloned()
 
 /////
 
-LuaTileLayer::LuaTileLayer(TileLayer *orig) :
-    LuaLayer(orig),
-    mCloneTileLayer(0),
-    mMap(0)
+LuaTileLayer::LuaTileLayer(TileLayer *orig, LuaMap *map) :
+    LuaLayer(orig, map),
+    mCloneTileLayer(0)
 {
 }
 
 LuaTileLayer::LuaTileLayer(const char *name, int x, int y, int width, int height) :
     LuaLayer(),
-    mCloneTileLayer(new TileLayer(QString::fromLatin1(name), x, y, width, height)),
-    mMap(0)
+    mCloneTileLayer(new TileLayer(QString::fromLatin1(name), x, y, width, height))
 {
     mName = mCloneTileLayer->name();
     mClone = mCloneTileLayer;
@@ -307,11 +313,12 @@ int LuaTileLayer::level()
 
 void LuaTileLayer::setTile(int x, int y, Tile *tile)
 {
+#if 0
     // Forbid changing tiles outside the current tile selection.
     // See the PaintTileLayer undo command.
     if (mMap && !mMap->mSelection.isEmpty() && !mMap->mSelection.contains(QPoint(x, y)))
         return;
-
+#endif
     initClone();
     if (!mCloneTileLayer->contains(x, y))
         return; // TODO: lua error!
@@ -383,6 +390,16 @@ void LuaTileLayer::fill(LuaRegion &rgn, Tile *tile)
     }
 }
 
+#include "luaworlded.h"
+#include "path.h"
+void LuaTileLayer::fill(LuaPath *path, Tile *tile)
+{;
+    QPolygonF polygon = path->mPath->polygon();
+    QRegion region = WorldPath::polygonRegion(polygon);
+    region.translate(polygon.boundingRect().toAlignedRect().topLeft() - mMap->mCellPos * 300);
+    fill(LuaRegion(region), tile);
+}
+
 void LuaTileLayer::fill(Tile *tile)
 {
     fill(mClone ? mClone->bounds() : mOrig->bounds(), tile);
@@ -412,11 +429,11 @@ LuaMap::LuaMap(Map *orig) :
 {
     foreach (Layer *layer, orig->layers()) {
         if (TileLayer *tl = layer->asTileLayer())
-            mLayers += new LuaTileLayer(tl);
+            mLayers += new LuaTileLayer(tl, this);
         else if (ObjectGroup *og = layer->asObjectGroup())
-            mLayers+= new LuaObjectGroup(og);
+            mLayers+= new LuaObjectGroup(og, this);
         else
-            mLayers += new LuaLayer(layer);
+            mLayers += new LuaLayer(layer, this);
         mLayerByName[layer->name()] = mLayers.last(); // could be duplicates & empty names
 //        mClone->addLayer(layer);
     }
@@ -523,12 +540,13 @@ LuaTileLayer *LuaMap::newTileLayer(const char *name)
 
 void LuaMap::addLayer(LuaLayer *layer)
 {
-    if (mLayers.contains(layer))
+    if (mLayers.contains(layer) || layer->mMap)
         return; // error!
 
     if (mRemovedLayers.contains(layer))
         mRemovedLayers.removeAll(layer);
     mLayers += layer;
+    layer->mMap = this;
 //    mClone->addLayer(layer->mClone ? layer->mClone : layer->mOrig);
 
     mLayerByName.clear(); // FIXME: make more efficient
@@ -538,7 +556,7 @@ void LuaMap::addLayer(LuaLayer *layer)
 
 void LuaMap::insertLayer(int index, LuaLayer *layer)
 {
-    if (mLayers.contains(layer))
+    if (mLayers.contains(layer) || layer->mMap)
         return; // error!
 
     if (mRemovedLayers.contains(layer))
@@ -546,6 +564,7 @@ void LuaMap::insertLayer(int index, LuaLayer *layer)
 
     index = qBound(0, index, mLayers.size());
     mLayers.insert(index, layer);
+    layer->mMap = this;
 //    mClone->insertLayer(index, layer->mClone ? layer->mClone : layer->mOrig);
 
     mLayerByName.clear(); // FIXME: make more efficient
@@ -559,6 +578,7 @@ void LuaMap::removeLayer(int index)
         return; // error!
     LuaLayer *layer = mLayers.takeAt(index);
     mRemovedLayers += layer;
+    layer->mMap = 0;
 //    mClone->takeLayerAt(index);
 
     mLayerByName.clear(); // FIXME: make more efficient
@@ -873,8 +893,8 @@ QRect LuaMapObject::bounds()
 
 /////
 
-LuaObjectGroup::LuaObjectGroup(ObjectGroup *orig) :
-    LuaLayer(orig),
+LuaObjectGroup::LuaObjectGroup(ObjectGroup *orig, LuaMap *map) :
+    LuaLayer(orig, map),
     mCloneObjectGroup(0),
     mOrig(orig),
     mColor(orig->color())

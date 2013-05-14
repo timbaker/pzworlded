@@ -45,6 +45,7 @@ namespace Lua {
 
 class LuaMap;
 class LuaObjectGroup;
+class LuaPath;
 class LuaTileLayer;
 
 class LuaColor
@@ -91,7 +92,7 @@ class LuaLayer
 {
 public:
     LuaLayer();
-    LuaLayer(Layer *orig);
+    LuaLayer(Layer *orig, LuaMap *map = 0);
     virtual ~LuaLayer();
 
     const char *name();
@@ -107,12 +108,13 @@ public:
     Layer *mClone;
     Layer *mOrig;
     QString mName;
+    LuaMap *mMap;
 };
 
 class LuaTileLayer : public LuaLayer
 {
 public:
-    LuaTileLayer(TileLayer *orig);
+    LuaTileLayer(TileLayer *orig, LuaMap *map = 0);
     LuaTileLayer(const char *name, int x, int y, int width, int height);
     ~LuaTileLayer();
 
@@ -136,13 +138,13 @@ public:
     void fill(int x, int y, int width, int height, Tile *tile);
     void fill(QRect &r, Tile *tile);
     void fill(LuaRegion &rgn, Tile *tile);
+    void fill(LuaPath *path, Tile *tile);
     void fill(Tile *tile);
 
     void replaceTile(Tile *oldTile, Tile *newTile);
 
     TileLayer *mCloneTileLayer;
     QRegion mAltered;
-    LuaMap *mMap;
 };
 
 
@@ -164,7 +166,7 @@ public:
 class LuaObjectGroup : public LuaLayer
 {
 public:
-    LuaObjectGroup(ObjectGroup *orig);
+    LuaObjectGroup(ObjectGroup *orig, LuaMap *map);
     LuaObjectGroup(const char *name, int x, int y, int width, int height);
     ~LuaObjectGroup();
 
@@ -349,7 +351,11 @@ public:
     QMap<QString,LuaBmpRule*> mRuleByName;
 
     QList<LuaBmpBlend*> mBlends;
+
+    QPoint mCellPos;
 };
+
+class LuaPath;
 
 class LuaScript
 {
@@ -362,6 +368,7 @@ public:
 
     lua_State *L;
     LuaMap mMap;
+    LuaPath *mPath;
 };
 
 extern LuaColor Lua_rgb(int r, int g, int b);

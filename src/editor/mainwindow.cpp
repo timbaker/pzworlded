@@ -78,6 +78,15 @@
 #include <QUndoGroup>
 #include <QUndoStack>
 
+#ifdef Q_OS_WIN
+// Hmmmm.  libtiled.dll defines the Properties class as so:
+// class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QMap<QString, QString>;
+#endif
+
 using namespace Tiled;
 using namespace Tiled::Internal;
 
@@ -377,7 +386,7 @@ void MainWindow::newWorld()
         WorldPath::Layer *pathLayer = new WorldPath::Layer();
         int i = 0;
         int zoom = 15;
-        int TILE_SIZE = 512;
+        int TILE_SIZE = 512 + 64;
         int worldGridX1 = qFloor(osm.minProjected().x * (1U << zoom)) * TILE_SIZE;
         int worldGridY1 = qFloor(osm.minProjected().y * (1U << zoom)) * TILE_SIZE;
         double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
@@ -390,6 +399,7 @@ void MainWindow::newWorld()
         i = 0;
         foreach (OSM::Way *w, osm.ways()) {
             WorldPath::Path *path = new WorldPath::Path(w->id);
+            path->tags = w->tags;
             int j = 0;
             foreach (OSM::Node *nd, w->nodes)
                 path->insertNode(j++, pathLayer->node(nd->id));

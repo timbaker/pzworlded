@@ -3,6 +3,9 @@ $#include "tile.h"
 $#include "tilelayer.h"
 $#include "tileset.h"
 
+$#include "luaworlded.h"
+$#include "path.h"
+
 $using namespace Tiled;
 $using namespace Tiled::Lua;
 
@@ -89,6 +92,7 @@ class LuaTileLayer @ TileLayer : public LuaLayer
     void fill(int x, int y, int width, int height, Tile *tile);
     void fill(QRect &r, Tile *tile);
     void fill(LuaRegion &rgn, Tile *tile);
+    void fill(LuaPath *path, Tile *tile);
     void fill(Tile *tile);
 
     void replaceTile(Tile *oldTile, Tile *newTile);
@@ -233,3 +237,12 @@ class LuaMap @ Map
 
     bool write(const char *path);
 };
+
+class LuaPath @ Path
+{
+    LuaPath *stroke(double thickness);
+    LuaRegion region();
+};
+
+QPolygonF strokePath(LuaPath *path, double thickness);
+LuaRegion polygonRegion(QPolygonF polygon);

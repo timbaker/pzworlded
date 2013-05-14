@@ -118,6 +118,7 @@ SOURCES += main.cpp\
     fromtodialog.cpp \
     unknowncolorsdialog.cpp \
     path.cpp \
+    luaworlded.cpp \
     luatiled.cpp \
     luaconsole.cpp
 
@@ -193,6 +194,7 @@ HEADERS  += mainwindow.h \
     fromtodialog.h \
     unknowncolorsdialog.h \
     path.h \
+    luaworlded.h \
     luaconsole.h \
     luatiled.h
 
@@ -214,7 +216,7 @@ FORMS    += mainwindow.ui \
     unknowncolorsdialog.ui \
     luaconsole.ui
 
-OTHER_FILES +=
+OTHER_FILES += luatiled.pkg
 
 RESOURCES += \
     editor.qrc
@@ -231,3 +233,8 @@ TOLUA_PKGNAME = tiled
 TOLUA_PKG = luatiled.pkg
 TOLUA_DEPS = $$PWD/luatiled.h
 include(../tolua/src/bin/tolua.pri)
+
+#TOLUA_PKGNAME = worlded
+#TOLUA_PKG = luaworlded.pkg
+#TOLUA_DEPS = $$PWD/luaworlded.h
+#include(../tolua/src/bin/tolua.pri)
