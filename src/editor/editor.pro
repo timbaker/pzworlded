@@ -1,5 +1,6 @@
 include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
+include(../lua/lua.pri)
 include(../worldgen/worldgen.pri)
 include(../osm/osm.pri)
 include(../qtlockedfile/qtlockedfile.pri)
@@ -116,7 +117,9 @@ SOURCES += main.cpp\
     chunkmap.cpp \
     fromtodialog.cpp \
     unknowncolorsdialog.cpp \
-    path.cpp
+    path.cpp \
+    luatiled.cpp \
+    luaconsole.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -189,7 +192,9 @@ HEADERS  += mainwindow.h \
     chunkmap.h \
     fromtodialog.h \
     unknowncolorsdialog.h \
-    path.h
+    path.h \
+    luaconsole.h \
+    luatiled.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -206,7 +211,8 @@ FORMS    += mainwindow.ui \
     newworlddialog.ui \
     lotpackwindow.ui \
     fromtodialog.ui \
-    unknowncolorsdialog.ui
+    unknowncolorsdialog.ui \
+    luaconsole.ui
 
 OTHER_FILES +=
 
@@ -218,3 +224,10 @@ win32 {
 }
 
 win32:INCLUDEPATH += .
+
+
+include(../tolua/src/lib/tolua.pri)
+TOLUA_PKGNAME = tiled
+TOLUA_PKG = luatiled.pkg
+TOLUA_DEPS = $$PWD/luatiled.h
+include(../tolua/src/bin/tolua.pri)

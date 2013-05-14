@@ -254,6 +254,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
+    connect(ui->actionLuaConsole, SIGNAL(triggered()), SLOT(LuaConsole()));
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -1844,4 +1845,12 @@ void MainWindow::updateZoom()
         mZoomComboBox->setCurrentIndex(index);
         mZoomComboBox->setEnabled(false);
     }
+}
+
+#include "luaconsole.h"
+void MainWindow::LuaConsole()
+{
+    LuaConsole::instance()->show();
+    LuaConsole::instance()->raise();
+    LuaConsole::instance()->activateWindow();
 }

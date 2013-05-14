@@ -1,4 +1,4 @@
 TEMPLATE  = subdirs
 CONFIG   += ordered
 
-SUBDIRS = libtiled worldgen osm editor
+SUBDIRS = libtiled lua tolua worldgen osm editor

@@ -292,6 +292,7 @@
     <addaction name="actionLotPackViewer"/>
     <addaction name="menuAlias_Fixup"/>
     <addaction name="actionWorldGen"/>
+    <addaction name="actionLuaConsole"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -689,6 +690,14 @@
   <action name="actionWorldGen">
    <property name="text">
     <string>WorldGen</string>
+   </property>
+  </action>
+  <action name="actionLuaConsole">
+   <property name="text">
+    <string>Lua Console</string>
+   </property>
+   <property name="shortcut">
+    <string>L</string>
    </property>
   </action>
  </widget>

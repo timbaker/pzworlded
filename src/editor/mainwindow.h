@@ -139,6 +139,8 @@ public slots:
 
     void WorldGen();
 
+    void LuaConsole();
+
 private:
     void FromToAux(bool selectedOnly);
 
