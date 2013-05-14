@@ -1458,6 +1458,8 @@ void CellScene::loadMap()
                         script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
                     }
                     if (!script.isEmpty()) {
+#if 1
+#else
                         Lua::LuaScript ls(mMap);
                         ls.mMap.mCellPos = cell()->pos();
                         Lua::LuaPath lp(path);
@@ -1478,6 +1480,7 @@ void CellScene::loadMap()
                                 }
                             }
                         }
+#endif
 #if 0
                         QPolygonF poly = WorldPath::strokePath(path, width);
                         QRegion rgn = WorldPath::polygonRegion(poly);
@@ -2487,6 +2490,18 @@ QRectF PathLayerItem::boundingRect() const
 
 void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
+    painter->setBrush(QColor(0,0,128,128));
+    foreach (WorldScript *ws, mScene->world()->scripts()) {
+        QRect r = ws->mRegion.boundingRect().translated(-mScene->cell()->pos() * 300);
+        if (!r.intersects(QRect(QPoint(), QSize(300,300)))) continue;
+        QRegion rgn = ws->mRegion.translated(-mScene->cell()->pos() * 300);
+        foreach (QRect r, rgn.rects()) {
+            painter->drawPolygon(mScene->renderer()->tileToPixelCoords(r));
+        }
+    }
+
+    return;
+
     WorldPath::Rect bounds = option->exposedRect
             .translated(mScene->cell()->x() * 300,
                         mScene->cell()->y() * 300);

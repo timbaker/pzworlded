@@ -28,6 +28,9 @@ extern "C" {
 struct lua_State;
 }
 
+class World;
+class WorldScript;
+
 namespace Tiled {
 class BmpAlias;
 class BmpBlend;
@@ -356,19 +359,23 @@ public:
 };
 
 class LuaPath;
+class LuaWorldScript;
 
 class LuaScript
 {
 public:
-    LuaScript(Map *map);
+    LuaScript(World *world, WorldScript *script);
     ~LuaScript();
 
     lua_State *init();
     bool dofile(const QString &f, QString &output);
 
+    bool runFunction(const char *name);
+    bool getResultRegion(QRegion &rgn);
+
     lua_State *L;
-    LuaMap mMap;
-    LuaPath *mPath;
+    World *mWorld;
+    WorldScript *mWorldScript;
 };
 
 extern LuaColor Lua_rgb(int r, int g, int b);

@@ -370,6 +370,7 @@ void MainWindow::retranslateUi()
 
 #include "path.h"
 #include "osmfile.h"
+#include "luatiled.h"
 void MainWindow::newWorld()
 {
     NewWorldDialog dialog(this);
@@ -407,6 +408,63 @@ void MainWindow::newWorld()
         }
         newWorld->insertLayer(0, pathLayer);
     }
+
+    foreach (WorldPath::Layer *layer, newWorld->layers()) {
+        foreach (WorldPath::Path *path, layer->paths()) {
+            QString script;
+            if (path->tags.contains(QLatin1String("landuse"))) {
+                QString v = path->tags[QLatin1String("landuse")];
+                if (v == QLatin1String("forest") || v == QLatin1String("wood"))
+                    ;
+                else if (v == QLatin1String("park"))
+                    ;
+                else if (v == QLatin1String("grass"))
+                    ;
+            } else if (path->tags.contains(QLatin1String("natural"))) {
+                QString v = path->tags[QLatin1String("natural")];
+                if (v == QLatin1String("water"))
+                    ;
+
+            } else if (path->tags.contains(QLatin1String("leisure"))) {
+                QString v = path->tags[QLatin1String("leisure")];
+                if (v == QLatin1String("park"))
+                    script = QLatin1String("C:/Programming/Tiled/PZWorldEd/park.lua");
+            }
+            if (path->tags.contains(QLatin1String("highway"))) {
+                qreal width;
+                QString v = path->tags[QLatin1String("highway")];
+                if (v == QLatin1String("residential")) width = 6; /// #1
+                else if (v == QLatin1String("pedestrian")) width = 5;
+                else if (v == QLatin1String("secondary")) width = 5;
+                else if (v == QLatin1String("secondary_link")) width = 5;
+                else if (v == QLatin1String("tertiary")) width = 4; /// #3
+                else if (v == QLatin1String("tertiary_link")) width = 4;
+                else if (v == QLatin1String("bridleway")) width = 4;
+                else if (v == QLatin1String("private")) width = 4;
+                else if (v == QLatin1String("service")) width = 6/2; /// #2
+                else if (v == QLatin1String("path")) width = 3; /// #2
+                else continue;
+                script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
+            }
+
+            if (!script.isEmpty()) {
+                WorldScript *ws = new WorldScript;
+                ws->mFileName = script;
+                ws->mPaths += path;
+                newWorld->insertScript(newWorld->scriptCount(), ws);
+            }
+        }
+    }
+
+    foreach (WorldScript *ws, newWorld->scripts()) {
+        Lua::LuaScript ls(newWorld, ws);
+        if (ls.runFunction("region")) {
+            QRegion rgn;
+            if (ls.getResultRegion(rgn))
+                ws->mRegion = rgn;
+        }
+    }
+
 #else
     WorldPath::Node *n1 = new WorldPath::Node(1, 10, 10);
     WorldPath::Node *n2 = new WorldPath::Node(2, 10, 20);

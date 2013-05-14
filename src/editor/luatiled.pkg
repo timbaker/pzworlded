@@ -244,5 +244,10 @@ class LuaPath @ Path
     LuaRegion region();
 };
 
+class LuaWorldScript & WorldScript
+{
+    list<LuaPath*> paths();
+};
+
 QPolygonF strokePath(LuaPath *path, double thickness);
 LuaRegion polygonRegion(QPolygonF polygon);

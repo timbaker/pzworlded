@@ -120,7 +120,8 @@ SOURCES += main.cpp\
     path.cpp \
     luaworlded.cpp \
     luatiled.cpp \
-    luaconsole.cpp
+    luaconsole.cpp \
+    tilepainter.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -196,7 +197,8 @@ HEADERS  += mainwindow.h \
     path.h \
     luaworlded.h \
     luaconsole.h \
-    luatiled.h
+    luatiled.h \
+    tilepainter.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

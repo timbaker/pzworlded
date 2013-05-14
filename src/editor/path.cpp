@@ -642,7 +642,7 @@ QRegion WorldPath::polygonRegion(const QPolygonF &poly)
             if (x2 >= IMAGE_LEFT) {
                 if (x1 < IMAGE_LEFT) x1 = IMAGE_LEFT;
                 if (x2 > IMAGE_RIGHT) x2 = IMAGE_RIGHT;
-                ret += QRect(x1 - IMAGE_LEFT, pixelY - IMAGE_TOP, x2 - x1 + 1, 1);
+                ret += QRect(x1 /*- IMAGE_LEFT*/, pixelY /*- IMAGE_TOP*/, x2 - x1 + 1, 1);
             }
         }
     }

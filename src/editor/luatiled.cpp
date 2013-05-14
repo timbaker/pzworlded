@@ -144,10 +144,10 @@ tolua_lerror:
 
 /////
 
-LuaScript::LuaScript(Map *map) :
-    mMap(map),
-    mPath(0),
-    L(0)
+LuaScript::LuaScript(World *world, WorldScript *script) :
+    L(0),
+    mWorld(world),
+    mWorldScript(script)
 {
 }
 
@@ -210,7 +210,7 @@ bool LuaScript::dofile(const QString &f, QString &output)
 
     QElapsedTimer elapsed;
     elapsed.start();
-
+#if 0
     tolua_pushusertype(L, &mMap, "LuaMap");
     lua_setglobal(L, "map");
 
@@ -218,7 +218,7 @@ bool LuaScript::dofile(const QString &f, QString &output)
         tolua_pushusertype(L, mPath, "LuaPath");
         lua_setglobal(L, "path");
     }
-
+#endif
     int status = luaL_loadfile(L, cstring(f));
     if (status == LUA_OK) {
         int base = lua_gettop(L);
@@ -233,6 +233,52 @@ bool LuaScript::dofile(const QString &f, QString &output)
                                   .arg(elapsed.elapsed()/1000.0));
     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     return status == LUA_OK;
+}
+
+#include "luaworlded.h"
+#include "world.h"
+bool LuaScript::runFunction(const char *name)
+{
+    QElapsedTimer elapsed;
+    elapsed.start();
+
+    lua_State *L = init();
+
+    LuaWorldScript lws(mWorldScript);
+    tolua_pushusertype(L, &lws, "LuaWorldScript");
+    lua_setglobal(L, "script");
+
+    QString output;
+    int status = luaL_loadfile(L, cstring(mWorldScript->mFileName));
+    if (status == LUA_OK) {
+        int base = lua_gettop(L);
+        lua_pushcfunction(L, traceback);
+        lua_insert(L, base);
+        status = lua_pcall(L, 0, 0, base);
+        output = QString::fromLatin1(lua_tostring(L, -1));
+        if (status == LUA_OK) {
+            lua_getglobal(L, name);
+            status = lua_pcall(L, 0, 1, base);
+            output = QString::fromLatin1(lua_tostring(L, -1));
+        }
+        lua_remove(L, base);
+    }
+    LuaConsole::instance()->write(output, (status == LUA_OK) ? Qt::black : Qt::red);
+    LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
+                                  .arg(elapsed.elapsed()/1000.0));
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    return status == LUA_OK;
+}
+
+bool LuaScript::getResultRegion(QRegion &rgn)
+{
+    tolua_Error err;
+    if (lua_gettop(L) >= 1 && tolua_isusertype(L, -1, "LuaRegion", 0, &err) == 1) {
+        LuaRegion *lr = (LuaRegion *) tolua_tousertype(L, -1, 0);
+        rgn = *lr;
+        return true;
+    }
+    return false;
 }
 
 /////

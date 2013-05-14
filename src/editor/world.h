@@ -22,6 +22,7 @@
 #include "road.h"
 
 #include <QRect>
+#include <QRegion>
 #include <QSize>
 #include <QVector>
 
@@ -32,6 +33,7 @@ class WorldCell;
 
 namespace WorldPath {
 class Layer;
+class Path;
 }
 
 class ObjectGroupList : public QList<WorldObjectGroup*>
@@ -152,6 +154,22 @@ private:
     QString mFilePath;
 };
 
+class ScriptParam
+{
+public:
+    QString key;
+    QString value;
+};
+
+class WorldScript
+{
+public:
+    QString mFileName;
+    QList<ScriptParam> mParams;
+    QList<WorldPath::Path*> mPaths;
+    QRegion mRegion;
+};
+
 class World
 {
 public:
@@ -236,6 +254,14 @@ public:
     WorldPath::Layer *layerAt(int index);
     int layerCount() const;
 
+    void insertScript(int index, WorldScript *script);
+    WorldScript *removeScript(int index);
+    const QList<WorldScript*> &scripts() const
+    { return mScripts; }
+    WorldScript *scriptAt(int index);
+    int scriptCount() const
+    { return mScripts.size(); }
+
 private:
     int mWidth;
     int mHeight;
@@ -250,7 +276,9 @@ private:
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
+
     QList<WorldPath::Layer*> mLayers;
+    QList<WorldScript*> mScripts;
 };
 
 #endif // WORLD_H

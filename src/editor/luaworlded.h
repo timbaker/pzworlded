@@ -22,6 +22,8 @@
 
 #include <QPolygonF>
 
+class WorldScript;
+
 namespace WorldPath {
 class Path;
 }
@@ -41,6 +43,18 @@ public:
 
     WorldPath::Path *mPath;
     bool mOwner;
+};
+
+class LuaWorldScript
+{
+public:
+    LuaWorldScript(WorldScript *worldScript);
+    ~LuaWorldScript();
+
+    QList<LuaPath*> paths();
+
+    WorldScript *mWorldScript;
+    QList<LuaPath*> mPaths;
 };
 
 QPolygonF strokePath(LuaPath *path, qreal thickness);

@@ -18,6 +18,7 @@
 #include "world.h"
 
 #include "bmptotmx.h" // FIXME: remove from this file
+#include "path.h"
 #include "worldcell.h"
 
 #include <QStringList>
@@ -127,6 +128,11 @@ WorldPath::Layer *World::layerAt(int index)
 int World::layerCount() const
 {
     return mLayers.size();
+}
+
+void World::insertScript(int index, WorldScript *script)
+{
+    mScripts.insert(index, script);
 }
 
 /////

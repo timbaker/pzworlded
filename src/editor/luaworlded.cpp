@@ -18,6 +18,7 @@
 #include "luaworlded.h"
 
 #include "path.h"
+#include "world.h"
 
 using namespace Tiled::Lua;
 
@@ -40,10 +41,11 @@ LuaPath *LuaPath::stroke(double thickness)
 {
     QPolygonF poly = strokePath(mPath, thickness);
     WorldPath::Path *newPath = new WorldPath::Path;
-    int i = 0;
-    foreach (QPointF p, poly) {
-        newPath->insertNode(i++, new WorldPath::Node(WorldPath::InvalidId, p));
+    for (int i = 0; i < poly.size() - 1; i++) {
+        newPath->insertNode(i, new WorldPath::Node(WorldPath::InvalidId, poly[i]));
     }
+    if (newPath->nodes.size())
+        newPath->insertNode(newPath->nodes.size(), newPath->nodes[0]);
 
     return new LuaPath(newPath, true); // FIXME: never freed
 }
@@ -51,6 +53,25 @@ LuaPath *LuaPath::stroke(double thickness)
 LuaRegion LuaPath::region()
 {
     return mPath->region();
+}
+
+/////
+
+LuaWorldScript::LuaWorldScript(WorldScript *worldScript) :
+    mWorldScript(worldScript)
+{
+    foreach (WorldPath::Path *path, worldScript->mPaths)
+        mPaths += new LuaPath(path, false);
+}
+
+LuaWorldScript::~LuaWorldScript()
+{
+    qDeleteAll(mPaths);
+}
+
+QList<LuaPath *> LuaWorldScript::paths()
+{
+    return mPaths;
 }
 
 /////
