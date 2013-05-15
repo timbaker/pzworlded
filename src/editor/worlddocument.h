@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QList>
 #include <QPoint>
+#include <QRectF>
 #include <QSize>
 
 class BMPToTMXSettings;
@@ -41,7 +42,9 @@ class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
 class WorldCellObject;
+class WorldLookup;
 class WorldObjectGroup;
+class WorldScript;
 
 class QUndoStack;
 
@@ -353,6 +356,8 @@ public:
 
     WorldDocumentUndoRedo &undoRedo() { return mUndoRedo; }
 
+    QList<WorldScript*> lookupScripts(const QRectF &bounds);
+
 private:
     void removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd);
     void removeTemplate(PropertyHolder *ph, PropertyTemplate *pt);
@@ -445,6 +450,8 @@ private:
 
     friend class WorldDocumentUndoRedo;
     WorldDocumentUndoRedo mUndoRedo;
+
+    WorldLookup *mLookup;
 };
 
 #endif // WORLDDOCUMENT_H

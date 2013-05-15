@@ -2525,8 +2525,11 @@ QRectF PathLayerItem::boundingRect() const
 
 void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
+    bounds = QRectF(0, 0, 300, 300).translated(mScene->cell()->x() * 300,
+                                               mScene->cell()->y() * 300);
+
     painter->setBrush(QColor(0,0,128,128));
-    foreach (WorldScript *ws, mScene->world()->scripts()) {
+    foreach (WorldScript *ws, mScene->worldDocument()->lookupScripts(bounds)) {
         QRect r = ws->mRegion.boundingRect().translated(-mScene->cell()->pos() * 300);
         if (!r.intersects(QRect(QPoint(), QSize(300,300)))) continue;
         QRegion rgn = ws->mRegion.translated(-mScene->cell()->pos() * 300);
@@ -2536,7 +2539,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     }
 
     return;
-
+#if 0
     WorldPath::Rect bounds = option->exposedRect
             .translated(mScene->cell()->x() * 300,
                         mScene->cell()->y() * 300);
@@ -2594,4 +2597,5 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             }
         }
     }
+#endif
 }
