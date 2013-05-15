@@ -122,7 +122,13 @@ SOURCES += main.cpp\
     luatiled.cpp \
     luaconsole.cpp \
     tilepainter.cpp \
-    worldlookup.cpp
+    worldlookup.cpp \
+    pathdocument.cpp \
+    basepathscene.cpp \
+    orthopathscene.cpp \
+    basepathrenderer.cpp \
+    isopathscene.cpp \
+    pathview.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -200,7 +206,13 @@ HEADERS  += mainwindow.h \
     luaconsole.h \
     luatiled.h \
     tilepainter.h \
-    worldlookup.h
+    worldlookup.h \
+    pathdocument.h \
+    basepathscene.h \
+    orthopathscene.h \
+    basepathrenderer.h \
+    isopathscene.h \
+    pathview.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

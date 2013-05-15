@@ -352,6 +352,7 @@ void BaseGraphicsView::ensureRectVisible(const QRectF &rect, int xmargin, int ym
 MiniMap::MiniMap(BaseGraphicsView *parent)
     : QGraphicsView(parent)
     , mParentView(parent)
+    , mScene(0)
     , mViewportItem(0)
     , mExtraItem(0)
     , mButtons(new QFrame(this))
@@ -424,6 +425,9 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
 
 void MiniMap::setScene(BaseGraphicsScene *scene)
 {
+    if (mScene) {
+        mScene->disconnect(this);
+    }
     mScene = scene;
     widthChanged(mWidth);
     connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));

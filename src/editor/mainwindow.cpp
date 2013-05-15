@@ -97,6 +97,136 @@ MainWindow *MainWindow::instance()
     return mInstance;
 }
 
+#include "basepathrenderer.h"
+#include "isopathscene.h"
+#include "luatiled.h"
+#include "osmfile.h"
+#include "orthopathscene.h"
+#include "pathview.h"
+#include "path.h"
+#include "pathdocument.h"
+static void testPathDocument()
+{
+    World *newWorld = new World(30, 30);
+
+#if 1
+    PROGRESS progress(QLatin1String("Reading OSM data"));
+    OSM::File osm;
+    QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
+    if (osm.read(f)) {
+        WorldPath::Layer *pathLayer = new WorldPath::Layer();
+        int i = 0;
+        int zoom = 15;
+        int TILE_SIZE = 512 + 64;
+        int worldGridX1 = qFloor(osm.minProjected().x * (1U << zoom)) * TILE_SIZE;
+        int worldGridY1 = qFloor(osm.minProjected().y * (1U << zoom)) * TILE_SIZE;
+        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+
+        foreach (OSM::Node *n, osm.nodes())
+            pathLayer->insertNode(i++, new WorldPath::Node(n->id,
+                                                           n->pc.x * worldInPixels - worldGridX1,
+                                                           n->pc.y * worldInPixels - worldGridY1));
+
+        i = 0;
+        foreach (OSM::Way *w, osm.ways()) {
+            WorldPath::Path *path = new WorldPath::Path(w->id);
+            path->tags = w->tags;
+            int j = 0;
+            foreach (OSM::Node *nd, w->nodes)
+                path->insertNode(j++, pathLayer->node(nd->id));
+            pathLayer->insertPath(i++, path);
+        }
+        newWorld->insertLayer(0, pathLayer);
+    }
+
+    foreach (WorldPath::Layer *layer, newWorld->layers()) {
+        foreach (WorldPath::Path *path, layer->paths()) {
+            QString script;
+            if (path->tags.contains(QLatin1String("landuse"))) {
+                QString v = path->tags[QLatin1String("landuse")];
+                if (v == QLatin1String("forest") || v == QLatin1String("wood"))
+                    ;
+                else if (v == QLatin1String("park"))
+                    ;
+                else if (v == QLatin1String("grass"))
+                    ;
+            } else if (path->tags.contains(QLatin1String("natural"))) {
+                QString v = path->tags[QLatin1String("natural")];
+                if (v == QLatin1String("water"))
+                    ;
+
+            } else if (path->tags.contains(QLatin1String("leisure"))) {
+                QString v = path->tags[QLatin1String("leisure")];
+                if (v == QLatin1String("park"))
+                    script = QLatin1String("C:/Programming/Tiled/PZWorldEd/park.lua");
+            }
+            if (path->tags.contains(QLatin1String("highway"))) {
+                qreal width;
+                QString v = path->tags[QLatin1String("highway")];
+                if (v == QLatin1String("residential")) width = 6; /// #1
+                else if (v == QLatin1String("pedestrian")) width = 5;
+                else if (v == QLatin1String("secondary")) width = 5;
+                else if (v == QLatin1String("secondary_link")) width = 5;
+                else if (v == QLatin1String("tertiary")) width = 4; /// #3
+                else if (v == QLatin1String("tertiary_link")) width = 4;
+                else if (v == QLatin1String("bridleway")) width = 4;
+                else if (v == QLatin1String("private")) width = 4;
+                else if (v == QLatin1String("service")) width = 6/2; /// #2
+                else if (v == QLatin1String("path")) width = 3; /// #2
+                else continue;
+                script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
+            }
+
+            continue; /////
+
+            if (!script.isEmpty()) {
+                WorldScript *ws = new WorldScript;
+                ws->mFileName = script;
+                ws->mPaths += path;
+                newWorld->insertScript(newWorld->scriptCount(), ws);
+            }
+        }
+    }
+
+    progress.update(QLatin1String("Running scripts"));
+
+    foreach (WorldScript *ws, newWorld->scripts()) {
+        Lua::LuaScript ls(newWorld, ws);
+        if (ls.runFunction("region")) {
+            QRegion rgn;
+            if (ls.getResultRegion(rgn))
+                ws->mRegion = rgn;
+        }
+    }
+
+    progress.update(QLatin1String("Loading tilesets"));
+
+    newWorld->insertTileLayer(0, new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
+
+    foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
+        WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());
+        for (int i = 0; i < ts->tileCount(); i++)
+            wts->tileAt(i)->mTiledTile = ts->tileAt(i); // HACK for convenience
+        newWorld->insertTileset(newWorld->tilesetCount(), wts);
+    }
+    TileMetaInfoMgr::instance()->loadTilesets();
+
+#else
+    WorldPath::Node *n1 = new WorldPath::Node(1, 10, 10);
+    WorldPath::Node *n2 = new WorldPath::Node(2, 10, 20);
+    WorldPath::Node *n3 = new WorldPath::Node(3, 20, 20);
+    WorldPath::Path *p1 = new WorldPath::Path(1);
+    p1->insertNode(0, n1); p1->insertNode(1, n2); p1->insertNode(2, n3);
+    WorldPath::Layer *pathLayer = new WorldPath::Layer();
+    pathLayer->insertNode(0, n1); pathLayer->insertNode(1, n2); pathLayer->insertNode(2, n3);
+    pathLayer->insertPath(0, p1);
+    newWorld->insertLayer(0, pathLayer);
+#endif
+
+    PathDocument *newDoc = new PathDocument(newWorld);
+    DocumentManager::instance()->addDocument(newDoc);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -260,6 +390,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+    connect(ui->actionSwitchOrthoIso, SIGNAL(triggered()), SLOT(switchOrthoIso()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
@@ -368,125 +499,16 @@ void MainWindow::retranslateUi()
     setWindowTitle(tr("PZWorldEd"));
 }
 
-#include "path.h"
-#include "osmfile.h"
-#include "luatiled.h"
 void MainWindow::newWorld()
 {
+    testPathDocument(); return;
+
     NewWorldDialog dialog(this);
     if (dialog.exec() != QDialog::Accepted)
         return;
     QSize size = dialog.worldSize();
 
     World *newWorld = new World(size.width(), size.height());
-
-#if 1
-    OSM::File osm;
-    QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
-    if (osm.read(f)) {
-        WorldPath::Layer *pathLayer = new WorldPath::Layer();
-        int i = 0;
-        int zoom = 15;
-        int TILE_SIZE = 512 + 64;
-        int worldGridX1 = qFloor(osm.minProjected().x * (1U << zoom)) * TILE_SIZE;
-        int worldGridY1 = qFloor(osm.minProjected().y * (1U << zoom)) * TILE_SIZE;
-        double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
-
-        foreach (OSM::Node *n, osm.nodes())
-            pathLayer->insertNode(i++, new WorldPath::Node(n->id,
-                                                           n->pc.x * worldInPixels - worldGridX1,
-                                                           n->pc.y * worldInPixels - worldGridY1));
-
-        i = 0;
-        foreach (OSM::Way *w, osm.ways()) {
-            WorldPath::Path *path = new WorldPath::Path(w->id);
-            path->tags = w->tags;
-            int j = 0;
-            foreach (OSM::Node *nd, w->nodes)
-                path->insertNode(j++, pathLayer->node(nd->id));
-            pathLayer->insertPath(i++, path);
-        }
-        newWorld->insertLayer(0, pathLayer);
-    }
-
-    foreach (WorldPath::Layer *layer, newWorld->layers()) {
-        foreach (WorldPath::Path *path, layer->paths()) {
-            QString script;
-            if (path->tags.contains(QLatin1String("landuse"))) {
-                QString v = path->tags[QLatin1String("landuse")];
-                if (v == QLatin1String("forest") || v == QLatin1String("wood"))
-                    ;
-                else if (v == QLatin1String("park"))
-                    ;
-                else if (v == QLatin1String("grass"))
-                    ;
-            } else if (path->tags.contains(QLatin1String("natural"))) {
-                QString v = path->tags[QLatin1String("natural")];
-                if (v == QLatin1String("water"))
-                    ;
-
-            } else if (path->tags.contains(QLatin1String("leisure"))) {
-                QString v = path->tags[QLatin1String("leisure")];
-                if (v == QLatin1String("park"))
-                    script = QLatin1String("C:/Programming/Tiled/PZWorldEd/park.lua");
-            }
-            if (path->tags.contains(QLatin1String("highway"))) {
-                qreal width;
-                QString v = path->tags[QLatin1String("highway")];
-                if (v == QLatin1String("residential")) width = 6; /// #1
-                else if (v == QLatin1String("pedestrian")) width = 5;
-                else if (v == QLatin1String("secondary")) width = 5;
-                else if (v == QLatin1String("secondary_link")) width = 5;
-                else if (v == QLatin1String("tertiary")) width = 4; /// #3
-                else if (v == QLatin1String("tertiary_link")) width = 4;
-                else if (v == QLatin1String("bridleway")) width = 4;
-                else if (v == QLatin1String("private")) width = 4;
-                else if (v == QLatin1String("service")) width = 6/2; /// #2
-                else if (v == QLatin1String("path")) width = 3; /// #2
-                else continue;
-                script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
-            }
-
-            if (!script.isEmpty()) {
-                WorldScript *ws = new WorldScript;
-                ws->mFileName = script;
-                ws->mPaths += path;
-                newWorld->insertScript(newWorld->scriptCount(), ws);
-            }
-        }
-    }
-
-    foreach (WorldScript *ws, newWorld->scripts()) {
-        Lua::LuaScript ls(newWorld, ws);
-        if (ls.runFunction("region")) {
-            QRegion rgn;
-            if (ls.getResultRegion(rgn))
-                ws->mRegion = rgn;
-        }
-    }
-
-    newWorld->insertTileLayer(0, new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
-
-    foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
-        WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());
-        for (int i = 0; i < ts->tileCount(); i++)
-            wts->tileAt(i)->mTiledTile = ts->tileAt(i); // HACK for convenience
-        newWorld->insertTileset(newWorld->tilesetCount(), wts);
-    }
-    TileMetaInfoMgr::instance()->loadTilesets();
-
-#else
-    WorldPath::Node *n1 = new WorldPath::Node(1, 10, 10);
-    WorldPath::Node *n2 = new WorldPath::Node(2, 10, 20);
-    WorldPath::Node *n3 = new WorldPath::Node(3, 20, 20);
-    WorldPath::Path *p1 = new WorldPath::Path(1);
-    p1->insertNode(0, n1); p1->insertNode(1, n2); p1->insertNode(2, n3);
-    WorldPath::Layer *pathLayer = new WorldPath::Layer();
-    pathLayer->insertNode(0, n1); pathLayer->insertNode(1, n2); pathLayer->insertNode(2, n3);
-    pathLayer->insertPath(0, p1);
-    newWorld->insertLayer(0, pathLayer);
-#endif
-
     WorldDocument *newDoc = new WorldDocument(newWorld);
     docman()->addDocument(newDoc);
 }
@@ -554,6 +576,16 @@ void MainWindow::documentAdded(Document *doc)
             view->centerOn(mViewHint.scrollX, mViewHint.scrollY);
         } else
             view->centerOn(scene->cellToPixelCoords(0, 0));
+    }
+    if (PathDocument *pathDoc = doc->asPathDocument()) {
+        PathView *view = new PathView(pathDoc, this);
+        view->switchToOrtho();
+        doc->setView(view);
+
+        int pos = docman()->documents().indexOf(doc);
+        ui->documentTabWidget->insertTab(pos, view, tr("The World"));
+        ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
+        view->centerOn(view->scene()->renderer()->toScene(QPoint()));
     }
 }
 
@@ -1931,4 +1963,14 @@ void MainWindow::LuaConsole()
     LuaConsole::instance()->show();
     LuaConsole::instance()->raise();
     LuaConsole::instance()->activateWindow();
+}
+
+void MainWindow::switchOrthoIso()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        if (doc->view()->scene()->isIso())
+            doc->view()->switchToOrtho();
+        else
+            doc->view()->switchToIso();
+    }
 }

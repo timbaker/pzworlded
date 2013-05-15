@@ -248,6 +248,7 @@
     <addaction name="actionZoomOut"/>
     <addaction name="actionZoomNormal"/>
     <addaction name="separator"/>
+    <addaction name="actionSwitchOrthoIso"/>
    </widget>
    <widget class="QMenu" name="menuWorld">
     <property name="title">
@@ -698,6 +699,14 @@
    </property>
    <property name="shortcut">
     <string>L</string>
+   </property>
+  </action>
+  <action name="actionSwitchOrthoIso">
+   <property name="text">
+    <string>Switch Ortho/Iso</string>
+   </property>
+   <property name="shortcut">
+    <string>Esc</string>
    </property>
   </action>
  </widget>

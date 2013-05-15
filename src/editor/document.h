@@ -20,9 +20,10 @@
 
 #include <QObject>
 
-class CellDocument;
-class WorldDocument;
 class BaseGraphicsView;
+class CellDocument;
+class PathDocument;
+class WorldDocument;
 
 class QUndoStack;
 
@@ -36,7 +37,8 @@ class Document : public QObject
 public:
     enum DocumentType {
         CellDocType,
-        WorldDocType
+        WorldDocType,
+        PathDocType
     };
 
 public:
@@ -45,9 +47,11 @@ public:
     DocumentType type() const { return mType; }
     bool isCellDocument() const { return mType == CellDocType; }
     bool isWorldDocument() const { return mType == WorldDocType; }
+    bool isPathDocument() const { return mType == PathDocType; }
 
     CellDocument *asCellDocument();
     WorldDocument *asWorldDocument();
+    PathDocument *asPathDocument();
 
     void setView(BaseGraphicsView *view) { mView = view; }
     BaseGraphicsView *view() const { return mView; }

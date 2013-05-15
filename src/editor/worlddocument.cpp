@@ -37,7 +37,6 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     , mWorld(world)
     , mFileName(fileName)
     , mUndoRedo(this)
-    , mLookup(new WorldLookup(mWorld))
 {
     mUndoStack = new QUndoStack(this);
 
@@ -165,7 +164,6 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 WorldDocument::~WorldDocument()
 {
     delete mUndoStack; // before mWorld is deleted
-    delete mLookup;
     delete mWorld;
 }
 
@@ -741,11 +739,6 @@ void WorldDocument::emitCellMapFileAboutToChange(WorldCell *cell)
 void WorldDocument::emitCellMapFileChanged(WorldCell *cell)
 {
     emit cellMapFileChanged(cell);
-}
-
-QList<WorldScript *> WorldDocument::lookupScripts(const QRectF &bounds)
-{
-    return mLookup->scripts(bounds);
 }
 
 void WorldDocument::removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd)

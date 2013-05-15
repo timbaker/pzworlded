@@ -567,7 +567,9 @@ public:
 };
 #endif
 
-QPolygonF WorldPath::strokePath(Path *path, qreal thickness)
+namespace WorldPath {
+
+QPolygonF strokePath(Path *path, qreal thickness)
 {
     PathStroke stroke;
     QVector<PathStroke::v2_t> fwd, bwd;
@@ -582,8 +584,24 @@ QPolygonF WorldPath::strokePath(Path *path, qreal thickness)
     return ret;
 }
 
+QPolygonF offsetPath(Path *path, qreal offset)
+{
+    PathStroke stroke;
+    QVector<PathStroke::v2_t> fwd, bwd;
+    stroke.build(path, offset * 2, fwd, bwd);
+    QPolygonF ret;
+    if (offset >= 0) {
+        // Strip off the 2 cap vertices
+        foreach (PathStroke::v2_t v, fwd.mid(1,fwd.size()-2))
+            ret += QPointF(v.x, v.y);
+    } else {
+        foreach (PathStroke::v2_t v, bwd)
+            ret += QPointF(v.x, v.y);
+    }
+    return ret;
+}
 
-QRegion WorldPath::polygonRegion(const QPolygonF &poly)
+QRegion polygonRegion(const QPolygonF &poly)
 {
     QRect r = poly.boundingRect().toAlignedRect();
     QRegion ret;
@@ -649,3 +667,5 @@ QRegion WorldPath::polygonRegion(const QPolygonF &poly)
 
     return ret;
 }
+
+} // namespace WorldPath

@@ -23,7 +23,6 @@
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
-#include "path.h"
 #include "preferences.h"
 #include "progress.h"
 #include "scenetools.h"
@@ -1360,7 +1359,6 @@ void CellScene::loadMap()
         mSubMapItems.clear();
         mSelectedSubMapItems.clear();
         mRoadItems.clear();
-        mPathLayerItems.clear();
 
         // mMap, mMapInfo are shared, don't destroy
         mMap = 0;
@@ -1426,119 +1424,6 @@ void CellScene::loadMap()
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
         mRoadItems += item;
-    }
-
-#if 1
-    foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-        int n = mMap->indexOfLayer(wtl->mName, Layer::TileLayerType);
-        if (n >= 0) {
-            CellTileSink *sink = new CellTileSink;
-            sink->mWorldLayer = wtl;
-            sink->mMapLayer = mMap->layerAt(n)->asTileLayer();
-            sink->mCellPos = cell()->pos();
-            wtl->mSinks += sink;
-            mTileSinks += sink;
-
-            sink->mMapLayer->erase();
-        }
-    }
-
-    foreach (WorldScript *ws, world()->scripts()) {
-        QRect r = ws->mRegion.boundingRect().translated(-cell()->pos() * 300);
-        if (!r.intersects(QRect(QPoint(), QSize(300,300)))) continue;
-        Lua::LuaScript ls(world(), ws);
-        ls.runFunction("run");
-    }
-
-#endif
-    foreach (WorldPath::Layer *layer, world()->layers()) {
-        PathLayerItem *item = new PathLayerItem(layer, this);
-#if 0
-        if (floor && ts) {
-            foreach (WorldPath::Path *path, layer->paths()) {
-                if (path->bounds().intersects(QRect(cell()->pos()*300, QSize(300,300)))) {
-                    QString script;
-                    if (path->tags.contains(QLatin1String("landuse"))) {
-                        QString v = path->tags[QLatin1String("landuse")];
-                        if (v == QLatin1String("forest") || v == QLatin1String("wood"))
-                            ;
-                        else if (v == QLatin1String("park"))
-                            ;
-                        else if (v == QLatin1String("grass"))
-                            ;
-                    } else if (path->tags.contains(QLatin1String("natural"))) {
-                        QString v = path->tags[QLatin1String("natural")];
-                        if (v == QLatin1String("water"))
-                            ;
-
-                    } else if (path->tags.contains(QLatin1String("leisure"))) {
-                        QString v = path->tags[QLatin1String("leisure")];
-                        if (v == QLatin1String("park"))
-                            script = QLatin1String("C:/Programming/Tiled/PZWorldEd/park.lua");
-                    }
-                    if (path->tags.contains(QLatin1String("highway"))) {
-                        qreal width;
-                        QString v = path->tags[QLatin1String("highway")];
-                        if (v == QLatin1String("residential")) width = 6; /// #1
-                        else if (v == QLatin1String("pedestrian")) width = 5;
-                        else if (v == QLatin1String("secondary")) width = 5;
-                        else if (v == QLatin1String("secondary_link")) width = 5;
-                        else if (v == QLatin1String("tertiary")) width = 4; /// #3
-                        else if (v == QLatin1String("tertiary_link")) width = 4;
-                        else if (v == QLatin1String("bridleway")) width = 4;
-                        else if (v == QLatin1String("private")) width = 4;
-                        else if (v == QLatin1String("service")) width = 6/2; /// #2
-                        else if (v == QLatin1String("path")) width = 3; /// #2
-                        else continue;
-                        script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
-                    }
-                    if (!script.isEmpty()) {
-#if 1
-#else
-                        Lua::LuaScript ls(mMap);
-                        ls.mMap.mCellPos = cell()->pos();
-                        Lua::LuaPath lp(path);
-                        ls.mPath = &lp;
-                        QString output;
-                        if (ls.dofile(script, output)) {
-                            foreach (Lua::LuaLayer *ll, ls.mMap.mLayers) {
-                                // Apply changes to tile layers.
-                                if (Lua::LuaTileLayer *tl = ll->asTileLayer()) {
-                                    if (tl->mOrig == 0)
-                                        continue; // Ignore new layers.
-                                    if (!tl->mCloneTileLayer || tl->mAltered.isEmpty())
-                                        continue; // No changes.
-                                    TileLayer *source = tl->mCloneTileLayer->copy(tl->mAltered);
-                                    QRect r = tl->mAltered.boundingRect();
-                                    tl->mOrig->asTileLayer()->setCells(r.x(), r.y(), source, tl->mAltered);
-                                    delete source;
-                                }
-                            }
-                        }
-#endif
-#if 0
-                        QPolygonF poly = WorldPath::strokePath(path, width);
-                        QRegion rgn = WorldPath::polygonRegion(poly);
-                        rgn.translate(poly.boundingRect().toAlignedRect().topLeft() - cell()->pos() * 300);
-                        if (!rgn.boundingRect().intersects(floor->bounds()))
-                            continue;
-                        foreach (QRect r, rgn.rects()) {
-                            for (int y = r.top(); y <= r.bottom(); y++) {
-                                for (int x = r.left(); x <= r.right(); x++) {
-                                    if (floor->contains(x, y))
-                                        floor->setCell(x, y, Cell(ts->tileAt(96)));
-                                }
-                            }
-                        }
-#endif
-                    }
-                }
-            }
-        }
-
-#endif
-        addItem(item);
-        mLayerItems += item;
     }
 
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
@@ -2508,94 +2393,3 @@ void CellScene::mapFailedToLoad(MapInfo *mapInfo)
     }
 }
 
-/////
-
-PathLayerItem::PathLayerItem(WorldPath::Layer *layer, CellScene *scene, QGraphicsItem *parent) :
-    QGraphicsItem(parent),
-    mLayer(layer),
-    mScene(scene)
-{
-    setFlag(ItemUsesExtendedStyleOption);
-}
-
-QRectF PathLayerItem::boundingRect() const
-{
-    return mScene->renderer()->boundingRect(QRect(0, 0, 300, 300), mLayer->mLevel);
-}
-
-void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
-{
-    bounds = QRectF(0, 0, 300, 300).translated(mScene->cell()->x() * 300,
-                                               mScene->cell()->y() * 300);
-
-    painter->setBrush(QColor(0,0,128,128));
-    foreach (WorldScript *ws, mScene->worldDocument()->lookupScripts(bounds)) {
-        QRect r = ws->mRegion.boundingRect().translated(-mScene->cell()->pos() * 300);
-        if (!r.intersects(QRect(QPoint(), QSize(300,300)))) continue;
-        QRegion rgn = ws->mRegion.translated(-mScene->cell()->pos() * 300);
-        foreach (QRect r, rgn.rects()) {
-            painter->drawPolygon(mScene->renderer()->tileToPixelCoords(r));
-        }
-    }
-
-    return;
-#if 0
-    WorldPath::Rect bounds = option->exposedRect
-            .translated(mScene->cell()->x() * 300,
-                        mScene->cell()->y() * 300);
-    foreach (WorldPath::Path *path, mLayer->paths(bounds)) {
-        painter->setBrush(Qt::NoBrush);
-        QPolygonF pf = path->polygon().translated(-mScene->cell()->x() * 300,
-                                                  -mScene->cell()->y() * 300);
-        if (path->isClosed()) {
-            if (path->tags.contains(QLatin1String("landuse"))) {
-                QString v = path->tags[QLatin1String("landuse")];
-                if (v == QLatin1String("forest") || v == QLatin1String("wood"))
-                    painter->setBrush(Qt::darkGreen);
-                else if (v == QLatin1String("park"))
-                    painter->setBrush(Qt::green);
-                else if (v == QLatin1String("grass"))
-                    painter->setBrush(QColor(Qt::green).lighter());
-            } else if (path->tags.contains(QLatin1String("natural"))) {
-                QString v = path->tags[QLatin1String("natural")];
-                if (v == QLatin1String("water"))
-                    painter->setBrush(Qt::blue);
-
-            } else if (path->tags.contains(QLatin1String("leisure"))) {
-                QString v = path->tags[QLatin1String("leisure")];
-                if (v == QLatin1String("park"))
-                    painter->setBrush(Qt::green);
-            }
-            painter->drawPolygon(mScene->renderer()->tileToPixelCoords(
-                                     pf, mLayer->level()));
-        } else {
-            painter->drawPolyline(mScene->renderer()->tileToPixelCoords(
-                                      pf, mLayer->level()));
-            if (path->tags.contains(QLatin1String("highway"))) {
-                qreal width = 6;
-                QColor color = QColor(0,0,0,128);
-                QString v = path->tags[QLatin1String("highway")];
-                qreal residentialWidth = 6;
-                if (v == QLatin1String("residential")) width = 6; /// #1
-                else if (v == QLatin1String("pedestrian")) width = 5, color = QColor(0,64,0,128);
-                else if (v == QLatin1String("secondary")) width = 5, color = QColor(0,0,128,128);
-                else if (v == QLatin1String("secondary_link")) width = 5, color = QColor(0,0,128,128);
-                else if (v == QLatin1String("tertiary")) width = 4, color = QColor(0,128,0,128); /// #3
-                else if (v == QLatin1String("tertiary_link")) width = 4, color = QColor(0,128,0,128);
-                else if (v == QLatin1String("bridleway")) width = 4, color = QColor(128,128,0,128);
-                else if (v == QLatin1String("private")) width = 4, color = QColor(128,0,0,128);
-                else if (v == QLatin1String("service")) width = residentialWidth/2, color = QColor(0,0,64,128); /// #2
-                else if (v == QLatin1String("path")) width = 3, color = QColor(128,64,64,128); /// #2
-                else continue;
-
-                pf = WorldPath::strokePath(path, width);
-                pf.translate(-mScene->cell()->x() * 300,
-                             -mScene->cell()->y() * 300);
-                painter->setBrush(color);
-                painter->drawPolygon(mScene->renderer()->tileToPixelCoords(
-                                         pf, mLayer->level()));
-            }
-        }
-    }
-#endif
-}

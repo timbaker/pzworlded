@@ -84,6 +84,7 @@ public:
 };
 
 QPolygonF strokePath(Path *path, qreal thickness);
+QPolygonF offsetPath(Path *path, qreal offset);
 QRegion polygonRegion(const QPolygonF &poly);
 
 class Layer

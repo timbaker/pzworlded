@@ -32,7 +32,8 @@ public:
     enum SceneType {
         CellSceneType,
         WorldSceneType,
-        LotPackSceneType
+        LotPackSceneType,
+        PathSceneType
     };
 
     explicit BaseGraphicsScene(SceneType type, QObject *parent = 0);

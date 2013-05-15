@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -15,38 +15,43 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "document.h"
-
-#include "celldocument.h"
 #include "pathdocument.h"
-#include "worlddocument.h"
+
+#include "worldlookup.h"
 
 #include <QUndoStack>
 
-Document::Document(DocumentType type)
-    : QObject()
-    , mUndoStack(0)
-    , mType(type)
-    , mView(0)
+PathDocument::PathDocument(World *world, const QString &fileName) :
+    Document(PathDocType),
+    mWorld(world),
+    mFileName(fileName),
+    mLookup(new WorldLookup(mWorld))
 {
+    mUndoStack = new QUndoStack(this);
 }
 
-CellDocument *Document::asCellDocument()
+PathDocument::~PathDocument()
 {
-    return isCellDocument() ? static_cast<CellDocument*>(this) : NULL;
+    delete mLookup;
 }
 
-WorldDocument *Document::asWorldDocument()
+void PathDocument::setFileName(const QString &fileName)
 {
-    return isWorldDocument() ? static_cast<WorldDocument*>(this) : NULL;
+    mFileName = fileName;
 }
 
-PathDocument *Document::asPathDocument()
+const QString &PathDocument::fileName() const
 {
-    return isPathDocument() ? static_cast<PathDocument*>(this) : NULL;
+    return mFileName;
 }
 
-bool Document::isModified() const
+bool PathDocument::save(const QString &filePath, QString &error)
 {
-    return mUndoStack->isClean() == false;
+    return false;
 }
+
+QList<WorldScript *> PathDocument::lookupScripts(const QRectF &bounds)
+{
+    return mLookup->scripts(bounds);
+}
+
