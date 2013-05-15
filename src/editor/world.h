@@ -154,6 +154,64 @@ private:
     QString mFilePath;
 };
 
+namespace Tiled {
+class Tile;
+}
+class WorldTileset;
+class WorldTile
+{
+public:
+    WorldTile(WorldTileset *tileset, int index) :
+        mTileset(tileset),
+        mIndex(index)
+    {}
+
+    WorldTileset *mTileset;
+    int mIndex;
+
+    // HACK for convenience
+    Tiled::Tile *mTiledTile;
+};
+
+class WorldTileset
+{
+public:
+    WorldTileset(const QString &name, int columns, int rows);
+    ~WorldTileset();
+
+    WorldTile *tileAt(int index);
+
+    QString mName;
+    int mColumns;
+    int mRows;
+    QList<WorldTile*> mTiles;
+};
+
+class WorldTileLayer
+{
+public:
+    WorldTileLayer(World *world, const QString &name) :
+        mWorld(world),
+        mName(name),
+        mLevel(0)
+    {}
+
+    void putTile(int x, int y, WorldTile *tile);
+    WorldTile *getTile(int x, int y);
+
+    class TileSink
+    {
+    public:
+        virtual void putTile(int x, int y, WorldTile *tile) = 0;
+        virtual WorldTile *getTile(int x, int y) = 0;
+    };
+
+    World *mWorld;
+    QString mName;
+    int mLevel;
+    QList<TileSink*> mSinks;
+};
+
 class ScriptParam
 {
 public:
@@ -250,9 +308,18 @@ public:
     void insertLayer(int index, WorldPath::Layer *layer);
     WorldPath::Layer *removeLayer(int index);
     const QList<WorldPath::Layer*> &layers() const
-    { return mLayers; }
+    { return mPathLayers; }
     WorldPath::Layer *layerAt(int index);
     int layerCount() const;
+
+    void insertTileLayer(int index, WorldTileLayer *layer);
+    WorldTileLayer *removeTileLayer(int index);
+    const QList<WorldTileLayer*> &tileLayers() const
+    { return mTileLayers; }
+    WorldTileLayer *tileLayerAt(int index);
+    WorldTileLayer *tileLayer(const QString &layerName);
+    int tileLayerCount() const
+    { return mTileLayers.size(); }
 
     void insertScript(int index, WorldScript *script);
     WorldScript *removeScript(int index);
@@ -261,6 +328,13 @@ public:
     WorldScript *scriptAt(int index);
     int scriptCount() const
     { return mScripts.size(); }
+
+    void insertTileset(int index, WorldTileset *tileset);
+    WorldTileset *tileset(const QString &tilesetName);
+    int tilesetCount() const
+    { return mTilesets.size(); }
+
+    WorldTile *tile(const QString &tilesetName, int index);
 
 private:
     int mWidth;
@@ -277,7 +351,13 @@ private:
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
 
-    QList<WorldPath::Layer*> mLayers;
+    QList<WorldTileset*> mTilesets;
+    QMap<QString,WorldTileset*> mTilesetByName;
+
+    QList<WorldTileLayer*> mTileLayers;
+    QMap<QString,WorldTileLayer*> mTileLayerByName;
+
+    QList<WorldPath::Layer*> mPathLayers;
     QList<WorldScript*> mScripts;
 };
 

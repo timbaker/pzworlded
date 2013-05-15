@@ -465,6 +465,16 @@ void MainWindow::newWorld()
         }
     }
 
+    newWorld->insertTileLayer(0, new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
+
+    foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
+        WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());
+        for (int i = 0; i < ts->tileCount(); i++)
+            wts->tileAt(i)->mTiledTile = ts->tileAt(i); // HACK for convenience
+        newWorld->insertTileset(newWorld->tilesetCount(), wts);
+    }
+    TileMetaInfoMgr::instance()->loadTilesets();
+
 #else
     WorldPath::Node *n1 = new WorldPath::Node(1, 10, 10);
     WorldPath::Node *n2 = new WorldPath::Node(2, 10, 20);

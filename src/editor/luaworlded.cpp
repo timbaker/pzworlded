@@ -18,6 +18,7 @@
 #include "luaworlded.h"
 
 #include "path.h"
+#include "tilepainter.h"
 #include "world.h"
 
 using namespace Tiled::Lua;
@@ -76,6 +77,51 @@ QList<LuaPath *> LuaWorldScript::paths()
 
 /////
 
+LuaWorld::LuaWorld(World *world) :
+    mWorld(world)
+{
+}
+
+WorldTile *LuaWorld::tile(const char *tilesetName, int id)
+{
+    return mWorld->tile(QLatin1String(tilesetName), id);
+}
+
+WorldTileLayer *LuaWorld::tileLayer(const char *layerName)
+{
+    return mWorld->tileLayer(QLatin1String(layerName));
+}
+
+/////
+
+LuaTilePainter::LuaTilePainter(TilePainter *painter) :
+    mPainter(painter)
+{
+
+}
+
+void LuaTilePainter::setLayer(WorldTileLayer *layer)
+{
+    mPainter->setLayer(layer);
+}
+
+void LuaTilePainter::setTile(WorldTile *tile)
+{
+    mPainter->setTile(tile);
+}
+
+void LuaTilePainter::fill(LuaPath *path)
+{
+    mPainter->fill(path->mPath);
+}
+
+void LuaTilePainter::strokePath(LuaPath *path, qreal thickness)
+{
+    mPainter->strokePath(path->mPath, thickness);
+}
+
+/////
+
 namespace Tiled {
 namespace Lua {
 QPolygonF strokePath(LuaPath *path, qreal thickness)
@@ -88,6 +134,7 @@ LuaRegion polygonRegion(QPolygonF polygon)
 {
     return WorldPath::polygonRegion(polygon);
 }
+
 
 }
 }

@@ -236,6 +236,7 @@ bool LuaScript::dofile(const QString &f, QString &output)
 }
 
 #include "luaworlded.h"
+#include "tilepainter.h"
 #include "world.h"
 bool LuaScript::runFunction(const char *name)
 {
@@ -244,9 +245,18 @@ bool LuaScript::runFunction(const char *name)
 
     lua_State *L = init();
 
+    LuaWorld lw(mWorld);
+    tolua_pushusertype(L, &lw, "LuaWorld");
+    lua_setglobal(L, "world");
+
     LuaWorldScript lws(mWorldScript);
     tolua_pushusertype(L, &lws, "LuaWorldScript");
     lua_setglobal(L, "script");
+
+    TilePainter tp(mWorld);
+    LuaTilePainter ltp(&tp);
+    tolua_pushusertype(L, &ltp, "LuaTilePainter");
+    lua_setglobal(L, "painter");
 
     QString output;
     int status = luaL_loadfile(L, cstring(mWorldScript->mFileName));

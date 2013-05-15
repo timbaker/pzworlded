@@ -31,6 +31,7 @@
 class BaseCellSceneTool;
 class CellDocument;
 class CellGridItem;
+class CellTileSink;
 class CompositeLayerGroup;
 class MapComposite;
 class MapImage;
@@ -336,7 +337,6 @@ private:
     CellScene *mScene;
 };
 
-
 class CellScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -537,6 +537,7 @@ private:
     BaseCellSceneTool *mActiveTool;
 
     QList<PathLayerItem*> mPathLayerItems;
+    QList<CellTileSink*> mTileSinks;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

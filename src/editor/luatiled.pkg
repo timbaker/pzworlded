@@ -5,6 +5,7 @@ $#include "tileset.h"
 
 $#include "luaworlded.h"
 $#include "path.h"
+$#include "tilepainter.h"
 
 $using namespace Tiled;
 $using namespace Tiled::Lua;
@@ -247,6 +248,22 @@ class LuaPath @ Path
 class LuaWorldScript & WorldScript
 {
     list<LuaPath*> paths();
+};
+
+class LuaWorld @ World
+{
+public:
+    WorldTile *tile(const char *tilesetName, int id);
+    WorldTileLayer *tileLayer(const char *name);
+};
+
+class LuaTilePainter @ TilePainter
+{
+public:
+    void setLayer(WorldTileLayer *layer);
+    void setTile(WorldTile *tile);
+    void fill @ fillPath(LuaPath *path);
+    void strokePath(LuaPath *path, double thickness);
 };
 
 QPolygonF strokePath(LuaPath *path, double thickness);

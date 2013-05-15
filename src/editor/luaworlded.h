@@ -22,7 +22,11 @@
 
 #include <QPolygonF>
 
+class TilePainter;
+class World;
 class WorldScript;
+class WorldTile;
+class WorldTileLayer;
 
 namespace WorldPath {
 class Path;
@@ -55,6 +59,30 @@ public:
 
     WorldScript *mWorldScript;
     QList<LuaPath*> mPaths;
+};
+
+class LuaWorld
+{
+public:
+    LuaWorld(World *world);
+
+    WorldTile *tile(const char *tilesetName, int id);
+    WorldTileLayer *tileLayer(const char *name);
+
+    World *mWorld;
+};
+
+class LuaTilePainter
+{
+public:
+    LuaTilePainter(TilePainter *painter);
+
+    void setLayer(WorldTileLayer *layer);
+    void setTile(WorldTile *tile);
+    void fill(LuaPath *path);
+    void strokePath(LuaPath *path, qreal thickness);
+
+    TilePainter *mPainter;
 };
 
 QPolygonF strokePath(LuaPath *path, qreal thickness);

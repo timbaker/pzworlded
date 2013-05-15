@@ -1314,6 +1314,28 @@ void CellScene::keyPressEvent(QKeyEvent *event)
 #include "tileset.h" // TEMP for path region-fill testing
 #include "luaworlded.h"
 
+class CellTileSink : public WorldTileLayer::TileSink
+{
+public:
+    virtual void putTile(int x, int y, WorldTile *tile)
+    {
+        int x1 = x - mCellPos.x() * 300;
+        int y1 = y - mCellPos.y() * 300;
+
+        if (mMapLayer->contains(x1, y1))
+            mMapLayer->setCell(x1, y1, Cell(tile->mTiledTile));
+    }
+
+    virtual WorldTile *getTile(int x, int y)
+    {
+        return 0; // FIXME
+    }
+
+    WorldTileLayer *mWorldLayer;
+    QPoint mCellPos;
+    TileLayer *mMapLayer;
+};
+
 void CellScene::loadMap()
 {
     if (mMap) {
@@ -1326,6 +1348,10 @@ void CellScene::loadMap()
 
         delete mMapComposite;
         delete mRenderer;
+
+        foreach (CellTileSink *sink, mTileSinks)
+            sink->mWorldLayer->mSinks.removeOne(sink);
+        qDeleteAll(mTileSinks);
 
         mLayerItems.clear();
         mTileLayerGroupItems.clear();
@@ -1403,22 +1429,31 @@ void CellScene::loadMap()
     }
 
 #if 1
-    int n = mMap->indexOfLayer(QLatin1String("0_Floor"), Layer::TileLayerType);
-    TileLayer *floor = (n >= 0) ? mMap->layerAt(n)->asTileLayer() : 0;
-    Tileset *ts = 0;
-    foreach (Tileset *ts2, mMap->tilesets()) {
-        if (ts2->name() == QLatin1String("blends_street_01")) {
-            ts = ts2;
-            break;
+    foreach (WorldTileLayer *wtl, world()->tileLayers()) {
+        int n = mMap->indexOfLayer(wtl->mName, Layer::TileLayerType);
+        if (n >= 0) {
+            CellTileSink *sink = new CellTileSink;
+            sink->mWorldLayer = wtl;
+            sink->mMapLayer = mMap->layerAt(n)->asTileLayer();
+            sink->mCellPos = cell()->pos();
+            wtl->mSinks += sink;
+            mTileSinks += sink;
+
+            sink->mMapLayer->erase();
         }
     }
-    if (floor && ts && world()->layerCount())
-        floor->erase();
+
+    foreach (WorldScript *ws, world()->scripts()) {
+        QRect r = ws->mRegion.boundingRect().translated(-cell()->pos() * 300);
+        if (!r.intersects(QRect(QPoint(), QSize(300,300)))) continue;
+        Lua::LuaScript ls(world(), ws);
+        ls.runFunction("run");
+    }
 
 #endif
     foreach (WorldPath::Layer *layer, world()->layers()) {
         PathLayerItem *item = new PathLayerItem(layer, this);
-#if 1
+#if 0
         if (floor && ts) {
             foreach (WorldPath::Path *path, layer->paths()) {
                 if (path->bounds().intersects(QRect(cell()->pos()*300, QSize(300,300)))) {
