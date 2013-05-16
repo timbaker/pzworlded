@@ -19,24 +19,33 @@
 
 #include "isopathscene.h"
 #include "orthopathscene.h"
+#include "tilepathscene.h"
+#include "zoomable.h"
 
 PathView::PathView(PathDocument *doc, QWidget *parent) :
-    BaseGraphicsView(false, parent),
+    BaseGraphicsView(true, parent),
     mDocument(doc),
     mIsoScene(new IsoPathScene(doc, this)),
-    mOrthoScene(new OrthoPathScene(doc, this))
+    mOrthoScene(new OrthoPathScene(doc, this)),
+    mTileScene(new TilePathScene(doc, this))
 {
+    setScene(mOrthoScene);
+
+    mOrthoIsoScale = mTileScale = zoomable()->scale();
 }
 
 void PathView::switchToIso()
 {
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
-    QPointF worldPos = mOrthoScene->renderer()->toWorld(scenePos);
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+
+    if (scene()->isTile()) mTileScale = zoomable()->scale();
 
     setScene(mIsoScene);
+    zoomable()->setScale(mOrthoIsoScale);
 
-    centerOn(mIsoScene->renderer()->toScene(worldPos));
+    centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 }
 
@@ -44,10 +53,29 @@ void PathView::switchToOrtho()
 {
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
-    QPointF worldPos = mIsoScene->renderer()->toWorld(scenePos);
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+
+    if (scene()->isTile()) mTileScale = zoomable()->scale();
 
     setScene(mOrthoScene);
+    zoomable()->setScale(mOrthoIsoScale);
 
-    centerOn(mOrthoScene->renderer()->toScene(worldPos));
+    centerOn(scene()->renderer()->toScene(worldPos));
+    mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
+}
+
+void PathView::switchToTile()
+{
+    QPointF viewPos = viewport()->rect().center();
+    QPointF scenePos = mapToScene(viewPos.toPoint());
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+
+    mOrthoIsoScale = zoomable()->scale();
+
+    mTileScene->centerOn(worldPos);
+    setScene(mTileScene);
+    zoomable()->setScale(mTileScale);
+
+    centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 }

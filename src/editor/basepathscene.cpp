@@ -42,6 +42,11 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
 {
 }
 
+BasePathScene::~BasePathScene()
+{
+    delete mRenderer;
+}
+
 void BasePathScene::setDocument(PathDocument *doc)
 {
     mDocument = doc;
@@ -49,19 +54,6 @@ void BasePathScene::setDocument(PathDocument *doc)
     mPathLayerItems.clear();
 
 #if 0
-    foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-        int n = mMap->indexOfLayer(wtl->mName, Layer::TileLayerType);
-        if (n >= 0) {
-            CellTileSink *sink = new CellTileSink;
-            sink->mWorldLayer = wtl;
-            sink->mMapLayer = mMap->layerAt(n)->asTileLayer();
-            sink->mCellPos = cell()->pos();
-            wtl->mSinks += sink;
-            mTileSinks += sink;
-
-            sink->mMapLayer->erase();
-        }
-    }
 
     foreach (WorldScript *ws, world()->scripts()) {
         QRect r = ws->mRegion.boundingRect().translated(-cell()->pos() * 300);

@@ -177,8 +177,6 @@ static void testPathDocument()
                 script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
             }
 
-            continue; /////
-
             if (!script.isEmpty()) {
                 WorldScript *ws = new WorldScript;
                 ws->mFileName = script;
@@ -188,7 +186,7 @@ static void testPathDocument()
         }
     }
 
-    progress.update(QLatin1String("Running scripts"));
+    progress.update(QLatin1String("Running scripts (region)"));
 
     foreach (WorldScript *ws, newWorld->scripts()) {
         Lua::LuaScript ls(newWorld, ws);
@@ -1970,6 +1968,8 @@ void MainWindow::switchOrthoIso()
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
         if (doc->view()->scene()->isIso())
             doc->view()->switchToOrtho();
+        else if (doc->view()->scene()->isOrtho())
+            doc->view()->switchToTile();
         else
             doc->view()->switchToIso();
     }

@@ -1310,31 +1310,6 @@ void CellScene::keyPressEvent(QKeyEvent *event)
     QGraphicsScene::keyPressEvent(event);
 }
 
-#include "tileset.h" // TEMP for path region-fill testing
-#include "luaworlded.h"
-
-class CellTileSink : public WorldTileLayer::TileSink
-{
-public:
-    virtual void putTile(int x, int y, WorldTile *tile)
-    {
-        int x1 = x - mCellPos.x() * 300;
-        int y1 = y - mCellPos.y() * 300;
-
-        if (mMapLayer->contains(x1, y1))
-            mMapLayer->setCell(x1, y1, Cell(tile->mTiledTile));
-    }
-
-    virtual WorldTile *getTile(int x, int y)
-    {
-        return 0; // FIXME
-    }
-
-    WorldTileLayer *mWorldLayer;
-    QPoint mCellPos;
-    TileLayer *mMapLayer;
-};
-
 void CellScene::loadMap()
 {
     if (mMap) {
@@ -1347,10 +1322,6 @@ void CellScene::loadMap()
 
         delete mMapComposite;
         delete mRenderer;
-
-        foreach (CellTileSink *sink, mTileSinks)
-            sink->mWorldLayer->mSinks.removeOne(sink);
-        qDeleteAll(mTileSinks);
 
         mLayerItems.clear();
         mTileLayerGroupItems.clear();

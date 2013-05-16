@@ -21,3 +21,7 @@ BasePathRenderer::BasePathRenderer(World *world) :
     mWorld(world)
 {
 }
+
+BasePathRenderer::~BasePathRenderer()
+{
+}

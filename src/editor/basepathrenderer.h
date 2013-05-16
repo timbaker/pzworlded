@@ -28,6 +28,7 @@ class BasePathRenderer
 {
 public:
     BasePathRenderer(World *world);
+    virtual ~BasePathRenderer();
 
     virtual QPointF toScene(qreal x, qreal y, int level = 0) = 0;
     inline QPointF toScene(const QPointF &worldPt, int level = 0)

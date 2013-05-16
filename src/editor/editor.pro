@@ -128,7 +128,8 @@ SOURCES += main.cpp\
     orthopathscene.cpp \
     basepathrenderer.cpp \
     isopathscene.cpp \
-    pathview.cpp
+    pathview.cpp \
+    tilepathscene.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -212,7 +213,8 @@ HEADERS  += mainwindow.h \
     orthopathscene.h \
     basepathrenderer.h \
     isopathscene.h \
-    pathview.h
+    pathview.h \
+    tilepathscene.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

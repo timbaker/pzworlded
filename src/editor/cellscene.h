@@ -519,8 +519,6 @@ private:
     QList<CompositeLayerGroupItem*> mPendingGroupItems;
 
     BaseCellSceneTool *mActiveTool;
-
-    QList<CellTileSink*> mTileSinks;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

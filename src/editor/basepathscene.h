@@ -48,6 +48,7 @@ class BasePathScene : public BaseGraphicsScene
 {
 public:
     BasePathScene(PathDocument *doc, QObject *parent = 0);
+    ~BasePathScene();
 
     void setDocument(PathDocument *doc);
     PathDocument *document() const
@@ -61,6 +62,7 @@ public:
 
     virtual bool isIso() const { return false; }
     virtual bool isOrtho() const { return false; }
+    virtual bool isTile() const { return false; }
 
 private:
     PathDocument *mDocument;

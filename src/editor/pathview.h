@@ -24,6 +24,7 @@ class BasePathScene;
 class IsoPathScene;
 class OrthoPathScene;
 class PathDocument;
+class TilePathScene;
 
 class PathView : public BaseGraphicsView
 {
@@ -45,6 +46,9 @@ private:
     PathDocument *mDocument;
     IsoPathScene *mIsoScene;
     OrthoPathScene *mOrthoScene;
+    TilePathScene *mTileScene;
+    qreal mOrthoIsoScale;
+    qreal mTileScale;
 };
 
 #endif // BASEWORLDVIEW_H
