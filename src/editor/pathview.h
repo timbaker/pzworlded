@@ -31,6 +31,8 @@ class PathView : public BaseGraphicsView
 public:
     PathView(PathDocument *doc, QWidget *parent = 0);
 
+    void scrollContentsBy(int dx, int dy);
+
     void setDocument(PathDocument *doc);
     PathDocument *document() const
     { return mDocument; }

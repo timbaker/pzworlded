@@ -129,7 +129,8 @@ SOURCES += main.cpp\
     basepathrenderer.cpp \
     isopathscene.cpp \
     pathview.cpp \
-    tilepathscene.cpp
+    tilepathscene.cpp \
+    worldchunkmap.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -214,7 +215,8 @@ HEADERS  += mainwindow.h \
     basepathrenderer.h \
     isopathscene.h \
     pathview.h \
-    tilepathscene.h
+    tilepathscene.h \
+    worldchunkmap.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

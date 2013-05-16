@@ -23,6 +23,7 @@
 #include "preferences.h"
 #include "progress.h"
 #include "world.h"
+#include "worldchunkmap.h"
 
 #include "map.h"
 #include "zlevelrenderer.h"
@@ -31,10 +32,11 @@
 
 using namespace Tiled;
 
+#if 0
 class TilePathSceneSink : public WorldTileLayer::TileSink
 {
 public:
-    virtual void putTile(int x, int y, WorldTile *tile)
+    void putTile(int x, int y, WorldTile *tile)
     {
         int x1 = x - mScene->topLeftInWorld().x();
         int y1 = y - mScene->topLeftInWorld().y();
@@ -43,7 +45,7 @@ public:
             mMapLayer->setCell(x1, y1, Cell(tile->mTiledTile));
     }
 
-    virtual WorldTile *getTile(int x, int y)
+    WorldTile *getTile(int x, int y)
     {
         return 0; // FIXME
     }
@@ -52,6 +54,7 @@ public:
     WorldTileLayer *mWorldLayer;
     TileLayer *mMapLayer;
 };
+#endif
 
 /////
 
@@ -84,7 +87,7 @@ public:
     {
         QRectF boundsF;
         if (mScene->renderer()) {
-            QRect bounds(QPoint(), mScene->map()->size());
+            QRect bounds(QPoint(), mScene->world()->size() * 300);
             boundsF = mScene->renderer()->sceneBounds(bounds, mScene->currentLevel());
         }
         if (boundsF != mBoundingRect) {
@@ -100,7 +103,77 @@ private:
 
 /////
 
-TSCompositeLayerGroupItem::TSCompositeLayerGroupItem(CompositeLayerGroup *layerGroup,
+/////
+
+class TSCompositeLayerGroup : public Tiled::ZTileLayerGroup
+{
+public:
+    TSCompositeLayerGroup(TilePathScene *scene, Tiled::Map *map, int level);
+
+    QRect bounds() const;
+    QMargins drawMargins() const;
+
+    bool orderedCellsAt(const QPoint &point, QVector<const Tiled::Cell*>& cells,
+                        QVector<qreal> &opacities) const;
+
+    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
+
+    TilePathScene *mScene;
+    World *mWorld;
+    QVector<Tiled::SparseTileGrid*> mGrids;
+};
+
+TSCompositeLayerGroup::TSCompositeLayerGroup(TilePathScene *scene, Map *map, int level) :
+    ZTileLayerGroup(map, level),
+    mScene(scene),
+    mWorld(scene->world())
+{
+    mGrids.resize(20); // FIXME: max number of tiles in any cell on this level
+    for (int x = 0; x < mGrids.size(); x++)
+        mGrids[x] = new SparseTileGrid(mScene->chunkMap()->getWidthInTiles(),
+                                       mScene->chunkMap()->getWidthInTiles());
+}
+
+QRect TSCompositeLayerGroup::bounds() const
+{
+    return QRect(0, 0, mWorld->width() * 300, mWorld->height() * 300);
+}
+
+QMargins TSCompositeLayerGroup::drawMargins() const
+{
+    return QMargins(0, 128 - 32, 64, 0);
+}
+
+bool TSCompositeLayerGroup::orderedCellsAt(const QPoint &point,
+                                       QVector<const Cell *> &cells,
+                                       QVector<qreal> &opacities) const
+{
+    cells.resize(0);
+    opacities.resize(0);
+    int x = point.x()  - mScene->chunkMap()->getWorldXMinTiles();
+    int y = point.y() - mScene->chunkMap()->getWorldYMinTiles();
+    if (WorldChunkSquare *sq = mScene->chunkMap()->getGridSquare(point.x(), point.y(), level())) {
+        foreach (WorldTile *wtile, sq->tiles) {
+            if (Tile *tile = wtile->mTiledTile) {
+                mGrids[cells.size()]->replace(x, y, Cell(tile));
+                const Cell *cell = &mGrids[cells.size()]->at(x, y);
+                cells += cell;
+                opacities += 1.0;
+            }
+        }
+    }
+    return !cells.isEmpty();
+}
+
+void TSCompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect)
+{
+    Q_UNUSED(renderer)
+    Q_UNUSED(rect)
+}
+
+/////
+
+TSCompositeLayerGroupItem::TSCompositeLayerGroupItem(ZTileLayerGroup *layerGroup,
                                                      Tiled::MapRenderer *renderer,
                                                      QGraphicsItem *parent)
     : QGraphicsItem(parent)
@@ -130,8 +203,8 @@ QRectF TSCompositeLayerGroupItem::boundingRect() const
 
 void TSCompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *)
 {
-    if (mLayerGroup->needsSynch())
-        return; // needed, see MapComposite::mapAboutToChange
+//    if (mLayerGroup->needsSynch())
+//        return; // needed, see MapComposite::mapAboutToChange
     mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
 #ifdef _DEBUGxxx
     p->drawRect(mBoundingRect);
@@ -142,32 +215,42 @@ void TSCompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsIte
 
 TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
     BasePathScene(doc, parent),
-    mMap(new Map(Map::LevelIsometric, 300, 300, 64, 32)),
+    mMap(new Map(Map::LevelIsometric, 1, 1, 64, 32)),
     mMapInfo(MapManager::instance()->newFromMap(mMap)),
+    mMapComposite(0),
     mGridItem(new TSGridItem(this))
 {
     setBackgroundBrush(Qt::darkGray);
 
+    // The map is as big as the world, but I don't want MapBMP to allocate that
+    // large an image!
+    mMap->setWidth(world()->width() * 300);
+    mMap->setHeight(world()->height() * 300);
+
     foreach (WorldTileLayer *wtl, world()->tileLayers()) {
         TileLayer *tl = new TileLayer(wtl->mName, 0, 0, mMap->width(), mMap->height());
         mMap->insertLayer(mMap->layerCount(), tl);
-
+#if 0
         TilePathSceneSink *sink = new TilePathSceneSink;
         sink->mScene = this;
         sink->mWorldLayer = wtl;
         sink->mMapLayer = tl;
         wtl->mSinks += sink;
         mTileSinks += sink;
+#endif
     }
 
     TilePathRenderer *renderer = new TilePathRenderer(this, world());
     setRenderer(renderer);
     setDocument(doc);
 
+    mChunkMap = new WorldChunkMap(document());
+
     qDeleteAll(items());
 
-    mMapComposite = new MapComposite(mMapInfo);
-    foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups()) {
+//    mMapComposite = new MapComposite(mMapInfo);
+    foreach (WorldTileLayer *wtl, world()->tileLayers()) {
+        TSCompositeLayerGroup *lg = new TSCompositeLayerGroup(this, mMap, wtl->mLevel);
         TSCompositeLayerGroupItem *item = new TSCompositeLayerGroupItem(lg, renderer->mRenderer);
         mLayerGroupItems += item;
         addItem(item);
@@ -179,8 +262,25 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
     setSceneRect(mGridItem->boundingRect());
 }
 
+TilePathScene::~TilePathScene()
+{
+    delete mChunkMap;
+    delete mMapComposite;
+    delete mMapInfo;
+    delete mMap;
+}
+
 void TilePathScene::setTool(AbstractTool *tool)
 {
+}
+
+void TilePathScene::scrollContentsBy(const QPointF &worldPos)
+{
+    int wx = qMax(0, int(worldPos.x()) - mMap->width() / 2);
+    int wy = qMax(0, int(worldPos.y()) - mMap->height() / 2);
+    mTopLeftInWorld = QPoint(wx, wy);
+
+    mChunkMap->setCenter(worldPos.x(), worldPos.y());
 }
 
 void TilePathScene::centerOn(const QPointF &worldPos)
@@ -189,6 +289,7 @@ void TilePathScene::centerOn(const QPointF &worldPos)
     int wy = qMax(0, int(worldPos.y()) - mMap->height() / 2);
     mTopLeftInWorld = QPoint(wx, wy);
 
+#if 0
     foreach (TileLayer *tl, mMap->tileLayers())
         tl->erase();
 
@@ -200,9 +301,9 @@ void TilePathScene::centerOn(const QPointF &worldPos)
         Lua::LuaScript ls(world(), ws);
         ls.runFunction("run");
     }
-
+#endif
     foreach (TSCompositeLayerGroupItem *item, mLayerGroupItems) {
-        item->layerGroup()->synch();
+//        item->layerGroup()->synch();
         item->synchWithTileLayers();
     }
 }
@@ -233,8 +334,8 @@ TilePathRenderer::~TilePathRenderer()
 
 QPointF TilePathRenderer::toScene(qreal x, qreal y, int level)
 {
-    x -= mScene->topLeftInWorld().x();
-    y -= mScene->topLeftInWorld().y();
+//    x -= mScene->topLeftInWorld().x();
+//    y -= mScene->topLeftInWorld().y();
     return mRenderer->tileToPixelCoords(x, y, level);
 }
 
@@ -259,7 +360,7 @@ QPolygonF TilePathRenderer::toScene(const QPolygonF &worldPoly, int level)
 
 QPointF TilePathRenderer::toWorld(qreal x, qreal y, int level)
 {
-    return mScene->topLeftInWorld() + mRenderer->pixelToTileCoords(x, y);
+    return /*mScene->topLeftInWorld() +*/ mRenderer->pixelToTileCoords(x, y);
 }
 
 QRectF TilePathRenderer::sceneBounds(const QRectF &worldRect, int level)

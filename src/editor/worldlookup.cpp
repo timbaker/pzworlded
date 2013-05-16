@@ -20,7 +20,7 @@
 #include "path.h"
 #include "world.h"
 
-#define FUDGE 10e6
+#define FUDGE 10e1
 #define QTREE_DEPTH 6
 
 class LookupCoordinate
@@ -42,6 +42,9 @@ WorldLookup::WorldLookup(World *world) :
                              LookupCoordinate(QPoint(world->width() * 300, world->height() * 300)).y,
                              0, QTREE_DEPTH))
 {
+    foreach (WorldPath::Layer *layer, mWorld->layers())
+        foreach (WorldPath::Path *path, layer->paths())
+            mQTree->AddObject(new WorldQuadTreeObject(path));
     foreach (WorldScript *ws, mWorld->scripts())
         mQTree->AddObject(new WorldQuadTreeObject(ws));
 }
@@ -57,9 +60,24 @@ QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
     LookupCoordinate botRight(bounds.bottomRight());
     QList<WorldScript *> ret;
     foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
-                                                          botRight.x - topLeft.x, botRight.y - topLeft.y)) {
+                                                          botRight.x - topLeft.x,
+                                                          botRight.y - topLeft.y)) {
         if (o->script)
             ret += o->script;
+    }
+    return ret;
+}
+
+QList<WorldPath::Path *> WorldLookup::paths(const QRectF &bounds) const
+{
+    LookupCoordinate topLeft(bounds.topLeft());
+    LookupCoordinate botRight(bounds.bottomRight());
+    QList<WorldPath::Path *> ret;
+    foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
+                                                          botRight.x - topLeft.x,
+                                                          botRight.y - topLeft.y)) {
+        if (o->path)
+            ret += o->path;
     }
     return ret;
 }
@@ -87,6 +105,13 @@ WorldQuadTreeObject::WorldQuadTreeObject(WorldScript *script) :
     y = LookupCoordinate(script->mRegion.boundingRect().topLeft()).y;
     width = LookupCoordinate(script->mRegion.boundingRect().bottomRight()).x - x;
     height = LookupCoordinate(script->mRegion.boundingRect().bottomRight()).y - y;
+}
+
+bool WorldQuadTreeObject::intersects(LookupCoordType x, LookupCoordType y,
+                                     LookupCoordType width, LookupCoordType height)
+{
+    return (x + width > this->x) && (x < this->x + this->width) &&
+            (y + height > this->y) && (y < this->y + this->height);
 }
 
 bool WorldQuadTreeObject::contains(LookupCoordType x, LookupCoordType y)
@@ -153,11 +178,16 @@ void WorldQuadTree::AddObject(WorldQuadTreeObject *object) {
 }
 
 QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(LookupCoordType x, LookupCoordType y,
-                                               LookupCoordType width, LookupCoordType height)
+                                                         LookupCoordType width, LookupCoordType height)
 {
     QList<WorldQuadTreeObject*> ret;
-    if (level == maxLevel)
-        return objects.toList();
+    if (level == maxLevel) {
+        foreach (WorldQuadTreeObject *qto, objects) {
+            if (qto->intersects(x, y, width, height))
+                ret += qto;
+        }
+        return ret;
+    }
 
     if (NW->contains(x, y, width, height))
         ret += NW->GetObjectsAt(x, y, width, height);
@@ -231,7 +261,7 @@ QList<WorldQuadTree *> WorldQuadTree::nonEmptyQuads()
 
 
 bool WorldQuadTree::contains(LookupCoordType x, LookupCoordType y,
-                        LookupCoordType width, LookupCoordType height)
+                             LookupCoordType width, LookupCoordType height)
 {
     return (x + width > this->x) && (x < this->x + this->width) &&
             (y + height > this->y) && (y < this->y + this->height);

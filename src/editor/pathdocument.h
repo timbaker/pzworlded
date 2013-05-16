@@ -28,6 +28,10 @@ class World;
 class WorldLookup;
 class WorldScript;
 
+namespace WorldPath {
+    class Path;
+};
+
 class PathDocument : public Document
 {
 public:
@@ -46,6 +50,7 @@ public:
     { return (PathView*)Document::view(); }
 
     QList<WorldScript*> lookupScripts(const QRectF &bounds);
+    QList<WorldPath::Path*> lookupPaths(const QRectF &bounds);
 
 private:
     World *mWorld;

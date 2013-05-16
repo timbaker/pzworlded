@@ -64,6 +64,9 @@ public:
     virtual bool isOrtho() const { return false; }
     virtual bool isTile() const { return false; }
 
+    virtual void scrollContentsBy(const QPointF &worldPos)
+    { Q_UNUSED(worldPos) }
+
 private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;

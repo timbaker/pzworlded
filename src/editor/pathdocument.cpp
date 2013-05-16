@@ -25,7 +25,7 @@ PathDocument::PathDocument(World *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
     mFileName(fileName),
-    mLookup(new WorldLookup(mWorld))
+    mLookup(new WorldLookup(world))
 {
     mUndoStack = new QUndoStack(this);
 }
@@ -53,5 +53,10 @@ bool PathDocument::save(const QString &filePath, QString &error)
 QList<WorldScript *> PathDocument::lookupScripts(const QRectF &bounds)
 {
     return mLookup->scripts(bounds);
+}
+
+QList<WorldPath::Path *> PathDocument::lookupPaths(const QRectF &bounds)
+{
+    return mLookup->paths(bounds);
 }
 

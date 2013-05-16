@@ -39,6 +39,8 @@ public:
     WorldQuadTreeObject(WorldPath::Path *path);
     WorldQuadTreeObject(WorldScript *script);
 
+    bool intersects(LookupCoordType x, LookupCoordType y,
+                    LookupCoordType width, LookupCoordType height);
     bool contains(LookupCoordType x, LookupCoordType y);
 
     WorldPath::Node *node;
@@ -57,7 +59,7 @@ public:
 
     void AddObject(WorldQuadTreeObject *object);
     QList<WorldQuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y,
-                                         LookupCoordType width, LookupCoordType height);
+                                              LookupCoordType width, LookupCoordType height);
     QList<WorldQuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y);
     void Clear();
 
@@ -90,6 +92,7 @@ public:
     ~WorldLookup();
 
     QList<WorldScript*> scripts(const QRectF &bounds) const;
+    QList<WorldPath::Path*> paths(const QRectF &bounds) const;
 
 private:
     World *mWorld;

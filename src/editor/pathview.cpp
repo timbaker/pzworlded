@@ -22,8 +22,10 @@
 #include "tilepathscene.h"
 #include "zoomable.h"
 
+static bool AllowOpenGL = false;
+
 PathView::PathView(PathDocument *doc, QWidget *parent) :
-    BaseGraphicsView(true, parent),
+    BaseGraphicsView(AllowOpenGL, parent),
     mDocument(doc),
     mIsoScene(new IsoPathScene(doc, this)),
     mOrthoScene(new OrthoPathScene(doc, this)),
@@ -78,4 +80,15 @@ void PathView::switchToTile()
 
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
+}
+
+void PathView::scrollContentsBy(int dx, int dy)
+{
+    BaseGraphicsView::scrollContentsBy(dx, dy);
+
+    QPointF viewPos = viewport()->rect().center();
+    QPointF scenePos = mapToScene(viewPos.toPoint());
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+
+    scene()->scrollContentsBy(worldPos);
 }

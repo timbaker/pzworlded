@@ -26,11 +26,13 @@ namespace Tiled {
 class Map;
 class MapRenderer;
 class ZLevelRenderer;
+class ZTileLayerGroup;
 }
 
 class CompositeLayerGroup;
 class MapComposite;
 class MapInfo;
+class WorldChunkMap;
 
 class TilePathScene;
 class TilePathSceneSink;
@@ -61,17 +63,17 @@ public:
 class TSCompositeLayerGroupItem : public QGraphicsItem
 {
 public:
-    TSCompositeLayerGroupItem(CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
+    TSCompositeLayerGroupItem(Tiled::ZTileLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
 
     void synchWithTileLayers();
 
     QRectF boundingRect() const;
     void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *);
 
-    CompositeLayerGroup *layerGroup() const { return mLayerGroup; }
+    Tiled::ZTileLayerGroup *layerGroup() const { return mLayerGroup; }
 
 private:
-    CompositeLayerGroup *mLayerGroup;
+    Tiled::ZTileLayerGroup *mLayerGroup;
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
 };
@@ -80,10 +82,13 @@ class TilePathScene : public BasePathScene
 {
 public:
     TilePathScene(PathDocument *doc, QObject *parent = 0);
+    ~TilePathScene();
 
     void setTool(AbstractTool *tool);
 
     bool isTile() const { return true; }
+
+    void scrollContentsBy(const QPointF &worldPos);
 
     void centerOn(const QPointF &worldPos);
 
@@ -95,6 +100,9 @@ public:
     Tiled::MapRenderer *mapRenderer() const;
     int currentLevel();
 
+    WorldChunkMap *chunkMap() const
+    { return mChunkMap; }
+
 private:
     Tiled::Map *mMap;
     MapInfo *mMapInfo;
@@ -103,6 +111,7 @@ private:
     QPoint mTopLeftInWorld;
     TSGridItem *mGridItem;
     QList<TSCompositeLayerGroupItem*> mLayerGroupItems;
+    WorldChunkMap *mChunkMap;
 };
 
 #endif // TILEPATHSCENE_H
