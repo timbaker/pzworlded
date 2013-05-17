@@ -200,8 +200,8 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     return;
 #endif
 #if 1
-    WorldPath::Rect bounds = option->exposedRect;
-    foreach (WorldPath::Path *path, mScene->document()->lookupPaths(bounds)) {
+    QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
+    foreach (WorldPath::Path *path, mScene->document()->lookupPaths(exposed)) {
         painter->setBrush(Qt::NoBrush);
         QPolygonF pf = path->polygon();
         if (path->isClosed()) {

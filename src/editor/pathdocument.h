@@ -21,6 +21,7 @@
 #include "document.h"
 
 #include <QList>
+#include <QPolygonF>
 #include <QRectF>
 
 class PathView;
@@ -51,6 +52,7 @@ public:
 
     QList<WorldScript*> lookupScripts(const QRectF &bounds);
     QList<WorldPath::Path*> lookupPaths(const QRectF &bounds);
+    QList<WorldPath::Path*> lookupPaths(const QPolygonF &bounds);
 
 private:
     World *mWorld;

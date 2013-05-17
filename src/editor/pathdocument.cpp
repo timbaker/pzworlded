@@ -60,3 +60,7 @@ QList<WorldPath::Path *> PathDocument::lookupPaths(const QRectF &bounds)
     return mLookup->paths(bounds);
 }
 
+QList<WorldPath::Path *> PathDocument::lookupPaths(const QPolygonF &bounds)
+{
+    return mLookup->paths(bounds);
+}

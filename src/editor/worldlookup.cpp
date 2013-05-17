@@ -32,6 +32,8 @@ public:
         y = wc.y() * FUDGE;
     }
 
+    QPointF toPointF() const { return QPointF(x, y); }
+
     LookupCoordType x, y;
 };
 
@@ -90,6 +92,21 @@ QList<WorldPath::Path *> WorldLookup::paths(const QRectF &bounds) const
     return ret;
 }
 
+QList<WorldPath::Path *> WorldLookup::paths(const QPolygonF &poly) const
+{
+    static QPolygonF lpoly;
+    lpoly.resize(0);
+    foreach (QPointF p, poly)
+        lpoly += LookupCoordinate(p).toPointF();
+
+    QList<WorldPath::Path *> ret;
+    foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(lpoly)) {
+        if (o->path)
+            ret += o->path;
+    }
+    return ret;
+}
+
 /////
 
 WorldQuadTreeObject::WorldQuadTreeObject(WorldPath::Node *node) :
@@ -120,6 +137,12 @@ bool WorldQuadTreeObject::intersects(LookupCoordType x, LookupCoordType y,
 {
     return (x + width > this->x) && (x < this->x + this->width) &&
             (y + height > this->y) && (y < this->y + this->height);
+}
+
+bool WorldQuadTreeObject::intersects(const QPolygonF &poly)
+{
+    QRectF selfRect(QRectF(this->x, this->y, this->width, this->height));
+    return poly.boundingRect().intersects(selfRect);
 }
 
 bool WorldQuadTreeObject::contains(LookupCoordType x, LookupCoordType y)
@@ -209,6 +232,29 @@ QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(LookupCoordType x, Look
     return ret.toSet().toList();
 }
 
+QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(const QPolygonF &poly)
+{
+    QList<WorldQuadTreeObject*> ret;
+    if (level == maxLevel) {
+        foreach (WorldQuadTreeObject *qto, objects) {
+            if (qto->intersects(poly))
+                ret += qto;
+        }
+        return ret;
+    }
+
+    if (NW->intersects(poly))
+        ret += NW->GetObjectsAt(poly);
+    if (NE->intersects(poly))
+        ret += NE->GetObjectsAt(poly);
+    if (SW->intersects(poly))
+        ret += SW->GetObjectsAt(poly);
+    if (SE->intersects(poly))
+        ret += SE->GetObjectsAt(poly);
+
+    return ret.toSet().toList();
+}
+
 QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(LookupCoordType x, LookupCoordType y)
 {
     QList<WorldQuadTreeObject*> ret;
@@ -279,4 +325,10 @@ bool WorldQuadTree::contains(LookupCoordType x, LookupCoordType y)
 {
     return (x >= this->x) && (x < this->x + this->width) &&
             (y >= this->y) && (y < this->y + this->height);
+}
+
+bool WorldQuadTree::intersects(const QPolygonF &poly)
+{
+    QRectF selfRect(QRectF(this->x, this->y, this->width, this->height));
+    return poly.boundingRect().intersects(selfRect);
 }

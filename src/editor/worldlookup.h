@@ -19,6 +19,7 @@
 #define WORLDLOOKUP_H
 
 #include <QList>
+#include <QPolygonF>
 #include <QRectF>
 #include <QVector>
 
@@ -41,6 +42,7 @@ public:
 
     bool intersects(LookupCoordType x, LookupCoordType y,
                     LookupCoordType width, LookupCoordType height);
+    bool intersects(const QPolygonF &poly);
     bool contains(LookupCoordType x, LookupCoordType y);
 
     WorldPath::Node *node;
@@ -60,6 +62,7 @@ public:
     void AddObject(WorldQuadTreeObject *object);
     QList<WorldQuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y,
                                               LookupCoordType width, LookupCoordType height);
+    QList<WorldQuadTreeObject *> GetObjectsAt(const QPolygonF &poly);
     QList<WorldQuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y);
     void Clear();
 
@@ -81,6 +84,7 @@ private:
     bool contains(LookupCoordType x, LookupCoordType y,
                   LookupCoordType width, LookupCoordType height);
     bool contains(LookupCoordType x, LookupCoordType y);
+    bool intersects(const QPolygonF &poly);
     bool contains(WorldQuadTree *child, WorldQuadTreeObject *object);
 
 };
@@ -93,6 +97,7 @@ public:
 
     QList<WorldScript*> scripts(const QRectF &bounds) const;
     QList<WorldPath::Path*> paths(const QRectF &bounds) const;
+    QList<WorldPath::Path*> paths(const QPolygonF &poly) const;
 
 private:
     World *mWorld;

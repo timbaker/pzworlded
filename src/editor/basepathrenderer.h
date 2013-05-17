@@ -37,8 +37,9 @@ public:
     virtual QPolygonF toScene(const QPolygonF &worldPoly, int level) = 0;
 
     virtual QPointF toWorld(qreal x, qreal y, int level = 0) = 0;
-    inline QPointF toWorld(const QPointF &scenePos)
-    { return toWorld(scenePos.x(), scenePos.y()); }
+    inline QPointF toWorld(const QPointF &scenePos, int level = 0)
+    { return toWorld(scenePos.x(), scenePos.y(), level); }
+    virtual QPolygonF toWorld(const QRectF &sceneRect, int level = 0);
 
     virtual QRectF sceneBounds(const QRectF &worldRect, int level = 0) = 0;
 

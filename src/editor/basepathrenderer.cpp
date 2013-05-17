@@ -25,3 +25,14 @@ BasePathRenderer::BasePathRenderer(World *world) :
 BasePathRenderer::~BasePathRenderer()
 {
 }
+
+QPolygonF BasePathRenderer::toWorld(const QRectF &sceneRect, int level)
+{
+    QPolygonF pf;
+    pf << toWorld(sceneRect.topLeft());
+    pf << toWorld(sceneRect.topRight());
+    pf << toWorld(sceneRect.bottomRight());
+    pf << toWorld(sceneRect.bottomLeft());
+    pf += pf.first();
+    return pf;
+}
