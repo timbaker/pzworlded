@@ -22,12 +22,12 @@
 #include <QPolygonF>
 #include <QRectF>
 
-class World;
+class PathWorld;
 
 class BasePathRenderer
 {
 public:
-    BasePathRenderer(World *world);
+    BasePathRenderer(PathWorld *world);
     virtual ~BasePathRenderer();
 
     virtual QPointF toScene(qreal x, qreal y, int level = 0) = 0;
@@ -44,7 +44,7 @@ public:
     virtual QRectF sceneBounds(const QRectF &worldRect, int level = 0) = 0;
 
 protected:
-    World *mWorld;
+    PathWorld *mWorld;
 };
 
 #endif // BASEPATHRENDERER_H

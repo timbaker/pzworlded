@@ -19,7 +19,7 @@
 
 #include "luaworlded.h"
 #include "pathdocument.h"
-#include "world.h"
+#include "pathworld.h"
 
 #include <QRect>
 #include <QRegion>

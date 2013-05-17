@@ -20,9 +20,9 @@
 #include "luaworlded.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
+#include "pathworld.h"
 #include "preferences.h"
 #include "progress.h"
-#include "world.h"
 #include "worldchunkmap.h"
 
 #include "tile.h"
@@ -64,10 +64,9 @@ public:
     void updateBoundingRect()
     {
         QRectF boundsF;
-        if (mScene->renderer()) {
-            QRect bounds(QPoint(), mScene->world()->size() * 300);
-            boundsF = mScene->renderer()->sceneBounds(bounds, mScene->currentLevel());
-        }
+        if (mScene->renderer())
+            boundsF = mScene->renderer()->sceneBounds(mScene->world()->bounds(),
+                                                      mScene->currentLevel());
         if (boundsF != mBoundingRect) {
             prepareGeometryChange();
             mBoundingRect = boundsF;
@@ -90,18 +89,12 @@ TSLevelItem::TSLevelItem(int level,
 {
     setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
 
-    mBoundingRect = mScene->renderer()->sceneBounds(
-                QRect(0, 0,
-                      mScene->world()->width() * 300,
-                      mScene->world()->height() * 300), mLevel);
+    mBoundingRect = mScene->renderer()->sceneBounds(mScene->world()->bounds(), mLevel);
 }
 
 void TSLevelItem::synchWithTileLayers()
 {
-//    mLayerGroup->synch();
-
-    QRectF bounds = mScene->renderer()->sceneBounds(
-                QRect(0, 0, mScene->world()->width() * 300, mScene->world()->height() * 300), mLevel);
+    QRectF bounds = mScene->renderer()->sceneBounds(mScene->world()->bounds(), mLevel);
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
@@ -180,7 +173,7 @@ int TilePathScene::currentLevel()
 
 /////
 
-TilePathRenderer::TilePathRenderer(TilePathScene *scene, World *world) :
+TilePathRenderer::TilePathRenderer(TilePathScene *scene, PathWorld *world) :
     BasePathRenderer(world),
     mScene(scene)
 {
@@ -194,7 +187,7 @@ QPointF TilePathRenderer::toScene(qreal x, qreal y, int level)
 {
     const int tileWidth = 64;
     const int tileHeight = 32;
-    const int mapHeight = mScene->world()->height() * 300;
+    const int mapHeight = mScene->world()->height();
     const int tilesPerLevel = 3;
     const int maxLevel = 16;
 
@@ -229,7 +222,7 @@ QPointF TilePathRenderer::toWorld(qreal x, qreal y, int level)
     const int tileHeight = 32;
     const qreal ratio = (qreal) tileWidth / tileHeight;
 
-    const int mapHeight = mScene->world()->height() * 300;
+    const int mapHeight = mScene->world()->height();
     const int tilesPerLevel = 3;
     const int maxLevel = 16;
 
@@ -344,8 +337,8 @@ void TilePathRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor gr
     const int tileWidth = 64;
     const int tileHeight = 32;
 
-    const int mapHeight = mScene->world()->height() * 300;
-    const int mapWidth = mScene->world()->width() * 300;
+    const int mapHeight = mScene->world()->height();
+    const int mapWidth = mScene->world()->width();
 
     QRect r = rect.toAlignedRect();
     r.adjust(-tileWidth / 2, -tileHeight / 2,

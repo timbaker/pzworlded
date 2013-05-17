@@ -17,7 +17,7 @@
 
 #include "isopathscene.h"
 
-#include "world.h"
+#include "pathworld.h"
 
 IsoPathScene::IsoPathScene(PathDocument *doc, QObject *parent) :
     BasePathScene(doc, parent)
@@ -32,7 +32,7 @@ void IsoPathScene::setTool(AbstractTool *tool)
 
 /////
 
-IsoPathRenderer::IsoPathRenderer(World *world) :
+IsoPathRenderer::IsoPathRenderer(PathWorld *world) :
     BasePathRenderer(world)
 {
 }
@@ -41,7 +41,7 @@ QPointF IsoPathRenderer::toScene(qreal x, qreal y, int level)
 {
     const qreal tileWidth = 1;
     const qreal tileHeight = 0.5;
-    const int worldHeight = mWorld->height() * 300;
+    const int worldHeight = mWorld->height();
     const int levelHeight = 3;
     const int maxLevel = qMax(0, mWorld->layerCount() - 1);
 
@@ -76,7 +76,7 @@ QPointF IsoPathRenderer::toWorld(qreal x, qreal y, int level)
     const qreal tileHeight = 0.5;
     const qreal ratio = tileWidth / tileHeight;
 
-    const int worldHeight = mWorld->height() * 300;
+    const int worldHeight = mWorld->height();
     const int levelHeight = 3;
     const int maxLevel = qMax(0, mWorld->layerCount() - 1);
 

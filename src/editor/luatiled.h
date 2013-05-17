@@ -28,6 +28,7 @@ extern "C" {
 struct lua_State;
 }
 
+class PathWorld;
 class World;
 class WorldScript;
 
@@ -364,7 +365,7 @@ class LuaWorldScript;
 class LuaScript
 {
 public:
-    LuaScript(World *world, WorldScript *script);
+    LuaScript(PathWorld *world, WorldScript *script);
     ~LuaScript();
 
     lua_State *init();
@@ -374,7 +375,7 @@ public:
     bool getResultRegion(QRegion &rgn);
 
     lua_State *L;
-    World *mWorld;
+    PathWorld *mWorld;
     WorldScript *mWorldScript;
 };
 

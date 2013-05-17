@@ -18,8 +18,8 @@
 #include "luaworlded.h"
 
 #include "path.h"
+#include "pathworld.h"
 #include "tilepainter.h"
-#include "world.h"
 
 #include "mapmanager.h"
 #include "tile.h"
@@ -91,7 +91,7 @@ const char *LuaWorldScript::value(const char *key)
 
 /////
 
-LuaWorld::LuaWorld(World *world) :
+LuaWorld::LuaWorld(PathWorld *world) :
     mWorld(world)
 {
 }

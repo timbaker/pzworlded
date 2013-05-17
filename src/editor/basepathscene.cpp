@@ -20,7 +20,7 @@
 #include "basepathrenderer.h"
 #include "path.h"
 #include "pathdocument.h"
-#include "world.h"
+#include "pathworld.h"
 
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
@@ -154,7 +154,7 @@ void BasePathScene::setDocument(PathDocument *doc)
     }
 }
 
-World *BasePathScene::world() const
+PathWorld *BasePathScene::world() const
 {
     return mDocument ? mDocument->world() : 0;
 }
@@ -176,9 +176,7 @@ PathLayerItem::PathLayerItem(WorldPath::Layer *layer, BasePathScene *scene, QGra
 
 QRectF PathLayerItem::boundingRect() const
 {
-    return mScene->renderer()->sceneBounds(QRect(0, 0,
-                                                 mScene->world()->width() * 300,
-                                                 mScene->world()->height() * 300), mLayer->mLevel);
+    return mScene->renderer()->sceneBounds(mScene->world()->bounds(), mLayer->mLevel);
 }
 
 void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)

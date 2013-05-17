@@ -18,7 +18,9 @@
 #include "worldlookup.h"
 
 #include "path.h"
-#include "world.h"
+#include "pathworld.h"
+
+#include <QSet>
 
 #define FUDGE 10e1
 #define QTREE_DEPTH 6
@@ -42,7 +44,7 @@ static LookupCoordType LOOKUP_LENGTH(qreal w)
     return w * FUDGE;
 }
 
-WorldLookup::WorldLookup(World *world) :
+WorldLookup::WorldLookup(PathWorld *world) :
     mWorld(world),
     mQTree(new WorldQuadTree(0, 0,
                              LOOKUP_LENGTH(world->width() * 300),

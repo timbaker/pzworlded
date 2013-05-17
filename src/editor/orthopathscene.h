@@ -25,7 +25,7 @@
 class OrthoPathRenderer : public BasePathRenderer
 {
 public:
-    OrthoPathRenderer(World *world);
+    OrthoPathRenderer(PathWorld *world);
 
     using BasePathRenderer::toScene;
     QPointF toScene(qreal x, qreal y, int level = 0);

@@ -25,7 +25,7 @@
 #include <QRectF>
 
 class PathView;
-class World;
+class PathWorld;
 class WorldLookup;
 class WorldScript;
 
@@ -36,7 +36,7 @@ namespace WorldPath {
 class PathDocument : public Document
 {
 public:
-    PathDocument(World *world, const QString &fileName = QString());
+    PathDocument(PathWorld *world, const QString &fileName = QString());
     ~PathDocument();
 
     void setFileName(const QString &fileName);
@@ -44,7 +44,7 @@ public:
 
     bool save(const QString &filePath, QString &error);
 
-    World *world() const
+    PathWorld *world() const
     { return mWorld; }
 
     PathView *view() const
@@ -55,7 +55,7 @@ public:
     QList<WorldPath::Path*> lookupPaths(const QPolygonF &bounds);
 
 private:
-    World *mWorld;
+    PathWorld *mWorld;
     QString mFileName;
     WorldLookup *mLookup;
 };

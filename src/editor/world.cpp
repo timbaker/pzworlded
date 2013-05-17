@@ -18,7 +18,6 @@
 #include "world.h"
 
 #include "bmptotmx.h" // FIXME: remove from this file
-#include "path.h"
 #include "worldcell.h"
 
 #include <QStringList>
@@ -51,7 +50,6 @@ World::~World()
     qDeleteAll(mPropertyDefs);
     qDeleteAll(mObjectTypes);
     qDeleteAll(mBMPs);
-    qDeleteAll(mPathLayers);
 }
 
 void World::swapCells(QVector<WorldCell *> &cells)
@@ -108,91 +106,6 @@ void World::insertBmp(int index, WorldBMP *bmp)
 WorldBMP *World::removeBmp(int index)
 {
     return mBMPs.takeAt(index);
-}
-
-void World::insertLayer(int index, WorldPath::Layer *layer)
-{
-    mPathLayers.insert(index, layer);
-}
-
-WorldPath::Layer *World::removeLayer(int index)
-{
-    return mPathLayers.takeAt(index);
-}
-
-WorldPath::Layer *World::layerAt(int index)
-{
-    return mPathLayers.at(index);
-}
-
-int World::layerCount() const
-{
-    return mPathLayers.size();
-}
-
-void World::insertTileLayer(int index, WorldTileLayer *layer)
-{
-    mTileLayers.insert(index, layer);
-    mTileLayerByName[layer->mName] = layer;
-}
-
-WorldTileLayer *World::removeTileLayer(int index)
-{
-    return mTileLayers.takeAt(index);
-}
-
-WorldTileLayer *World::tileLayerAt(int index)
-{
-    if (index >= 0 && index < mTileLayers.size())
-        return mTileLayers[index];
-    return 0;
-}
-
-WorldTileLayer *World::tileLayer(const QString &layerName)
-{
-    if (mTileLayerByName.contains(layerName))
-        return mTileLayerByName[layerName];
-    return 0;
-}
-
-int World::indexOf(WorldTileLayer *wtl)
-{
-    return mTileLayers.indexOf(wtl);
-}
-
-void World::insertScript(int index, WorldScript *script)
-{
-    mScripts.insert(index, script);
-}
-
-WorldScript *World::removeScript(int index)
-{
-    return mScripts.takeAt(index);
-}
-
-WorldScript *World::scriptAt(int index)
-{
-    return (index >= 0 && index < mScripts.size()) ? mScripts[index] : 0;
-}
-
-void World::insertTileset(int index, WorldTileset *tileset)
-{
-    mTilesets.insert(index, tileset);
-    mTilesetByName[tileset->mName] = tileset;
-}
-
-WorldTileset *World::tileset(const QString &tilesetName)
-{
-    if (mTilesetByName.contains(tilesetName))
-        return mTilesetByName[tilesetName];
-    return 0;
-}
-
-WorldTile *World::tile(const QString &tilesetName, int index)
-{
-    if (WorldTileset *ts = tileset(tilesetName))
-        return ts->tileAt(index);
-    return 0;
 }
 
 /////
@@ -263,45 +176,4 @@ WorldBMP::WorldBMP(World *world, int x, int y, int width, int height, const QStr
     mHeight(height),
     mFilePath(filePath)
 {
-}
-
-/////
-
-WorldTileset::WorldTileset(const QString &name, int columns, int rows) :
-    mName(name),
-    mColumns(columns),
-    mRows(rows)
-{
-    for (int i = 0; i < mColumns * mRows; i++)
-        mTiles += new WorldTile(this, i);
-}
-
-WorldTileset::~WorldTileset()
-{
-    qDeleteAll(mTiles);
-}
-
-WorldTile *WorldTileset::tileAt(int index)
-{
-    if (index >= 0 && index < mTiles.size())
-        return mTiles[index];
-    return 0;
-}
-
-/////
-
-void WorldTileLayer::putTile(int x, int y, WorldTile *tile)
-{
-    foreach (TileSink *sink, mSinks)
-        sink->putTile(x, y, tile);
-}
-
-WorldTile *WorldTileLayer::getTile(int x, int y)
-{
-     // weird?
-    foreach (TileSink *sink, mSinks) {
-        if (WorldTile *tile = sink->getTile(x, y))
-            return tile;
-    }
-    return 0;
 }

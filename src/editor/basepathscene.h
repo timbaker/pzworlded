@@ -25,7 +25,7 @@
 class BasePathRenderer;
 class BasePathScene;
 class PathDocument;
-class World;
+class PathWorld;
 
 namespace WorldPath {
     class Layer;
@@ -54,7 +54,7 @@ public:
     PathDocument *document() const
     { return mDocument; }
 
-    World *world() const;
+    PathWorld *world() const;
 
     void setRenderer(BasePathRenderer *renderer);
     BasePathRenderer *renderer() const

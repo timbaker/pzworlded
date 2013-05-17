@@ -31,7 +31,7 @@ void OrthoPathScene::setTool(AbstractTool *tool)
 
 /////
 
-OrthoPathRenderer::OrthoPathRenderer(World *world) :
+OrthoPathRenderer::OrthoPathRenderer(PathWorld *world) :
     BasePathRenderer(world)
 {
 }

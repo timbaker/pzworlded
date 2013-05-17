@@ -18,9 +18,9 @@
 #include "tilepainter.h"
 
 #include "path.h"
-#include "world.h"
+#include "pathworld.h"
 
-TilePainter::TilePainter(World *world) :
+TilePainter::TilePainter(PathWorld *world) :
     mWorld(world),
     mLayer(0),
     mTile(0),

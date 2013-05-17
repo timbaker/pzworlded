@@ -23,7 +23,6 @@
 #include "documentmanager.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
-#include "path.h"
 #include "preferences.h"
 #include "scenetools.h"
 #include "toolmanager.h"
@@ -1263,19 +1262,6 @@ void WorldGridItem::paint(QPainter *painter,
         const QPointF end = mScene->cellToPixelCoords(x, (qreal)endY);
         painter->drawLine(start, end);
     }
-
-#if 1
-    WorldPath::Rect bounds = option->exposedRect;
-    foreach (WorldPath::Layer *layer, mScene->world()->layers()) {
-        foreach (WorldPath::Path *path, layer->paths(bounds)) {
-            QPolygonF pf = path->polygon();
-            if (path->isClosed())
-                painter->drawPolygon(mScene->worldToScene(pf/*, mLayer->level()*/));
-            else
-                painter->drawPolyline(mScene->worldToScene(pf/*, mLayer->level()*/));
-        }
-    }
-#endif
 }
 
 void WorldGridItem::updateBoundingRect()

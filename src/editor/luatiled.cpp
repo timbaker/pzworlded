@@ -19,12 +19,15 @@
 
 #include "mapcomposite.h"
 
+#include "luaworlded.h"
 #include "map.h"
 #include "mapobject.h"
 #include "objectgroup.h"
+#include "pathworld.h"
 #include "tile.h"
 #include "tileset.h"
 #include "tilelayer.h"
+#include "tilepainter.h"
 #if 1
 #include "mapwriter.h"
 #else
@@ -144,7 +147,7 @@ tolua_lerror:
 
 /////
 
-LuaScript::LuaScript(World *world, WorldScript *script) :
+LuaScript::LuaScript(PathWorld *world, WorldScript *script) :
     L(0),
     mWorld(world),
     mWorldScript(script)
@@ -268,9 +271,6 @@ bool LuaScript::dofile(const QString &f, QString &output)
     return status == LUA_OK;
 }
 
-#include "luaworlded.h"
-#include "tilepainter.h"
-#include "world.h"
 bool LuaScript::runFunction(const char *name)
 {
     QElapsedTimer elapsed;

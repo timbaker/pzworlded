@@ -25,7 +25,7 @@
 
 typedef unsigned long LookupCoordType;
 
-class World;
+class PathWorld;
 class WorldScript;
 
 namespace WorldPath {
@@ -92,7 +92,7 @@ private:
 class WorldLookup
 {
 public:
-    WorldLookup(World *world);
+    WorldLookup(PathWorld *world);
     ~WorldLookup();
 
     QList<WorldScript*> scripts(const QRectF &bounds) const;
@@ -100,7 +100,7 @@ public:
     QList<WorldPath::Path*> paths(const QPolygonF &poly) const;
 
 private:
-    World *mWorld;
+    PathWorld *mWorld;
     WorldQuadTree *mQTree;
 };
 

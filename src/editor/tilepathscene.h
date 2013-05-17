@@ -31,7 +31,7 @@ class TSGridItem;
 class TilePathRenderer : public BasePathRenderer
 {
 public:
-    TilePathRenderer(TilePathScene *scene, World *world);
+    TilePathRenderer(TilePathScene *scene, PathWorld *world);
     ~TilePathRenderer();
 
     using BasePathRenderer::toScene;

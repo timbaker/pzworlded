@@ -22,7 +22,7 @@
 #include <QList>
 
 class PathDocument;
-class World;
+class PathWorld;
 class WorldTile;
 
 class WorldChunk;
@@ -239,7 +239,7 @@ public:
     static const int MaxLevels = 16;
 
     PathDocument *mDocument;
-    World *mWorld;
+    PathWorld *mWorld;
 
 //    IsoCell *cell;
 

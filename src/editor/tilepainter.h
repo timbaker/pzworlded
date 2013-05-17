@@ -25,7 +25,7 @@ namespace WorldPath {
 class Path;
 }
 
-class World;
+class PathWorld;
 class WorldTile;
 class WorldTileLayer;
 class WorldTileset;
@@ -33,9 +33,9 @@ class WorldTileset;
 class TilePainter
 {
 public:
-    TilePainter(World *world);
+    TilePainter(PathWorld *world);
 
-    World *world() const
+    PathWorld *world() const
     { return mWorld; }
 
     void setLayer(WorldTileLayer *layer);
@@ -63,7 +63,7 @@ public:
     typedef void (*TileFilterProc)(int x, int y, WorldTile *tile);
 
 private:
-    World *mWorld;
+    PathWorld *mWorld;
     WorldTileLayer *mLayer;
     WorldTile *mTile;
 

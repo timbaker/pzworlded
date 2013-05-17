@@ -23,8 +23,8 @@
 #include <QPolygonF>
 
 class MapInfo;
+class PathWorld;
 class TilePainter;
-class World;
 class WorldScript;
 class WorldTile;
 class WorldTileLayer;
@@ -67,12 +67,12 @@ public:
 class LuaWorld
 {
 public:
-    LuaWorld(World *world);
+    LuaWorld(PathWorld *world);
 
     WorldTile *tile(const char *tilesetName, int id);
     WorldTileLayer *tileLayer(const char *name);
 
-    World *mWorld;
+    PathWorld *mWorld;
 };
 
 class LuaMapInfo;

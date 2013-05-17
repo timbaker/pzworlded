@@ -17,11 +17,12 @@
 
 #include "pathdocument.h"
 
+#include "pathworld.h"
 #include "worldlookup.h"
 
 #include <QUndoStack>
 
-PathDocument::PathDocument(World *world, const QString &fileName) :
+PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
     mFileName(fileName),

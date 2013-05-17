@@ -130,7 +130,8 @@ SOURCES += main.cpp\
     isopathscene.cpp \
     pathview.cpp \
     tilepathscene.cpp \
-    worldchunkmap.cpp
+    worldchunkmap.cpp \
+    pathworld.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -216,7 +217,8 @@ HEADERS  += mainwindow.h \
     isopathscene.h \
     pathview.h \
     tilepathscene.h \
-    worldchunkmap.h
+    worldchunkmap.h \
+    pathworld.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
