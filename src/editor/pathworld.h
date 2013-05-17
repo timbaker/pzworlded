@@ -109,12 +109,17 @@ public:
     QSize size() const { return QSize(mWidth, mHeight); }
     QRect bounds() const { return QRect(0, 0, mWidth, mHeight); }
 
-    void insertLayer(int index, WorldPath::Layer *layer);
-    WorldPath::Layer *removeLayer(int index);
-    const QList<WorldPath::Layer*> &layers() const
+    int tileHeight() const { return 32; }
+    int tileWidth() const { return 64; }
+
+    int maxLevel() const { return 16; }
+
+    void insertPathLayer(int index, WorldPath::Layer *layer);
+    WorldPath::Layer *removePathLayer(int index);
+    const QList<WorldPath::Layer*> &pathLayers() const
     { return mPathLayers; }
-    WorldPath::Layer *layerAt(int index);
-    int layerCount() const;
+    WorldPath::Layer *pathLayerAt(int index);
+    int pathLayerCount() const;
 
     void insertTileLayer(int index, WorldTileLayer *layer);
     WorldTileLayer *removeTileLayer(int index);

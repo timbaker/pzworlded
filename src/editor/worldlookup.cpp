@@ -51,7 +51,7 @@ WorldLookup::WorldLookup(PathWorld *world) :
                              LOOKUP_LENGTH(world->height() * 300),
                              0, QTREE_DEPTH))
 {
-    foreach (WorldPath::Layer *layer, mWorld->layers())
+    foreach (WorldPath::Layer *layer, mWorld->pathLayers())
         foreach (WorldPath::Path *path, layer->paths())
             mQTree->AddObject(new WorldQuadTreeObject(path));
     foreach (WorldScript *ws, mWorld->scripts()) {

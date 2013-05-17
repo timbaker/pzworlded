@@ -31,22 +31,22 @@ PathWorld::~PathWorld()
     qDeleteAll(mTileLayers);
 }
 
-void PathWorld::insertLayer(int index, WorldPath::Layer *layer)
+void PathWorld::insertPathLayer(int index, WorldPath::Layer *layer)
 {
     mPathLayers.insert(index, layer);
 }
 
-WorldPath::Layer *PathWorld::removeLayer(int index)
+WorldPath::Layer *PathWorld::removePathLayer(int index)
 {
     return mPathLayers.takeAt(index);
 }
 
-WorldPath::Layer *PathWorld::layerAt(int index)
+WorldPath::Layer *PathWorld::pathLayerAt(int index)
 {
     return mPathLayers.at(index);
 }
 
-int PathWorld::layerCount() const
+int PathWorld::pathLayerCount() const
 {
     return mPathLayers.size();
 }

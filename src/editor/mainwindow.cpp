@@ -137,10 +137,10 @@ static void testPathDocument()
                 path->insertNode(j++, pathLayer->node(nd->id));
             pathLayer->insertPath(i++, path);
         }
-        newWorld->insertLayer(0, pathLayer);
+        newWorld->insertPathLayer(0, pathLayer);
     }
 
-    foreach (WorldPath::Layer *layer, newWorld->layers()) {
+    foreach (WorldPath::Layer *layer, newWorld->pathLayers()) {
         foreach (WorldPath::Path *path, layer->paths()) {
             QString script;
             if (path->tags.contains(QLatin1String("landuse"))) {

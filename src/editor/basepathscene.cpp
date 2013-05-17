@@ -63,7 +63,7 @@ void BasePathScene::setDocument(PathDocument *doc)
     }
 #endif
 
-    foreach (WorldPath::Layer *layer, world()->layers()) {
+    foreach (WorldPath::Layer *layer, world()->pathLayers()) {
         PathLayerItem *item = new PathLayerItem(layer, this);
 #if 0
         if (floor && ts) {
