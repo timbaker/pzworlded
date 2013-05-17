@@ -25,6 +25,11 @@
 #ifdef ZOMBOID
 void luai_writestring(s,l) { fwrite((s), sizeof(char), (l), stdout); }
 void luai_writeline() { (luai_writestring("\n", 1), fflush(stdout)); }
+void extern_lua_assert(const char *cond, const char *file, int line)
+{
+    fprintf(stderr, "ASSERT FAILED: %s %s %d", cond, file, line);
+}
+
 #endif
 
 static void help (void)

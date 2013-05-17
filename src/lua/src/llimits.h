@@ -58,6 +58,10 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 
 /* internal assertions for in-house debugging */
+#ifdef ZOMBOID
+extern void extern_lua_assert(const char *cond, const char *file, int line);
+#define lua_assert(cond) ((!(cond)) ? extern_lua_assert(#cond,__FILE__,__LINE__) : ((void)0))
+#endif
 #if defined(lua_assert)
 #define check_exp(c,e)		(lua_assert(c), (e))
 /* to avoid problems with conditions too long */

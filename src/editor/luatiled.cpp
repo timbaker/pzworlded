@@ -192,6 +192,11 @@ void luai_writeline()
     LuaConsole::instance()->writeline();
 }
 
+void extern_lua_assert(const char *cond, const char *file, int line)
+{
+    qt_assert(cond, file, line);
+}
+
 static int traceback (lua_State *L) {
   const char *msg = lua_tostring(L, 1);
   if (msg)
