@@ -22,16 +22,6 @@
 
 #include "basepathrenderer.h"
 
-namespace Tiled {
-class Map;
-class MapRenderer;
-class ZLevelRenderer;
-class ZTileLayerGroup;
-}
-
-class CompositeLayerGroup;
-class MapComposite;
-class MapInfo;
 class WorldChunkMap;
 
 class TilePathScene;
@@ -49,32 +39,33 @@ public:
     QPolygonF toScene(const QRectF &worldRect, int level = 0);
     QPolygonF toScene(const QPolygonF &worldPoly, int level);
 
+    using BasePathRenderer::toWorld;
     QPointF toWorld(qreal x, qreal y, int level = 0);
 
     QRectF sceneBounds(const QRectF &worldRect, int level = 0);
 
+    void drawLevel(QPainter *painter, int level, const QRectF &exposed);
+    void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level);
+
     TilePathScene *mScene;
-    Tiled::ZLevelRenderer *mRenderer;
 };
 
 /**
   * Item that draws all the TileLayers on a single level.
   */
-class TSCompositeLayerGroupItem : public QGraphicsItem
+class TSLevelItem : public QGraphicsItem
 {
 public:
-    TSCompositeLayerGroupItem(Tiled::ZTileLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
+    TSLevelItem(int level, TilePathScene *scene, QGraphicsItem *parent = 0);
 
     void synchWithTileLayers();
 
     QRectF boundingRect() const;
-    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *);
-
-    Tiled::ZTileLayerGroup *layerGroup() const { return mLayerGroup; }
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
 
 private:
-    Tiled::ZTileLayerGroup *mLayerGroup;
-    Tiled::MapRenderer *mRenderer;
+    int mLevel;
+    TilePathScene *mScene;
     QRectF mBoundingRect;
 };
 
@@ -90,27 +81,19 @@ public:
 
     void scrollContentsBy(const QPointF &worldPos);
 
+    TilePathRenderer *renderer() const
+    { return (TilePathRenderer*)BasePathScene::renderer(); }
+
     void centerOn(const QPointF &worldPos);
 
-    QPoint topLeftInWorld() const
-    { return mTopLeftInWorld; }
-
-    Tiled::Map *map() const
-    { return mMap; }
-    Tiled::MapRenderer *mapRenderer() const;
     int currentLevel();
 
     WorldChunkMap *chunkMap() const
     { return mChunkMap; }
 
 private:
-    Tiled::Map *mMap;
-    MapInfo *mMapInfo;
-    MapComposite *mMapComposite;
-    QList<TilePathSceneSink*> mTileSinks;
-    QPoint mTopLeftInWorld;
     TSGridItem *mGridItem;
-    QList<TSCompositeLayerGroupItem*> mLayerGroupItems;
+    QList<TSLevelItem*> mLayerGroupItems;
     WorldChunkMap *mChunkMap;
 };
 

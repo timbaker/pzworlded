@@ -25,36 +25,13 @@
 #include "world.h"
 #include "worldchunkmap.h"
 
-#include "map.h"
-#include "zlevelrenderer.h"
+#include "tile.h"
 
+#include <qmath.h>
+#include <QPainter>
 #include <QStyleOptionGraphicsItem>
 
 using namespace Tiled;
-
-#if 0
-class TilePathSceneSink : public WorldTileLayer::TileSink
-{
-public:
-    void putTile(int x, int y, WorldTile *tile)
-    {
-        int x1 = x - mScene->topLeftInWorld().x();
-        int y1 = y - mScene->topLeftInWorld().y();
-
-        if (mMapLayer->contains(x1, y1))
-            mMapLayer->setCell(x1, y1, Cell(tile->mTiledTile));
-    }
-
-    WorldTile *getTile(int x, int y)
-    {
-        return 0; // FIXME
-    }
-
-    TilePathScene *mScene;
-    WorldTileLayer *mWorldLayer;
-    TileLayer *mMapLayer;
-};
-#endif
 
 /////
 
@@ -80,8 +57,8 @@ public:
     {
         if (painter->worldMatrix().m22() < 0.25) return;
         QColor gridColor = Preferences::instance()->gridColor();
-        mScene->mapRenderer()->drawGrid(painter, option->exposedRect, gridColor,
-                                        mScene->currentLevel());
+        mScene->renderer()->drawGrid(painter, option->exposedRect, gridColor,
+                                     mScene->currentLevel());
     }
 
     void updateBoundingRect()
@@ -104,143 +81,53 @@ private:
 
 /////
 
-/////
-
-class TSCompositeLayerGroup : public Tiled::ZTileLayerGroup
-{
-public:
-    TSCompositeLayerGroup(TilePathScene *scene, Tiled::Map *map, int level);
-
-    QRect bounds() const;
-    QMargins drawMargins() const;
-
-    bool orderedCellsAt(const QPoint &point, QVector<const Tiled::Cell*>& cells,
-                        QVector<qreal> &opacities) const;
-
-    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
-
-    TilePathScene *mScene;
-    World *mWorld;
-    QVector<Tiled::SparseTileGrid*> mGrids;
-};
-
-TSCompositeLayerGroup::TSCompositeLayerGroup(TilePathScene *scene, Map *map, int level) :
-    ZTileLayerGroup(map, level),
-    mScene(scene),
-    mWorld(scene->world())
-{
-    mGrids.resize(20); // FIXME: max number of tiles in any cell on this level
-    for (int x = 0; x < mGrids.size(); x++)
-        mGrids[x] = new SparseTileGrid(mScene->chunkMap()->getWidthInTiles(),
-                                       mScene->chunkMap()->getWidthInTiles());
-}
-
-QRect TSCompositeLayerGroup::bounds() const
-{
-    return QRect(0, 0, mWorld->width() * 300, mWorld->height() * 300);
-}
-
-QMargins TSCompositeLayerGroup::drawMargins() const
-{
-    return QMargins(0, 128 - 32, 64, 0);
-}
-
-bool TSCompositeLayerGroup::orderedCellsAt(const QPoint &point,
-                                       QVector<const Cell *> &cells,
-                                       QVector<qreal> &opacities) const
-{
-    cells.resize(0);
-    opacities.resize(0);
-    int x = point.x() - mScene->chunkMap()->getWorldXMinTiles();
-    int y = point.y() - mScene->chunkMap()->getWorldYMinTiles();
-    if (WorldChunkSquare *sq = mScene->chunkMap()->getGridSquare(point.x(), point.y(), level())) {
-        foreach (WorldTile *wtile, sq->tiles) {
-            if (!wtile) continue;
-            if (Tile *tile = wtile->mTiledTile) {
-                mGrids[cells.size()]->replace(x, y, Cell(tile));
-                const Cell *cell = &mGrids[cells.size()]->at(x, y);
-                cells += cell;
-                opacities += 1.0;
-            }
-        }
-    }
-    return !cells.isEmpty();
-}
-
-void TSCompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect)
-{
-    Q_UNUSED(renderer)
-    Q_UNUSED(rect)
-}
-
-/////
-
-TSCompositeLayerGroupItem::TSCompositeLayerGroupItem(ZTileLayerGroup *layerGroup,
-                                                     Tiled::MapRenderer *renderer,
+TSLevelItem::TSLevelItem(int level,
+                                                     TilePathScene *scene,
                                                      QGraphicsItem *parent)
     : QGraphicsItem(parent)
-    , mLayerGroup(layerGroup)
-    , mRenderer(renderer)
+    , mLevel(level)
+    , mScene(scene)
 {
     setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
 
-    mBoundingRect = layerGroup->boundingRect(mRenderer);
+    mBoundingRect = mScene->renderer()->sceneBounds(
+                QRect(0, 0,
+                      mScene->world()->width() * 300,
+                      mScene->world()->height() * 300), mLevel);
 }
 
-void TSCompositeLayerGroupItem::synchWithTileLayers()
+void TSLevelItem::synchWithTileLayers()
 {
 //    mLayerGroup->synch();
 
-    QRectF bounds = mLayerGroup->boundingRect(mRenderer);
+    QRectF bounds = mScene->renderer()->sceneBounds(
+                QRect(0, 0, mScene->world()->width() * 300, mScene->world()->height() * 300), mLevel);
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
     }
 }
 
-QRectF TSCompositeLayerGroupItem::boundingRect() const
+QRectF TSLevelItem::boundingRect() const
 {
     return mBoundingRect;
 }
 
-void TSCompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *)
+void TSLevelItem::paint(QPainter *painter,
+                                      const QStyleOptionGraphicsItem *option,
+                                      QWidget *)
 {
-//    if (mLayerGroup->needsSynch())
-//        return; // needed, see MapComposite::mapAboutToChange
-    mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
-#ifdef _DEBUGxxx
-    p->drawRect(mBoundingRect);
-#endif
+    ((TilePathRenderer*)mScene->renderer())->drawLevel(
+                painter, mLevel, option->exposedRect);
 }
 
 /////
 
 TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
     BasePathScene(doc, parent),
-    mMap(new Map(Map::LevelIsometric, 1, 1, 64, 32)),
-    mMapInfo(MapManager::instance()->newFromMap(mMap)),
-    mMapComposite(0),
     mGridItem(new TSGridItem(this))
 {
     setBackgroundBrush(Qt::darkGray);
-
-    // The map is as big as the world, but I don't want MapBMP to allocate that
-    // large an image!
-    mMap->setWidth(world()->width() * 300);
-    mMap->setHeight(world()->height() * 300);
-
-    foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-        TileLayer *tl = new TileLayer(wtl->mName, 0, 0, mMap->width(), mMap->height());
-        mMap->insertLayer(mMap->layerCount(), tl);
-#if 0
-        TilePathSceneSink *sink = new TilePathSceneSink;
-        sink->mScene = this;
-        sink->mWorldLayer = wtl;
-        sink->mMapLayer = tl;
-        wtl->mSinks += sink;
-        mTileSinks += sink;
-#endif
-    }
 
     TilePathRenderer *renderer = new TilePathRenderer(this, world());
     setRenderer(renderer);
@@ -250,12 +137,14 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
 
     qDeleteAll(items());
 
-//    mMapComposite = new MapComposite(mMapInfo);
     foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-        TSCompositeLayerGroup *lg = new TSCompositeLayerGroup(this, mMap, wtl->mLevel);
-        TSCompositeLayerGroupItem *item = new TSCompositeLayerGroupItem(lg, renderer->mRenderer);
-        mLayerGroupItems += item;
-        addItem(item);
+        int level;
+        MapComposite::levelForLayer(wtl->mName, &level);
+        while (level + 1 > mLayerGroupItems.size()) {
+            TSLevelItem *item = new TSLevelItem(level, this);
+            mLayerGroupItems += item;
+            addItem(item);
+        }
     }
 
     mGridItem->updateBoundingRect();
@@ -267,52 +156,21 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
 TilePathScene::~TilePathScene()
 {
     delete mChunkMap;
-    delete mMapComposite;
-    delete mMapInfo;
-    delete mMap;
 }
 
 void TilePathScene::setTool(AbstractTool *tool)
 {
+    Q_UNUSED(tool)
 }
 
 void TilePathScene::scrollContentsBy(const QPointF &worldPos)
 {
-    int wx = qMax(0, int(worldPos.x()) - mMap->width() / 2);
-    int wy = qMax(0, int(worldPos.y()) - mMap->height() / 2);
-    mTopLeftInWorld = QPoint(wx, wy);
-
     mChunkMap->setCenter(worldPos.x(), worldPos.y());
 }
 
 void TilePathScene::centerOn(const QPointF &worldPos)
 {
-    int wx = qMax(0, int(worldPos.x()) - mMap->width() / 2);
-    int wy = qMax(0, int(worldPos.y()) - mMap->height() / 2);
-    mTopLeftInWorld = QPoint(wx, wy);
-
-#if 0
-    foreach (TileLayer *tl, mMap->tileLayers())
-        tl->erase();
-
-    PROGRESS progress(QLatin1String("Running scripts (run)"));
-
-    foreach (WorldScript *ws, world()->scripts()) {
-        QRect r = ws->mRegion.boundingRect();
-        if (!r.intersects(QRect(mTopLeftInWorld, mMap->size()))) continue;
-        Lua::LuaScript ls(world(), ws);
-        ls.runFunction("run");
-    }
-#endif
-    foreach (TSCompositeLayerGroupItem *item, mLayerGroupItems) {
-//        item->layerGroup()->synch();
-        item->synchWithTileLayers();
-    }
-}
-
-MapRenderer *TilePathScene::mapRenderer() const
-{
-    return ((TilePathRenderer*)renderer())->mRenderer;
+    Q_UNUSED(worldPos)
 }
 
 int TilePathScene::currentLevel()
@@ -324,30 +182,35 @@ int TilePathScene::currentLevel()
 
 TilePathRenderer::TilePathRenderer(TilePathScene *scene, World *world) :
     BasePathRenderer(world),
-    mScene(scene),
-    mRenderer(new ZLevelRenderer(scene->map()))
+    mScene(scene)
 {
 }
 
 TilePathRenderer::~TilePathRenderer()
 {
-    delete mRenderer;
 }
 
 QPointF TilePathRenderer::toScene(qreal x, qreal y, int level)
 {
-//    x -= mScene->topLeftInWorld().x();
-//    y -= mScene->topLeftInWorld().y();
-    return mRenderer->tileToPixelCoords(x, y, level);
+    const int tileWidth = 64;
+    const int tileHeight = 32;
+    const int mapHeight = mScene->world()->height() * 300;
+    const int tilesPerLevel = 3;
+    const int maxLevel = 16;
+
+    const int originX = mapHeight * tileWidth / 2; // top-left corner
+    const int originY = tilesPerLevel * (maxLevel - level) * tileHeight;
+    return QPointF((x - y) * tileWidth / 2 + originX,
+                   (x + y) * tileHeight / 2 + originY);
 }
 
 QPolygonF TilePathRenderer::toScene(const QRectF &worldRect, int level)
 {
     QPolygonF pf;
-    pf << toScene(worldRect.topLeft());
-    pf << toScene(worldRect.topRight());
-    pf << toScene(worldRect.bottomRight());
-    pf << toScene(worldRect.bottomLeft());
+    pf << toScene(worldRect.topLeft(), level);
+    pf << toScene(worldRect.topRight(), level);
+    pf << toScene(worldRect.bottomRight(), level);
+    pf << toScene(worldRect.bottomLeft(), level);
     pf += pf.first();
     return pf;
 }
@@ -356,16 +219,160 @@ QPolygonF TilePathRenderer::toScene(const QPolygonF &worldPoly, int level)
 {
     QPolygonF pf;
     foreach (QPointF p, worldPoly)
-        pf += toScene(p);
+        pf += toScene(p, level);
     return pf;
 }
 
 QPointF TilePathRenderer::toWorld(qreal x, qreal y, int level)
 {
-    return /*mScene->topLeftInWorld() +*/ mRenderer->pixelToTileCoords(x, y);
+    const int tileWidth = 64;
+    const int tileHeight = 32;
+    const qreal ratio = (qreal) tileWidth / tileHeight;
+
+    const int mapHeight = mScene->world()->height() * 300;
+    const int tilesPerLevel = 3;
+    const int maxLevel = 16;
+
+    x -= mapHeight * tileWidth / 2;
+    y -= tilesPerLevel * (maxLevel - level) * tileHeight;
+    const qreal mx = y + (x / ratio);
+    const qreal my = y - (x / ratio);
+
+    return QPointF(mx / tileHeight,
+                   my / tileHeight);
 }
 
 QRectF TilePathRenderer::sceneBounds(const QRectF &worldRect, int level)
 {
     return toScene(worldRect, level).boundingRect();
+}
+
+void TilePathRenderer::drawLevel(QPainter *painter, int level, const QRectF &exposed)
+{
+    const int tileWidth = 64;
+    const int tileHeight = 32;
+
+    QRect rect = exposed.toAlignedRect();
+    if (rect.isNull()) {
+        Q_ASSERT(false);
+        return;
+    }
+
+    QMargins drawMargins(0, 128 - 32, 0, 0); // ???
+
+    rect.adjust(-drawMargins.right(),
+                -drawMargins.bottom(),
+                drawMargins.left(),
+                drawMargins.top());
+
+    // Determine the tile and pixel coordinates to start at
+    QPointF tilePos = toWorld(rect.x(), rect.y(), level);
+    QPoint rowItr = QPoint(qFloor(tilePos.x()), qFloor(tilePos.y()));
+    QPointF startPos = toScene(rowItr, level);
+    startPos.rx() -= tileWidth / 2;
+    startPos.ry() += tileHeight;
+
+    /* Determine in which half of the tile the top-left corner of the area we
+     * need to draw is. If we're in the upper half, we need to start one row
+     * up due to those tiles being visible as well. How we go up one row
+     * depends on whether we're in the left or right half of the tile.
+     */
+    const bool inUpperHalf = startPos.y() - rect.y() > tileHeight / 2;
+    const bool inLeftHalf = rect.x() - startPos.x() < tileWidth / 2;
+
+    if (inUpperHalf) {
+        if (inLeftHalf) {
+            --rowItr.rx();
+            startPos.rx() -= tileWidth / 2;
+        } else {
+            --rowItr.ry();
+            startPos.rx() += tileWidth / 2;
+        }
+        startPos.ry() -= tileHeight / 2;
+    }
+
+    // Determine whether the current row is shifted half a tile to the right
+    bool shifted = inUpperHalf ^ inLeftHalf;
+
+//    qreal opacity = painter->opacity();
+
+    for (int y = startPos.y(); y - tileHeight < rect.bottom();
+         y += tileHeight / 2) {
+        QPoint columnItr = rowItr;
+
+        for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
+#if 1
+            if (WorldChunkSquare *sq = mScene->chunkMap()->getGridSquare(columnItr.x(), columnItr.y(), level)) {
+                foreach (WorldTile *wtile, sq->tiles) {
+                    if (!wtile) continue;
+                    if (Tile *tile = wtile->mTiledTile) {
+#else
+            if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
+                for (int i = 0; i < cells.size(); i++) {
+                    const Cell *cell = cells[i];
+                    if (!cell->isEmpty()) {
+#endif
+                        const QImage &img = tile->image();
+
+//                        painter->setOpacity(opacities[i] * opacity);
+
+                        painter->drawImage(x, y - img.height(), img);
+                    }
+                }
+            }
+
+            // Advance to the next column
+            ++columnItr.rx();
+            --columnItr.ry();
+        }
+
+        // Advance to the next row
+        if (!shifted) {
+            ++rowItr.rx();
+            startPos.rx() += tileWidth / 2;
+            shifted = true;
+        } else {
+            ++rowItr.ry();
+            startPos.rx() -= tileWidth / 2;
+            shifted = false;
+        }
+    }
+}
+
+void TilePathRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level)
+{
+    const int tileWidth = 64;
+    const int tileHeight = 32;
+
+    const int mapHeight = mScene->world()->height() * 300;
+    const int mapWidth = mScene->world()->width() * 300;
+
+    QRect r = rect.toAlignedRect();
+    r.adjust(-tileWidth / 2, -tileHeight / 2,
+             tileWidth / 2, tileHeight / 2);
+
+    const int startX = qMax(qreal(0), toWorld(r.topLeft(), level).x());
+    const int startY = qMax(qreal(0), toWorld(r.topRight(), level).y());
+    const int endX = qMin(qreal(mapWidth), toWorld(r.bottomRight(), level).x());
+    const int endY = qMin(qreal(mapHeight), toWorld(r.bottomLeft(), level).y());
+
+    gridColor.setAlpha(128);
+
+    QPen pen;
+    QBrush brush(gridColor, Qt::Dense4Pattern);
+    brush.setTransform(QTransform::fromScale(1/painter->transform().m11(),
+                                             1/painter->transform().m22()));
+    pen.setBrush(brush);
+    painter->setPen(pen);
+
+    for (int y = startY; y <= endY; ++y) {
+        const QPointF start = toScene(startX, (qreal)y, level);
+        const QPointF end = toScene(endX, (qreal)y, level);
+        painter->drawLine(start, end);
+    }
+    for (int x = startX; x <= endX; ++x) {
+        const QPointF start = toScene(x, (qreal)startY, level);
+        const QPointF end = toScene(x, (qreal)endY, level);
+        painter->drawLine(start, end);
+    }
 }
