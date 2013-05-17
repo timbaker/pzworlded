@@ -35,18 +35,28 @@ public:
     LookupCoordType x, y;
 };
 
+static LookupCoordType LOOKUP_LENGTH(qreal w)
+{
+    return w * FUDGE;
+}
+
 WorldLookup::WorldLookup(World *world) :
     mWorld(world),
     mQTree(new WorldQuadTree(0, 0,
-                             LookupCoordinate(QPoint(world->width() * 300, world->height() * 300)).x,
-                             LookupCoordinate(QPoint(world->width() * 300, world->height() * 300)).y,
+                             LOOKUP_LENGTH(world->width() * 300),
+                             LOOKUP_LENGTH(world->height() * 300),
                              0, QTREE_DEPTH))
 {
     foreach (WorldPath::Layer *layer, mWorld->layers())
         foreach (WorldPath::Path *path, layer->paths())
             mQTree->AddObject(new WorldQuadTreeObject(path));
-    foreach (WorldScript *ws, mWorld->scripts())
+    foreach (WorldScript *ws, mWorld->scripts()) {
+        if (ws->mRegion.isEmpty()) {
+            qCritical("script has empty region - IGNORING");
+            continue;
+        }
         mQTree->AddObject(new WorldQuadTreeObject(ws));
+    }
 }
 
 WorldLookup::~WorldLookup()
@@ -57,11 +67,10 @@ WorldLookup::~WorldLookup()
 QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
-    LookupCoordinate botRight(bounds.bottomRight());
     QList<WorldScript *> ret;
     foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
-                                                          botRight.x - topLeft.x,
-                                                          botRight.y - topLeft.y)) {
+                                                          LOOKUP_LENGTH(bounds.width()),
+                                                          LOOKUP_LENGTH(bounds.height()))) {
         if (o->script)
             ret += o->script;
     }
@@ -71,11 +80,10 @@ QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
 QList<WorldPath::Path *> WorldLookup::paths(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
-    LookupCoordinate botRight(bounds.bottomRight());
     QList<WorldPath::Path *> ret;
     foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
-                                                          botRight.x - topLeft.x,
-                                                          botRight.y - topLeft.y)) {
+                                                          LOOKUP_LENGTH(bounds.width()),
+                                                          LOOKUP_LENGTH(bounds.height()))) {
         if (o->path)
             ret += o->path;
     }
@@ -94,8 +102,8 @@ WorldQuadTreeObject::WorldQuadTreeObject(WorldPath::Path *path) :
 {
     x = LookupCoordinate(path->bounds().topLeft()).x;
     y = LookupCoordinate(path->bounds().topLeft()).y;
-    width = LookupCoordinate(path->bounds().bottomRight()).x - x;
-    height = LookupCoordinate(path->bounds().bottomRight()).y - y;
+    width = LOOKUP_LENGTH(path->bounds().width());
+    height = LOOKUP_LENGTH(path->bounds().height());
 }
 
 WorldQuadTreeObject::WorldQuadTreeObject(WorldScript *script) :
@@ -103,8 +111,8 @@ WorldQuadTreeObject::WorldQuadTreeObject(WorldScript *script) :
 {
     x = LookupCoordinate(script->mRegion.boundingRect().topLeft()).x;
     y = LookupCoordinate(script->mRegion.boundingRect().topLeft()).y;
-    width = LookupCoordinate(script->mRegion.boundingRect().bottomRight()).x - x;
-    height = LookupCoordinate(script->mRegion.boundingRect().bottomRight()).y - y;
+    width = LOOKUP_LENGTH(script->mRegion.boundingRect().width());
+    height = LOOKUP_LENGTH(script->mRegion.boundingRect().height());
 }
 
 bool WorldQuadTreeObject::intersects(LookupCoordType x, LookupCoordType y,
