@@ -101,7 +101,8 @@ public:
     void addModifier(BuildingModifier *modifier);
     void removeModifier(BuildingModifier *modifier);
 
-private:    const Building *mBuilding;
+private:
+    const Building *mBuilding;
     Building *mShadowBuilding;
     QList<BuildingModifier*> mModifiers;
     BuildingModifier *mCursorObjectModifier;
