@@ -320,6 +320,7 @@ public:
     WorldTileLayer *tileLayer(const QString &layerName);
     int tileLayerCount() const
     { return mTileLayers.size(); }
+    int indexOf(WorldTileLayer *wtl);
 
     void insertScript(int index, WorldScript *script);
     WorldScript *removeScript(int index);

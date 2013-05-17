@@ -57,7 +57,7 @@ void WorldChunkSquare::discard()
 //    room = 0;
     ID = 0;
 
-    tiles[0] = 0;
+    tiles.fill(0);
 
     WorldChunkSquareCache += this;
 }
@@ -157,7 +157,8 @@ class CMTileSink : public WorldTileLayer::TileSink
 public:
     CMTileSink(WorldChunkMap *chunkMap, WorldTileLayer *wtl) :
         mChunkMap(chunkMap),
-        mLayer(wtl)
+        mLayer(wtl),
+        mLayerIndex(chunkMap->mWorld->indexOf(wtl))
     {
 
     }
@@ -172,11 +173,16 @@ public:
                          mChunkMap->getWidthInTiles()).contains(x,y)) {
             if (WorldChunk *chunk = mChunkMap->getChunkForWorldPos(x, y)) {
                 sq = WorldChunkSquare::getNew(x, y, mLayer->mLevel);
-                chunk->setSquare(x - chunk->wx * mChunkMap->TilesPerChunk, y - chunk->wy * mChunkMap->TilesPerChunk, mLayer->mLevel, sq);
+                chunk->setSquare(x - chunk->wx * mChunkMap->TilesPerChunk,
+                                 y - chunk->wy * mChunkMap->TilesPerChunk,
+                                 mLayer->mLevel, sq);
             }
         }
-        if (sq)
-            sq->tiles[0] = tile; // FIXME - put in correct layer
+        if (sq) {
+            if (sq->tiles.size() < mLayerIndex + 1)
+                sq->tiles.resize(mLayerIndex + 1);
+            sq->tiles[mLayerIndex] = tile;
+        }
 
     }
 
@@ -187,6 +193,7 @@ public:
 
     WorldChunkMap *mChunkMap;
     WorldTileLayer *mLayer;
+    int mLayerIndex;
 };
 
 WorldChunkMap::WorldChunkMap(PathDocument *doc) :

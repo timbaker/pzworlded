@@ -24,6 +24,8 @@ class QRect @ Rect
     int top();
     int bottom();
 
+    QRect adjusted(int dx1, int dy1, int dx2, int dy2);
+
     void translate(int dx, int dy);
     QRect translated(int dx, int dy);
 
@@ -264,6 +266,7 @@ public:
     void setLayer(WorldTileLayer *layer);
     void setTile(WorldTile *tile);
     void fill @ fillPath(LuaPath *path);
+    void fill @ fillRect(const QRect &r);
     void strokePath(LuaPath *path, double thickness);
     void drawMap(int x, int y, LuaMapInfo *mapInfo);
 };
@@ -273,6 +276,7 @@ class LuaMapInfo @ MapInfo
 public:
     static LuaMapInfo *get(const char *path);
     const char *path();
+    QRect bounds();
     LuaRegion region();
 };
 

@@ -151,10 +151,11 @@ bool TSCompositeLayerGroup::orderedCellsAt(const QPoint &point,
 {
     cells.resize(0);
     opacities.resize(0);
-    int x = point.x()  - mScene->chunkMap()->getWorldXMinTiles();
+    int x = point.x() - mScene->chunkMap()->getWorldXMinTiles();
     int y = point.y() - mScene->chunkMap()->getWorldYMinTiles();
     if (WorldChunkSquare *sq = mScene->chunkMap()->getGridSquare(point.x(), point.y(), level())) {
         foreach (WorldTile *wtile, sq->tiles) {
+            if (!wtile) continue;
             if (Tile *tile = wtile->mTiledTile) {
                 mGrids[cells.size()]->replace(x, y, Cell(tile));
                 const Cell *cell = &mGrids[cells.size()]->at(x, y);

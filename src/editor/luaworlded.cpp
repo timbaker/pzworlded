@@ -129,6 +129,11 @@ void LuaTilePainter::fill(LuaPath *path)
     mPainter->fill(path->mPath);
 }
 
+void LuaTilePainter::fill(const QRect &r)
+{
+    mPainter->fill(r);
+}
+
 void LuaTilePainter::strokePath(LuaPath *path, qreal thickness)
 {
     mPainter->strokePath(path->mPath, thickness);
@@ -142,17 +147,21 @@ void LuaTilePainter::drawMap(int wx, int wy, LuaMapInfo *mapInfo)
     if (!mapInfo || !mapInfo->mMapInfo->map() || !mapInfo->mMapInfo->map()->tileLayerCount())
         return;
 
-    mPainter->setLayer(mPainter->world()->tileLayers().first());
-    TileLayer *tl = mapInfo->mMapInfo->map()->tileLayers().first(); // FIXME: only 1 layer supported by WorldChunkMap atm
-    for (int y = 0; y < tl->height(); y++)
-        for (int x = 0; x < tl->width(); x++) {
-            Tiled::Tile *tile = tl->cellAt(x, y).tile;
-            if (!tile) continue;
-            if (WorldTileset *wts = mPainter->world()->tileset(tile->tileset()->name())) {
-                mPainter->setTile(wts->tileAt(tile->id())); // FIXME: assumes valid tile id
-                mPainter->fill(wx + x, wy + y, 1, 1);
+    foreach (TileLayer *tl, mapInfo->mMapInfo->map()->tileLayers()) {
+        if (WorldTileLayer *wtl = mPainter->world()->tileLayer(tl->name())) {
+            mPainter->setLayer(wtl);
+            for (int y = 0; y < tl->height(); y++) {
+                for (int x = 0; x < tl->width(); x++) {
+                    Tiled::Tile *tile = tl->cellAt(x, y).tile;
+                    if (!tile) continue;
+                    if (WorldTileset *wts = mPainter->world()->tileset(tile->tileset()->name())) { // FIXME: slow
+                        mPainter->setTile(wts->tileAt(tile->id())); // FIXME: assumes valid tile id
+                        mPainter->fill(wx + x, wy + y, 1, 1);
+                    }
+                }
             }
         }
+    }
 }
 
 /////
@@ -176,6 +185,11 @@ LuaMapInfo *LuaMapInfo::get(const char *path)
 const char *LuaMapInfo::path()
 {
     return cstring(mMapInfo->path());
+}
+
+QRect LuaMapInfo::bounds()
+{
+    return mMapInfo->bounds();
 }
 
 LuaRegion LuaMapInfo::region()

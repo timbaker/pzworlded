@@ -209,7 +209,10 @@ static void testPathDocument()
 
     progress.update(QLatin1String("Loading tilesets"));
 
-    newWorld->insertTileLayer(0, new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Frames")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Doors")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Walls")));
 
     foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
         WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());

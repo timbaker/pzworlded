@@ -155,6 +155,11 @@ WorldTileLayer *World::tileLayer(const QString &layerName)
     return 0;
 }
 
+int World::indexOf(WorldTileLayer *wtl)
+{
+    return mTileLayers.indexOf(wtl);
+}
+
 void World::insertScript(int index, WorldScript *script)
 {
     mScripts.insert(index, script);

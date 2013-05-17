@@ -85,6 +85,7 @@ public:
     void setLayer(WorldTileLayer *layer);
     void setTile(WorldTile *tile);
     void fill(LuaPath *path);
+    void fill(const QRect &r);
     void strokePath(LuaPath *path, qreal thickness);
     void drawMap(int wx, int wy, LuaMapInfo *mapInfo);
 
@@ -102,6 +103,7 @@ public:
     static LuaMapInfo *get(const char *path);
 
     const char *path();
+    QRect bounds();
     LuaRegion region();
 
     MapInfo *mMapInfo;

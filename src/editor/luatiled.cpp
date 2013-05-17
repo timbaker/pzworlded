@@ -321,6 +321,11 @@ bool LuaScript::getResultRegion(QRegion &rgn)
         rgn = *lr;
         return true;
     }
+    if (lua_gettop(L) >= 1 && tolua_isusertype(L, -1, "QRect", 0, &err) == 1) {
+        QRect *r = (QRect *) tolua_tousertype(L, -1, 0);
+        rgn = QRegion(*r);
+        return true;
+    }
     return false;
 }
 
