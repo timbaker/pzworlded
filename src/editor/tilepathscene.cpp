@@ -185,11 +185,11 @@ TilePathRenderer::~TilePathRenderer()
 
 QPointF TilePathRenderer::toScene(qreal x, qreal y, int level)
 {
-    const int tileWidth = 64;
-    const int tileHeight = 32;
+    const int tileWidth = mScene->world()->tileWidth();
+    const int tileHeight = mScene->world()->tileHeight();
     const int mapHeight = mScene->world()->height();
     const int tilesPerLevel = 3;
-    const int maxLevel = 16;
+    const int maxLevel = mScene->world()->maxLevel();
 
     const int originX = mapHeight * tileWidth / 2; // top-left corner
     const int originY = tilesPerLevel * (maxLevel - level) * tileHeight;
@@ -218,13 +218,13 @@ QPolygonF TilePathRenderer::toScene(const QPolygonF &worldPoly, int level)
 
 QPointF TilePathRenderer::toWorld(qreal x, qreal y, int level)
 {
-    const int tileWidth = 64;
-    const int tileHeight = 32;
+    const int tileWidth = mScene->world()->tileWidth();
+    const int tileHeight = mScene->world()->tileHeight();
     const qreal ratio = (qreal) tileWidth / tileHeight;
 
     const int mapHeight = mScene->world()->height();
     const int tilesPerLevel = 3;
-    const int maxLevel = 16;
+    const int maxLevel = mScene->world()->maxLevel();
 
     x -= mapHeight * tileWidth / 2;
     y -= tilesPerLevel * (maxLevel - level) * tileHeight;
@@ -242,8 +242,8 @@ QRectF TilePathRenderer::sceneBounds(const QRectF &worldRect, int level)
 
 void TilePathRenderer::drawLevel(QPainter *painter, int level, const QRectF &exposed)
 {
-    const int tileWidth = 64;
-    const int tileHeight = 32;
+    const int tileWidth = mScene->world()->tileWidth();
+    const int tileHeight = mScene->world()->tileHeight();
 
     QRect rect = exposed.toAlignedRect();
     if (rect.isNull()) {
@@ -334,8 +334,8 @@ void TilePathRenderer::drawLevel(QPainter *painter, int level, const QRectF &exp
 
 void TilePathRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level)
 {
-    const int tileWidth = 64;
-    const int tileHeight = 32;
+    const int tileWidth = mScene->world()->tileWidth();
+    const int tileHeight = mScene->world()->tileHeight();
 
     const int mapHeight = mScene->world()->height();
     const int mapWidth = mScene->world()->width();

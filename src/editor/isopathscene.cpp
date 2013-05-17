@@ -43,7 +43,7 @@ QPointF IsoPathRenderer::toScene(qreal x, qreal y, int level)
     const qreal tileHeight = 0.5;
     const int worldHeight = mWorld->height();
     const int levelHeight = 3;
-    const int maxLevel = qMax(0, mWorld->layerCount() - 1);
+    const int maxLevel = mWorld->maxLevel();
 
     const int originX = worldHeight * tileWidth / 2; // top-left corner
     const int originY = levelHeight * (maxLevel - level) * tileHeight;
@@ -78,7 +78,7 @@ QPointF IsoPathRenderer::toWorld(qreal x, qreal y, int level)
 
     const int worldHeight = mWorld->height();
     const int levelHeight = 3;
-    const int maxLevel = qMax(0, mWorld->layerCount() - 1);
+    const int maxLevel = mWorld->maxLevel();
 
     x -= worldHeight * tileWidth / 2;
     y -= levelHeight * (maxLevel - level) * tileHeight;
