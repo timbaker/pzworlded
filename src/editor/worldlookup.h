@@ -26,18 +26,15 @@
 typedef unsigned long LookupCoordType;
 
 class PathWorld;
+class WorldNode;
+class WorldPath;
 class WorldScript;
-
-namespace WorldPath {
-class Node;
-class Path;
-}
 
 class WorldQuadTreeObject
 {
 public:
-    WorldQuadTreeObject(WorldPath::Node *node);
-    WorldQuadTreeObject(WorldPath::Path *path);
+    WorldQuadTreeObject(WorldNode *node);
+    WorldQuadTreeObject(WorldPath *path);
     WorldQuadTreeObject(WorldScript *script);
 
     bool intersects(LookupCoordType x, LookupCoordType y,
@@ -45,8 +42,8 @@ public:
     bool intersects(const QPolygonF &poly);
     bool contains(LookupCoordType x, LookupCoordType y);
 
-    WorldPath::Node *node;
-    WorldPath::Path *path;
+    WorldNode *node;
+    WorldPath *path;
     WorldScript *script;
 
     LookupCoordType x, y, width, height;
@@ -96,8 +93,8 @@ public:
     ~WorldLookup();
 
     QList<WorldScript*> scripts(const QRectF &bounds) const;
-    QList<WorldPath::Path*> paths(const QRectF &bounds) const;
-    QList<WorldPath::Path*> paths(const QPolygonF &poly) const;
+    QList<WorldPath*> paths(const QRectF &bounds) const;
+    QList<WorldPath*> paths(const QPolygonF &poly) const;
 
 private:
     PathWorld *mWorld;

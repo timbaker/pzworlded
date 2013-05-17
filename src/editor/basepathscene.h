@@ -26,21 +26,18 @@ class BasePathRenderer;
 class BasePathScene;
 class PathDocument;
 class PathWorld;
-
-namespace WorldPath {
-    class Layer;
-}
+class WorldPathLayer;
 
 class PathLayerItem : public QGraphicsItem
 {
 public:
-    PathLayerItem(WorldPath::Layer *layer, BasePathScene *scene, QGraphicsItem *parent = 0);
+    PathLayerItem(WorldPathLayer *layer, BasePathScene *scene, QGraphicsItem *parent = 0);
 
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
 
 private:
-    WorldPath::Layer *mLayer;
+    WorldPathLayer *mLayer;
     BasePathScene *mScene;
 };
 

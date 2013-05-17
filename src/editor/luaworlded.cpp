@@ -30,8 +30,7 @@
 
 using namespace Tiled::Lua;
 
-
-LuaPath::LuaPath(WorldPath::Path *path, bool owner) :
+LuaPath::LuaPath(WorldPath *path, bool owner) :
     mPath(path),
     mOwner(owner)
 {
@@ -48,9 +47,9 @@ LuaPath::~LuaPath()
 LuaPath *LuaPath::stroke(double thickness)
 {
     QPolygonF poly = strokePath(mPath, thickness);
-    WorldPath::Path *newPath = new WorldPath::Path;
+    WorldPath *newPath = new WorldPath;
     for (int i = 0; i < poly.size() - 1; i++) {
-        newPath->insertNode(i, new WorldPath::Node(WorldPath::InvalidId, poly[i]));
+        newPath->insertNode(i, new WorldNode(InvalidId, poly[i]));
     }
     if (newPath->nodes.size())
         newPath->insertNode(newPath->nodes.size(), newPath->nodes[0]);
@@ -68,7 +67,7 @@ LuaRegion LuaPath::region()
 LuaWorldScript::LuaWorldScript(WorldScript *worldScript) :
     mWorldScript(worldScript)
 {
-    foreach (WorldPath::Path *path, worldScript->mPaths)
+    foreach (WorldPath *path, worldScript->mPaths)
         mPaths += new LuaPath(path, false);
 }
 
@@ -204,13 +203,13 @@ namespace Tiled {
 namespace Lua {
 QPolygonF strokePath(LuaPath *path, qreal thickness)
 {
-    return WorldPath::strokePath(path->mPath, thickness);
+    return ::strokePath(path->mPath, thickness);
 }
 
 
 LuaRegion polygonRegion(QPolygonF polygon)
 {
-    return WorldPath::polygonRegion(polygon);
+    return ::polygonRegion(polygon);
 }
 
 }

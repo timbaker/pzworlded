@@ -21,11 +21,8 @@
 #include <QRect>
 #include <QRegion>
 
-namespace WorldPath {
-class Path;
-}
-
 class PathWorld;
+class WorldPath;
 class WorldTile;
 class WorldTileLayer;
 class WorldTileset;
@@ -45,20 +42,20 @@ public:
     void erase(int x, int y, int width, int height);
     void erase(const QRect &r);
     void erase(const QRegion &rgn);
-    void erase(WorldPath::Path *path);
+    void erase(WorldPath *path);
 
     void fill(int x, int y, int width, int height);
     void fill(const QRect &r);
     void fill(const QRegion &rgn);
-    void fill(WorldPath::Path *path);
+    void fill(WorldPath *path);
 
-    void strokePath(WorldPath::Path *path, qreal thickness);
-    void fillPath(WorldPath::Path *path);
-    void tracePath(WorldPath::Path *path, qreal offset);
+    void strokePath(WorldPath *path, qreal thickness);
+    void fillPath(WorldPath *path);
+    void tracePath(WorldPath *path, qreal offset);
 
     void noClip();
     void setClip(const QRect &rect);
-    void setClip(WorldPath::Path *path);
+    void setClip(WorldPath *path);
 
     typedef void (*TileFilterProc)(int x, int y, WorldTile *tile);
 
@@ -75,7 +72,7 @@ private:
     };
     ClipType mClipType;
     QRect mClipRect;
-    WorldPath::Path *mClipPath;
+    WorldPath *mClipPath;
 };
 
 #endif // TILEPAINTER_H

@@ -25,13 +25,10 @@
 class MapInfo;
 class PathWorld;
 class TilePainter;
+class WorldPath;
 class WorldScript;
 class WorldTile;
 class WorldTileLayer;
-
-namespace WorldPath {
-class Path;
-}
 
 namespace Tiled {
 namespace Lua {
@@ -39,14 +36,14 @@ namespace Lua {
 class LuaPath
 {
 public:
-    LuaPath(WorldPath::Path *path, bool owner = false);
+    LuaPath(WorldPath *path, bool owner = false);
     ~LuaPath();
 
     LuaPath *stroke(double thickness);
 
     LuaRegion region();
 
-    WorldPath::Path *mPath;
+    WorldPath *mPath;
     bool mOwner;
 };
 

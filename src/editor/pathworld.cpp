@@ -31,17 +31,17 @@ PathWorld::~PathWorld()
     qDeleteAll(mTileLayers);
 }
 
-void PathWorld::insertPathLayer(int index, WorldPath::Layer *layer)
+void PathWorld::insertPathLayer(int index, WorldPathLayer *layer)
 {
     mPathLayers.insert(index, layer);
 }
 
-WorldPath::Layer *PathWorld::removePathLayer(int index)
+WorldPathLayer *PathWorld::removePathLayer(int index)
 {
     return mPathLayers.takeAt(index);
 }
 
-WorldPath::Layer *PathWorld::pathLayerAt(int index)
+WorldPathLayer *PathWorld::pathLayerAt(int index)
 {
     return mPathLayers.at(index);
 }

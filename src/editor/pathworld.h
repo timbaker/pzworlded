@@ -23,10 +23,8 @@
 #include <QRegion>
 #include <QString>
 
-namespace WorldPath {
-class Layer; // TODO: rename to WorldPathLayer
-class Path; // TODO: rename to WorldPath
-}
+class WorldPathLayer;
+class WorldPath;
 
 namespace Tiled {
 class Tile;
@@ -94,7 +92,7 @@ class WorldScript
 public:
     QString mFileName;
     QMap<QString,QString> mParams;
-    QList<WorldPath::Path*> mPaths;
+    QList<WorldPath*> mPaths;
     QRegion mRegion;
 };
 
@@ -114,11 +112,11 @@ public:
 
     int maxLevel() const { return 16; }
 
-    void insertPathLayer(int index, WorldPath::Layer *layer);
-    WorldPath::Layer *removePathLayer(int index);
-    const QList<WorldPath::Layer*> &pathLayers() const
+    void insertPathLayer(int index, WorldPathLayer *layer);
+    WorldPathLayer *removePathLayer(int index);
+    const QList<WorldPathLayer*> &pathLayers() const
     { return mPathLayers; }
-    WorldPath::Layer *pathLayerAt(int index);
+    WorldPathLayer *pathLayerAt(int index);
     int pathLayerCount() const;
 
     void insertTileLayer(int index, WorldTileLayer *layer);
@@ -156,7 +154,7 @@ protected:
     QList<WorldTileLayer*> mTileLayers;
     QMap<QString,WorldTileLayer*> mTileLayerByName;
 
-    QList<WorldPath::Layer*> mPathLayers;
+    QList<WorldPathLayer*> mPathLayers;
     QList<WorldScript*> mScripts;
 };
 

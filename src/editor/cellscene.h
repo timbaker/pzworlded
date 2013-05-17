@@ -47,9 +47,9 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
-namespace WorldPath {
-class Layer;
-class Path;
+namespace REMOVE_THIS_SHIZ {
+class WorldPathLayer;
+class WorldPath;
 }
 
 namespace Tiled {

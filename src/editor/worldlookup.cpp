@@ -51,8 +51,8 @@ WorldLookup::WorldLookup(PathWorld *world) :
                              LOOKUP_LENGTH(world->height() * 300),
                              0, QTREE_DEPTH))
 {
-    foreach (WorldPath::Layer *layer, mWorld->pathLayers())
-        foreach (WorldPath::Path *path, layer->paths())
+    foreach (WorldPathLayer *layer, mWorld->pathLayers())
+        foreach (WorldPath *path, layer->paths())
             mQTree->AddObject(new WorldQuadTreeObject(path));
     foreach (WorldScript *ws, mWorld->scripts()) {
         if (ws->mRegion.isEmpty()) {
@@ -81,10 +81,10 @@ QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
     return ret;
 }
 
-QList<WorldPath::Path *> WorldLookup::paths(const QRectF &bounds) const
+QList<WorldPath *> WorldLookup::paths(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
-    QList<WorldPath::Path *> ret;
+    QList<WorldPath *> ret;
     foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
                                                           LOOKUP_LENGTH(bounds.width()),
                                                           LOOKUP_LENGTH(bounds.height()))) {
@@ -94,14 +94,14 @@ QList<WorldPath::Path *> WorldLookup::paths(const QRectF &bounds) const
     return ret;
 }
 
-QList<WorldPath::Path *> WorldLookup::paths(const QPolygonF &poly) const
+QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
 {
     static QPolygonF lpoly;
     lpoly.resize(0);
     foreach (QPointF p, poly)
         lpoly += LookupCoordinate(p).toPointF();
 
-    QList<WorldPath::Path *> ret;
+    QList<WorldPath *> ret;
     foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(lpoly)) {
         if (o->path)
             ret += o->path;
@@ -111,12 +111,12 @@ QList<WorldPath::Path *> WorldLookup::paths(const QPolygonF &poly) const
 
 /////
 
-WorldQuadTreeObject::WorldQuadTreeObject(WorldPath::Node *node) :
+WorldQuadTreeObject::WorldQuadTreeObject(WorldNode *node) :
     node(node), path(0), script(0)
 {
 }
 
-WorldQuadTreeObject::WorldQuadTreeObject(WorldPath::Path *path) :
+WorldQuadTreeObject::WorldQuadTreeObject(WorldPath *path) :
     node(0), path(path), script(0)
 {
     x = LookupCoordinate(path->bounds().topLeft()).x;

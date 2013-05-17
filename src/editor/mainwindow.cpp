@@ -115,7 +115,7 @@ static void testPathDocument()
     OSM::File osm;
     QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
     if (osm.read(f)) {
-        WorldPath::Layer *pathLayer = new WorldPath::Layer();
+        WorldPathLayer *pathLayer = new WorldPathLayer();
         int i = 0;
         int zoom = 15;
         int TILE_SIZE = 512 + 64;
@@ -124,13 +124,13 @@ static void testPathDocument()
         double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
 
         foreach (OSM::Node *n, osm.nodes())
-            pathLayer->insertNode(i++, new WorldPath::Node(n->id,
+            pathLayer->insertNode(i++, new WorldNode(n->id,
                                                            n->pc.x * worldInPixels - worldGridX1,
                                                            n->pc.y * worldInPixels - worldGridY1));
 
         i = 0;
         foreach (OSM::Way *w, osm.ways()) {
-            WorldPath::Path *path = new WorldPath::Path(w->id);
+            WorldPath *path = new WorldPath(w->id);
             path->tags = w->tags;
             int j = 0;
             foreach (OSM::Node *nd, w->nodes)
@@ -140,8 +140,8 @@ static void testPathDocument()
         newWorld->insertPathLayer(0, pathLayer);
     }
 
-    foreach (WorldPath::Layer *layer, newWorld->pathLayers()) {
-        foreach (WorldPath::Path *path, layer->paths()) {
+    foreach (WorldPathLayer *layer, newWorld->pathLayers()) {
+        foreach (WorldPath *path, layer->paths()) {
             QString script;
             if (path->tags.contains(QLatin1String("landuse"))) {
                 QString v = path->tags[QLatin1String("landuse")];

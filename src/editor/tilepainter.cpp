@@ -63,7 +63,7 @@ void TilePainter::erase(const QRegion &rgn)
     mTile = oldTile;
 }
 
-void TilePainter::erase(WorldPath::Path *path)
+void TilePainter::erase(WorldPath *path)
 {
     WorldTile *oldTile = mTile;
     mTile = 0;
@@ -94,22 +94,22 @@ void TilePainter::fill(const QRegion &rgn)
         fill(r);
 }
 
-void TilePainter::fill(WorldPath::Path *path)
+void TilePainter::fill(WorldPath *path)
 {
     fill(path->region());
 }
 
-void TilePainter::strokePath(WorldPath::Path *path, qreal thickness)
+void TilePainter::strokePath(WorldPath *path, qreal thickness)
 {
-    QPolygonF polygon = WorldPath::strokePath(path, thickness);
-    QRegion region = WorldPath::polygonRegion(polygon);
+    QPolygonF polygon = ::strokePath(path, thickness);
+    QRegion region = ::polygonRegion(polygon);
     fill(region);
 }
 
 #include <QLineF>
-void TilePainter::tracePath(WorldPath::Path *path, qreal offset)
+void TilePainter::tracePath(WorldPath *path, qreal offset)
 {
-    QPolygonF polygon = WorldPath::offsetPath(path, offset);
+    QPolygonF polygon = offsetPath(path, offset);
     for (int i = 0; i < polygon.size() - 1; i += 2) {
         QPointF p1 = polygon[i], p2 = polygon[i+1];
         QLineF line1(p1, p2);

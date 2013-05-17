@@ -26,67 +26,65 @@
 template class __declspec(dllimport) QMap<QString, QString>;
 #endif
 
-using namespace WorldPath;
-
 /////
 
-Node::Node() :
+WorldNode::WorldNode() :
     id(InvalidId)
 {
 }
 
-Node::Node(id_t id, coord_t x, coord_t y) :
+WorldNode::WorldNode(id_t id, qreal x, qreal y) :
     id(id),
     p(x, y)
 {
 }
 
-Node::Node(id_t id, const Point &p) :
+WorldNode::WorldNode(id_t id, const QPointF &p) :
     id(id),
     p(p)
 {
 }
 
-Node::~Node()
+WorldNode::~WorldNode()
 {
 }
 
 /////
 
-Path::Path() :
+WorldPath::WorldPath() :
     id(InvalidId)
 {
 }
 
-Path::Path(id_t id) :
+WorldPath::WorldPath(id_t id) :
     id(id)
 {
 }
 
-Path::~Path()
+WorldPath::~WorldPath()
 {
 }
 
-void Path::insertNode(int index, Node *node)
+void WorldPath::insertNode(int index, WorldNode *node)
 {
     mPolygon.clear();
-    mBounds = Rect();
+    mBounds = QRectF();
     nodes.insert(index, node);
 }
 
-Node *Path::removeNode(int index)
+WorldNode *WorldPath::removeNode(int index)
 {
     mPolygon.clear();
-    mBounds = Rect();
+    mBounds = QRectF();
     return nodes.takeAt(index);
 }
 
-bool Path::isClosed() const
+bool WorldPath::isClosed() const
 {
     return (nodes.size() > 1) && (nodes.first() == nodes.last());
 }
 
-Rect Path::bounds()
+QRectF WorldPath::bounds()
 {
     if (mBounds.isNull()) {
         mBounds = polygon().boundingRect();
@@ -94,16 +92,16 @@ Rect Path::bounds()
     return mBounds;
 }
 
-Polygon Path::polygon()
+QPolygonF WorldPath::polygon()
 {
     if (mPolygon.isEmpty()) {
-        foreach (Node *node, nodes)
+        foreach (WorldNode *node, nodes)
             mPolygon += node->p;
     }
     return mPolygon;
 }
 
-QRegion Path::region()
+QRegion WorldPath::region()
 {
     if (!isClosed() || nodes.size() < 3)
         return QRegion();
@@ -113,59 +111,59 @@ QRegion Path::region()
 
 /////
 
-Layer::Layer() :
+WorldPathLayer::WorldPathLayer() :
     mLevel(0)
 {
 }
 
-Layer::Layer(const QString &name, int level) :
+WorldPathLayer::WorldPathLayer(const QString &name, int level) :
     mName(name),
     mLevel(level)
 {
 }
 
-Layer::~Layer()
+WorldPathLayer::~WorldPathLayer()
 {
     qDeleteAll(mPaths);
     qDeleteAll(mNodes);
 }
 
-void Layer::insertNode(int index, Node *node)
+void WorldPathLayer::insertNode(int index, WorldNode *node)
 {
     mNodes.insert(index, node);
     mNodeByID[node->id] = node;
 }
 
-Node *Layer::removeNode(int index)
+WorldNode *WorldPathLayer::removeNode(int index)
 {
-    Node *node = mNodes.takeAt(index);
+    WorldNode *node = mNodes.takeAt(index);
     mNodeByID.remove(node->id);
     return node;
 }
 
-Node *Layer::node(id_t id)
+WorldNode *WorldPathLayer::node(id_t id)
 {
     if (mNodeByID.contains(id))
         return mNodeByID[id];
     return 0;
 }
 
-void Layer::insertPath(int index, Path *path)
+void WorldPathLayer::insertPath(int index, WorldPath *path)
 {
     mPaths.insert(index, path);
 }
 
-Path *Layer::removePath(int index)
+WorldPath *WorldPathLayer::removePath(int index)
 {
     return mPaths.takeAt(index);
 }
 
-QList<Path *> Layer::paths(Rect &bounds)
+QList<WorldPath *> WorldPathLayer::paths(QRectF &bounds)
 {
     return mPaths;
 }
 
-QList<Path*> Layer::paths(coord_t x, coord_t y, coord_t width, coord_t height)
+QList<WorldPath*> WorldPathLayer::paths(qreal x, qreal y, qreal width, qreal height)
 {
     return mPaths; // TODO: spatial partitioning
 }
@@ -238,7 +236,7 @@ public:
       VG_JOIN_STYLE_FORCE_SIZE                    = VG_MAX_ENUM
     } VGJoinStyle;
 
-    void build(WorldPath::Path *path, qreal stroke_width, QVector<v2_t> &outlineFwd, QVector<v2_t> &outlineBkwd)
+    void build(WorldPath *path, qreal stroke_width, QVector<v2_t> &outlineFwd, QVector<v2_t> &outlineBkwd)
     {
         _strokeVertices.clear();
 
@@ -565,9 +563,7 @@ public:
 };
 #endif
 
-namespace WorldPath {
-
-QPolygonF strokePath(Path *path, qreal thickness)
+QPolygonF strokePath(WorldPath *path, qreal thickness)
 {
     PathStroke stroke;
     QVector<PathStroke::v2_t> fwd, bwd;
@@ -582,7 +578,7 @@ QPolygonF strokePath(Path *path, qreal thickness)
     return ret;
 }
 
-QPolygonF offsetPath(Path *path, qreal offset)
+QPolygonF offsetPath(WorldPath *path, qreal offset)
 {
     PathStroke stroke;
     QVector<PathStroke::v2_t> fwd, bwd;
@@ -665,5 +661,3 @@ QRegion polygonRegion(const QPolygonF &poly)
 
     return ret;
 }
-
-} // namespace WorldPath

@@ -63,7 +63,7 @@ void BasePathScene::setDocument(PathDocument *doc)
     }
 #endif
 
-    foreach (WorldPath::Layer *layer, world()->pathLayers()) {
+    foreach (WorldPathLayer *layer, world()->pathLayers()) {
         PathLayerItem *item = new PathLayerItem(layer, this);
 #if 0
         if (floor && ts) {
@@ -166,7 +166,7 @@ void BasePathScene::setRenderer(BasePathRenderer *renderer)
 
 /////
 
-PathLayerItem::PathLayerItem(WorldPath::Layer *layer, BasePathScene *scene, QGraphicsItem *parent) :
+PathLayerItem::PathLayerItem(WorldPathLayer *layer, BasePathScene *scene, QGraphicsItem *parent) :
     QGraphicsItem(parent),
     mLayer(layer),
     mScene(scene)
@@ -199,7 +199,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 #endif
 #if 1
     QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
-    foreach (WorldPath::Path *path, mScene->document()->lookupPaths(exposed)) {
+    foreach (WorldPath *path, mScene->document()->lookupPaths(exposed)) {
         painter->setBrush(Qt::NoBrush);
         QPolygonF pf = path->polygon();
         if (path->isClosed()) {
@@ -241,7 +241,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 else if (v == QLatin1String("path")) width = 3, color = QColor(128,64,64,128); /// #2
                 else continue;
 
-                pf = WorldPath::strokePath(path, width);
+                pf = strokePath(path, width);
                 painter->setBrush(color);
                 painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
             }

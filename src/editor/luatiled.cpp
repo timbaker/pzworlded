@@ -489,7 +489,7 @@ void LuaTileLayer::fill(const LuaRegion &rgn, Tile *tile)
 void LuaTileLayer::fill(LuaPath *path, Tile *tile)
 {;
     QPolygonF polygon = path->mPath->polygon();
-    QRegion region = WorldPath::polygonRegion(polygon);
+    QRegion region = ::polygonRegion(polygon);
     region.translate(polygon.boundingRect().toAlignedRect().topLeft() - mMap->mCellPos * 300);
     fill(LuaRegion(region), tile);
 }

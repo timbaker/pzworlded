@@ -25,74 +25,56 @@
 #include <QPolygonF>
 #include <QString>
 
-namespace WorldPath {
-
 typedef unsigned long id_t;
-typedef qreal coord_t;
-
-typedef QPointF Point;
-typedef QPolygonF Polygon;
-typedef QRectF Rect;
-
 const id_t InvalidId = 0;
 
-class Tag
+class WorldNode
 {
 public:
-    Tag(const QString &k, const QString &v) :
-        k(k), v(v)
-    {}
-    QString k;
-    QString v;
-};
-
-class Node
-{
-public:
-    Node();
-    Node(id_t id, coord_t x, coord_t y);
-    Node(id_t id, const Point &p);
-    ~Node();
+    WorldNode();
+    WorldNode(id_t id, qreal x, qreal y);
+    WorldNode(id_t id, const QPointF &p);
+    ~WorldNode();
 
     id_t id;
-    Point p;
+    QPointF p;
 };
 
-class Path
+class WorldPath
 {
 public:
-    Path();
-    Path(id_t id);
-    ~Path();
+    WorldPath();
+    WorldPath(id_t id);
+    ~WorldPath();
 
-    void insertNode(int index, Node *node);
-    Node *removeNode(int index);
+    void insertNode(int index, WorldNode *node);
+    WorldNode *removeNode(int index);
 
     bool isClosed() const;
 
-    Rect bounds();
-    Polygon polygon();
+    QRectF bounds();
+    QPolygonF polygon();
 
     QRegion region();
 
     id_t id;
-    QList<Node*> nodes;
+    QList<WorldNode*> nodes;
     QMap<QString,QString> tags;
 
-    Rect mBounds;
-    Polygon mPolygon;
+    QRectF mBounds;
+    QPolygonF mPolygon;
 };
 
-QPolygonF strokePath(Path *path, qreal thickness);
-QPolygonF offsetPath(Path *path, qreal offset);
+QPolygonF strokePath(WorldPath *path, qreal thickness);
+QPolygonF offsetPath(WorldPath *path, qreal offset);
 QRegion polygonRegion(const QPolygonF &poly);
 
-class Layer
+class WorldPathLayer
 {
 public:
-    Layer();
-    Layer(const QString &mName, int mLevel);
-    ~Layer();
+    WorldPathLayer();
+    WorldPathLayer(const QString &mName, int mLevel);
+    ~WorldPathLayer();
 
     const QString &name() const
     { return mName; }
@@ -100,27 +82,25 @@ public:
     int level() const
     { return mLevel; }
 
-    void insertNode(int index, Node *node);
-    Node *removeNode(int index);
-    const QList<Node*> &nodes() const
+    void insertNode(int index, WorldNode *node);
+    WorldNode *removeNode(int index);
+    const QList<WorldNode*> &nodes() const
     { return mNodes; }
-    Node *node(id_t id);
+    WorldNode *node(id_t id);
 
-    void insertPath(int index, Path *path);
-    Path *removePath(int index);
-    const QList<Path*> &paths() const
+    void insertPath(int index, WorldPath *path);
+    WorldPath *removePath(int index);
+    const QList<WorldPath*> &paths() const
     { return mPaths; }
 
-    QList<Path*> paths(Rect &bounds);
-    QList<Path*> paths(coord_t x, coord_t y, coord_t width, coord_t height);
+    QList<WorldPath*> paths(QRectF &bounds);
+    QList<WorldPath*> paths(qreal x, qreal y, qreal width, qreal height);
 
     QString mName;
     int mLevel;
-    QList<Node*> mNodes;
-    QMap<id_t,Node*> mNodeByID;
-    QList<Path*> mPaths;
+    QList<WorldNode*> mNodes;
+    QMap<id_t,WorldNode*> mNodeByID;
+    QList<WorldPath*> mPaths;
 };
-
-} // namespace WorldPath
 
 #endif // PATH_H
