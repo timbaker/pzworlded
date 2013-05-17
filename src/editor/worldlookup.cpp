@@ -46,52 +46,65 @@ static LookupCoordType LOOKUP_LENGTH(qreal w)
 
 WorldLookup::WorldLookup(PathWorld *world) :
     mWorld(world),
-    mQTree(new WorldQuadTree(0, 0,
-                             LOOKUP_LENGTH(world->width() * 300),
-                             LOOKUP_LENGTH(world->height() * 300),
-                             0, QTREE_DEPTH))
+    mNodeTree(new WorldQuadTree(0, 0,
+                                LOOKUP_LENGTH(world->width()),
+                                LOOKUP_LENGTH(world->height()),
+                                0, QTREE_DEPTH)),
+    mPathTree(new WorldQuadTree(0, 0,
+                                LOOKUP_LENGTH(world->width()),
+                                LOOKUP_LENGTH(world->height()),
+                                0, QTREE_DEPTH)),
+    mScriptTree(new WorldQuadTree(0, 0,
+                                  LOOKUP_LENGTH(world->width()),
+                                  LOOKUP_LENGTH(world->height()),
+                                  0, QTREE_DEPTH))
 {
+    int index = 0;
     foreach (WorldPathLayer *layer, mWorld->pathLayers())
         foreach (WorldPath *path, layer->paths())
-            mQTree->AddObject(new WorldQuadTreeObject(path));
+            mPathTree->AddObject(new WorldQuadTreeObject(index++, path));
+
+    index = 0;
     foreach (WorldScript *ws, mWorld->scripts()) {
         if (ws->mRegion.isEmpty()) {
             qCritical("script has empty region - IGNORING");
             continue;
         }
-        mQTree->AddObject(new WorldQuadTreeObject(ws));
+        mScriptTree->AddObject(new WorldQuadTreeObject(index++, ws));
     }
 }
 
 WorldLookup::~WorldLookup()
 {
-    delete mQTree;
+    delete mNodeTree;
+    delete mPathTree;
+    delete mScriptTree;
 }
 
 QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
-    QList<WorldScript *> ret;
-    foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
-                                                          LOOKUP_LENGTH(bounds.width()),
-                                                          LOOKUP_LENGTH(bounds.height()))) {
-        if (o->script)
-            ret += o->script;
+    QMap<int,WorldScript *> ret;
+    foreach (WorldQuadTreeObject *o, mScriptTree->GetObjectsAt(topLeft.x, topLeft.y,
+                                                               LOOKUP_LENGTH(bounds.width()),
+                                                               LOOKUP_LENGTH(bounds.height()))) {
+        Q_ASSERT(o->script);
+        ret[o->index] = o->script;
     }
-    return ret;
+    return ret.values();
 }
 
 QList<WorldPath *> WorldLookup::paths(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
-    QList<WorldPath *> ret;
-    foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(topLeft.x, topLeft.y,
-                                                          LOOKUP_LENGTH(bounds.width()),
-                                                          LOOKUP_LENGTH(bounds.height()))) {
-        if (o->path)
-            ret += o->path;
+    QMap<int,WorldPath *> ret;
+    foreach (WorldQuadTreeObject *o, mPathTree->GetObjectsAt(topLeft.x, topLeft.y,
+                                                             LOOKUP_LENGTH(bounds.width()),
+                                                             LOOKUP_LENGTH(bounds.height()))) {
+        Q_ASSERT(o->path);
+        ret[o->index] = o->path;
     }
-    return ret;
+    return ret.values();
 }
 
 QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
@@ -101,23 +114,23 @@ QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
     foreach (QPointF p, poly)
         lpoly += LookupCoordinate(p).toPointF();
 
-    QList<WorldPath *> ret;
-    foreach (WorldQuadTreeObject *o, mQTree->GetObjectsAt(lpoly)) {
-        if (o->path)
-            ret += o->path;
+    QMap<int,WorldPath *> ret;
+    foreach (WorldQuadTreeObject *o, mPathTree->GetObjectsAt(lpoly)) {
+        Q_ASSERT(o->path);
+        ret[o->index] = o->path;
     }
-    return ret;
+    return ret.values();
 }
 
 /////
 
-WorldQuadTreeObject::WorldQuadTreeObject(WorldNode *node) :
-    node(node), path(0), script(0)
+WorldQuadTreeObject::WorldQuadTreeObject(int index, WorldNode *node) :
+    index(index), node(node), path(0), script(0)
 {
 }
 
-WorldQuadTreeObject::WorldQuadTreeObject(WorldPath *path) :
-    node(0), path(path), script(0)
+WorldQuadTreeObject::WorldQuadTreeObject(int index, WorldPath *path) :
+    index(index), node(0), path(path), script(0)
 {
     x = LookupCoordinate(path->bounds().topLeft()).x;
     y = LookupCoordinate(path->bounds().topLeft()).y;
@@ -125,8 +138,8 @@ WorldQuadTreeObject::WorldQuadTreeObject(WorldPath *path) :
     height = LOOKUP_LENGTH(path->bounds().height());
 }
 
-WorldQuadTreeObject::WorldQuadTreeObject(WorldScript *script) :
-    node(0), path(0), script(script)
+WorldQuadTreeObject::WorldQuadTreeObject(int index, WorldScript *script) :
+    index(index), node(0), path(0), script(script)
 {
     x = LookupCoordinate(script->mRegion.boundingRect().topLeft()).x;
     y = LookupCoordinate(script->mRegion.boundingRect().topLeft()).y;
@@ -231,7 +244,7 @@ QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(LookupCoordType x, Look
     if (SE->contains(x, y, width, height))
         ret += SE->GetObjectsAt(x, y, width, height);
 
-    return ret.toSet().toList();
+    return ret;
 }
 
 QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(const QPolygonF &poly)
@@ -254,7 +267,7 @@ QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(const QPolygonF &poly)
     if (SE->intersects(poly))
         ret += SE->GetObjectsAt(poly);
 
-    return ret.toSet().toList();
+    return ret;
 }
 
 QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(LookupCoordType x, LookupCoordType y)
@@ -277,7 +290,7 @@ QList<WorldQuadTreeObject *> WorldQuadTree::GetObjectsAt(LookupCoordType x, Look
     if (SE->contains(x, y))
         ret += SE->GetObjectsAt(x, y);
 
-    return ret.toSet().toList();
+    return ret;
 }
 
 void WorldQuadTree::Clear() {

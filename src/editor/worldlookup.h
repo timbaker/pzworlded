@@ -33,15 +33,16 @@ class WorldScript;
 class WorldQuadTreeObject
 {
 public:
-    WorldQuadTreeObject(WorldNode *node);
-    WorldQuadTreeObject(WorldPath *path);
-    WorldQuadTreeObject(WorldScript *script);
+    WorldQuadTreeObject(int index, WorldNode *node);
+    WorldQuadTreeObject(int index, WorldPath *path);
+    WorldQuadTreeObject(int index, WorldScript *script);
 
     bool intersects(LookupCoordType x, LookupCoordType y,
                     LookupCoordType width, LookupCoordType height);
     bool intersects(const QPolygonF &poly);
     bool contains(LookupCoordType x, LookupCoordType y);
 
+    int index;
     WorldNode *node;
     WorldPath *path;
     WorldScript *script;
@@ -98,7 +99,9 @@ public:
 
 private:
     PathWorld *mWorld;
-    WorldQuadTree *mQTree;
+    WorldQuadTree *mNodeTree;
+    WorldQuadTree *mPathTree;
+    WorldQuadTree *mScriptTree;
 };
 
 #endif // WORLDLOOKUP_H
