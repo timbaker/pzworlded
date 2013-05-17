@@ -183,8 +183,18 @@ static void testPathDocument()
                 ws->mPaths += path;
                 newWorld->insertScript(newWorld->scriptCount(), ws);
             }
+
+            if (path->tags.contains(QLatin1String("building")))
+            {
+                WorldScript *ws = new WorldScript;
+                ws->mFileName = QLatin1String("C:/Programming/Tiled/PZWorldEd/place-lot.lua");
+                ws->mParams[QLatin1String("mapfile")] = QLatin1String("C:\\Users\\Tim\\Desktop\\ProjectZomboid\\Tools\\Buildings\\tiny-house.tbx");
+                ws->mParams[QLatin1String("pos")] = QString::fromLatin1("%1 %2").arg(path->bounds().center().x()).arg(path->bounds().center().y());
+                newWorld->insertScript(newWorld->scriptCount(), ws);
+            }
         }
     }
+
 
     progress.update(QLatin1String("Running scripts (region)"));
 

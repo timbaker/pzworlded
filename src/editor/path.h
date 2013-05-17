@@ -34,7 +34,7 @@ typedef QPointF Point;
 typedef QPolygonF Polygon;
 typedef QRectF Rect;
 
-static const id_t InvalidId;
+const id_t InvalidId = 0;
 
 class Tag
 {

@@ -22,7 +22,7 @@
 #include "tilepathscene.h"
 #include "zoomable.h"
 
-static bool AllowOpenGL = false;
+static bool AllowOpenGL = true;
 
 PathView::PathView(PathDocument *doc, QWidget *parent) :
     BaseGraphicsView(AllowOpenGL, parent),

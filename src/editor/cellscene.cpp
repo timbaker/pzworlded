@@ -1012,6 +1012,7 @@ const int CellScene::ZVALUE_ROADITEM_UNSELECTED = 20000;
 
 CellScene::CellScene(QObject *parent)
     : BaseGraphicsScene(CellSceneType, parent)
+    , mHandleDelayedMapLoadingScheduled(false)
     , mMap(0)
     , mMapComposite(0)
     , mDocument(0)
@@ -1019,11 +1020,10 @@ CellScene::CellScene(QObject *parent)
     , mDnDItem(0)
     , mDarkRectangle(new QGraphicsRectItem)
     , mGridItem(new CellGridItem(this))
+    , mMapBordersItem(new QGraphicsPolygonItem)
     , mPendingFlags(None)
     , mPendingActive(false)
     , mActiveTool(0)
-    , mMapBordersItem(new QGraphicsPolygonItem)
-    , mHandleDelayedMapLoadingScheduled(false)
 {
     setBackgroundBrush(Qt::darkGray);
 

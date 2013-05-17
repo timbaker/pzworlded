@@ -21,6 +21,13 @@
 #include "tilepainter.h"
 #include "world.h"
 
+#include "mapmanager.h"
+#include "tile.h"
+#include "tilelayer.h"
+#include "tileset.h"
+
+#include <QFileInfo>
+
 using namespace Tiled::Lua;
 
 
@@ -75,6 +82,13 @@ QList<LuaPath *> LuaWorldScript::paths()
     return mPaths;
 }
 
+const char *LuaWorldScript::value(const char *key)
+{
+    if (mWorldScript->mParams.contains(QLatin1String(key)))
+        return cstring(mWorldScript->mParams[QLatin1String(key)]);
+    return 0;
+}
+
 /////
 
 LuaWorld::LuaWorld(World *world) :
@@ -120,6 +134,56 @@ void LuaTilePainter::strokePath(LuaPath *path, qreal thickness)
     mPainter->strokePath(path->mPath, thickness);
 }
 
+void LuaTilePainter::drawMap(int wx, int wy, LuaMapInfo *mapInfo)
+{
+    if (mapInfo && !mapInfo->mMapInfo->map()) {
+        MapManager::instance()->loadMap(mapInfo->mMapInfo->path());
+    }
+    if (!mapInfo || !mapInfo->mMapInfo->map() || !mapInfo->mMapInfo->map()->tileLayerCount())
+        return;
+
+    mPainter->setLayer(mPainter->world()->tileLayers().first());
+    TileLayer *tl = mapInfo->mMapInfo->map()->tileLayers().first(); // FIXME: only 1 layer supported by WorldChunkMap atm
+    for (int y = 0; y < tl->height(); y++)
+        for (int x = 0; x < tl->width(); x++) {
+            Tiled::Tile *tile = tl->cellAt(x, y).tile;
+            if (!tile) continue;
+            if (WorldTileset *wts = mPainter->world()->tileset(tile->tileset()->name())) {
+                mPainter->setTile(wts->tileAt(tile->id())); // FIXME: assumes valid tile id
+                mPainter->fill(wx + x, wy + y, 1, 1);
+            }
+        }
+}
+
+/////
+
+LuaMapInfo::LuaMapInfo(MapInfo *mapInfo) :
+    mMapInfo(mapInfo)
+{
+}
+
+LuaMapInfo *LuaMapInfo::get(const char *path)
+{
+    QFileInfo info;
+    info.setFile(QLatin1String(path));
+    if (!info.exists())
+        return 0;
+    if (MapInfo *mapInfo = MapManager::instance()->mapInfo(info.canonicalFilePath()))
+        return new LuaMapInfo(mapInfo); // FIXME: never freed
+    return 0;
+}
+
+const char *LuaMapInfo::path()
+{
+    return cstring(mMapInfo->path());
+}
+
+LuaRegion LuaMapInfo::region()
+{
+    return LuaRegion(QRect(mMapInfo->bounds()));
+}
+
+
 /////
 
 namespace Tiled {
@@ -134,7 +198,6 @@ LuaRegion polygonRegion(QPolygonF polygon)
 {
     return WorldPath::polygonRegion(polygon);
 }
-
 
 }
 }

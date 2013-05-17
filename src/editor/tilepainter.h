@@ -35,22 +35,26 @@ class TilePainter
 public:
     TilePainter(World *world);
 
+    World *world() const
+    { return mWorld; }
+
     void setLayer(WorldTileLayer *layer);
 
     void setTile(WorldTile *tile);
 
     void erase(int x, int y, int width, int height);
-    void erase(QRect &r);
-    void erase(QRegion &rgn);
+    void erase(const QRect &r);
+    void erase(const QRegion &rgn);
     void erase(WorldPath::Path *path);
 
     void fill(int x, int y, int width, int height);
-    void fill(QRect &r);
-    void fill(QRegion &rgn);
+    void fill(const QRect &r);
+    void fill(const QRegion &rgn);
     void fill(WorldPath::Path *path);
 
     void strokePath(WorldPath::Path *path, qreal thickness);
     void fillPath(WorldPath::Path *path);
+    void tracePath(WorldPath::Path *path, qreal offset);
 
     void noClip();
     void setClip(const QRect &rect);

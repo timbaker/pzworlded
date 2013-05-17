@@ -204,6 +204,32 @@ static int traceback (lua_State *L) {
 }
 }
 
+#define SCRIPT_CACHE 0
+#if SCRIPT_CACHE
+static QMap<QString,char*> LoadedScripts;
+#include <QFile>
+#endif
+
+static int load_lua_file(lua_State *L, const QString &fileName)
+{
+#if SCRIPT_CACHE
+    if (!LoadedScripts.contains(fileName)) {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+//            output = file.errorString();
+            return LUA_ERRFILE;
+        }
+        QByteArray ba = file.readAll();
+        char *buf = (char*)malloc(ba.size() + 1);
+        memcpy(buf, ba.data(), ba.size() + 1);
+        LoadedScripts[fileName] = buf;
+    }
+    return luaL_dostring(L, LoadedScripts[fileName]); // FIXME: loses the file name
+#else
+    return luaL_loadfile(L, cstring(fileName));
+#endif
+}
+
 bool LuaScript::dofile(const QString &f, QString &output)
 {
     lua_State *L = init();
@@ -219,7 +245,8 @@ bool LuaScript::dofile(const QString &f, QString &output)
         lua_setglobal(L, "path");
     }
 #endif
-    int status = luaL_loadfile(L, cstring(f));
+
+    int status = load_lua_file(L, f);
     if (status == LUA_OK) {
         int base = lua_gettop(L);
         lua_pushcfunction(L, traceback);
@@ -229,9 +256,10 @@ bool LuaScript::dofile(const QString &f, QString &output)
     }
     output = QString::fromLatin1(lua_tostring(L, -1));
     LuaConsole::instance()->write(output, (status == LUA_OK) ? Qt::black : Qt::red);
-    LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
-                                  .arg(elapsed.elapsed()/1000.0));
-    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    if (elapsed.elapsed() > 1000)
+        LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
+                                      .arg(elapsed.elapsed()/1000.0));
+//    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     return status == LUA_OK;
 }
 
@@ -259,24 +287,24 @@ bool LuaScript::runFunction(const char *name)
     lua_setglobal(L, "painter");
 
     QString output;
-    int status = luaL_loadfile(L, cstring(mWorldScript->mFileName));
+    int status = load_lua_file(L, mWorldScript->mFileName);
     if (status == LUA_OK) {
         int base = lua_gettop(L);
         lua_pushcfunction(L, traceback);
         lua_insert(L, base);
         status = lua_pcall(L, 0, 0, base);
-        output = QString::fromLatin1(lua_tostring(L, -1));
         if (status == LUA_OK) {
             lua_getglobal(L, name);
             status = lua_pcall(L, 0, 1, base);
-            output = QString::fromLatin1(lua_tostring(L, -1));
         }
         lua_remove(L, base);
     }
+    output = QString::fromLatin1(lua_tostring(L, -1));
     LuaConsole::instance()->write(output, (status == LUA_OK) ? Qt::black : Qt::red);
-    LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
-                                  .arg(elapsed.elapsed()/1000.0));
-    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    if (elapsed.elapsed() > 1000)
+        LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
+                                      .arg(elapsed.elapsed()/1000.0));
+//    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     return status == LUA_OK;
 }
 
@@ -427,19 +455,19 @@ void LuaTileLayer::fill(int x, int y, int width, int height, Tile *tile)
     fill(QRect(x, y, width, height), tile);
 }
 
-void LuaTileLayer::fill(QRect &r, Tile *tile)
+void LuaTileLayer::fill(const QRect &r, Tile *tile)
 {
     initClone();
-    r &= mClone->bounds();
-    for (int y = r.y(); y <= r.bottom(); y++) {
-        for (int x = r.x(); x <= r.right(); x++) {
+    QRect r2 = r & mClone->bounds();
+    for (int y = r2.y(); y <= r2.bottom(); y++) {
+        for (int x = r2.x(); x <= r2.right(); x++) {
             mCloneTileLayer->setCell(x, y, Cell(tile));
         }
     }
     mAltered += r;
 }
 
-void LuaTileLayer::fill(LuaRegion &rgn, Tile *tile)
+void LuaTileLayer::fill(const LuaRegion &rgn, Tile *tile)
 {
     foreach (QRect r, rgn.rects()) {
         fill(r, tile);
@@ -820,12 +848,12 @@ void LuaMapBmp::erase(int x, int y, int width, int height)
     fill(x, y, width, height, LuaColor());
 }
 
-void LuaMapBmp::erase(QRect &r)
+void LuaMapBmp::erase(const QRect &r)
 {
     fill(r, LuaColor());
 }
 
-void LuaMapBmp::erase(LuaRegion &rgn)
+void LuaMapBmp::erase(const LuaRegion &rgn)
 {
     fill(rgn, LuaColor());
 }
@@ -835,17 +863,17 @@ void LuaMapBmp::erase()
     fill(LuaColor());
 }
 
-void LuaMapBmp::fill(int x, int y, int width, int height, LuaColor &c)
+void LuaMapBmp::fill(int x, int y, int width, int height, const LuaColor &c)
 {
     fill(QRect(x, y, width, height), c);
 }
 
-void LuaMapBmp::fill(QRect &r, LuaColor &c)
+void LuaMapBmp::fill(const QRect &r, const LuaColor &c)
 {
-    r &= QRect(0, 0, mBmp.width(), mBmp.height());
+    QRect r2 = r & QRect(0, 0, mBmp.width(), mBmp.height());
 
-    for (int y = r.y(); y <= r.bottom(); y++) {
-        for (int x = r.x(); x <= r.right(); x++) {
+    for (int y = r2.y(); y <= r2.bottom(); y++) {
+        for (int x = r2.x(); x <= r2.right(); x++) {
             mBmp.setPixel(x, y, c.pixel);
         }
     }
@@ -853,13 +881,13 @@ void LuaMapBmp::fill(QRect &r, LuaColor &c)
     mAltered += r;
 }
 
-void LuaMapBmp::fill(LuaRegion &rgn, LuaColor &c)
+void LuaMapBmp::fill(const LuaRegion &rgn, const LuaColor &c)
 {
     foreach (QRect r, rgn.rects())
         fill(r, c);
 }
 
-void LuaMapBmp::fill(LuaColor &c)
+void LuaMapBmp::fill(const LuaColor &c)
 {
     fill(QRect(0, 0, mBmp.width(), mBmp.height()), c);
 }

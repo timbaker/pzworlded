@@ -245,9 +245,10 @@ class LuaPath @ Path
     LuaRegion region();
 };
 
-class LuaWorldScript & WorldScript
+class LuaWorldScript @ WorldScript
 {
     list<LuaPath*> paths();
+    const char *value(const char *key);
 };
 
 class LuaWorld @ World
@@ -264,6 +265,15 @@ public:
     void setTile(WorldTile *tile);
     void fill @ fillPath(LuaPath *path);
     void strokePath(LuaPath *path, double thickness);
+    void drawMap(int x, int y, LuaMapInfo *mapInfo);
+};
+
+class LuaMapInfo @ MapInfo
+{
+public:
+    static LuaMapInfo *get(const char *path);
+    const char *path();
+    LuaRegion region();
 };
 
 QPolygonF strokePath(LuaPath *path, double thickness);

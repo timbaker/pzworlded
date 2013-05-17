@@ -78,6 +78,7 @@ public:
                const QStyleOptionGraphicsItem *option,
                QWidget *)
     {
+        if (painter->worldMatrix().m22() < 0.25) return;
         QColor gridColor = Preferences::instance()->gridColor();
         mScene->mapRenderer()->drawGrid(painter, option->exposedRect, gridColor,
                                         mScene->currentLevel());

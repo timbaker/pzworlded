@@ -28,8 +28,6 @@ template class __declspec(dllimport) QMap<QString, QString>;
 
 using namespace WorldPath;
 
-const int InvalidId = 0;
-
 /////
 
 Node::Node() :

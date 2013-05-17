@@ -22,6 +22,7 @@
 
 #include <QPolygonF>
 
+class MapInfo;
 class TilePainter;
 class World;
 class WorldScript;
@@ -57,6 +58,8 @@ public:
 
     QList<LuaPath*> paths();
 
+    const char *value(const char *key);
+
     WorldScript *mWorldScript;
     QList<LuaPath*> mPaths;
 };
@@ -72,6 +75,8 @@ public:
     World *mWorld;
 };
 
+class LuaMapInfo;
+
 class LuaTilePainter
 {
 public:
@@ -81,12 +86,26 @@ public:
     void setTile(WorldTile *tile);
     void fill(LuaPath *path);
     void strokePath(LuaPath *path, qreal thickness);
+    void drawMap(int wx, int wy, LuaMapInfo *mapInfo);
 
     TilePainter *mPainter;
 };
 
 QPolygonF strokePath(LuaPath *path, qreal thickness);
 LuaRegion polygonRegion(QPolygonF polygon);
+
+class LuaMapInfo
+{
+public:
+    LuaMapInfo(MapInfo *mapInfo);
+
+    static LuaMapInfo *get(const char *path);
+
+    const char *path();
+    LuaRegion region();
+
+    MapInfo *mMapInfo;
+};
 
 } // namespace Lua
 } // namespace Tiled

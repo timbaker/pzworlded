@@ -87,12 +87,12 @@ void WorldChunk::LoadForLater(int wx, int wy)
                            /*mChunkMap->getWorldYMinTiles() +*/ this->wy * mChunkMap->TilesPerChunk,
                            mChunkMap->TilesPerChunk, mChunkMap->TilesPerChunk);
 
-    qDebug() << "WorldChunk::LoadForLater" << bounds;
+//    qDebug() << "WorldChunk::LoadForLater" << bounds;
 
     // No event processing allowed during these scripts!
     QList<WorldScript*> scripts = mChunkMap->mDocument->lookupScripts(bounds);
-    QList<WorldPath::Path*> paths = mChunkMap->mDocument->lookupPaths(bounds);
-    qDebug() << QString::fromLatin1("Running scripts (%1) #paths=%2").arg(scripts.size()).arg(paths.size());
+//    QList<WorldPath::Path*> paths = mChunkMap->mDocument->lookupPaths(bounds);
+    qDebug() << QString::fromLatin1("Running scripts (%1) #paths=%2").arg(scripts.size())/*.arg(paths.size())*/;
 
     foreach (WorldScript *ws, scripts) {
         QRect b = ws->mRegion.boundingRect();
@@ -308,7 +308,7 @@ void WorldChunkMap::setCenter(int x, int y)
     int wy = y / TilesPerChunk;
     wx = qBound(ChunkGridWidth / 2, wx, (mWorld->width() * 300) / TilesPerChunk - ChunkGridWidth / 2);
     wy = qBound(ChunkGridWidth / 2, wy, (mWorld->height() * 300) / TilesPerChunk - ChunkGridWidth / 2);
-    qDebug() << "WorldChunkMap::setCenter x,y=" << x << "," << y << " wx,wy=" << wx << "," << wy;
+//    qDebug() << "WorldChunkMap::setCenter x,y=" << x << "," << y << " wx,wy=" << wx << "," << wy;
     if (wx != WorldX || wy != WorldY) {
         QRegion current = QRect(getWorldXMin(), getWorldYMin(),
                                 ChunkGridWidth, ChunkGridWidth);
@@ -353,7 +353,7 @@ void WorldChunkMap::setCenter(int x, int y)
         foreach (QRect r, (updated - current).rects()) {
             for (int x = r.left(); x <= r.right(); x++) {
                 for (int y = r.top(); y <= r.bottom(); y++) {
-                    qDebug() << "Load chunk" << x << "," << y;
+//                    qDebug() << "Load chunk" << x << "," << y;
                     LoadChunkForLater(x, y, x - getWorldXMin(), y - getWorldYMin());
                 }
             }

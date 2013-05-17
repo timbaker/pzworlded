@@ -248,6 +248,12 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
             }
         }
+
+        if (path->tags.contains(QLatin1String("name"))
+                && path->tags[QLatin1String("name")] == QLatin1String("Plant Science Field Building")) {
+            painter->setBrush(Qt::red);
+            painter->drawPolygon(pf);
+        }
     }
 #endif
 }

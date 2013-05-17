@@ -223,7 +223,7 @@ class WorldScript
 {
 public:
     QString mFileName;
-    QList<ScriptParam> mParams;
+    QMap<QString,QString> mParams;
     QList<WorldPath::Path*> mPaths;
     QRegion mRegion;
 };

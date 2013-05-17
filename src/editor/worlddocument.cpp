@@ -23,7 +23,6 @@
 #include "luawriter.h"
 #include "undoredo.h"
 #include "world.h"
-#include "worldlookup.h"
 #include "worldscene.h"
 #include "worldview.h"
 #include "worldwriter.h"
