@@ -77,7 +77,7 @@ void TilePainter::fill(int x, int y, int width, int height)
         return;
 
     for (int x1 = x; x1 < x + width; x1++) {
-        for (int y1 = y; y1 <= y + height; y1++) {
+        for (int y1 = y; y1 < y + height; y1++) {
             mLayer->putTile(x1, y1, mTile);
         }
     }
