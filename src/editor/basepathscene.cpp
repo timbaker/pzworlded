@@ -22,6 +22,8 @@
 #include "pathdocument.h"
 #include "pathtools.h"
 #include "pathworld.h"
+#include "shadowworld.h"
+#include "worldlookup.h"
 
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
@@ -43,7 +45,7 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     BaseGraphicsScene(PathSceneType, parent),
     mDocument(doc),
     mNodeItem(new NodesItem(this)),
-    mCurrentPathLayer(doc->world()->pathLayers().first()),
+    mCurrentPathLayer(doc->shadow()->pathLayers().first()),
     mActiveTool(0)
 {
 }
@@ -69,6 +71,7 @@ void BasePathScene::setDocument(PathDocument *doc)
     }
 #endif
 
+    int z = 1;
     foreach (WorldPathLayer *layer, world()->pathLayers()) {
         PathLayerItem *item = new PathLayerItem(layer, this);
 #if 0
@@ -155,16 +158,25 @@ void BasePathScene::setDocument(PathDocument *doc)
         }
 
 #endif
+        item->setZValue(z++);
+        if (isTile())
+            item->setOpacity(0.5);
         addItem(item);
         mPathLayerItems += item;
     }
 
+    mNodeItem->setZValue(z++);
     addItem(mNodeItem);
 }
 
 PathWorld *BasePathScene::world() const
 {
-    return mDocument ? mDocument->world() : 0;
+    return mDocument ? mDocument->shadow() : 0;
+}
+
+WorldLookup *BasePathScene::lookup() const
+{
+    return mDocument ? mDocument->shadow()->lookup() : 0;
 }
 
 void BasePathScene::setRenderer(BasePathRenderer *renderer)
@@ -266,7 +278,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 #if 1
     QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
     foreach (WorldPathLayer *wpl, mScene->world()->pathLayers()) {
-        foreach (WorldPath *path, mScene->document()->lookupPaths(wpl, exposed)) {
+        foreach (WorldPath *path, mScene->lookup()->paths(wpl, exposed)) {
             painter->setBrush(Qt::NoBrush);
             QPolygonF pf = path->polygon();
             if (path->isClosed()) {
@@ -345,13 +357,13 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
     painter->setPen(QColor(0x33,0x99,0xff));
     painter->setBrush(QColor(0x33,0x99,0xff,255/8));
     foreach (WorldNode *node, lookupNodes(exposed)) {
-        QPointF scenePos = mScene->renderer()->toScene(node->pos() + dragOffset(node));
+        QPointF scenePos = mScene->renderer()->toScene(node->pos());
         painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
     }
 
     painter->setBrush(QColor(0x33,0x99,0xff,128));
     foreach (WorldNode *node, mSelectedNodes) {
-        QPointF scenePos = mScene->renderer()->toScene(node->pos() + dragOffset(node));
+        QPointF scenePos = mScene->renderer()->toScene(node->pos());
         if (exposed.contains(scenePos))
             painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
     }
@@ -365,40 +377,31 @@ void NodesItem::setSelectedNodes(const NodeSet &selection)
 
 void NodesItem::setDragging(WorldNode *node, bool dragging)
 {
-    if (dragging) {
-        mNodeOffset[node] = QPointF();
-    } else {
-        mNodeOffset.remove(node);
-    }
+    if (!dragging)
+        mScene->document()->shadow()->removeOffsetNode(node);
     update(); // FIXME: don't redraw everything
 }
 
 void NodesItem::setDragOffset(WorldNode *node, const QPointF &offset)
 {
-    mNodeOffset[node] = offset;
+    mScene->document()->shadow()->addOffsetNode(node, offset);
     update(); // FIXME: don't redraw everything
-}
-
-QPointF NodesItem::dragOffset(WorldNode *node)
-{
-    if (mNodeOffset.contains(node))
-        return mNodeOffset[node];
-    return QPointF();
 }
 
 QList<WorldNode *> NodesItem::lookupNodes(const QRectF &sceneRect)
 {
-    return mScene->document()->lookupNodes(mScene->currentPathLayer(),
-                                           mScene->renderer()->toWorld(sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
-                                                                                          nodeRadius(), nodeRadius())));
+    return mScene->lookup()->nodes(mScene->currentPathLayer(),
+                                   mScene->renderer()->toWorld(
+                                       sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
+                                                          nodeRadius(), nodeRadius())));
 }
 
 WorldNode *NodesItem::topmostNodeAt(const QPointF &scenePos)
 {
     QRectF sceneRect(scenePos.x() - nodeRadius(), scenePos.y() - nodeRadius(),
                      nodeRadius() * 2, nodeRadius() * 2);
-    QList<WorldNode*> nodes = mScene->document()->lookupNodes(mScene->currentPathLayer(),
-                                                              mScene->renderer()->toWorld(sceneRect));
+    QList<WorldNode*> nodes = mScene->lookup()->nodes(mScene->currentPathLayer(),
+                                                      mScene->renderer()->toWorld(sceneRect));
     return nodes.size() ? nodes.last() : 0;
 }
 

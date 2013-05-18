@@ -131,6 +131,7 @@ SOURCES += main.cpp\
     pathview.cpp \
     tilepathscene.cpp \
     worldchunkmap.cpp \
+    shadowworld.cpp \
     pathworld.cpp \
     pathtools.cpp
 
@@ -219,6 +220,7 @@ HEADERS  += mainwindow.h \
     pathview.h \
     tilepathscene.h \
     worldchunkmap.h \
+    shadowworld.h \
     pathworld.h \
     pathtools.h \
     global.h

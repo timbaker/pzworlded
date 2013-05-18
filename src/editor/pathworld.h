@@ -38,7 +38,8 @@ class WorldTile
 public:
     WorldTile(WorldTileset *tileset, int index) :
         mTileset(tileset),
-        mIndex(index)
+        mIndex(index),
+        mTiledTile(0)
     {}
 
     WorldTileset *mTileset;
@@ -55,6 +56,8 @@ public:
     ~WorldTileset();
 
     WorldTile *tileAt(int index);
+
+    WorldTileset *clone() const;
 
     QString mName;
     int mColumns;
@@ -74,6 +77,8 @@ public:
     void putTile(int x, int y, WorldTile *tile);
     WorldTile *getTile(int x, int y);
 
+    WorldTileLayer *clone(PathWorld *owner) const;
+
     class TileSink
     {
     public:
@@ -90,6 +95,8 @@ public:
 class WorldScript
 {
 public:
+    WorldScript *clone(PathWorld *owner) const;
+
     QString mFileName;
     QMap<QString,QString> mParams;
     QList<WorldPath*> mPaths;
@@ -139,11 +146,15 @@ public:
     { return mScripts.size(); }
 
     void insertTileset(int index, WorldTileset *tileset);
+    const QList<WorldTileset*> &tilesets() const
+    { return mTilesets; }
     WorldTileset *tileset(const QString &tilesetName);
     int tilesetCount() const
     { return mTilesets.size(); }
 
     WorldTile *tile(const QString &tilesetName, int index);
+
+    void initClone(PathWorld *clone);
 
 protected:
     int mWidth;

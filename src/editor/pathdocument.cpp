@@ -18,6 +18,7 @@
 #include "pathdocument.h"
 
 #include "pathworld.h"
+#include "shadowworld.h"
 #include "worldlookup.h"
 
 #include <QUndoStack>
@@ -25,6 +26,7 @@
 PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
+    mShadowWorld(new ShadowWorld(mWorld)),
     mFileName(fileName),
     mLookup(new WorldLookup(world))
 {

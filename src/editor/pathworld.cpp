@@ -19,6 +19,15 @@
 
 #include "path.h"
 
+#ifdef Q_OS_WIN
+// Hmmmm.  libtiled.dll defines the Properties class as so:
+// class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QMap<QString, QString>;
+#endif
+
 PathWorld::PathWorld(int width, int height) :
     mWidth(width),
     mHeight(height)
@@ -121,6 +130,24 @@ WorldTile *PathWorld::tile(const QString &tilesetName, int index)
     return 0;
 }
 
+void PathWorld::initClone(PathWorld *clone)
+{
+    clone->mWidth = mWidth;
+    clone->mHeight = mHeight;
+
+    foreach (WorldTileset *ts, tilesets())
+        clone->insertTileset(clone->tilesetCount(), ts->clone());
+
+    foreach (WorldPathLayer *layer, pathLayers())
+        clone->insertPathLayer(clone->pathLayerCount(), layer->clone());
+
+    foreach (WorldTileLayer *layer, tileLayers())
+        clone->insertTileLayer(clone->tileLayerCount(), layer->clone(clone));
+
+    foreach (WorldScript *script, scripts())
+        clone->insertScript(clone->scriptCount(), script->clone(clone));
+}
+
 /////
 
 WorldTileset::WorldTileset(const QString &name, int columns, int rows) :
@@ -144,6 +171,15 @@ WorldTile *WorldTileset::tileAt(int index)
     return 0;
 }
 
+WorldTileset *WorldTileset::clone() const
+{
+    WorldTileset *clone = new WorldTileset(mName, mColumns, mRows);
+    for (int i = 0; i < mColumns * mRows; i++) {
+        clone->mTiles[i]->mTiledTile = mTiles[i]->mTiledTile;
+    }
+    return clone;
+}
+
 /////
 
 void WorldTileLayer::putTile(int x, int y, WorldTile *tile)
@@ -160,4 +196,27 @@ WorldTile *WorldTileLayer::getTile(int x, int y)
             return tile;
     }
     return 0;
+}
+
+WorldTileLayer *WorldTileLayer::clone(PathWorld *owner) const
+{
+    WorldTileLayer *clone = new WorldTileLayer(owner, mName);
+    clone->mLevel = mLevel;
+    // don't clone the sinks
+    return clone;
+}
+
+/////
+
+WorldScript *WorldScript::clone(PathWorld *owner) const
+{
+    WorldScript *clone = new WorldScript;
+    clone->mFileName = mFileName;
+    clone->mParams = mParams;
+    foreach (WorldPath *path, mPaths) {
+        if (WorldPath *clonePath = path->owner()->path(path->id))
+            clone->mPaths += clonePath;
+    }
+    clone->mRegion = mRegion;
+    return clone;
 }

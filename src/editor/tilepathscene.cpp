@@ -128,7 +128,7 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
 
     mChunkMap = new WorldChunkMap(document());
 
-    qDeleteAll(items());
+//    qDeleteAll(items());
 
     foreach (WorldTileLayer *wtl, world()->tileLayers()) {
         int level;

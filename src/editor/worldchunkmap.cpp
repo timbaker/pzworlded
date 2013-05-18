@@ -20,6 +20,8 @@
 #include "luaworlded.h"
 #include "pathdocument.h"
 #include "pathworld.h"
+#include "shadowworld.h"
+#include "worldlookup.h"
 
 #include <QRect>
 #include <QRegion>
@@ -90,7 +92,7 @@ void WorldChunk::LoadForLater(int wx, int wy)
 //    qDebug() << "WorldChunk::LoadForLater" << bounds;
 
     // No event processing allowed during these scripts!
-    QList<WorldScript*> scripts = mChunkMap->mDocument->lookupScripts(bounds);
+    QList<WorldScript*> scripts = mChunkMap->mDocument->shadow()->lookup()->scripts(bounds);
 //    QList<WorldPath::Path*> paths = mChunkMap->mDocument->lookupPaths(bounds);
     qDebug() << QString::fromLatin1("Running scripts (%1) #paths=%2").arg(scripts.size())/*.arg(paths.size())*/;
 
@@ -198,7 +200,7 @@ public:
 
 WorldChunkMap::WorldChunkMap(PathDocument *doc) :
     mDocument(doc),
-    mWorld(doc->world()),
+    mWorld(doc->shadow()),
     WorldX(5),
     WorldY(5),
     XMinTiles(-1),
@@ -313,8 +315,8 @@ void WorldChunkMap::setCenter(int x, int y)
 {
     int wx = x / TilesPerChunk;
     int wy = y / TilesPerChunk;
-    wx = qBound(ChunkGridWidth / 2, wx, (mWorld->width() * 300) / TilesPerChunk - ChunkGridWidth / 2);
-    wy = qBound(ChunkGridWidth / 2, wy, (mWorld->height() * 300) / TilesPerChunk - ChunkGridWidth / 2);
+    wx = qBound(ChunkGridWidth / 2, wx, (mWorld->width()) / TilesPerChunk - ChunkGridWidth / 2);
+    wy = qBound(ChunkGridWidth / 2, wy, (mWorld->height()) / TilesPerChunk - ChunkGridWidth / 2);
 //    qDebug() << "WorldChunkMap::setCenter x,y=" << x << "," << y << " wx,wy=" << wx << "," << wy;
     if (wx != WorldX || wy != WorldY) {
         QRegion current = QRect(getWorldXMin(), getWorldYMin(),

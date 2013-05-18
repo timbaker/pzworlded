@@ -29,6 +29,7 @@
 
 class PathView;
 class PathWorld;
+class ShadowWorld;
 class WorldLookup;
 class WorldNode;
 class WorldPath;
@@ -49,6 +50,9 @@ public:
     PathWorld *world() const
     { return mWorld; }
 
+    ShadowWorld *shadow() const
+    { return mShadowWorld; }
+
     PathView *view() const
     { return (PathView*)Document::view(); }
 
@@ -64,6 +68,7 @@ public:
 
 private:
     PathWorld *mWorld;
+    ShadowWorld *mShadowWorld;
     QString mFileName;
     WorldLookup *mLookup;
 };

@@ -49,15 +49,23 @@ WorldNode::~WorldNode()
 {
 }
 
+WorldNode *WorldNode::clone() const
+{
+    WorldNode *clone = new WorldNode(id, p.x(), p.y());
+    return clone;
+}
+
 /////
 
 WorldPath::WorldPath() :
-    id(InvalidId)
+    id(InvalidId),
+    mOwner(0)
 {
 }
 
 WorldPath::WorldPath(id_t id) :
-    id(id)
+    id(id),
+    mOwner(0)
 {
 }
 
@@ -94,6 +102,12 @@ QRectF WorldPath::bounds()
 
 QPolygonF WorldPath::polygon()
 {
+    mPolygon.resize(0);
+    foreach (WorldNode *node, nodes)
+        mPolygon += node->p;
+    return mPolygon;
+
+
     if (mPolygon.isEmpty()) {
         foreach (WorldNode *node, nodes)
             mPolygon += node->p;
@@ -107,6 +121,16 @@ QRegion WorldPath::region()
         return QRegion();
 
     return polygonRegion(polygon());
+}
+
+WorldPath *WorldPath::clone(WorldPathLayer *owner) const
+{
+    WorldPath *clone = new WorldPath(id);
+    foreach (WorldNode *node, nodes)
+        if (WorldNode *cloneNode = owner->node(node->id))
+            clone->nodes += cloneNode;
+    clone->tags = tags;
+    return clone;
 }
 
 /////
@@ -150,14 +174,39 @@ WorldNode *WorldPathLayer::node(id_t id)
 
 void WorldPathLayer::insertPath(int index, WorldPath *path)
 {
+    Q_ASSERT(path->owner() == 0);
+    path->setOwner(this);
     mPaths.insert(index, path);
+    mPathByID[path->id] = path;
 }
 
 WorldPath *WorldPathLayer::removePath(int index)
 {
-    return mPaths.takeAt(index);
+    WorldPath *path = mPaths.takeAt(index);
+    mPathByID.remove(path->id);
+    Q_ASSERT(path->owner() == this);
+    path->setOwner(0);
+    return path;
 }
 
+WorldPath *WorldPathLayer::path(id_t id)
+{
+    if (mPathByID.contains(id))
+        return mPathByID[id];
+    return 0;
+}
+
+WorldPathLayer *WorldPathLayer::clone() const
+{
+    WorldPathLayer *clone = new WorldPathLayer(mName, mLevel);
+    foreach (WorldNode *node, nodes())
+        clone->insertNode(clone->nodeCount(), node->clone());
+    foreach (WorldPath *path, paths())
+        clone->insertPath(clone->pathCount(), path->clone(clone));
+    return clone;
+}
+
+#if 0
 QList<WorldPath *> WorldPathLayer::paths(QRectF &bounds)
 {
     return mPaths;
@@ -167,6 +216,8 @@ QList<WorldPath*> WorldPathLayer::paths(qreal x, qreal y, qreal width, qreal hei
 {
     return mPaths; // TODO: spatial partitioning
 }
+#endif
+
 
 #if 1
 #include <qmath.h>

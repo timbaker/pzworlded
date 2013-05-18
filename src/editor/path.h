@@ -25,6 +25,8 @@
 #include <QPolygonF>
 #include <QString>
 
+class WorldPathLayer;
+
 typedef unsigned long id_t;
 const id_t InvalidId = 0;
 
@@ -39,6 +41,8 @@ public:
     const QPointF &pos() const
     { return p; }
 
+    WorldNode *clone() const;
+
     id_t id;
     QPointF p;
 };
@@ -50,6 +54,9 @@ public:
     WorldPath(id_t id);
     ~WorldPath();
 
+    WorldPathLayer *owner() const
+    { return mOwner; }
+
     void insertNode(int index, WorldNode *node);
     WorldNode *removeNode(int index);
 
@@ -60,12 +67,18 @@ public:
 
     QRegion region();
 
+    void setOwner(WorldPathLayer *owner)
+    { mOwner = owner; }
+    WorldPath *clone(WorldPathLayer *owner) const;
+
     id_t id;
     QList<WorldNode*> nodes;
     QMap<QString,QString> tags;
 
     QRectF mBounds;
     QPolygonF mPolygon;
+
+    WorldPathLayer *mOwner;
 };
 
 QPolygonF strokePath(WorldPath *path, qreal thickness);
@@ -89,21 +102,29 @@ public:
     WorldNode *removeNode(int index);
     const QList<WorldNode*> &nodes() const
     { return mNodes; }
+    int nodeCount() const
+    { return mNodes.size(); }
     WorldNode *node(id_t id);
 
     void insertPath(int index, WorldPath *path);
     WorldPath *removePath(int index);
     const QList<WorldPath*> &paths() const
     { return mPaths; }
+    int pathCount() const
+    { return mPaths.size(); }
+    WorldPath *path(id_t id);
 
-    QList<WorldPath*> paths(QRectF &bounds);
-    QList<WorldPath*> paths(qreal x, qreal y, qreal width, qreal height);
+//    QList<WorldPath*> paths(QRectF &bounds);
+//    QList<WorldPath*> paths(qreal x, qreal y, qreal width, qreal height);
+
+    WorldPathLayer *clone() const;
 
     QString mName;
     int mLevel;
     QList<WorldNode*> mNodes;
     QMap<id_t,WorldNode*> mNodeByID;
     QList<WorldPath*> mPaths;
+    QMap<id_t,WorldPath*> mPathByID;
 };
 
 #endif // PATH_H
