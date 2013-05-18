@@ -87,7 +87,38 @@ public:
 
 } // namespace ShadowWorldModifiers
 
+class WorldChange
+{
+public:
+    virtual void apply(ShadowWorld *world) = 0;
+};
+
+namespace ShadowWorldChanges {
+
+class NodeMoved : public WorldChange
+{
+public:
+    NodeMoved(WorldNode *node) : id(node->id), p(node->pos()) {}
+    virtual void apply(ShadowWorld *world)
+    {
+        foreach (WorldPathLayer *wpl, world->pathLayers()) {
+            if (WorldNode *node = wpl->node(id)) {
+                node->p = p;
+                world->lookup()->nodeMoved(node);
+                qDebug() << "NodeMoved" << id << p;
+                break;
+            }
+        }
+    }
+
+    id_t id;
+    QPointF p;
+};
+
+}
+
 using namespace ShadowWorldModifiers;
+using namespace ShadowWorldChanges;
 
 /////
 
@@ -147,5 +178,21 @@ void ShadowWorld::removeOffsetNode(WorldNode *node)
             delete m;
         }
     }
+}
+
+void ShadowWorld::nodeMoved(WorldNode *node)
+{
+    if (mChanges.isEmpty())
+        QMetaObject::invokeMethod(this, "processChanges", Qt::QueuedConnection);
+    mChanges += new NodeMoved(node);
+}
+
+void ShadowWorld::processChanges()
+{
+    foreach (WorldChange *c, mChanges) {
+        c->apply(this);
+        delete c;
+    }
+    mChanges.clear();
 }
 

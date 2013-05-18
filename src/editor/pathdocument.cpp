@@ -58,7 +58,8 @@ QPointF PathDocument::moveNode(WorldNode *node, const QPointF &pos)
 {
     QPointF old = node->pos();
     node->p = pos;
-    mLookup->nodeMoved(node, old);
+    mLookup->nodeMoved(node);
+    mShadowWorld->nodeMoved(node); // FIXME: hook to signal?
     emit nodeMoved(node);
     return old;
 }

@@ -23,10 +23,12 @@
 class WorldLookup;
 class WorldNode;
 
+class WorldChange;
 class WorldModifier;
 
-class ShadowWorld : public PathWorld
+class ShadowWorld : public QObject, public PathWorld
 {
+    Q_OBJECT
 public:
     ShadowWorld(PathWorld *orig);
 
@@ -39,10 +41,16 @@ public:
     void addOffsetNode(WorldNode *node, const QPointF &offset);
     void removeOffsetNode(WorldNode *node);
 
+    void nodeMoved(WorldNode *node);
+
+private slots:
+    void processChanges();
+
 private:
     PathWorld *mOrig;
     WorldLookup *mLookup;
     QList<WorldModifier*> mModifiers;
+    QList<WorldChange*> mChanges;
 };
 
 #endif // SHADOWWORLD_H
