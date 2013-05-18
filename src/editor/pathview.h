@@ -28,6 +28,7 @@ class TilePathScene;
 
 class PathView : public BaseGraphicsView
 {
+    Q_OBJECT
 public:
     PathView(PathDocument *doc, QWidget *parent = 0);
 
@@ -44,6 +45,9 @@ public:
     void switchToOrtho();
     void switchToTile();
 
+private slots:
+    void recenter();
+
 private:
     PathDocument *mDocument;
     IsoPathScene *mIsoScene;
@@ -51,6 +55,7 @@ private:
     TilePathScene *mTileScene;
     qreal mOrthoIsoScale;
     qreal mTileScale;
+    bool mRecenterScheduled;
 };
 
 #endif // BASEWORLDVIEW_H

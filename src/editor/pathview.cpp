@@ -30,7 +30,8 @@ PathView::PathView(PathDocument *doc, QWidget *parent) :
     mDocument(doc),
     mIsoScene(new IsoPathScene(doc, this)),
     mOrthoScene(new OrthoPathScene(doc, this)),
-    mTileScene(new TilePathScene(doc, this))
+    mTileScene(new TilePathScene(doc, this)),
+    mRecenterScheduled(false)
 {
     setScene(mOrthoScene);
 
@@ -93,13 +94,27 @@ void PathView::switchToTile()
     ToolManager::instance()->setScene(scene());
 }
 
-void PathView::scrollContentsBy(int dx, int dy)
+void PathView::recenter()
 {
-    BaseGraphicsView::scrollContentsBy(dx, dy);
+    mRecenterScheduled = false;
 
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
     QPointF worldPos = scene()->renderer()->toWorld(scenePos);
 
     scene()->scrollContentsBy(worldPos);
+}
+
+void PathView::scrollContentsBy(int dx, int dy)
+{
+    BaseGraphicsView::scrollContentsBy(dx, dy);
+
+    // scrollContentsBy() gets called twice, once for the horizontal scrollbar
+    // and once for the vertical scrollbar.  When changing scale, the dx/dy
+    // values are quite large.  So, don't update the chunkmap until both
+    // calls have completed.
+    if (!mRecenterScheduled) {
+        QMetaObject::invokeMethod(this, "recenter", Qt::QueuedConnection);
+        mRecenterScheduled = true;
+    }
 }
