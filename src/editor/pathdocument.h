@@ -38,6 +38,7 @@ class WorldScript;
 
 class PathDocument : public Document
 {
+    Q_OBJECT
 public:
     PathDocument(PathWorld *world, const QString &fileName = QString());
     ~PathDocument();
@@ -57,7 +58,7 @@ public:
     { return (PathView*)Document::view(); }
 
     // +UNDO/REDO
-    void moveNode(WorldNode *node, const QPointF &pos);
+    QPointF moveNode(WorldNode *node, const QPointF &pos);
     // -UNDO/REDO
 
     QList<WorldScript*> lookupScripts(const QRectF &bounds);
@@ -65,6 +66,9 @@ public:
     QList<WorldPath*> lookupPaths(WorldPathLayer *layer, const QPolygonF &bounds);
     QList<WorldNode*> lookupNodes(WorldPathLayer *layer, const QRectF &bounds);
     QList<WorldNode*> lookupNodes(WorldPathLayer *layer, const QPolygonF &poly);
+
+signals:
+    void nodeMoved(WorldNode *node);
 
 private:
     PathWorld *mWorld;

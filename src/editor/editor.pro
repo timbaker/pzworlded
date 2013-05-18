@@ -133,7 +133,8 @@ SOURCES += main.cpp\
     worldchunkmap.cpp \
     shadowworld.cpp \
     pathworld.cpp \
-    pathtools.cpp
+    pathtools.cpp \
+    pathundoredo.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -223,7 +224,8 @@ HEADERS  += mainwindow.h \
     shadowworld.h \
     pathworld.h \
     pathtools.h \
-    global.h
+    global.h \
+    pathundoredo.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

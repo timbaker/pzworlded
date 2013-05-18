@@ -29,17 +29,20 @@ template class __declspec(dllimport) QMap<QString, QString>;
 /////
 
 WorldNode::WorldNode() :
+    layer(0),
     id(InvalidId)
 {
 }
 
 WorldNode::WorldNode(id_t id, qreal x, qreal y) :
+    layer(0),
     id(id),
     p(x, y)
 {
 }
 
 WorldNode::WorldNode(id_t id, const QPointF &p) :
+    layer(0),
     id(id),
     p(p)
 {
@@ -156,12 +159,14 @@ void WorldPathLayer::insertNode(int index, WorldNode *node)
 {
     mNodes.insert(index, node);
     mNodeByID[node->id] = node;
+    node->layer = this;
 }
 
 WorldNode *WorldPathLayer::removeNode(int index)
 {
     WorldNode *node = mNodes.takeAt(index);
     mNodeByID.remove(node->id);
+    node->layer = 0;
     return node;
 }
 

@@ -21,6 +21,7 @@
 #include "basepathscene.h"
 #include "path.h"
 #include "pathdocument.h"
+#include "pathundoredo.h"
 #include "pathworld.h"
 
 #include <QApplication>
@@ -43,6 +44,21 @@ BasePathTool::~BasePathTool()
 void BasePathTool::setScene(BaseGraphicsScene *scene)
 {
     mScene = scene ? scene->asPathScene() : 0;
+}
+
+PathDocument *BasePathTool::document()
+{
+    return mScene ? mScene->document() : 0;
+}
+
+void BasePathTool::beginUndoMacro(const QString &s)
+{
+    document()->undoStack()->beginMacro(s);
+}
+
+void BasePathTool::endUndoMacro()
+{
+    document()->undoStack()->endMacro();
 }
 
 void BasePathTool::updateEnabledState()
@@ -287,13 +303,16 @@ void SelectMoveNodeTool::finishMoving(const QPointF &pos)
     QPointF dropPos = mDropWorldPos;
     QPointF diff = dropPos - startPos;
     if (startPos != dropPos) {
-        QUndoStack *undoStack = mScene->document()->undoStack();
         int count = mMovingNodes.size();
-        undoStack->beginMacro(tr("Move %1 Road%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
+        beginUndoMacro(tr("Move %1 Node%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
         foreach (WorldNode *node, mMovingNodes) {
-            mScene->document()->moveNode(node, node->pos() + diff);
+            foreach (WorldPathLayer *wpl, document()->world()->pathLayers()) {
+                if (WorldNode *origNode = wpl->node(node->id))
+                    PathUndoRedo::MoveNode::push(document(), origNode, node->pos() + diff);
+            }
+
         }
-        undoStack->endMacro();
+        endUndoMacro();
     }
 
     mMovingNodes.clear();

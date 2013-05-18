@@ -43,6 +43,7 @@ public:
 
     WorldNode *clone() const;
 
+    WorldPathLayer *layer;
     id_t id;
     QPointF p;
 };

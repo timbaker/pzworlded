@@ -17,6 +17,7 @@
 
 #include "pathdocument.h"
 
+#include "path.h"
 #include "pathworld.h"
 #include "shadowworld.h"
 #include "worldlookup.h"
@@ -53,8 +54,13 @@ bool PathDocument::save(const QString &filePath, QString &error)
     return false;
 }
 
-void PathDocument::moveNode(WorldNode *node, const QPointF &pos)
+QPointF PathDocument::moveNode(WorldNode *node, const QPointF &pos)
 {
+    QPointF old = node->pos();
+    node->p = pos;
+    mLookup->nodeMoved(node, old);
+    emit nodeMoved(node);
+    return old;
 }
 
 QList<WorldScript *> PathDocument::lookupScripts(const QRectF &bounds)

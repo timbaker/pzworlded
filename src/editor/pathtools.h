@@ -20,10 +20,13 @@
 
 #include "scenetools.h"
 
-#include <global.h>
+#include "global.h"
 
 class BasePathScene;
+class PathDocument;
 class WorldNode;
+
+class QUndoStack;
 
 class BasePathTool : public AbstractTool
 {
@@ -36,6 +39,10 @@ public:
     ~BasePathTool();
 
     void setScene(BaseGraphicsScene *scene);
+
+    PathDocument *document();
+    void beginUndoMacro(const QString &s);
+    void endUndoMacro();
 
     virtual void keyPressEvent(QKeyEvent *event) { Q_UNUSED(event) }
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }

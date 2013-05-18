@@ -21,6 +21,8 @@
 #include "pathworld.h"
 #include "worldlookup.h"
 
+#include <QDebug>
+
 namespace ShadowWorldModifiers {
 class MoveNode;
 class OffsetNode;
@@ -132,12 +134,14 @@ void ShadowWorld::addOffsetNode(WorldNode *node, const QPointF &offset)
     }
     mModifiers += new OffsetNode(node, offset);
     mModifiers.last()->redo();
+    qDebug() << "addOffsetNode";
 }
 
 void ShadowWorld::removeOffsetNode(WorldNode *node)
 {
     foreach (WorldModifier *m, mModifiers) {
         if (m->asOffsetNode() && m->asOffsetNode()->mNode == node) {
+            qDebug() << "removeOffsetNode";
             m->undo();
             mModifiers.removeOne(m);
             delete m;
