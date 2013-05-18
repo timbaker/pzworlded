@@ -19,17 +19,54 @@
 #define WORLDLOOKUP_H
 
 #include <QList>
+#include <QMap>
 #include <QPolygonF>
 #include <QRectF>
 #include <QVector>
 
 typedef unsigned long LookupCoordType;
 
+class QuadRect
+{
+public:
+    QuadRect() :
+        x(0), y(0), width(0), height(0)
+    {}
+    QuadRect(LookupCoordType x, LookupCoordType y, LookupCoordType width, LookupCoordType height) :
+        x(x), y(y), width(width), height(height)
+    {}
+
+    bool contains(LookupCoordType x1, LookupCoordType y1) const
+    {
+        return (x1 >= x && x1 < x + this->width
+                && y1 >= y && y1 < y + height);
+    }
+
+    bool contains(const QuadRect &other) const
+    {
+        return (other.x >= x) && (other.x + other.width <= x + width)
+                && (other.y >= y) && (other.y + other.height <= y + height);
+    }
+
+    bool intersects(const QuadRect &other) const
+    {
+        return (other.x + other.width > x) && (other.x < x + width) &&
+                (other.y + other.height > y) && (other.y < y + height);
+    }
+
+    LookupCoordType x;
+    LookupCoordType y;
+    LookupCoordType width;
+    LookupCoordType height;
+};
+
 class PathWorld;
 class WorldNode;
 class WorldPath;
 class WorldPathLayer;
 class WorldScript;
+
+class WorldQuadSubTree;
 
 class WorldQuadTreeObject
 {
@@ -38,54 +75,135 @@ public:
     WorldQuadTreeObject(int index, WorldPath *path);
     WorldQuadTreeObject(int index, WorldScript *script);
 
-    bool intersects(LookupCoordType x, LookupCoordType y,
-                    LookupCoordType width, LookupCoordType height);
+    bool intersects(const QuadRect &rect);
     bool intersects(const QPolygonF &poly);
     bool contains(LookupCoordType x, LookupCoordType y);
+
+    WorldQuadSubTree *owner;
 
     int index;
     WorldNode *node;
     WorldPath *path;
     WorldScript *script;
 
-    LookupCoordType x, y, width, height;
+    QuadRect bounds;
 };
 
-class WorldQuadTree {
+// http://gamedev.stackexchange.com/questions/20607/quad-tree-with-a-lot-of-moving-objects
+class WorldQuadSubTree {
 public:
-    WorldQuadTree(LookupCoordType x, LookupCoordType y, LookupCoordType w, LookupCoordType h,
-             int level, int maxLevel);
+    WorldQuadSubTree(LookupCoordType x, LookupCoordType y,
+                  LookupCoordType width, LookupCoordType height);
+    WorldQuadSubTree(WorldQuadSubTree *parent,
+                  LookupCoordType x, LookupCoordType y,
+                  LookupCoordType width, LookupCoordType height);
 
-    ~WorldQuadTree();
+    ~WorldQuadSubTree();
 
-    void AddObject(WorldQuadTreeObject *object);
-    QList<WorldQuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y,
-                                              LookupCoordType width, LookupCoordType height);
-    QList<WorldQuadTreeObject *> GetObjectsAt(const QPolygonF &poly);
-    QList<WorldQuadTreeObject *> GetObjectsAt(LookupCoordType x, LookupCoordType y);
+    void Add(WorldQuadTreeObject *object);
+    void Remove(WorldQuadTreeObject *object);
+    void Subdivide();
+    WorldQuadSubTree *GetDestinationTree(WorldQuadTreeObject *object);
+    void Relocate(WorldQuadTreeObject *object);
+    void CleanUpwards();
+    void Delete(WorldQuadTreeObject *object, bool clean);
+    void Insert(WorldQuadTreeObject *object);
+
+    typedef QList<WorldQuadTreeObject *> ObjectList;
+
+    void GetObjects(LookupCoordType x, LookupCoordType y,
+                    LookupCoordType width, LookupCoordType height,
+                    ObjectList &ret)
+    { GetObjects(QuadRect(x, y, width, height), ret); }
+    void GetObjects(const QuadRect &rect, ObjectList &ret);
+    void GetObjects(const QPolygonF &poly, ObjectList &ret);
+    void GetObjects(LookupCoordType x, LookupCoordType y, ObjectList &ret);
+    void GetAllObjects(ObjectList &ret);
+
+    void Move(WorldQuadTreeObject *object);
+
     void Clear();
 
-    int count();
-    QList<WorldQuadTree*> nonEmptyQuads();
+    int ObjectCount();
 
 private:
-    LookupCoordType x, y, width, height;
-    int level;
-    int maxLevel;
-    QVector<WorldQuadTreeObject*> objects;
+    QuadRect bounds;
+    ObjectList objects;
+    int depth;
 
-    WorldQuadTree *parent;
-    WorldQuadTree *NW;
-    WorldQuadTree *NE;
-    WorldQuadTree *SW;
-    WorldQuadTree *SE;
+    WorldQuadSubTree *parent;
+    WorldQuadSubTree *NW;
+    WorldQuadSubTree *NE;
+    WorldQuadSubTree *SW;
+    WorldQuadSubTree *SE;
 
-    bool contains(LookupCoordType x, LookupCoordType y,
-                  LookupCoordType width, LookupCoordType height);
+    static const int MaxObjectsPerNode = 50;
+
+    bool contains(const QuadRect &rect);
     bool contains(LookupCoordType x, LookupCoordType y);
+    bool intersects(const QuadRect &rect);
     bool intersects(const QPolygonF &poly);
-    bool contains(WorldQuadTree *child, WorldQuadTreeObject *object);
+    bool contains(WorldQuadTreeObject *object);
 
+};
+
+template<class T>
+class WorldQuadTree
+{
+public:
+    WorldQuadTree(LookupCoordType x, LookupCoordType y,
+                  LookupCoordType width, LookupCoordType height) :
+        mRoot(new WorldQuadSubTree(x, y, width, height))
+    {
+
+    }
+
+    void Add(int index, T *object)
+    {
+        WorldQuadTreeObject *wrapped = new WorldQuadTreeObject(index, object);
+        mMap[object] = wrapped;
+        mRoot->Insert(wrapped);
+    }
+
+    void Remove(T *object)
+    {
+        if (mMap.contains(object)) {
+            mRoot->Delete(object, true);
+            mMap.remove(object);
+        }
+    }
+
+    void Move(T *object)
+    {
+        if (mMap.contains(object))
+            mRoot->Move(mMap[object]);
+    }
+
+
+    void GetObjects(LookupCoordType x, LookupCoordType y,
+                    LookupCoordType width, LookupCoordType height,
+                    WorldQuadSubTree::ObjectList &ret)
+    {
+        GetObjects(QuadRect(x, y, width, height), ret);
+    }
+
+    void GetObjects(const QuadRect &rect, WorldQuadSubTree::ObjectList &ret)
+    {
+        mRoot->GetObjects(rect, ret);
+    }
+
+    void GetObjects(const QPolygonF &poly, WorldQuadSubTree::ObjectList &ret)
+    {
+        mRoot->GetObjects(poly, ret);
+    }
+
+    void GetObjects(LookupCoordType x, LookupCoordType y, WorldQuadSubTree::ObjectList &ret)
+    {
+        mRoot->GetObjects(x, y, ret);
+    }
+
+    WorldQuadSubTree *mRoot;
+    QMap<T*,WorldQuadTreeObject*> mMap;
 };
 
 class WorldLookup
@@ -100,11 +218,13 @@ public:
     QList<WorldNode*> nodes(WorldPathLayer *layer, const QRectF &bounds) const;
     QList<WorldNode*> nodes(WorldPathLayer *layer, const QPolygonF &bounds) const;
 
+    void nodeMoved(WorldNode *node, const QPointF &oldPos);
+
 private:
     PathWorld *mWorld;
-    QVector<WorldQuadTree *> mNodeTree;
-    QVector<WorldQuadTree *> mPathTree;
-    WorldQuadTree *mScriptTree;
+    QVector<WorldQuadTree<WorldNode> *> mNodeTree;
+    QVector<WorldQuadTree<WorldPath> *> mPathTree;
+    WorldQuadTree<WorldScript> *mScriptTree;
 };
 
 #endif // WORLDLOOKUP_H
