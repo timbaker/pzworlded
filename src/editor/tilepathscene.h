@@ -75,8 +75,6 @@ public:
     TilePathScene(PathDocument *doc, QObject *parent = 0);
     ~TilePathScene();
 
-    void setTool(AbstractTool *tool);
-
     bool isTile() const { return true; }
 
     void scrollContentsBy(const QPointF &worldPos);

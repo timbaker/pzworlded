@@ -20,14 +20,19 @@
 
 #include "document.h"
 
+#include "global.h"
+
 #include <QList>
 #include <QPolygonF>
 #include <QRectF>
+#include <QSet>
 
 class PathView;
 class PathWorld;
 class WorldLookup;
+class WorldNode;
 class WorldPath;
+class WorldPathLayer;
 class WorldScript;
 
 class PathDocument : public Document
@@ -47,9 +52,15 @@ public:
     PathView *view() const
     { return (PathView*)Document::view(); }
 
+    // +UNDO/REDO
+    void moveNode(WorldNode *node, const QPointF &pos);
+    // -UNDO/REDO
+
     QList<WorldScript*> lookupScripts(const QRectF &bounds);
-    QList<WorldPath*> lookupPaths(const QRectF &bounds);
-    QList<WorldPath*> lookupPaths(const QPolygonF &bounds);
+    QList<WorldPath*> lookupPaths(WorldPathLayer *layer, const QRectF &bounds);
+    QList<WorldPath*> lookupPaths(WorldPathLayer *layer, const QPolygonF &bounds);
+    QList<WorldNode*> lookupNodes(WorldPathLayer *layer, const QRectF &bounds);
+    QList<WorldNode*> lookupNodes(WorldPathLayer *layer, const QPolygonF &poly);
 
 private:
     PathWorld *mWorld;

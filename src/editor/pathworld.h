@@ -118,6 +118,7 @@ public:
     { return mPathLayers; }
     WorldPathLayer *pathLayerAt(int index);
     int pathLayerCount() const;
+    int indexOf(WorldPathLayer *wtl);
 
     void insertTileLayer(int index, WorldTileLayer *layer);
     WorldTileLayer *removeTileLayer(int index);

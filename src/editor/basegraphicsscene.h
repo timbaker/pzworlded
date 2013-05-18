@@ -24,6 +24,7 @@ class AbstractTool;
 class BaseGraphicsView;
 class CellScene;
 class LotPackScene;
+class BasePathScene;
 class WorldScene;
 
 class BaseGraphicsScene : public QGraphicsScene
@@ -44,6 +45,7 @@ public:
     bool isWorldScene() const { return mType == WorldSceneType; }
     bool isCellScene() const { return mType == CellSceneType; }
     bool isLotPackScene() const { return mType == LotPackSceneType; }
+    bool isPathScene() const { return mType == PathSceneType; }
 
     virtual void viewTransformChanged(BaseGraphicsView *view)
     {
@@ -53,6 +55,7 @@ public:
     WorldScene *asWorldScene();
     CellScene *asCellScene();
     LotPackScene *asLotPackScene();
+    BasePathScene *asPathScene();
 
     void clearScene();
 

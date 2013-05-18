@@ -36,6 +36,9 @@ public:
     WorldNode(id_t id, const QPointF &p);
     ~WorldNode();
 
+    const QPointF &pos() const
+    { return p; }
+
     id_t id;
     QPointF p;
 };

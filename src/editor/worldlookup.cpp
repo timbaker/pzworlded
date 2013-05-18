@@ -46,23 +46,29 @@ static LookupCoordType LOOKUP_LENGTH(qreal w)
 
 WorldLookup::WorldLookup(PathWorld *world) :
     mWorld(world),
-    mNodeTree(new WorldQuadTree(0, 0,
-                                LOOKUP_LENGTH(world->width()),
-                                LOOKUP_LENGTH(world->height()),
-                                0, QTREE_DEPTH)),
-    mPathTree(new WorldQuadTree(0, 0,
-                                LOOKUP_LENGTH(world->width()),
-                                LOOKUP_LENGTH(world->height()),
-                                0, QTREE_DEPTH)),
     mScriptTree(new WorldQuadTree(0, 0,
                                   LOOKUP_LENGTH(world->width()),
                                   LOOKUP_LENGTH(world->height()),
                                   0, QTREE_DEPTH))
 {
     int index = 0;
-    foreach (WorldPathLayer *layer, mWorld->pathLayers())
+    foreach (WorldPathLayer *layer, mWorld->pathLayers()) {
+        mNodeTree += new WorldQuadTree(0, 0,
+                                      LOOKUP_LENGTH(world->width()),
+                                      LOOKUP_LENGTH(world->height()),
+                                      0, QTREE_DEPTH);
+        mPathTree += new WorldQuadTree(0, 0,
+                                      LOOKUP_LENGTH(world->width()),
+                                      LOOKUP_LENGTH(world->height()),
+                                      0, QTREE_DEPTH);
+        index = 0;
+        foreach (WorldNode *node, layer->nodes())
+            mNodeTree.last()->AddObject(new WorldQuadTreeObject(index++, node));
+
+        index = 0;
         foreach (WorldPath *path, layer->paths())
-            mPathTree->AddObject(new WorldQuadTreeObject(index++, path));
+            mPathTree.last()->AddObject(new WorldQuadTreeObject(index++, path));
+    }
 
     index = 0;
     foreach (WorldScript *ws, mWorld->scripts()) {
@@ -76,8 +82,8 @@ WorldLookup::WorldLookup(PathWorld *world) :
 
 WorldLookup::~WorldLookup()
 {
-    delete mNodeTree;
-    delete mPathTree;
+    qDeleteAll(mNodeTree);
+    qDeleteAll(mPathTree);
     delete mScriptTree;
 }
 
@@ -94,20 +100,20 @@ QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
     return ret.values();
 }
 
-QList<WorldPath *> WorldLookup::paths(const QRectF &bounds) const
+QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
     QMap<int,WorldPath *> ret;
-    foreach (WorldQuadTreeObject *o, mPathTree->GetObjectsAt(topLeft.x, topLeft.y,
-                                                             LOOKUP_LENGTH(bounds.width()),
-                                                             LOOKUP_LENGTH(bounds.height()))) {
+    foreach (WorldQuadTreeObject *o, mPathTree[mWorld->indexOf(layer)]->GetObjectsAt(topLeft.x, topLeft.y,
+                                                                                     LOOKUP_LENGTH(bounds.width()),
+                                                                                     LOOKUP_LENGTH(bounds.height()))) {
         Q_ASSERT(o->path);
         ret[o->index] = o->path;
     }
     return ret.values();
 }
 
-QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
+QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QPolygonF &poly) const
 {
     static QPolygonF lpoly;
     lpoly.resize(0);
@@ -115,9 +121,37 @@ QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
         lpoly += LookupCoordinate(p).toPointF();
 
     QMap<int,WorldPath *> ret;
-    foreach (WorldQuadTreeObject *o, mPathTree->GetObjectsAt(lpoly)) {
+    foreach (WorldQuadTreeObject *o, mPathTree[mWorld->indexOf(layer)]->GetObjectsAt(lpoly)) {
         Q_ASSERT(o->path);
         ret[o->index] = o->path;
+    }
+    return ret.values();
+}
+
+QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QRectF &bounds) const
+{
+    LookupCoordinate topLeft(bounds.topLeft());
+    QMap<int,WorldNode *> ret;
+    foreach (WorldQuadTreeObject *o, mNodeTree[mWorld->indexOf(layer)]->GetObjectsAt(topLeft.x, topLeft.y,
+                                                                                     LOOKUP_LENGTH(bounds.width()),
+                                                                                     LOOKUP_LENGTH(bounds.height()))) {
+        Q_ASSERT(o->node);
+        ret[o->index] = o->node;
+    }
+    return ret.values();
+}
+
+QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QPolygonF &poly) const
+{
+    static QPolygonF lpoly;
+    lpoly.resize(0);
+    foreach (QPointF p, poly)
+        lpoly += LookupCoordinate(p).toPointF();
+
+    QMap<int,WorldNode *> ret;
+    foreach (WorldQuadTreeObject *o, mNodeTree[mWorld->indexOf(layer)]->GetObjectsAt(lpoly)) {
+        Q_ASSERT(o->node);
+        ret[o->index] = o->node;
     }
     return ret.values();
 }
@@ -127,6 +161,10 @@ QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
 WorldQuadTreeObject::WorldQuadTreeObject(int index, WorldNode *node) :
     index(index), node(node), path(0), script(0)
 {
+    x = LookupCoordinate(node->pos()).x;
+    y = LookupCoordinate(node->pos()).y;
+    width = 0;
+    height = 0;
 }
 
 WorldQuadTreeObject::WorldQuadTreeObject(int index, WorldPath *path) :
@@ -150,18 +188,24 @@ WorldQuadTreeObject::WorldQuadTreeObject(int index, WorldScript *script) :
 bool WorldQuadTreeObject::intersects(LookupCoordType x, LookupCoordType y,
                                      LookupCoordType width, LookupCoordType height)
 {
+    if (node) return QRectF(x, y, width, height).contains(this->x, this->y);
+
     return (x + width > this->x) && (x < this->x + this->width) &&
             (y + height > this->y) && (y < this->y + this->height);
 }
 
 bool WorldQuadTreeObject::intersects(const QPolygonF &poly)
 {
+    if (node) return poly.boundingRect().contains(this->x, this->y);
+
     QRectF selfRect(QRectF(this->x, this->y, this->width, this->height));
     return poly.boundingRect().intersects(selfRect);
 }
 
 bool WorldQuadTreeObject::contains(LookupCoordType x, LookupCoordType y)
 {
+    if (node) return false;
+
     if (x >= this->x && x < this->x + this->width
             && y >= this->y && y < this->y + this->height) {
 
@@ -310,6 +354,7 @@ void WorldQuadTree::Clear() {
 }
 
 bool WorldQuadTree::contains(WorldQuadTree *child, WorldQuadTreeObject *object) {
+    if (object->node) return child->contains(object->x, object->y);
     return child->contains(object->x,object->y,object->width,object->height);
 }
 

@@ -18,6 +18,7 @@
 #include "basegraphicsscene.h"
 
 #include "cellscene.h"
+#include "basepathscene.h"
 #include "toolmanager.h"
 #include "worldscene.h"
 
@@ -38,6 +39,10 @@ CellScene *BaseGraphicsScene::asCellScene()
     return isCellScene() ? static_cast<CellScene*>(this) : 0;
 }
 
+BasePathScene *BaseGraphicsScene::asPathScene()
+{
+    return isPathScene() ? static_cast<BasePathScene*>(this) : 0;
+}
 
 void BaseGraphicsScene::clearScene()
 {
@@ -45,3 +50,4 @@ void BaseGraphicsScene::clearScene()
     clear();
     ToolManager::instance()->endClearScene(this);
 }
+

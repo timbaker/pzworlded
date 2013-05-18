@@ -25,10 +25,6 @@ OrthoPathScene::OrthoPathScene(PathDocument *doc, QObject *parent) :
     setDocument(doc);
 }
 
-void OrthoPathScene::setTool(AbstractTool *tool)
-{
-}
-
 /////
 
 OrthoPathRenderer::OrthoPathRenderer(PathWorld *world) :

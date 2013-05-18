@@ -43,8 +43,6 @@ class OrthoPathScene : public BasePathScene
 public:
     OrthoPathScene(PathDocument *doc, QObject *parent = 0);
 
-    void setTool(AbstractTool *tool);
-
     bool isOrtho() const { return true; }
 };
 

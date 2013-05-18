@@ -29,6 +29,7 @@
 #include <QTimer>
 
 class BaseCellSceneTool;
+class BasePathTool;
 class BaseWorldSceneTool;
 class BaseGraphicsScene;
 class BaseGraphicsView;
@@ -58,7 +59,8 @@ class AbstractTool : public QObject
 public:
     enum ToolType {
         CellToolType,
-        WorldToolType
+        WorldToolType,
+        PathToolType
     };
 
     AbstractTool(const QString &name,
@@ -91,9 +93,11 @@ public:
 
     bool isWorldTool() const { return mType == WorldToolType; }
     bool isCellTool() const { return mType == CellToolType; }
+    bool isPathTool() const { return mType == PathToolType; }
 
     BaseWorldSceneTool *asWorldTool();
     BaseCellSceneTool *asCellTool();
+    BasePathTool *asPathTool();
 
     /**
      * Called when the application language changed.

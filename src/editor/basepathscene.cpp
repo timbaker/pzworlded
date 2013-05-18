@@ -20,8 +20,11 @@
 #include "basepathrenderer.h"
 #include "path.h"
 #include "pathdocument.h"
+#include "pathtools.h"
 #include "pathworld.h"
 
+#include <QGraphicsSceneMouseEvent>
+#include <QKeyEvent>
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 
@@ -37,8 +40,11 @@ template class __declspec(dllimport) QMap<QString, QString>;
 /////
 
 BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
-    BaseGraphicsScene(PathSceneType),
-    mDocument(doc)
+    BaseGraphicsScene(PathSceneType, parent),
+    mDocument(doc),
+    mNodeItem(new NodesItem(this)),
+    mCurrentPathLayer(doc->world()->pathLayers().first()),
+    mActiveTool(0)
 {
 }
 
@@ -152,6 +158,8 @@ void BasePathScene::setDocument(PathDocument *doc)
         addItem(item);
         mPathLayerItems += item;
     }
+
+    addItem(mNodeItem);
 }
 
 PathWorld *BasePathScene::world() const
@@ -162,6 +170,64 @@ PathWorld *BasePathScene::world() const
 void BasePathScene::setRenderer(BasePathRenderer *renderer)
 {
     mRenderer = renderer;
+}
+
+void BasePathScene::setTool(AbstractTool *tool)
+{
+    BasePathTool *pathTool = tool ? tool->asPathTool() : 0;
+
+    if (mActiveTool == pathTool)
+        return;
+
+    if (mActiveTool) {
+        mActiveTool->deactivate();
+    }
+
+    mActiveTool = pathTool;
+
+    if (mActiveTool) {
+        mActiveTool->activate();
+    }
+}
+
+void BasePathScene::keyPressEvent(QKeyEvent *event)
+{
+    if (mActiveTool) {
+        mActiveTool->keyPressEvent(event);
+        if (event->isAccepted())
+            return;
+    }
+    QGraphicsScene::keyPressEvent(event);
+}
+
+void BasePathScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsScene::mouseMoveEvent(event);
+    if (event->isAccepted())
+        return;
+
+    if (mActiveTool)
+        mActiveTool->mouseMoveEvent(event);
+}
+
+void BasePathScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsScene::mousePressEvent(event);
+    if (event->isAccepted())
+        return;
+
+    if (mActiveTool)
+        mActiveTool->mousePressEvent(event);
+}
+
+void BasePathScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsScene::mouseReleaseEvent(event);
+    if (event->isAccepted())
+        return;
+
+    if (mActiveTool)
+        mActiveTool->mouseReleaseEvent(event);
 }
 
 /////
@@ -199,59 +265,145 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 #endif
 #if 1
     QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
-    foreach (WorldPath *path, mScene->document()->lookupPaths(exposed)) {
-        painter->setBrush(Qt::NoBrush);
-        QPolygonF pf = path->polygon();
-        if (path->isClosed()) {
-            if (path->tags.contains(QLatin1String("landuse"))) {
-                QString v = path->tags[QLatin1String("landuse")];
-                if (v == QLatin1String("forest") || v == QLatin1String("wood"))
-                    painter->setBrush(Qt::darkGreen);
-                else if (v == QLatin1String("park"))
-                    painter->setBrush(Qt::green);
-                else if (v == QLatin1String("grass"))
-                    painter->setBrush(QColor(Qt::green).lighter());
-            } else if (path->tags.contains(QLatin1String("natural"))) {
-                QString v = path->tags[QLatin1String("natural")];
-                if (v == QLatin1String("water"))
-                    painter->setBrush(Qt::blue);
+    foreach (WorldPathLayer *wpl, mScene->world()->pathLayers()) {
+        foreach (WorldPath *path, mScene->document()->lookupPaths(wpl, exposed)) {
+            painter->setBrush(Qt::NoBrush);
+            QPolygonF pf = path->polygon();
+            if (path->isClosed()) {
+                if (path->tags.contains(QLatin1String("landuse"))) {
+                    QString v = path->tags[QLatin1String("landuse")];
+                    if (v == QLatin1String("forest") || v == QLatin1String("wood"))
+                        painter->setBrush(Qt::darkGreen);
+                    else if (v == QLatin1String("park"))
+                        painter->setBrush(Qt::green);
+                    else if (v == QLatin1String("grass"))
+                        painter->setBrush(QColor(Qt::green).lighter());
+                } else if (path->tags.contains(QLatin1String("natural"))) {
+                    QString v = path->tags[QLatin1String("natural")];
+                    if (v == QLatin1String("water"))
+                        painter->setBrush(Qt::blue);
 
-            } else if (path->tags.contains(QLatin1String("leisure"))) {
-                QString v = path->tags[QLatin1String("leisure")];
-                if (v == QLatin1String("park"))
-                    painter->setBrush(Qt::green);
-            }
-            painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
-        } else {
-            painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
-            if (path->tags.contains(QLatin1String("highway"))) {
-                qreal width = 6;
-                QColor color = QColor(0,0,0,128);
-                QString v = path->tags[QLatin1String("highway")];
-                qreal residentialWidth = 6;
-                if (v == QLatin1String("residential")) width = 6; /// #1
-                else if (v == QLatin1String("pedestrian")) width = 5, color = QColor(0,64,0,128);
-                else if (v == QLatin1String("secondary")) width = 5, color = QColor(0,0,128,128);
-                else if (v == QLatin1String("secondary_link")) width = 5, color = QColor(0,0,128,128);
-                else if (v == QLatin1String("tertiary")) width = 4, color = QColor(0,128,0,128); /// #3
-                else if (v == QLatin1String("tertiary_link")) width = 4, color = QColor(0,128,0,128);
-                else if (v == QLatin1String("bridleway")) width = 4, color = QColor(128,128,0,128);
-                else if (v == QLatin1String("private")) width = 4, color = QColor(128,0,0,128);
-                else if (v == QLatin1String("service")) width = residentialWidth/2, color = QColor(0,0,64,128); /// #2
-                else if (v == QLatin1String("path")) width = 3, color = QColor(128,64,64,128); /// #2
-                else continue;
-
-                pf = strokePath(path, width);
-                painter->setBrush(color);
+                } else if (path->tags.contains(QLatin1String("leisure"))) {
+                    QString v = path->tags[QLatin1String("leisure")];
+                    if (v == QLatin1String("park"))
+                        painter->setBrush(Qt::green);
+                }
                 painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
-            }
-        }
+            } else {
+                painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+                if (path->tags.contains(QLatin1String("highway"))) {
+                    qreal width = 6;
+                    QColor color = QColor(0,0,0,128);
+                    QString v = path->tags[QLatin1String("highway")];
+                    qreal residentialWidth = 6;
+                    if (v == QLatin1String("residential")) width = 6; /// #1
+                    else if (v == QLatin1String("pedestrian")) width = 5, color = QColor(0,64,0,128);
+                    else if (v == QLatin1String("secondary")) width = 5, color = QColor(0,0,128,128);
+                    else if (v == QLatin1String("secondary_link")) width = 5, color = QColor(0,0,128,128);
+                    else if (v == QLatin1String("tertiary")) width = 4, color = QColor(0,128,0,128); /// #3
+                    else if (v == QLatin1String("tertiary_link")) width = 4, color = QColor(0,128,0,128);
+                    else if (v == QLatin1String("bridleway")) width = 4, color = QColor(128,128,0,128);
+                    else if (v == QLatin1String("private")) width = 4, color = QColor(128,0,0,128);
+                    else if (v == QLatin1String("service")) width = residentialWidth/2, color = QColor(0,0,64,128); /// #2
+                    else if (v == QLatin1String("path")) width = 3, color = QColor(128,64,64,128); /// #2
+                    else continue;
 
-        if (path->tags.contains(QLatin1String("name"))
-                && path->tags[QLatin1String("name")] == QLatin1String("Plant Science Field Building")) {
-            painter->setBrush(Qt::red);
-            painter->drawPolygon(pf);
+                    pf = strokePath(path, width);
+                    painter->setBrush(color);
+                    painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
+                }
+            }
+
+            if (path->tags.contains(QLatin1String("name"))
+                    && path->tags[QLatin1String("name")] == QLatin1String("Plant Science Field Building")) {
+                painter->setBrush(Qt::red);
+                painter->drawPolygon(pf);
+            }
         }
     }
 #endif
+}
+
+/////
+
+NodesItem::NodesItem(BasePathScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mScene(scene)
+{
+    setFlag(ItemUsesExtendedStyleOption);
+}
+
+QRectF NodesItem::boundingRect() const
+{
+    return mScene->renderer()->sceneBounds(mScene->world()->bounds());
+}
+
+void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
+{
+    QRectF exposed = option->exposedRect.adjusted(-nodeRadius(), -nodeRadius(),
+                                                  nodeRadius(), nodeRadius());
+    painter->setPen(QColor(0x33,0x99,0xff));
+    painter->setBrush(QColor(0x33,0x99,0xff,255/8));
+    foreach (WorldNode *node, lookupNodes(exposed)) {
+        QPointF scenePos = mScene->renderer()->toScene(node->pos() + dragOffset(node));
+        painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+    }
+
+    painter->setBrush(QColor(0x33,0x99,0xff,128));
+    foreach (WorldNode *node, mSelectedNodes) {
+        QPointF scenePos = mScene->renderer()->toScene(node->pos() + dragOffset(node));
+        if (exposed.contains(scenePos))
+            painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+    }
+}
+
+void NodesItem::setSelectedNodes(const NodeSet &selection)
+{
+    mSelectedNodes = selection;
+    update(); // FIXME: don't redraw everything
+}
+
+void NodesItem::setDragging(WorldNode *node, bool dragging)
+{
+    if (dragging) {
+        mNodeOffset[node] = QPointF();
+    } else {
+        mNodeOffset.remove(node);
+    }
+    update(); // FIXME: don't redraw everything
+}
+
+void NodesItem::setDragOffset(WorldNode *node, const QPointF &offset)
+{
+    mNodeOffset[node] = offset;
+    update(); // FIXME: don't redraw everything
+}
+
+QPointF NodesItem::dragOffset(WorldNode *node)
+{
+    if (mNodeOffset.contains(node))
+        return mNodeOffset[node];
+    return QPointF();
+}
+
+QList<WorldNode *> NodesItem::lookupNodes(const QRectF &sceneRect)
+{
+    return mScene->document()->lookupNodes(mScene->currentPathLayer(),
+                                           mScene->renderer()->toWorld(sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
+                                                                                          nodeRadius(), nodeRadius())));
+}
+
+WorldNode *NodesItem::topmostNodeAt(const QPointF &scenePos)
+{
+    QRectF sceneRect(scenePos.x() - nodeRadius(), scenePos.y() - nodeRadius(),
+                     nodeRadius() * 2, nodeRadius() * 2);
+    QList<WorldNode*> nodes = mScene->document()->lookupNodes(mScene->currentPathLayer(),
+                                                              mScene->renderer()->toWorld(sceneRect));
+    return nodes.size() ? nodes.last() : 0;
+}
+
+qreal NodesItem::nodeRadius() const
+{
+    if (mScene->isTile()) return 8;
+    return 2;
 }

@@ -26,10 +26,6 @@ IsoPathScene::IsoPathScene(PathDocument *doc, QObject *parent) :
     setDocument(doc);
 }
 
-void IsoPathScene::setTool(AbstractTool *tool)
-{
-}
-
 /////
 
 IsoPathRenderer::IsoPathRenderer(PathWorld *world) :

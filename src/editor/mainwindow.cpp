@@ -105,6 +105,7 @@ MainWindow *MainWindow::instance()
 #include "pathview.h"
 #include "path.h"
 #include "pathdocument.h"
+#include "pathtools.h"
 #include "pathworld.h"
 static void testPathDocument()
 {
@@ -429,6 +430,8 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
+    toolManager->addSeparator();
+    toolManager->registerTool(SelectMoveNodeTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);

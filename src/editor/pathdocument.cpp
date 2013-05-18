@@ -51,17 +51,31 @@ bool PathDocument::save(const QString &filePath, QString &error)
     return false;
 }
 
+void PathDocument::moveNode(WorldNode *node, const QPointF &pos)
+{
+}
+
 QList<WorldScript *> PathDocument::lookupScripts(const QRectF &bounds)
 {
     return mLookup->scripts(bounds);
 }
 
-QList<WorldPath *> PathDocument::lookupPaths(const QRectF &bounds)
+QList<WorldPath *> PathDocument::lookupPaths(WorldPathLayer *layer, const QRectF &bounds)
 {
-    return mLookup->paths(bounds);
+    return mLookup->paths(layer, bounds);
 }
 
-QList<WorldPath *> PathDocument::lookupPaths(const QPolygonF &bounds)
+QList<WorldPath *> PathDocument::lookupPaths(WorldPathLayer *layer, const QPolygonF &bounds)
 {
-    return mLookup->paths(bounds);
+    return mLookup->paths(layer, bounds);
+}
+
+QList<WorldNode *> PathDocument::lookupNodes(WorldPathLayer *layer, const QRectF &bounds)
+{
+    return mLookup->nodes(layer, bounds);
+}
+
+QList<WorldNode *> PathDocument::lookupNodes(WorldPathLayer *layer, const QPolygonF &poly)
+{
+    return mLookup->nodes(layer, poly);
 }

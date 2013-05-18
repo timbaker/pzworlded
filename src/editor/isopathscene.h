@@ -42,8 +42,6 @@ class IsoPathScene : public BasePathScene
 public:
     IsoPathScene(PathDocument *doc, QObject *parent = 0);
 
-    void setTool(AbstractTool *tool);
-
     bool isIso() const { return true; }
 };
 

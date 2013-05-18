@@ -51,6 +51,11 @@ int PathWorld::pathLayerCount() const
     return mPathLayers.size();
 }
 
+int PathWorld::indexOf(WorldPathLayer *wtl)
+{
+    return mPathLayers.indexOf(wtl);
+}
+
 void PathWorld::insertTileLayer(int index, WorldTileLayer *layer)
 {
     mTileLayers.insert(index, layer);

@@ -20,6 +20,7 @@
 #include "isopathscene.h"
 #include "orthopathscene.h"
 #include "tilepathscene.h"
+#include "toolmanager.h"
 #include "zoomable.h"
 
 static bool AllowOpenGL = true;
@@ -32,6 +33,10 @@ PathView::PathView(PathDocument *doc, QWidget *parent) :
     mTileScene(new TilePathScene(doc, this))
 {
     setScene(mOrthoScene);
+
+    QVector<qreal> zf = zoomable()->zoomFactors();
+    zf += 8.0;
+    zoomable()->setZoomFactors(zf);
 
     mOrthoIsoScale = mTileScale = zoomable()->scale();
 }
@@ -49,6 +54,8 @@ void PathView::switchToIso()
 
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
+
+    ToolManager::instance()->setScene(scene());
 }
 
 void PathView::switchToOrtho()
@@ -64,6 +71,8 @@ void PathView::switchToOrtho()
 
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
+
+    ToolManager::instance()->setScene(scene());
 }
 
 void PathView::switchToTile()
@@ -80,6 +89,8 @@ void PathView::switchToTile()
 
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
+
+    ToolManager::instance()->setScene(scene());
 }
 
 void PathView::scrollContentsBy(int dx, int dy)

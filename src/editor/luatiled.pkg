@@ -280,5 +280,5 @@ public:
     LuaRegion region();
 };
 
-QPolygonF strokePath(LuaPath *path, double thickness);
-LuaRegion polygonRegion(QPolygonF polygon);
+//QPolygonF strokePath(LuaPath *path, double thickness);
+//LuaRegion polygonRegion(QPolygonF polygon);

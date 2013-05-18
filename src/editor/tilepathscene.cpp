@@ -151,11 +151,6 @@ TilePathScene::~TilePathScene()
     delete mChunkMap;
 }
 
-void TilePathScene::setTool(AbstractTool *tool)
-{
-    Q_UNUSED(tool)
-}
-
 void TilePathScene::scrollContentsBy(const QPointF &worldPos)
 {
     mChunkMap->setCenter(worldPos.x(), worldPos.y());

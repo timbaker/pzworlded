@@ -131,7 +131,8 @@ SOURCES += main.cpp\
     pathview.cpp \
     tilepathscene.cpp \
     worldchunkmap.cpp \
-    pathworld.cpp
+    pathworld.cpp \
+    pathtools.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -218,7 +219,9 @@ HEADERS  += mainwindow.h \
     pathview.h \
     tilepathscene.h \
     worldchunkmap.h \
-    pathworld.h
+    pathworld.h \
+    pathtools.h \
+    global.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

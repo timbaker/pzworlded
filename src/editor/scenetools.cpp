@@ -24,6 +24,7 @@
 #include "clipboard.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
+#include "pathtools.h"
 #include "preferences.h"
 #include "progress.h"
 #include "toolmanager.h"
@@ -84,6 +85,11 @@ BaseWorldSceneTool *AbstractTool::asWorldTool()
 BaseCellSceneTool *AbstractTool::asCellTool()
 {
     return isCellTool() ? static_cast<BaseCellSceneTool*>(this) : 0;
+}
+
+BasePathTool *AbstractTool::asPathTool()
+{
+    return isPathTool() ? static_cast<BasePathTool*>(this) : 0;
 }
 
 /////
