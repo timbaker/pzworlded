@@ -167,6 +167,9 @@ void BasePathScene::setDocument(PathDocument *doc)
 
     mNodeItem->setZValue(z++);
     addItem(mNodeItem);
+
+    connect(mDocument, SIGNAL(nodeMoved(WorldNode*)), SLOT(nodeMoved(WorldNode*)));
+    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(update())); // FIXME: only repaint what's needed
 }
 
 PathWorld *BasePathScene::world() const
@@ -242,6 +245,84 @@ void BasePathScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         mActiveTool->mouseReleaseEvent(event);
 }
 
+void BasePathScene::setSelectedPaths(const PathSet &selection)
+{
+    mSelectedPaths = selection;
+    update(); // FIXME: redraw only as needed
+}
+
+bool PolylineIntersectsPolygon(const QPolygonF &polyLine, const QPolygonF &polyTest)
+{
+    // Slowest algo evar
+    for (int i = 0; i < polyTest.size() - 1; i++) {
+        QLineF line1(polyTest[i], polyTest[i+1]);
+        for (int j = 0; j < polyLine.size() - 1; j++) {
+            QLineF line2(polyLine[j], polyLine[j+1]);
+            if (line1.intersect(line2, 0) == QLineF::BoundedIntersection)
+                return true;
+        }
+    }
+    return false;
+}
+
+QList<WorldPath*> BasePathScene::lookupPaths(const QRectF &sceneRect)
+{
+    QPolygonF worldPoly = renderer()->toWorld(sceneRect);
+    QList<WorldPath*> paths = lookup()->paths(currentPathLayer(), worldPoly);
+    foreach (WorldPath *path, paths) {
+        if (!PolylineIntersectsPolygon(path->polygon(), worldPoly))
+            paths.removeOne(path);
+    }
+    return paths;
+}
+
+#include <QVector2D>
+float minimum_distance(QVector2D v, QVector2D w, QVector2D p) {
+  // Return minimum distance between line segment vw and point p
+    const qreal l2 = (v - w).lengthSquared();  // i.e. |w-v|^2 -  avoid a sqrt
+    if (l2 == 0.0) return (p - v).length();   // v == w case
+  // Consider the line extending the segment, parameterized as v + t (w - v).
+  // We find projection of point p onto the line.
+  // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+  const qreal t = QVector2D::dotProduct(p - v, w - v) / l2;
+  if (t < 0.0) return (p - v).length();       // Beyond the 'v' end of the segment
+  else if (t > 1.0) return (p - w).length();  // Beyond the 'w' end of the segment
+  const QVector2D projection = v + t * (w - v);  // Projection falls on the segment
+  return (p - projection).length();
+}
+
+WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
+{
+    qreal radius = 3;
+    QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
+    QList<WorldPath*> paths = lookup()->paths(currentPathLayer(),
+                                              renderer()->toWorld(sceneRect));
+
+    // Do distance check in scene coords otherwise isometric testing is 1/2 height
+    QVector2D p(scenePos);
+    qreal min = 1000;
+    WorldPath *closest = 0;
+    foreach (WorldPath *path, paths) {
+        for (int i = 0; i < path->nodes.size() - 1; i++) {
+            QVector2D v(mRenderer->toScene(path->nodes[i]->p));
+            QVector2D w(mRenderer->toScene(path->nodes[i+1]->p));
+            qreal dist = minimum_distance(v, w, p);
+            if (dist <= radius && dist < min) {
+                min = dist;
+                closest = path;
+            }
+        }
+    }
+
+    return closest;
+}
+
+void BasePathScene::nodeMoved(WorldNode *node)
+{
+    Q_UNUSED(node)
+    nodeItem()->update(); // FIXME: redraw only as needed
+}
+
 /////
 
 PathLayerItem::PathLayerItem(WorldPathLayer *layer, BasePathScene *scene, QGraphicsItem *parent) :
@@ -279,6 +360,11 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
     foreach (WorldPathLayer *wpl, mScene->world()->pathLayers()) {
         foreach (WorldPath *path, mScene->lookup()->paths(wpl, exposed)) {
+#if 1
+            painter->setPen(QPen());
+            QPolygonF pf = path->polygon();
+            painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+#else
             painter->setBrush(Qt::NoBrush);
             QPolygonF pf = path->polygon();
             if (path->isClosed()) {
@@ -331,8 +417,28 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 painter->setBrush(Qt::red);
                 painter->drawPolygon(pf);
             }
+#endif
+            if (mScene->selectedPaths().contains(path)) {
+                painter->setPen(QPen(Qt::blue, 4));
+                painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+            }
+
+            if (mScene->mHighlightPath == path) {
+                painter->setPen(QPen(Qt::green, 4));
+                painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+            }
         }
     }
+
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(QColor(0,64,0,128));
+    foreach (WorldScript *ws, mScene->lookup()->scripts(exposed.boundingRect())) {
+        if (!ws->mRegion.isEmpty()) {
+            foreach (QRect rect, ws->mRegion.rects())
+                painter->drawPolygon(mScene->renderer()->toScene(rect));
+        }
+    }
+
 #endif
 }
 
@@ -352,6 +458,8 @@ QRectF NodesItem::boundingRect() const
 
 void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
+    if (!mScene->isTile() && painter->worldMatrix().m22() < 1) return;
+
     QRectF exposed = option->exposedRect.adjusted(-nodeRadius(), -nodeRadius(),
                                                   nodeRadius(), nodeRadius());
     painter->setPen(QColor(0x33,0x99,0xff));

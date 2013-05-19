@@ -103,9 +103,9 @@ public:
     {
         foreach (WorldPathLayer *wpl, world->pathLayers()) {
             if (WorldNode *node = wpl->node(id)) {
+                world->nodeMoved(node->p, p);
                 node->p = p;
                 world->lookup()->nodeMoved(node);
-                qDebug() << "NodeMoved" << id << p;
                 break;
             }
         }
@@ -165,14 +165,12 @@ void ShadowWorld::addOffsetNode(WorldNode *node, const QPointF &offset)
     }
     mModifiers += new OffsetNode(node, offset);
     mModifiers.last()->redo();
-    qDebug() << "addOffsetNode";
 }
 
 void ShadowWorld::removeOffsetNode(WorldNode *node)
 {
     foreach (WorldModifier *m, mModifiers) {
         if (m->asOffsetNode() && m->asOffsetNode()->mNode == node) {
-            qDebug() << "removeOffsetNode";
             m->undo();
             mModifiers.removeOne(m);
             delete m;
@@ -187,12 +185,28 @@ void ShadowWorld::nodeMoved(WorldNode *node)
     mChanges += new NodeMoved(node);
 }
 
+void ShadowWorld::nodeMoved(const QPointF &oldPos, const QPointF &newPos)
+{
+    if (mMovedNodeArea.isNull()) {
+        mMovedNodeArea = QRectF(oldPos, newPos).normalized();
+    } else {
+        mMovedNodeArea |= QRectF(oldPos, newPos).normalized();
+    }
+}
+
 void ShadowWorld::processChanges()
 {
+    mMovedNodeArea = QRectF();
+
     foreach (WorldChange *c, mChanges) {
         c->apply(this);
         delete c;
     }
     mChanges.clear();
-}
 
+    if (!mMovedNodeArea.isNull()) {
+        // Tell WorldLookup about all the Paths that are affected
+
+        emit nodesMoved(mMovedNodeArea);
+    }
+}

@@ -215,6 +215,8 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
     foreach (WorldTileLayer *wtl, mWorld->tileLayers()) {
         wtl->mSinks += new CMTileSink(this, wtl);
     }
+
+    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(nodesMoved(QRectF)));
 }
 
 void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
@@ -390,5 +392,61 @@ void WorldChunkMap::setCenter(int x, int y)
         mScene->setMaxLevel(mWorld->CurrentCell->MaxHeight);
 #endif
     }
+}
+
+#include "tilepainter.h"
+void WorldChunkMap::nodesMoved(const QRectF &area)
+{
+    QList<WorldScript*> scripts = mDocument->shadow()->lookup()->scripts(area.adjusted(-1,-1,1,1));
+    qDebug() << QString::fromLatin1("%1 scripts in nodesMoved area #1").arg(scripts.size());
+
+    // erase tile layers where scripts used to be
+    TilePainter painter(mWorld);
+    QRegion dirty;
+    foreach (WorldScript *ws, scripts) {
+        if (!ws->mRegion.isEmpty()) {
+            if (dirty.isEmpty())
+                dirty = ws->mRegion;
+            else
+                dirty |= ws->mRegion;
+        }
+    }
+
+    foreach (WorldScript *ws, scripts) {
+        Tiled::Lua::LuaScript ls(mWorld, ws);
+        if (ls.runFunction("region")) {
+            QRegion rgn;
+            if (ls.getResultRegion(rgn)) {
+                if (rgn != ws->mRegion) {
+//                    mDocument->scriptRegionChanged(ws);
+                    ws->mRegion = rgn;
+                    mDocument->shadow()->lookup()->scriptRegionChanged(ws);
+                    if (!ws->mRegion.isEmpty()) {
+                        if (dirty.isEmpty())
+                            dirty = ws->mRegion;
+                        else
+                            dirty |= ws->mRegion;
+                    }
+                }
+            }
+        }
+    }
+
+    foreach (WorldTileLayer *wtl, mWorld->tileLayers()) {
+        painter.setLayer(wtl);
+        painter.erase(dirty);
+    }
+
+    dirty &= QRect(getWorldXMinTiles(), getWorldYMinTiles(), getWidthInTiles(), getWidthInTiles());
+    scripts = mDocument->shadow()->lookup()->scripts(dirty.boundingRect());
+    int runN = 0;
+    foreach (WorldScript *ws, scripts) {
+        if (!ws->mRegion.intersects(dirty)) continue;
+        Tiled::Lua::LuaScript ls(mWorld, ws);
+        ls.runFunction("run");
+        runN++;
+    }
+    qDebug() << QString::fromLatin1("%1 (down from %2) scripts in nodesMoved area #2")
+                .arg(runN).arg(scripts.size());
 }
 

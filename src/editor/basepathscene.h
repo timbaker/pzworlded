@@ -31,6 +31,7 @@ class PathDocument;
 class PathWorld;
 class WorldLookup;
 class WorldNode;
+class WorldPath;
 class WorldPathLayer;
 
 class PathLayerItem : public QGraphicsItem
@@ -74,6 +75,7 @@ private:
 
 class BasePathScene : public BaseGraphicsScene
 {
+    Q_OBJECT
 public:
     BasePathScene(PathDocument *doc, QObject *parent = 0);
     ~BasePathScene();
@@ -109,10 +111,22 @@ public:
     WorldPathLayer *currentPathLayer() const
     { return mCurrentPathLayer; }
 
+    void setSelectedPaths(const PathSet &selection);
+    const PathSet &selectedPaths() const
+    { return mSelectedPaths; }
+    QList<WorldPath *> lookupPaths(const QRectF &sceneRect);
+    WorldPath *topmostPathAt(const QPointF &scenePos);
+
+    WorldPath *mHighlightPath;
+
+public slots:
+    void nodeMoved(WorldNode *node);
+
 private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;
     QList<PathLayerItem*> mPathLayerItems;
+    PathSet mSelectedPaths;
     NodesItem *mNodeItem;
     WorldPathLayer *mCurrentPathLayer;
     BasePathTool *mActiveTool;

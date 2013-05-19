@@ -18,6 +18,8 @@
 #ifndef PATH_H
 #define PATH_H
 
+#include "global.h"
+
 #include <QList>
 #include <QMap>
 #include <QRectF>
@@ -43,9 +45,21 @@ public:
 
     WorldNode *clone() const;
 
+    void addedToPath(WorldPath *path)
+    {
+        mPaths[path] += 1;
+    }
+
+    void removedFromPath(WorldPath *path)
+    {
+        if (--mPaths[path] <= 0)
+            mPaths.remove(path);
+    }
+
     WorldPathLayer *layer;
     id_t id;
     QPointF p;
+    QMap<WorldPath*,int> mPaths;
 };
 
 class WorldPath
@@ -55,11 +69,13 @@ public:
     WorldPath(id_t id);
     ~WorldPath();
 
-    WorldPathLayer *owner() const
-    { return mOwner; }
+    WorldPathLayer *layer() const
+    { return mLayer; }
 
     void insertNode(int index, WorldNode *node);
     WorldNode *removeNode(int index);
+    int nodeCount() const
+    { return nodes.size(); }
 
     bool isClosed() const;
 
@@ -69,8 +85,15 @@ public:
     QRegion region();
 
     void setOwner(WorldPathLayer *owner)
-    { mOwner = owner; }
-    WorldPath *clone(WorldPathLayer *owner) const;
+    { mLayer = owner; }
+
+    WorldPath *clone(WorldPathLayer *layer) const;
+
+    void nodeMoved()
+    {
+        mBounds = QRectF();
+        mPolygon.clear();
+    }
 
     id_t id;
     QList<WorldNode*> nodes;
@@ -79,7 +102,7 @@ public:
     QRectF mBounds;
     QPolygonF mPolygon;
 
-    WorldPathLayer *mOwner;
+    WorldPathLayer *mLayer;
 };
 
 QPolygonF strokePath(WorldPath *path, qreal thickness);

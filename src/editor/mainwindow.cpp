@@ -432,6 +432,7 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellEditRoadTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SelectMoveNodeTool::instance());
+    toolManager->registerTool(SelectMovePathTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);

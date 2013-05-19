@@ -42,6 +42,10 @@ public:
     void removeOffsetNode(WorldNode *node);
 
     void nodeMoved(WorldNode *node);
+    void nodeMoved(const QPointF &oldPos, const QPointF &newPos);
+
+signals:
+    void nodesMoved(const QRectF &area);
 
 private slots:
     void processChanges();
@@ -51,6 +55,7 @@ private:
     WorldLookup *mLookup;
     QList<WorldModifier*> mModifiers;
     QList<WorldChange*> mChanges;
+    QRectF mMovedNodeArea;
 };
 
 #endif // SHADOWWORLD_H

@@ -167,6 +167,15 @@ QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QPolygonF &po
 void WorldLookup::nodeMoved(WorldNode *node)
 {
     mNodeTree[mWorld->indexOf(node->layer)]->Move(node);
+    foreach (WorldPath *path, node->mPaths.keys()) {// FIXME: do this once after all the nodes have moved
+        path->nodeMoved();
+        mPathTree[mWorld->indexOf(path->layer())]->Move(path);
+    }
+}
+
+void WorldLookup::scriptRegionChanged(WorldScript *script)
+{
+    mScriptTree->Move(script);
 }
 
 /////

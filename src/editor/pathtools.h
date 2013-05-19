@@ -25,6 +25,7 @@
 class BasePathScene;
 class PathDocument;
 class WorldNode;
+class WorldPath;
 
 class QUndoStack;
 
@@ -104,9 +105,67 @@ private:
     Mode mMode;
     bool mMousePressed;
     QPointF mStartScenePos;
+    QPointF mStartScreenPos;
     QPointF mDropWorldPos;
     WorldNode *mClickedNode;
     NodeSet mMovingNodes;
+    QGraphicsRectItem *mSelectionRectItem;
+};
+
+class SelectMovePathTool : public BasePathTool
+{
+    Q_OBJECT
+
+public:
+    static SelectMovePathTool *instance();
+    static void deleteInstance();
+
+    void setScene(BaseGraphicsScene *scene);
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Select and Move Path"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private slots:
+    void pathAboutToBeRemoved(WorldPath *path);
+
+private:
+    Q_DISABLE_COPY(SelectMovePathTool)
+    static SelectMovePathTool *mInstance;
+    explicit SelectMovePathTool();
+    ~SelectMovePathTool();
+
+    void startSelecting();
+    void updateSelection(QGraphicsSceneMouseEvent *event);
+    void startMoving();
+    void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
+    void finishMoving(const QPointF &pos);
+
+    enum Mode {
+        NoMode,
+        Selecting,
+        Moving,
+        CancelMoving
+    };
+
+    WorldPath *topmostPathAt(const QPointF &scenePos);
+
+    NodeSet movingNodes();
+
+    Mode mMode;
+    bool mMousePressed;
+    QPointF mStartScenePos;
+    QPointF mStartScreenPos;
+    QPointF mDropWorldPos;
+    WorldPath *mClickedPath;
+    PathSet mMovingPaths;
     QGraphicsRectItem *mSelectionRectItem;
 };
 

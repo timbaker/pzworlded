@@ -214,7 +214,7 @@ WorldScript *WorldScript::clone(PathWorld *owner) const
     clone->mFileName = mFileName;
     clone->mParams = mParams;
     foreach (WorldPath *path, mPaths) {
-        if (WorldPath *clonePath = path->owner()->path(path->id))
+        if (WorldPath *clonePath = path->layer()->path(path->id))
             clone->mPaths += clonePath;
     }
     clone->mRegion = mRegion;

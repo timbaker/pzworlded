@@ -230,6 +230,7 @@ public:
     QList<WorldNode*> nodes(WorldPathLayer *layer, const QPolygonF &bounds) const;
 
     void nodeMoved(WorldNode *node);
+    void scriptRegionChanged(WorldScript *script);
 
 private:
     PathWorld *mWorld;

@@ -18,8 +18,9 @@
 #ifndef WORLDCHUNKMAP_H
 #define WORLDCHUNKMAP_H
 
-#include <QVector>
 #include <QList>
+#include <QRectF>
+#include <QVector>
 
 class PathDocument;
 class PathWorld;
@@ -208,8 +209,9 @@ public:
     static QList<WorldChunk*> WorldChunkCache;
 };
 
-class WorldChunkMap
+class WorldChunkMap : public QObject
 {
+    Q_OBJECT
 public:
     WorldChunkMap(PathDocument *doc);
 
@@ -232,7 +234,11 @@ public:
 
     void setCenter(int x, int y);
 
-//    static const int ChunkDiv = 10;
+public slots:
+    void nodesMoved(const QRectF &area);
+
+public:
+    //    static const int ChunkDiv = 10;
     static const int TilesPerChunk = 100; // Number of tiles per chunk.
     static const int ChunkGridWidth = 6; // Columns/Rows of chunks displayed.
     static const int CellSize = TilesPerChunk * ChunkGridWidth; // Columns/Rows of tiles displayed.
