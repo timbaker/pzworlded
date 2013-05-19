@@ -21,11 +21,14 @@
 #include "luatiled.h"
 
 #include <QPolygonF>
+#include <QSet>
 
 class MapInfo;
 class PathWorld;
 class TilePainter;
+class WorldNode;
 class WorldPath;
+class WorldPathLayer;
 class WorldScript;
 class WorldTile;
 class WorldTileLayer;
@@ -33,30 +36,71 @@ class WorldTileLayer;
 namespace Tiled {
 namespace Lua {
 
+class LuaPathLayer;
+class LuaWorld;
+
+class LuaNode
+{
+public:
+    LuaNode(LuaPathLayer *layer, WorldNode *node, bool owner = false);
+    ~LuaNode();
+
+    qreal x() const;
+    qreal y() const;
+    void setX(qreal x);
+    void setY(qreal y);
+
+    void initClone();
+
+    LuaPathLayer *mLayer;
+    WorldNode *mClone;
+    WorldNode *mNode;
+    bool mOwner;
+};
+
 class LuaPath
 {
 public:
-    LuaPath(WorldPath *path, bool owner = false);
+    LuaPath(LuaPathLayer *layer, WorldPath *path, bool owner = false);
     ~LuaPath();
 
     LuaPath *stroke(double thickness);
-
     LuaRegion region();
 
+    int nodeCount();
+    LuaNode *nodeAt(int index);
+
+    LuaPathLayer *mLayer;
+    WorldPath *mClone;
     WorldPath *mPath;
     bool mOwner;
+    QList<LuaNode*> mNodes;
+};
+
+class LuaPathLayer
+{
+public:
+    LuaPathLayer(LuaWorld *world, WorldPathLayer *layer);
+    ~LuaPathLayer();
+
+    LuaPath *luaPath(WorldPath *path);
+
+    LuaWorld *mWorld;
+    WorldPathLayer *mLayer;
+    QList<LuaPath*> mPaths;
 };
 
 class LuaWorldScript
 {
 public:
-    LuaWorldScript(WorldScript *worldScript);
+    LuaWorldScript(LuaWorld *world, WorldScript *worldScript);
     ~LuaWorldScript();
 
     QList<LuaPath*> paths();
 
     const char *value(const char *key);
 
+    LuaWorld *mWorld;
     WorldScript *mWorldScript;
     QList<LuaPath*> mPaths;
 };
@@ -65,11 +109,16 @@ class LuaWorld
 {
 public:
     LuaWorld(PathWorld *world);
+    ~LuaWorld();
 
     WorldTile *tile(const char *tilesetName, int id);
     WorldTileLayer *tileLayer(const char *name);
 
+    LuaPath *luaPath(WorldPath *path);
+
     PathWorld *mWorld;
+    QList<LuaPathLayer*> mPathLayers;
+    QSet<LuaNode*> mModifiedNodes;
 };
 
 class LuaMapInfo;

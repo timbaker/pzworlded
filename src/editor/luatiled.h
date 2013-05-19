@@ -359,7 +359,7 @@ public:
     QPoint mCellPos;
 };
 
-class LuaPath;
+class LuaWorld;
 class LuaWorldScript;
 
 class LuaScript
@@ -376,6 +376,7 @@ public:
 
     lua_State *L;
     PathWorld *mWorld;
+    LuaWorld *mLuaWorld;
     WorldScript *mWorldScript;
 };
 

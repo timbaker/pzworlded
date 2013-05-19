@@ -241,10 +241,21 @@ class LuaMap @ Map
     bool write(const char *path);
 };
 
+class LuaNode @ Node
+{
+    double x();
+    double y();
+    void setX(double x);
+    void setY(double y);
+};
+
 class LuaPath @ Path
 {
     LuaPath *stroke(double thickness);
     LuaRegion region();
+
+    int nodeCount();
+    LuaNode *nodeAt(int index);
 };
 
 class LuaWorldScript @ WorldScript

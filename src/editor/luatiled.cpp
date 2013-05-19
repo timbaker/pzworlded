@@ -279,10 +279,11 @@ bool LuaScript::runFunction(const char *name)
     lua_State *L = init();
 
     LuaWorld lw(mWorld);
+    mLuaWorld = &lw;
     tolua_pushusertype(L, &lw, "LuaWorld");
     lua_setglobal(L, "world");
 
-    LuaWorldScript lws(mWorldScript);
+    LuaWorldScript lws(&lw, mWorldScript);
     tolua_pushusertype(L, &lws, "LuaWorldScript");
     lua_setglobal(L, "script");
 

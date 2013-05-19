@@ -124,10 +124,12 @@ static void testPathDocument()
         int worldGridY1 = qFloor(osm.minProjected().y * (1U << zoom)) * TILE_SIZE;
         double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
 
+        PROGRESS progress(QLatin1String("Creating nodes and paths"));
+
         foreach (OSM::Node *n, osm.nodes())
             pathLayer->insertNode(i++, new WorldNode(n->id,
-                                                           n->pc.x * worldInPixels - worldGridX1,
-                                                           n->pc.y * worldInPixels - worldGridY1));
+                                                     n->pc.x * worldInPixels - worldGridX1,
+                                                     n->pc.y * worldInPixels - worldGridY1));
 
         i = 0;
         foreach (OSM::Way *w, osm.ways()) {
@@ -404,7 +406,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+
     connect(ui->actionSwitchOrthoIso, SIGNAL(triggered()), SLOT(switchOrthoIso()));
+    connect(ui->actionPathAlign, SIGNAL(triggered()), SLOT(pathAlign()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
@@ -1991,5 +1995,29 @@ void MainWindow::switchOrthoIso()
             doc->view()->switchToTile();
         else
             doc->view()->switchToIso();
+    }
+}
+
+#include "pathundoredo.h"
+#include "luaworlded.h"
+void MainWindow::pathAlign()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        WorldScript ws;
+#if 1
+        ws.mFileName = QLatin1String("C:/Programming/Tiled/PZWorldEd/PZWorldEd/lua/path-align.lua");
+#else
+        ws.mFileName = qApp->applicationDirPath() + QLatin1String("/lua/path-align.lua");
+#endif
+        ws.mPaths = doc->view()->scene()->selectedPaths().toList();
+
+        Lua::LuaScript ls(doc->world(), &ws);
+        if (!ls.runFunction("run"))
+            return;
+
+        doc->undoStack()->beginMacro(tr("Lua Script"));
+        foreach (Lua::LuaNode *lnode, ls.mLuaWorld->mModifiedNodes)
+            PathUndoRedo::MoveNode::push(doc, lnode->mNode, lnode->mClone->pos());
+        doc->undoStack()->endMacro();
     }
 }

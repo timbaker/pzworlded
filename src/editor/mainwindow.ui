@@ -295,11 +295,18 @@
     <addaction name="actionWorldGen"/>
     <addaction name="actionLuaConsole"/>
    </widget>
+   <widget class="QMenu" name="menuPath">
+    <property name="title">
+     <string>Path</string>
+    </property>
+    <addaction name="actionPathAlign"/>
+   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
+   <addaction name="menuPath"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
@@ -707,6 +714,14 @@
    </property>
    <property name="shortcut">
     <string>Esc</string>
+   </property>
+  </action>
+  <action name="actionPathAlign">
+   <property name="text">
+    <string>Align</string>
+   </property>
+   <property name="shortcut">
+    <string>A</string>
    </property>
   </action>
  </widget>

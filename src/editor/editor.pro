@@ -134,7 +134,8 @@ SOURCES += main.cpp\
     shadowworld.cpp \
     pathworld.cpp \
     pathtools.cpp \
-    pathundoredo.cpp
+    pathundoredo.cpp \
+    worldchanger.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -225,7 +226,8 @@ HEADERS  += mainwindow.h \
     pathworld.h \
     pathtools.h \
     global.h \
-    pathundoredo.h
+    pathundoredo.h \
+    worldchanger.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

@@ -30,14 +30,66 @@
 
 using namespace Tiled::Lua;
 
-LuaPath::LuaPath(WorldPath *path, bool owner) :
-    mPath(path),
+/////
+
+LuaNode::LuaNode(LuaPathLayer *layer, WorldNode *node, bool owner) :
+    mLayer(layer),
+    mClone(0),
+    mNode(node),
     mOwner(owner)
 {
 }
 
+LuaNode::~LuaNode()
+{
+    delete mClone;
+}
+
+qreal LuaNode::x() const
+{
+    return mClone ? mClone->pos().x() : mNode->pos().x();
+}
+
+qreal LuaNode::y() const
+{
+    return mClone ? mClone->pos().y() : mNode->pos().y();
+}
+
+void LuaNode::setX(qreal x)
+{
+    initClone();
+    mClone->setX(x);
+}
+
+void LuaNode::setY(qreal y)
+{
+    initClone();
+    mClone->setY(y);
+}
+
+void LuaNode::initClone()
+{
+    if (mClone) return;
+    mClone = mNode->clone();
+    if (mLayer && mLayer->mWorld)
+        mLayer->mWorld->mModifiedNodes += this;
+}
+
+/////
+
+LuaPath::LuaPath(LuaPathLayer *layer, WorldPath *path, bool owner) :
+    mLayer(layer),
+    mClone(0),
+    mPath(path),
+    mOwner(owner)
+{
+    foreach (WorldNode *node, mPath->nodes)
+        mNodes += new LuaNode(layer, node, false); // FIXME: point to 'path' too?
+}
+
 LuaPath::~LuaPath()
 {
+    qDeleteAll(mNodes);
     if (mOwner) {
         qDeleteAll(mPath->nodes);
         delete mPath;
@@ -55,7 +107,7 @@ LuaPath *LuaPath::stroke(double thickness)
         newPath->insertNode(newPath->nodes.size(), newPath->nodes[0]);
     }
 
-    return new LuaPath(newPath, true); // FIXME: never freed
+    return new LuaPath(0, newPath, true); // FIXME: never freed
 }
 
 LuaRegion LuaPath::region()
@@ -63,18 +115,55 @@ LuaRegion LuaPath::region()
     return mPath->region();
 }
 
+int LuaPath::nodeCount()
+{
+    return mNodes.size();
+}
+
+LuaNode *LuaPath::nodeAt(int index)
+{
+    return (index >= 0 && index < mNodes.size()) ? mNodes[index] : 0;
+}
+
 /////
 
-LuaWorldScript::LuaWorldScript(WorldScript *worldScript) :
+LuaPathLayer::LuaPathLayer(LuaWorld *world, WorldPathLayer *layer) :
+    mWorld(world),
+    mLayer(layer)
+{
+    foreach (WorldPath *path, layer->paths())
+        mPaths += new LuaPath(this, path);
+}
+
+LuaPathLayer::~LuaPathLayer()
+{
+    qDeleteAll(mPaths);
+}
+
+LuaPath *LuaPathLayer::luaPath(WorldPath *path)
+{
+    // FIXME: hash table lookup
+    foreach (LuaPath *lpath, mPaths) {
+        if (lpath->mPath == path)
+            return lpath;
+    }
+    return 0;
+}
+
+/////
+
+LuaWorldScript::LuaWorldScript(LuaWorld *world, WorldScript *worldScript) :
+    mWorld(world),
     mWorldScript(worldScript)
 {
-    foreach (WorldPath *path, worldScript->mPaths)
-        mPaths += new LuaPath(path, false);
+    foreach (WorldPath *path, worldScript->mPaths) {
+        if (LuaPath *lpath = mWorld->luaPath(path))
+            mPaths += lpath;
+    }
 }
 
 LuaWorldScript::~LuaWorldScript()
 {
-    qDeleteAll(mPaths);
 }
 
 QList<LuaPath *> LuaWorldScript::paths()
@@ -94,6 +183,13 @@ const char *LuaWorldScript::value(const char *key)
 LuaWorld::LuaWorld(PathWorld *world) :
     mWorld(world)
 {
+    foreach (WorldPathLayer *wpl, world->pathLayers())
+        mPathLayers += new LuaPathLayer(this, wpl);
+}
+
+LuaWorld::~LuaWorld()
+{
+    qDeleteAll(mPathLayers);
 }
 
 WorldTile *LuaWorld::tile(const char *tilesetName, int id)
@@ -104,6 +200,15 @@ WorldTile *LuaWorld::tile(const char *tilesetName, int id)
 WorldTileLayer *LuaWorld::tileLayer(const char *layerName)
 {
     return mWorld->tileLayer(QLatin1String(layerName));
+}
+
+LuaPath *LuaWorld::luaPath(WorldPath *path)
+{
+    foreach (LuaPathLayer *lpl, mPathLayers) {
+        if (LuaPath *lpath = lpl->luaPath(path))
+            return lpath;
+    }
+    return 0;
 }
 
 /////
@@ -200,6 +305,7 @@ LuaRegion LuaMapInfo::region()
 
 /////
 
+#if 0
 namespace Tiled {
 namespace Lua {
 QPolygonF strokePath(LuaPath *path, qreal thickness)
@@ -215,3 +321,6 @@ LuaRegion polygonRegion(QPolygonF polygon)
 
 }
 }
+
+#endif
+

@@ -40,6 +40,12 @@ public:
     WorldNode(id_t id, const QPointF &p);
     ~WorldNode();
 
+    void setPos(const QPointF &pos)
+    { p = pos; }
+    void setX(qreal x)
+    { p.rx() = x; }
+    void setY(qreal y)
+    { p.ry() = y; }
     const QPointF &pos() const
     { return p; }
 

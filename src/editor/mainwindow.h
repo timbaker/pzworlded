@@ -142,6 +142,7 @@ public slots:
     void LuaConsole();
 
     void switchOrthoIso();
+    void pathAlign();
 
 private:
     void FromToAux(bool selectedOnly);
