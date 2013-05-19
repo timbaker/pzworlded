@@ -46,13 +46,14 @@ LuaPath::~LuaPath()
 
 LuaPath *LuaPath::stroke(double thickness)
 {
-    QPolygonF poly = strokePath(mPath, thickness);
+    QPolygonF poly = ::strokePath(mPath, thickness);
     WorldPath *newPath = new WorldPath;
-    for (int i = 0; i < poly.size() - 1; i++) {
+    for (int i = 0; i < poly.size(); i++) {
         newPath->insertNode(i, new WorldNode(InvalidId, poly[i]));
     }
-    if (newPath->nodes.size())
+    if (newPath->nodes.size() && !mPath->isClosed()) {
         newPath->insertNode(newPath->nodes.size(), newPath->nodes[0]);
+    }
 
     return new LuaPath(newPath, true); // FIXME: never freed
 }
