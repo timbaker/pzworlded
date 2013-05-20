@@ -24,6 +24,8 @@
 
 class PathDocument;
 class PathWorld;
+class WorldNode;
+class WorldPath;
 class WorldTile;
 
 class WorldChunk;
@@ -234,8 +236,12 @@ public:
 
     void setCenter(int x, int y);
 
+signals:
+    void chunksUpdated();
+
 public slots:
-    void nodesMoved(const QRectF &area);
+    void nodeMoved(WorldNode *node, const QPointF &prev);
+    void nodesMoved();
 
 public:
     //    static const int ChunkDiv = 10;
@@ -260,6 +266,9 @@ public:
     int XMaxTiles;
     int YMinTiles;
     int YMaxTiles;
+
+private:
+    QRectF mMovedNodeArea;
 };
 
 #endif // WORLDCHUNKMAP_H

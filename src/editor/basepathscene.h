@@ -29,6 +29,7 @@ class BasePathScene;
 class BasePathTool;
 class PathDocument;
 class PathWorld;
+class WorldChanger;
 class WorldLookup;
 class WorldNode;
 class WorldPath;
@@ -59,9 +60,6 @@ public:
     { return mSelectedNodes; }
     void setSelectedNodes(const NodeSet &selection);
 
-    void setDragging(WorldNode *node, bool dragging);
-    void setDragOffset(WorldNode *node, const QPointF &offset);
-
     QList<WorldNode*> lookupNodes(const QRectF &sceneRect);
     WorldNode *topmostNodeAt(const QPointF &scenePos);
 
@@ -71,6 +69,7 @@ private:
 private:
     BasePathScene *mScene;
     NodeSet mSelectedNodes;
+    QMap<WorldNode*,QPointF> mNodeOffset;
 };
 
 class BasePathScene : public BaseGraphicsScene
@@ -117,6 +116,9 @@ public:
     QList<WorldPath *> lookupPaths(const QRectF &sceneRect);
     WorldPath *topmostPathAt(const QPointF &scenePos);
 
+    WorldChanger *changer() const
+    { return mChanger; }
+
     WorldPath *mHighlightPath;
 
 public slots:
@@ -130,6 +132,7 @@ private:
     NodesItem *mNodeItem;
     WorldPathLayer *mCurrentPathLayer;
     BasePathTool *mActiveTool;
+    WorldChanger *mChanger;
 };
 
 #endif // BASEWORLDSCENE_H

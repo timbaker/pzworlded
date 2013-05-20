@@ -19,8 +19,9 @@
 
 #include "luaworlded.h"
 #include "pathdocument.h"
+#include "path.h"
 #include "pathworld.h"
-#include "shadowworld.h"
+#include "worldchanger.h"
 #include "worldlookup.h"
 
 #include <QRect>
@@ -92,7 +93,7 @@ void WorldChunk::LoadForLater(int wx, int wy)
 //    qDebug() << "WorldChunk::LoadForLater" << bounds;
 
     // No event processing allowed during these scripts!
-    QList<WorldScript*> scripts = mChunkMap->mDocument->shadow()->lookup()->scripts(bounds);
+    QList<WorldScript*> scripts = mChunkMap->mDocument->lookup()->scripts(bounds);
 //    QList<WorldPath::Path*> paths = mChunkMap->mDocument->lookupPaths(bounds);
     qDebug() << QString::fromLatin1("Running scripts (%1) #paths=%2").arg(scripts.size())/*.arg(paths.size())*/;
 
@@ -200,7 +201,7 @@ public:
 
 WorldChunkMap::WorldChunkMap(PathDocument *doc) :
     mDocument(doc),
-    mWorld(doc->shadow()),
+    mWorld(doc->world()),
     WorldX(5),
     WorldY(5),
     XMinTiles(-1),
@@ -216,7 +217,8 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
         wtl->mSinks += new CMTileSink(this, wtl);
     }
 
-    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(nodesMoved(QRectF)));
+    connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
+            SLOT(nodeMoved(WorldNode*,QPointF)));
 }
 
 void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
@@ -394,10 +396,23 @@ void WorldChunkMap::setCenter(int x, int y)
     }
 }
 
-#include "tilepainter.h"
-void WorldChunkMap::nodesMoved(const QRectF &area)
+void WorldChunkMap::nodeMoved(WorldNode *node, const QPointF &prev)
 {
-    QList<WorldScript*> scripts = mDocument->shadow()->lookup()->scripts(area.adjusted(-1,-1,1,1));
+    if (mMovedNodeArea.isNull()) {
+        mMovedNodeArea = QRectF(prev, node->pos()).normalized();
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+    } else {
+        mMovedNodeArea |= QRectF(prev, node->pos()).normalized();
+    }
+}
+
+#include "tilepainter.h"
+void WorldChunkMap::nodesMoved()
+{
+    QRectF area = mMovedNodeArea;
+    mMovedNodeArea = QRectF();
+
+    QList<WorldScript*> scripts = mDocument->lookup()->scripts(area.adjusted(-1,-1,1,1));
     qDebug() << QString::fromLatin1("%1 scripts in nodesMoved area #1").arg(scripts.size());
 
     // erase tile layers where scripts used to be
@@ -420,7 +435,7 @@ void WorldChunkMap::nodesMoved(const QRectF &area)
                 if (rgn != ws->mRegion) {
 //                    mDocument->scriptRegionChanged(ws);
                     ws->mRegion = rgn;
-                    mDocument->shadow()->lookup()->scriptRegionChanged(ws);
+                    mDocument->lookup()->scriptRegionChanged(ws);
                     if (!ws->mRegion.isEmpty()) {
                         if (dirty.isEmpty())
                             dirty = ws->mRegion;
@@ -438,7 +453,7 @@ void WorldChunkMap::nodesMoved(const QRectF &area)
     }
 
     dirty &= QRect(getWorldXMinTiles(), getWorldYMinTiles(), getWidthInTiles(), getWidthInTiles());
-    scripts = mDocument->shadow()->lookup()->scripts(dirty.boundingRect());
+    scripts = mDocument->lookup()->scripts(dirty.boundingRect());
     int runN = 0;
     foreach (WorldScript *ws, scripts) {
         if (!ws->mRegion.intersects(dirty)) continue;
@@ -448,5 +463,7 @@ void WorldChunkMap::nodesMoved(const QRectF &area)
     }
     qDebug() << QString::fromLatin1("%1 (down from %2) scripts in nodesMoved area #2")
                 .arg(runN).arg(scripts.size());
+
+    emit chunksUpdated(); // for the GUI
 }
 

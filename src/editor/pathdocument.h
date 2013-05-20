@@ -29,7 +29,7 @@
 
 class PathView;
 class PathWorld;
-class ShadowWorld;
+class WorldChanger;
 class WorldLookup;
 class WorldNode;
 class WorldPath;
@@ -51,30 +51,23 @@ public:
     PathWorld *world() const
     { return mWorld; }
 
-    ShadowWorld *shadow() const
-    { return mShadowWorld; }
-
     PathView *view() const
     { return (PathView*)Document::view(); }
 
-    // +UNDO/REDO
-    QPointF moveNode(WorldNode *node, const QPointF &pos);
-    // -UNDO/REDO
+    WorldChanger *changer() const
+    { return mChanger; }
 
-    QList<WorldScript*> lookupScripts(const QRectF &bounds);
-    QList<WorldPath*> lookupPaths(WorldPathLayer *layer, const QRectF &bounds);
-    QList<WorldPath*> lookupPaths(WorldPathLayer *layer, const QPolygonF &bounds);
-    QList<WorldNode*> lookupNodes(WorldPathLayer *layer, const QRectF &bounds);
-    QList<WorldNode*> lookupNodes(WorldPathLayer *layer, const QPolygonF &poly);
+    WorldLookup *lookup() const
+    { return mLookup; }
 
-signals:
-    void nodeMoved(WorldNode *node);
+private slots:
+    void afterMoveNode(WorldNode *node);
 
 private:
     PathWorld *mWorld;
-    ShadowWorld *mShadowWorld;
     QString mFileName;
     WorldLookup *mLookup;
+    WorldChanger *mChanger;
 };
 
 #endif // PATHWORLDDOCUMENT_H

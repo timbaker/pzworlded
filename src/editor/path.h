@@ -80,6 +80,7 @@ public:
 
     void insertNode(int index, WorldNode *node);
     WorldNode *removeNode(int index);
+    WorldNode *nodeAt(int index);
     int nodeCount() const
     { return nodes.size(); }
 

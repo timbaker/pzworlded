@@ -33,6 +33,7 @@
 #else
 #include "tmxmapwriter.h"
 #endif
+#include "worldchanger.h"
 
 #include "tolua.h"
 
@@ -150,12 +151,14 @@ tolua_lerror:
 LuaScript::LuaScript(PathWorld *world, WorldScript *script) :
     L(0),
     mWorld(world),
-    mWorldScript(script)
+    mWorldScript(script),
+    mChanger(new WorldChanger)
 {
 }
 
 LuaScript::~LuaScript()
 {
+    delete mChanger;
     if (L)
         lua_close(L);
 }
@@ -268,6 +271,10 @@ bool LuaScript::dofile(const QString &f, QString &output)
         LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
                                       .arg(elapsed.elapsed()/1000.0));
 //    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    if (status != LUA_OK)
+        mChanger->undoAndForget();
+
     return status == LUA_OK;
 }
 
@@ -278,7 +285,7 @@ bool LuaScript::runFunction(const char *name)
 
     lua_State *L = init();
 
-    LuaWorld lw(mWorld);
+    LuaWorld lw(mWorld, mChanger);
     mLuaWorld = &lw;
     tolua_pushusertype(L, &lw, "LuaWorld");
     lua_setglobal(L, "world");
@@ -310,6 +317,10 @@ bool LuaScript::runFunction(const char *name)
     if (elapsed.elapsed() > 1000)
         LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
                                       .arg(elapsed.elapsed()/1000.0));
+
+    if (status != LUA_OK)
+        mChanger->undoAndForget();
+
 //    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     return status == LUA_OK;
 }

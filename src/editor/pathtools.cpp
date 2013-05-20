@@ -24,6 +24,7 @@
 #include "pathundoredo.h"
 #include "pathworld.h"
 #include "preferences.h"
+#include "worldchanger.h"
 
 #include <QApplication>
 #include <QKeyEvent>
@@ -118,8 +119,11 @@ void SelectMoveNodeTool::keyPressEvent(QKeyEvent *event)
 {
     if ((event->key() == Qt::Key_Escape) && (mMode == Moving)) {
         mMode = CancelMoving;
+        mScene->changer()->undoAndForget();
+#if 0
         foreach (WorldNode *node, mMovingNodes)
             mScene->nodeItem()->setDragging(node, false);
+#endif
         mMovingNodes.clear();
         event->accept();
     }
@@ -141,8 +145,7 @@ void SelectMoveNodeTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         // Right-clicks exits moving, same as the Escape key.
         if (mMode == Moving) {
             mMode = CancelMoving;
-            foreach (WorldNode *node, mMovingNodes)
-                mScene->nodeItem()->setDragging(node, false);
+            mScene->changer()->undoAndForget();
             mMovingNodes.clear();
         }
         break;
@@ -223,12 +226,16 @@ void SelectMoveNodeTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void SelectMoveNodeTool::nodeAboutToBeRemoved(WorldNode *node)
 {
+    // FIXME: the scene changer is separate from the document's changer.
+    // We can't have changes going on in two separate changers.
+    Q_ASSERT(false);
     if (mMode == Moving) {
         if (mMovingNodes.contains(node)) {
-            mScene->nodeItem()->setDragging(node, false);
             mMovingNodes.remove(node);
-            if (mMovingNodes.isEmpty())
+            if (mMovingNodes.isEmpty()) {
+                mScene->changer()->undoAndForget();
                 mMode = CancelMoving;
+            }
         }
     }
 }
@@ -292,9 +299,9 @@ void SelectMoveNodeTool::updateMovingItems(const QPointF &pos,
         mDropWorldPos = mDropWorldPos.toPoint();
 #endif
 
+    mScene->changer()->undoAndForget();
     foreach (WorldNode *node, mMovingNodes) {
-        mScene->nodeItem()->setDragging(node, true);
-        mScene->nodeItem()->setDragOffset(node, mDropWorldPos - startPos);
+        mScene->changer()->doMoveNode(node, node->pos() + mDropWorldPos - startPos);
     }
 }
 
@@ -304,21 +311,11 @@ void SelectMoveNodeTool::finishMoving(const QPointF &pos)
     Q_ASSERT(mMode == Moving);
     mMode = NoMode;
 
-    foreach (WorldNode *node, mMovingNodes)
-        mScene->nodeItem()->setDragging(node, false);
-
-    QPointF startPos = mScene->renderer()->toWorld(mStartScenePos);
-    QPointF dropPos = mDropWorldPos;
-    QPointF diff = dropPos - startPos;
-    if (startPos != dropPos) {
-        int count = mMovingNodes.size();
+    if (int count = mScene->changer()->changeCount()) {
         beginUndoMacro(tr("Move %1 Node%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
-        foreach (WorldNode *node, mMovingNodes) {
-            foreach (WorldPathLayer *wpl, document()->world()->pathLayers()) {
-                if (WorldNode *origNode = wpl->node(node->id))
-                    PathUndoRedo::MoveNode::push(document(), origNode, node->pos() + diff);
-            }
-
+        foreach (WorldChange *c, mScene->changer()->takeChanges()) {
+            c->setChanger(document()->changer());
+            document()->undoStack()->push(new WorldChangeUndoCommand(c));
         }
         endUndoMacro();
     }
@@ -382,8 +379,7 @@ void SelectMovePathTool::keyPressEvent(QKeyEvent *event)
 {
     if ((event->key() == Qt::Key_Escape) && (mMode == Moving)) {
         mMode = CancelMoving;
-        foreach (WorldNode *node, movingNodes())
-            mScene->nodeItem()->setDragging(node, false);
+        mScene->changer()->undoAndForget();
         mMovingPaths.clear();
         event->accept();
     }
@@ -405,8 +401,7 @@ void SelectMovePathTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         // Right-clicks exits moving, same as the Escape key.
         if (mMode == Moving) {
             mMode = CancelMoving;
-            foreach (WorldNode *node, movingNodes())
-                mScene->nodeItem()->setDragging(node, false);
+            mScene->changer()->undoAndForget();
             mMovingPaths.clear();
         }
         break;
@@ -493,14 +488,17 @@ void SelectMovePathTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void SelectMovePathTool::pathAboutToBeRemoved(WorldPath *path)
 {
+    // FIXME: the scene changer is separate from the document's changer.
+    // We can't have changes going on in two separate changers.
+    Q_ASSERT(false);
     if (mMode == Moving) {
         if (mMovingPaths.contains(path)) {
             NodeSet moving = movingNodes();
             mMovingPaths.remove(path);
-            if (mMovingPaths.isEmpty())
+            if (mMovingPaths.isEmpty()) {
+                mScene->changer()->undoAndForget();
                 mMode = CancelMoving;
-            foreach (WorldNode *node, moving - movingNodes())
-                mScene->nodeItem()->setDragging(node, false);
+            }
         }
     }
 }
@@ -564,9 +562,9 @@ void SelectMovePathTool::updateMovingItems(const QPointF &pos,
         mDropWorldPos = mDropWorldPos.toPoint();
 #endif
 
+    mScene->changer()->undoAndForget();
     foreach (WorldNode *node, movingNodes()) {
-        mScene->nodeItem()->setDragging(node, true);
-        mScene->nodeItem()->setDragOffset(node, mDropWorldPos - startPos);
+        mScene->changer()->doMoveNode(node, node->pos() + mDropWorldPos - startPos);
     }
 }
 
@@ -576,21 +574,11 @@ void SelectMovePathTool::finishMoving(const QPointF &pos)
     Q_ASSERT(mMode == Moving);
     mMode = NoMode;
 
-    foreach (WorldNode *node, movingNodes())
-        mScene->nodeItem()->setDragging(node, false);
-
-    QPointF startPos = mScene->renderer()->toWorld(mStartScenePos);
-    QPointF dropPos = mDropWorldPos;
-    QPointF diff = dropPos - startPos;
-    if (startPos != dropPos) {
-        int count = movingNodes().size();
+    if (int count = mScene->changer()->changeCount()) {
         beginUndoMacro(tr("Move %1 Node%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
-        foreach (WorldNode *node, movingNodes()) {
-            foreach (WorldPathLayer *wpl, document()->world()->pathLayers()) {
-                if (WorldNode *origNode = wpl->node(node->id))
-                    PathUndoRedo::MoveNode::push(document(), origNode, node->pos() + diff);
-            }
-
+        foreach (WorldChange *c, mScene->changer()->takeChanges()) {
+            c->setChanger(document()->changer());
+            document()->undoStack()->push(new WorldChangeUndoCommand(c));
         }
         endUndoMacro();
     }

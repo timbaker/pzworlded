@@ -127,6 +127,7 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
     setDocument(doc);
 
     mChunkMap = new WorldChunkMap(document());
+    connect(mChunkMap, SIGNAL(chunksUpdated()), SLOT(update()));
 
 //    qDeleteAll(items());
 

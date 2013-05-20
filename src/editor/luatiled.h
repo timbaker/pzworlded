@@ -30,6 +30,7 @@ struct lua_State;
 
 class PathWorld;
 class World;
+class WorldChanger;
 class WorldScript;
 
 namespace Tiled {
@@ -378,6 +379,7 @@ public:
     PathWorld *mWorld;
     LuaWorld *mLuaWorld;
     WorldScript *mWorldScript;
+    WorldChanger *mChanger;
 };
 
 extern LuaColor Lua_rgb(int r, int g, int b);

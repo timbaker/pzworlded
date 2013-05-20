@@ -2000,6 +2000,7 @@ void MainWindow::switchOrthoIso()
 
 #include "pathundoredo.h"
 #include "luaworlded.h"
+#include "worldchanger.h"
 void MainWindow::pathAlign()
 {
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
@@ -2015,9 +2016,13 @@ void MainWindow::pathAlign()
         if (!ls.runFunction("run"))
             return;
 
-        doc->undoStack()->beginMacro(tr("Lua Script"));
-        foreach (Lua::LuaNode *lnode, ls.mLuaWorld->mModifiedNodes)
-            PathUndoRedo::MoveNode::push(doc, lnode->mNode, lnode->mClone->pos());
-        doc->undoStack()->endMacro();
+        if (ls.mChanger->changeCount()) {
+            doc->undoStack()->beginMacro(tr("Lua Script"));
+            foreach (WorldChange *change, ls.mChanger->takeChanges()) {
+                change->setChanger(doc->changer());
+                doc->undoStack()->push(new WorldChangeUndoCommand(change));
+            }
+            doc->undoStack()->endMacro();
+        }
     }
 }

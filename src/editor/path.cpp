@@ -93,6 +93,11 @@ WorldNode *WorldPath::removeNode(int index)
     return node;
 }
 
+WorldNode *WorldPath::nodeAt(int index)
+{
+    return (index >= 0 && index < nodes.size()) ? nodes[index] : 0;
+}
+
 bool WorldPath::isClosed() const
 {
     return (nodes.size() > 1) && (nodes.first() == nodes.last());

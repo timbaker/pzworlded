@@ -18,11 +18,12 @@
 #include "basepathscene.h"
 
 #include "basepathrenderer.h"
+#include "global.h"
 #include "path.h"
 #include "pathdocument.h"
 #include "pathtools.h"
 #include "pathworld.h"
-#include "shadowworld.h"
+#include "worldchanger.h"
 #include "worldlookup.h"
 
 #include <QGraphicsSceneMouseEvent>
@@ -45,8 +46,9 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     BaseGraphicsScene(PathSceneType, parent),
     mDocument(doc),
     mNodeItem(new NodesItem(this)),
-    mCurrentPathLayer(doc->shadow()->pathLayers().first()),
-    mActiveTool(0)
+    mCurrentPathLayer(doc->world()->pathLayers().first()),
+    mActiveTool(0),
+    mChanger(new WorldChanger)
 {
 }
 
@@ -168,18 +170,22 @@ void BasePathScene::setDocument(PathDocument *doc)
     mNodeItem->setZValue(z++);
     addItem(mNodeItem);
 
-    connect(mDocument, SIGNAL(nodeMoved(WorldNode*)), SLOT(nodeMoved(WorldNode*)));
-    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(update())); // FIXME: only repaint what's needed
+    connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
+            SLOT(nodeMoved(WorldNode*)));
+//    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(update())); // FIXME: only repaint what's needed
+
+    connect(mChanger, SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
+            SLOT(nodeMoved(WorldNode*)));
 }
 
 PathWorld *BasePathScene::world() const
 {
-    return mDocument ? mDocument->shadow() : 0;
+    return mDocument ? mDocument->world() : 0;
 }
 
 WorldLookup *BasePathScene::lookup() const
 {
-    return mDocument ? mDocument->shadow()->lookup() : 0;
+    return mDocument ? mDocument->lookup() : 0;
 }
 
 void BasePathScene::setRenderer(BasePathRenderer *renderer)
@@ -483,25 +489,17 @@ void NodesItem::setSelectedNodes(const NodeSet &selection)
     update(); // FIXME: don't redraw everything
 }
 
-void NodesItem::setDragging(WorldNode *node, bool dragging)
-{
-    if (!dragging)
-        mScene->document()->shadow()->removeOffsetNode(node);
-    update(); // FIXME: don't redraw everything
-}
-
-void NodesItem::setDragOffset(WorldNode *node, const QPointF &offset)
-{
-    mScene->document()->shadow()->addOffsetNode(node, offset);
-    update(); // FIXME: don't redraw everything
-}
-
 QList<WorldNode *> NodesItem::lookupNodes(const QRectF &sceneRect)
 {
-    return mScene->lookup()->nodes(mScene->currentPathLayer(),
-                                   mScene->renderer()->toWorld(
-                                       sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
-                                                          nodeRadius(), nodeRadius())));
+    QRectF testRect = sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
+                                         nodeRadius(), nodeRadius());
+    NodeList nodes =  mScene->lookup()->nodes(mScene->currentPathLayer(),
+                                              mScene->renderer()->toWorld(testRect));
+    foreach(WorldNode *node, nodes) {
+        if (!testRect.contains(mScene->renderer()->toScene(node->pos())))
+            nodes.removeOne(node);
+    }
+    return nodes;
 }
 
 WorldNode *NodesItem::topmostNodeAt(const QPointF &scenePos)

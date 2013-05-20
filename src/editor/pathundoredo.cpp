@@ -1,26 +1,25 @@
 #include "pathundoredo.h"
 
-#include "pathdocument.h"
+#include "worldchanger.h"
 
-#include <QUndoStack>
-
-using namespace PathUndoRedo;
-
-void MoveNode::push(PathDocument *doc, WorldNode *node, const QPointF &pos)
-{
-    doc->undoStack()->push(new MoveNode(doc, node, pos));
-}
-
-MoveNode::MoveNode(PathDocument *doc, WorldNode *node, const QPointF &pos) :
-    mDocument(doc),
-    mNode(node),
-    mPos(pos)
+WorldChangeUndoCommand::WorldChangeUndoCommand(WorldChange *change) :
+    QUndoCommand(change->text()),
+    mChange(change)
 {
 }
 
-void MoveNode::swap()
+WorldChangeUndoCommand::~WorldChangeUndoCommand()
 {
-    mPos = mDocument->moveNode(mNode, mPos);
+    delete mChange;
 }
 
-/////
+void WorldChangeUndoCommand::redo()
+{
+    mChange->redo();
+}
+
+void WorldChangeUndoCommand::undo()
+{
+    mChange->undo();
+}
+

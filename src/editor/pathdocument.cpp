@@ -19,7 +19,7 @@
 
 #include "path.h"
 #include "pathworld.h"
-#include "shadowworld.h"
+#include "worldchanger.h"
 #include "worldlookup.h"
 
 #include <QUndoStack>
@@ -27,16 +27,20 @@
 PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
-    mShadowWorld(new ShadowWorld(mWorld)),
     mFileName(fileName),
-    mLookup(new WorldLookup(world))
+    mLookup(new WorldLookup(world)),
+    mChanger(new WorldChanger)
 {
     mUndoStack = new QUndoStack(this);
+
+    connect(mChanger, SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
+            SLOT(afterMoveNode(WorldNode*)));
 }
 
 PathDocument::~PathDocument()
 {
     delete mLookup;
+    delete mChanger;
 }
 
 void PathDocument::setFileName(const QString &fileName)
@@ -54,37 +58,7 @@ bool PathDocument::save(const QString &filePath, QString &error)
     return false;
 }
 
-QPointF PathDocument::moveNode(WorldNode *node, const QPointF &pos)
+void PathDocument::afterMoveNode(WorldNode *node)
 {
-    QPointF old = node->pos();
-    node->p = pos;
     mLookup->nodeMoved(node);
-    mShadowWorld->nodeMoved(node); // FIXME: hook to signal?
-    emit nodeMoved(node);
-    return old;
-}
-
-QList<WorldScript *> PathDocument::lookupScripts(const QRectF &bounds)
-{
-    return mLookup->scripts(bounds);
-}
-
-QList<WorldPath *> PathDocument::lookupPaths(WorldPathLayer *layer, const QRectF &bounds)
-{
-    return mLookup->paths(layer, bounds);
-}
-
-QList<WorldPath *> PathDocument::lookupPaths(WorldPathLayer *layer, const QPolygonF &bounds)
-{
-    return mLookup->paths(layer, bounds);
-}
-
-QList<WorldNode *> PathDocument::lookupNodes(WorldPathLayer *layer, const QRectF &bounds)
-{
-    return mLookup->nodes(layer, bounds);
-}
-
-QList<WorldNode *> PathDocument::lookupNodes(WorldPathLayer *layer, const QPolygonF &poly)
-{
-    return mLookup->nodes(layer, poly);
 }
