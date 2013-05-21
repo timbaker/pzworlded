@@ -295,6 +295,7 @@ bool LuaScript::runFunction(const char *name)
     lua_setglobal(L, "script");
 
     TilePainter tp(mWorld);
+    tp.setClip(mWorldScript->mRegion);
     LuaTilePainter ltp(&tp);
     tolua_pushusertype(L, &ltp, "LuaTilePainter");
     lua_setglobal(L, "painter");

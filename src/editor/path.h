@@ -28,9 +28,7 @@
 #include <QString>
 
 class WorldPathLayer;
-
-typedef unsigned long id_t;
-const id_t InvalidId = 0;
+class WorldScript;
 
 class WorldNode
 {
@@ -83,6 +81,10 @@ public:
     WorldNode *nodeAt(int index);
     int nodeCount() const
     { return nodes.size(); }
+    WorldNode *first() const
+    { return nodes.size() ? nodes.first() : 0; }
+    WorldNode *last() const
+    { return nodes.last() ? nodes.last() : 0; }
 
     bool isClosed() const;
 
@@ -102,6 +104,13 @@ public:
         mPolygon.clear();
     }
 
+    void insertScript(int index, WorldScript *script);
+    WorldScript *removeScript(int index);
+    const ScriptList &scripts() const
+    { return mScripts; }
+    int scriptCount() const
+    { return mScripts.size(); }
+
     id_t id;
     QList<WorldNode*> nodes;
     QMap<QString,QString> tags;
@@ -110,10 +119,11 @@ public:
     QPolygonF mPolygon;
 
     WorldPathLayer *mLayer;
+    ScriptList mScripts;
 };
 
 QPolygonF strokePath(WorldPath *path, qreal thickness);
-QPolygonF offsetPath(WorldPath *path, qreal offset);
+void offsetPath(WorldPath *path, qreal offset, QPolygonF &fwd, QPolygonF &bwd);
 QRegion polygonRegion(const QPolygonF &poly);
 
 class WorldPathLayer
@@ -136,6 +146,7 @@ public:
     int nodeCount() const
     { return mNodes.size(); }
     WorldNode *node(id_t id);
+    int indexOf(WorldNode *node);
 
     void insertPath(int index, WorldPath *path);
     WorldPath *removePath(int index);
@@ -144,6 +155,7 @@ public:
     int pathCount() const
     { return mPaths.size(); }
     WorldPath *path(id_t id);
+    int indexOf(WorldPath *path);
 
 //    QList<WorldPath*> paths(QRectF &bounds);
 //    QList<WorldPath*> paths(qreal x, qreal y, qreal width, qreal height);

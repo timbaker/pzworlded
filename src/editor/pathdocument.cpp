@@ -33,8 +33,24 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
 {
     mUndoStack = new QUndoStack(this);
 
+    connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
+            SLOT(afterAddNode(WorldNode*)));
+    connect(mChanger, SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
+            SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
+    connect(mChanger, SIGNAL(afterAddPathSignal(WorldPath*)),
+            SLOT(afterAddPath(WorldPath*)));
+    connect(mChanger, SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
+            SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
+    connect(mChanger, SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterAddNodeToPath(WorldPath*,int,WorldNode*)));
+    connect(mChanger, SIGNAL(afterRemoveNodeFromPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterRemoveNodeFromPath(WorldPath*,int,WorldNode*)));
+    connect(mChanger, SIGNAL(afterAddScriptToPathSignal(WorldPath*,int,WorldScript*)),
+            SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
+    connect(mChanger, SIGNAL(afterRemoveScriptFromPathSignal(WorldPath*,int,WorldScript*)),
+            SLOT(afterRemoveScriptFromPath(WorldPath*,int,WorldScript*)));
     connect(mChanger, SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
-            SLOT(afterMoveNode(WorldNode*)));
+            SLOT(afterMoveNode(WorldNode*,QPointF)));
 }
 
 PathDocument::~PathDocument()
@@ -58,7 +74,47 @@ bool PathDocument::save(const QString &filePath, QString &error)
     return false;
 }
 
-void PathDocument::afterMoveNode(WorldNode *node)
+void PathDocument::afterAddNode(WorldNode *node)
+{
+    lookup()->nodeAdded(node);
+}
+
+void PathDocument::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
+{
+    lookup()->nodeRemoved(layer, node);
+}
+
+void PathDocument::afterMoveNode(WorldNode *node, const QPointF &prev)
 {
     mLookup->nodeMoved(node);
+}
+
+void PathDocument::afterAddPath(WorldPath *path)
+{
+    lookup()->pathAdded(path);
+}
+
+void PathDocument::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    lookup()->pathRemoved(layer, path);
+}
+
+void PathDocument::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
+{
+    lookup()->pathChanged(path);
+}
+
+void PathDocument::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
+{
+    lookup()->pathChanged(path);
+}
+
+void PathDocument::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
+{
+    lookup()->scriptAdded(script);
+}
+
+void PathDocument::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
+{
+    lookup()->scriptRemoved(script);
 }

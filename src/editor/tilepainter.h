@@ -56,6 +56,7 @@ public:
     void noClip();
     void setClip(const QRect &rect);
     void setClip(WorldPath *path);
+    void setClip(const QRegion &region);
 
     typedef void (*TileFilterProc)(int x, int y, WorldTile *tile);
 
@@ -68,10 +69,12 @@ private:
     {
         ClipNone,
         ClipRect,
-        ClipPath
+        ClipPath,
+        ClipRegion
     };
     ClipType mClipType;
     QRect mClipRect;
+    QRegion mClipRegion;
     WorldPath *mClipPath;
 };
 

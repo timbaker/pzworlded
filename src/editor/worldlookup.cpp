@@ -49,7 +49,10 @@ WorldLookup::WorldLookup(PathWorld *world) :
                                   LOOKUP_LENGTH(world->width()),
                                   LOOKUP_LENGTH(world->height())))
 {
+    // FIXME: when inserting or deleting objects, the index becomes invalid
     int index = 0;
+    int scriptIndex = 0;
+
     foreach (WorldPathLayer *layer, mWorld->pathLayers()) {
         mNodeTree += new WorldQuadTree<WorldNode>(0, 0,
                                       LOOKUP_LENGTH(world->width()),
@@ -62,17 +65,26 @@ WorldLookup::WorldLookup(PathWorld *world) :
             mNodeTree.last()->Add(index++, node);
 
         index = 0;
-        foreach (WorldPath *path, layer->paths())
+        foreach (WorldPath *path, layer->paths()) {
             mPathTree.last()->Add(index++, path);
+
+            foreach (WorldScript *ws, path->scripts()) {
+                if (ws->mRegion.isEmpty()) {
+                    qCritical("script has empty region - IGNORING");
+                    continue;
+                }
+                mScriptTree->Add(scriptIndex++, ws);
+            }
+            scriptIndex += 10 - scriptIndex % 10; // FIXME: see scriptAdded()
+        }
     }
 
-    index = 0;
     foreach (WorldScript *ws, mWorld->scripts()) {
         if (ws->mRegion.isEmpty()) {
             qCritical("script has empty region - IGNORING");
             continue;
         }
-        mScriptTree->Add(index++, ws);
+        mScriptTree->Add(scriptIndex++, ws);
     }
 }
 
@@ -164,6 +176,16 @@ QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QPolygonF &po
     return ret.values();
 }
 
+void WorldLookup::nodeAdded(WorldNode *node)
+{
+    mNodeTree[mWorld->indexOf(node->layer)]->Add(node->layer->indexOf(node), node);
+}
+
+void WorldLookup::nodeRemoved(WorldPathLayer *layer, WorldNode *node)
+{
+    mNodeTree[mWorld->indexOf(layer)]->Remove(node);
+}
+
 void WorldLookup::nodeMoved(WorldNode *node)
 {
     mNodeTree[mWorld->indexOf(node->layer)]->Move(node);
@@ -171,6 +193,35 @@ void WorldLookup::nodeMoved(WorldNode *node)
         path->nodeMoved();
         mPathTree[mWorld->indexOf(path->layer())]->Move(path);
     }
+}
+
+void WorldLookup::pathAdded(WorldPath *path)
+{
+    mPathTree[mWorld->indexOf(path->layer())]->Add(path->layer()->indexOf(path), path);
+}
+
+void WorldLookup::pathRemoved(WorldPathLayer *layer, WorldPath *path)
+{
+    mPathTree[mWorld->indexOf(layer)]->Remove(path);
+}
+
+void WorldLookup::pathChanged(WorldPath *path)
+{
+    mPathTree[mWorld->indexOf(path->layer())]->Move(path);
+}
+
+void WorldLookup::scriptAdded(WorldScript *script)
+{
+    // A script was added to a Path.  The 'index' should be the position in a
+    // global list of scripts in the order they are applied.
+    WorldPath *path = script->mPaths.first();
+    int index = path->layer()->indexOf(path) * 10 + path->scripts().indexOf(script); // FIXME: totally bogus, must push following scripts up
+    mScriptTree->Add(index, script);
+}
+
+void WorldLookup::scriptRemoved(WorldScript *script)
+{
+    mScriptTree->Remove(script);
 }
 
 void WorldLookup::scriptRegionChanged(WorldScript *script)
@@ -201,8 +252,8 @@ void WorldQuadTreeObject<T>::updateBounds(WorldPath *path)
 {
     bounds.x = LookupCoordinate(path->bounds().topLeft()).x;
     bounds.y = LookupCoordinate(path->bounds().topLeft()).y;
-    bounds.width = LOOKUP_LENGTH(path->bounds().width());
-    bounds.height = LOOKUP_LENGTH(path->bounds().height());
+    bounds.width = qMax(1UL, LOOKUP_LENGTH(path->bounds().width()));
+    bounds.height = qMax(1UL,LOOKUP_LENGTH(path->bounds().height()));
 }
 
 template<class T>
@@ -210,8 +261,8 @@ void WorldQuadTreeObject<T>::updateBounds(WorldScript *script)
 {
     bounds.x = LookupCoordinate(script->mRegion.boundingRect().topLeft()).x;
     bounds.y = LookupCoordinate(script->mRegion.boundingRect().topLeft()).y;
-    bounds.width = LOOKUP_LENGTH(script->mRegion.boundingRect().width());
-    bounds.height = LOOKUP_LENGTH(script->mRegion.boundingRect().height());
+    bounds.width = qMax(1UL,LOOKUP_LENGTH(script->mRegion.boundingRect().width()));
+    bounds.height = qMax(1UL,LOOKUP_LENGTH(script->mRegion.boundingRect().height()));
 }
 
 template<class T>

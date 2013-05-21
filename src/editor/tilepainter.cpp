@@ -78,6 +78,8 @@ void TilePainter::fill(int x, int y, int width, int height)
 
     for (int x1 = x; x1 < x + width; x1++) {
         for (int y1 = y; y1 < y + height; y1++) {
+            if (mClipType == ClipRegion && !mClipRegion.contains(QPoint(x1, y1)))
+                continue;
             mLayer->putTile(x1, y1, mTile);
         }
     }
@@ -107,11 +109,78 @@ void TilePainter::strokePath(WorldPath *path, qreal thickness)
 }
 
 #include <QLineF>
+bool closeEnough(qreal p1, qreal p2)
+{
+    return qAbs(p1 - p2) <= 0.01;
+}
+
 void TilePainter::tracePath(WorldPath *path, qreal offset)
 {
-    QPolygonF polygon = offsetPath(path, offset);
-    for (int i = 0; i < polygon.size() - 1; i += 2) {
-        QPointF p1 = polygon[i], p2 = polygon[i+1];
-        QLineF line1(p1, p2);
+    if (path->nodeCount() > 100) return;
+    QPolygonF fwd, bwd;
+    offsetPath(path, 0.51, fwd, bwd);
+
+    // FIXME:
+    if (fwd.size() != bwd.size() || fwd.size() != path->nodeCount()) {
+        return;
     }
+
+    WorldTileLayer *layer1 = mWorld->tileLayerAt(1);
+    WorldTileLayer *layer2 = mWorld->tileLayerAt(2);
+
+    WorldTile *west = mWorld->tile(QLatin1String("street_trafficlines_01"), 0);
+    WorldTile *north = mWorld->tile(QLatin1String("street_trafficlines_01"), 2);
+    WorldTile *east = mWorld->tile(QLatin1String("street_trafficlines_01"), 4);
+    WorldTile *south = mWorld->tile(QLatin1String("street_trafficlines_01"), 6);
+
+    setLayer(layer1);
+    for (int i = 0; i < fwd.size() - 1; i += 1) {
+        QPointF p1 = fwd[i], p2 = fwd[i+1];
+        if (closeEnough(p1.x(), p2.x())) { // vertical
+            if (p1.y() > p2.y()) qSwap(p1.ry(), p2.ry());
+            setTile((p1.x() >= path->nodeAt(i)->p.x()) ? west : east);
+            fill(QRect(p1.x(), p1.y(), 1, p2.y() - p1.y()).normalized());
+        } else if (closeEnough(p1.y(), p2.y())) { // horizontal
+            if (p1.x() > p2.x()) qSwap(p1.rx(), p2.rx());
+            setTile((p1.y() >= path->nodeAt(i)->p.y()) ? north : south);
+            fill(QRect(p1.x(), p1.y(), p2.x() - p1.x(), 1).normalized());
+        }
+    }
+
+    setLayer(layer2);
+    for (int i = 0; i < bwd.size() - 1; i += 1) {
+        QPointF p1 = bwd[i], p2 = bwd[i+1];
+        if (closeEnough(p1.x(), p2.x())) { // vertical
+            if (p1.y() > p2.y()) qSwap(p1.ry(), p2.ry());
+            setTile((p1.x() >= path->nodeAt(i)->p.x()) ? west : east);
+            fill(QRect(p1.x(), p1.y(), 1, p2.y() - p1.y()).normalized());
+        } else if (closeEnough(p1.y(), p2.y())) { // horizontal
+            if (p1.x() > p2.x()) qSwap(p1.rx(), p2.rx());
+            setTile((p1.y() >= path->nodeAt(i)->p.y()) ? north : south);
+            fill(QRect(p1.x(), p1.y(), p2.x() - p1.x(), 1).normalized());
+        }
+    }
+}
+
+void TilePainter::noClip()
+{
+    mClipType = ClipNone;
+}
+
+void TilePainter::setClip(const QRect &rect)
+{
+    mClipType = ClipRect;
+    mClipRect = rect;
+}
+
+void TilePainter::setClip(WorldPath *path)
+{
+    mClipType = ClipPath;
+    mClipPath = path; // FIXME: clear this if path is removed
+}
+
+void TilePainter::setClip(const QRegion &region)
+{
+    mClipType = ClipRegion;
+    mClipRegion = region;
 }

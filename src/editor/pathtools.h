@@ -169,4 +169,37 @@ private:
     QGraphicsRectItem *mSelectionRectItem;
 };
 
+class CreatePathTool : public BasePathTool
+{
+    Q_OBJECT
+
+public:
+    static CreatePathTool *instance();
+    static void deleteInstance();
+
+    void setScene(BaseGraphicsScene *scene);
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Create Path"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+    void finishNewPath();
+
+private:
+    Q_DISABLE_COPY(CreatePathTool)
+    static CreatePathTool *mInstance;
+    explicit CreatePathTool();
+    ~CreatePathTool();
+
+    WorldPath *mNewPath;
+    QPointF mStartScenePos;
+};
+
 #endif // PATHTOOLS_H

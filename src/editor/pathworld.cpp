@@ -30,7 +30,9 @@ template class __declspec(dllimport) QMap<QString, QString>;
 
 PathWorld::PathWorld(int width, int height) :
     mWidth(width),
-    mHeight(height)
+    mHeight(height),
+    mNextPathId(InvalidId),
+    mNextNodeId(InvalidId)
 {
 }
 
@@ -38,6 +40,16 @@ PathWorld::~PathWorld()
 {
     qDeleteAll(mPathLayers);
     qDeleteAll(mTileLayers);
+}
+
+WorldNode *PathWorld::allocNode(const QPointF &pos)
+{
+    return new WorldNode(mNextNodeId++, pos);
+}
+
+WorldPath *PathWorld::allocPath()
+{
+    return new WorldPath(mNextPathId++);
 }
 
 void PathWorld::insertPathLayer(int index, WorldPathLayer *layer)

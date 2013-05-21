@@ -176,7 +176,7 @@ public:
     void Remove(T *object)
     {
         if (mMap.contains(object)) {
-            mRoot->Delete(object, true);
+            mRoot->Delete(mMap[object], true);
             mMap.remove(object);
         }
     }
@@ -229,7 +229,16 @@ public:
     QList<WorldNode*> nodes(WorldPathLayer *layer, const QRectF &bounds) const;
     QList<WorldNode*> nodes(WorldPathLayer *layer, const QPolygonF &bounds) const;
 
+    void nodeAdded(WorldNode *node);
+    void nodeRemoved(WorldPathLayer *layer, WorldNode *node);
     void nodeMoved(WorldNode *node);
+
+    void pathAdded(WorldPath *path);
+    void pathRemoved(WorldPathLayer *layer, WorldPath *path);
+    void pathChanged(WorldPath *path);
+
+    void scriptAdded(WorldScript *script);
+    void scriptRemoved(WorldScript *script);
     void scriptRegionChanged(WorldScript *script);
 
 private:

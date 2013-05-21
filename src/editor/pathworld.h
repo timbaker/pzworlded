@@ -23,6 +23,8 @@
 #include <QRegion>
 #include <QString>
 
+#include "global.h"
+
 class WorldPathLayer;
 class WorldPath;
 
@@ -100,6 +102,7 @@ public:
     QString mFileName;
     QMap<QString,QString> mParams;
     QList<WorldPath*> mPaths;
+    QList<WorldNode*> mNodes;
     QRegion mRegion;
 };
 
@@ -118,6 +121,12 @@ public:
     int tileWidth() const { return 64; }
 
     int maxLevel() const { return 16; }
+
+    void setNextIds(id_t node, id_t path)
+    { mNextNodeId = node, mNextPathId = path; }
+
+    WorldNode *allocNode(const QPointF &pos);
+    WorldPath *allocPath();
 
     void insertPathLayer(int index, WorldPathLayer *layer);
     WorldPathLayer *removePathLayer(int index);
@@ -168,6 +177,9 @@ protected:
 
     QList<WorldPathLayer*> mPathLayers;
     QList<WorldScript*> mScripts;
+
+    id_t mNextPathId;
+    id_t mNextNodeId;
 };
 
 #endif // PATHWORLD_H

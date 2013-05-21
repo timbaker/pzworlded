@@ -134,6 +134,15 @@ LuaWorldScript::~LuaWorldScript()
 {
 }
 
+QList<LuaNode *> LuaWorldScript::nodes()
+{
+    QList<LuaNode *> nodes;
+    foreach (WorldNode *node, mWorldScript->mNodes)
+        if (LuaNode *lnode = mWorld->luaNode(node))
+            nodes += lnode;
+    return nodes;
+}
+
 QList<LuaPath *> LuaWorldScript::paths()
 {
     QList<LuaPath *> paths;
@@ -208,6 +217,16 @@ void LuaTilePainter::setTile(WorldTile *tile)
     mPainter->setTile(tile);
 }
 
+void LuaTilePainter::erase(LuaPath *path)
+{
+    mPainter->erase(path->mPath);
+}
+
+void LuaTilePainter::erase(const QRect &r)
+{
+    mPainter->erase(r);
+}
+
 void LuaTilePainter::fill(LuaPath *path)
 {
     mPainter->fill(path->mPath);
@@ -221,6 +240,11 @@ void LuaTilePainter::fill(const QRect &r)
 void LuaTilePainter::strokePath(LuaPath *path, qreal thickness)
 {
     mPainter->strokePath(path->mPath, thickness);
+}
+
+void LuaTilePainter::tracePath(LuaPath *path, qreal offset)
+{
+    mPainter->tracePath(path->mPath, offset);
 }
 
 void LuaTilePainter::drawMap(int wx, int wy, LuaMapInfo *mapInfo)

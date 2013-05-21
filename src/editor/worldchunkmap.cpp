@@ -219,6 +219,10 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
 
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*,QPointF)));
+    connect(mDocument->changer(), SIGNAL(afterAddScriptToPathSignal(WorldPath*,int,WorldScript*)),
+            SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
+    connect(mDocument->changer(), SIGNAL(afterRemoveScriptFromPathSignal(WorldPath*,int,WorldScript*)),
+            SLOT(afterRemoveScriptFromPath(WorldPath*,int,WorldScript*)));
 }
 
 void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
@@ -412,7 +416,7 @@ void WorldChunkMap::nodesMoved()
     QRectF area = mMovedNodeArea;
     mMovedNodeArea = QRectF();
 
-    QList<WorldScript*> scripts = mDocument->lookup()->scripts(area.adjusted(-1,-1,1,1));
+    ScriptList scripts = mDocument->lookup()->scripts(area.adjusted(-1,-1,1,1));
     qDebug() << QString::fromLatin1("%1 scripts in nodesMoved area #1").arg(scripts.size());
 
     // erase tile layers where scripts used to be
@@ -467,3 +471,40 @@ void WorldChunkMap::nodesMoved()
     emit chunksUpdated(); // for the GUI
 }
 
+void WorldChunkMap::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
+{
+    if (mScriptChangeArea.isEmpty())
+        QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+    mScriptChangeArea |= script->mRegion;
+}
+
+void WorldChunkMap::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
+{
+    afterAddScriptToPath(path, index, script);
+}
+
+void WorldChunkMap::processScriptRegionChanges()
+{
+    QRegion dirty = mScriptChangeArea;
+    mScriptChangeArea = QRegion();
+
+    TilePainter painter(mWorld);
+    foreach (WorldTileLayer *wtl, mWorld->tileLayers()) {
+        painter.setLayer(wtl);
+        painter.erase(dirty);
+    }
+
+    dirty &= QRect(getWorldXMinTiles(), getWorldYMinTiles(), getWidthInTiles(), getWidthInTiles());
+    ScriptList scripts = mDocument->lookup()->scripts(dirty.boundingRect());
+    int runN = 0;
+    foreach (WorldScript *ws, scripts) {
+        if (!ws->mRegion.intersects(dirty)) continue;
+        Tiled::Lua::LuaScript ls(mWorld, ws);
+        ls.runFunction("run");
+        runN++;
+    }
+    qDebug() << QString::fromLatin1("%1 (down from %2) scripts in processScriptRegionChanges area")
+                .arg(runN).arg(scripts.size());
+
+    emit chunksUpdated(); // for the GUI
+}

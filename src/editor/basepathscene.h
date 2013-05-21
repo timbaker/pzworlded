@@ -56,12 +56,19 @@ public:
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
 
+    void trackMouse(QGraphicsSceneMouseEvent *event);
+
     const NodeSet &selectedNodes()
     { return mSelectedNodes; }
     void setSelectedNodes(const NodeSet &selection);
 
     QList<WorldNode*> lookupNodes(const QRectF &sceneRect);
     WorldNode *topmostNodeAt(const QPointF &scenePos);
+
+    void nodeRemoved(WorldNode *node)
+    { mSelectedNodes.remove(node); }
+
+    void redrawNode(id_t id);
 
 private:
     qreal nodeRadius() const;
@@ -70,6 +77,7 @@ private:
     BasePathScene *mScene;
     NodeSet mSelectedNodes;
     QMap<WorldNode*,QPointF> mNodeOffset;
+    id_t mHoverNode;
 };
 
 class BasePathScene : public BaseGraphicsScene
@@ -122,6 +130,15 @@ public:
     WorldPath *mHighlightPath;
 
 public slots:
+    void afterAddNode(WorldNode *node);
+    void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
+    void afterMoveNode(WorldNode *node, const QPointF &prev);
+
+    void afterAddPath(WorldPath *path);
+    void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
+    void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
+
     void nodeMoved(WorldNode *node);
 
 private:

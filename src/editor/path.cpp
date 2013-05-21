@@ -145,6 +145,16 @@ WorldPath *WorldPath::clone(WorldPathLayer *owner) const
     return clone;
 }
 
+void WorldPath::insertScript(int index, WorldScript *script)
+{
+    mScripts.insert(index, script);
+}
+
+WorldScript *WorldPath::removeScript(int index)
+{
+    return mScripts.takeAt(index);
+}
+
 /////
 
 WorldPathLayer::WorldPathLayer() :
@@ -187,6 +197,11 @@ WorldNode *WorldPathLayer::node(id_t id)
     return 0;
 }
 
+int WorldPathLayer::indexOf(WorldNode *node)
+{
+    return mNodes.indexOf(node); // FIXME: slow
+}
+
 void WorldPathLayer::insertPath(int index, WorldPath *path)
 {
     Q_ASSERT(path->layer() == 0);
@@ -209,6 +224,11 @@ WorldPath *WorldPathLayer::path(id_t id)
     if (mPathByID.contains(id))
         return mPathByID[id];
     return 0;
+}
+
+int WorldPathLayer::indexOf(WorldPath *path)
+{
+    return mPaths.indexOf(path); // FIXME: slow
 }
 
 WorldPathLayer *WorldPathLayer::clone() const
@@ -644,21 +664,29 @@ QPolygonF strokePath(WorldPath *path, qreal thickness)
     return ret;
 }
 
-QPolygonF offsetPath(WorldPath *path, qreal offset)
+void offsetPath(WorldPath *path, qreal offset, QPolygonF &pfwd, QPolygonF &pbwd)
 {
     PathStroke stroke;
     QVector<PathStroke::v2_t> fwd, bwd;
     stroke.build(path, offset * 2, fwd, bwd);
-    QPolygonF ret;
-    if (offset >= 0) {
-        // Strip off the 2 cap vertices
-        foreach (PathStroke::v2_t v, fwd.mid(1,fwd.size()-2))
-            ret += QPointF(v.x, v.y);
-    } else {
+    pfwd.resize(0);
+    pbwd.resize(0);
+    // Transfer the 2 cap vertices to the backward path
+    if (path->isClosed()) {
+        foreach (PathStroke::v2_t v, fwd)
+            pfwd += QPointF(v.x, v.y);
         foreach (PathStroke::v2_t v, bwd)
-            ret += QPointF(v.x, v.y);
+            pbwd.insert(0, QPointF(v.x, v.y));
+        pfwd += pfwd.first();
+        pbwd += pbwd.first();
+    } else {
+        foreach (PathStroke::v2_t v, fwd.mid(1,fwd.size()-2))
+            pfwd += QPointF(v.x, v.y);
+        foreach (PathStroke::v2_t v, bwd)
+            pbwd.insert(0, QPointF(v.x, v.y));
+        pbwd.insert(0, QPointF(fwd[0].x, fwd[0].y));
+        pbwd += QPointF(fwd.last().x, fwd.last().y);
     }
-    return ret;
 }
 
 QRegion polygonRegion(const QPolygonF &poly)

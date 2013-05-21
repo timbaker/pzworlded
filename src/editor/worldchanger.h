@@ -23,6 +23,9 @@
 #include <QPointF>
 
 class WorldNode;
+class WorldPath;
+class WorldPathLayer;
+class WorldScript;
 
 class WorldChanger;
 
@@ -52,8 +55,25 @@ public:
     WorldChanger();
     ~WorldChanger();
 
+    void doAddNode(WorldPathLayer *layer, int index, WorldNode *node);
+    void afterAddNode(WorldNode *node);
+
+    void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
+
     void doMoveNode(WorldNode *node, const QPointF &pos);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
+
+    void doAddPath(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterAddPath(WorldPath *path);
+    void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
+
+    void doAddNodeToPath(WorldPath *path, int index, WorldNode *node);
+    void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
+    void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
+
+    void doAddScriptToPath(WorldPath *path, int index, WorldScript *script);
+    void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
+    void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
 
     const WorldChangeList &changes() const
     { return mChanges; }
@@ -67,7 +87,20 @@ public:
     void undo();
 
 signals:
+    void afterAddNodeSignal(WorldNode *node);
+    void afterRemoveNodeSignal(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNodeSignal(WorldNode *node, const QPointF &prev);
+
+    void afterAddPathSignal(WorldPath *path);
+    void afterRemovePathSignal(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterAddNodeToPathSignal(WorldPath *path, int index, WorldNode *node);
+    void afterRemoveNodeFromPathSignal(WorldPath *path, int index, WorldNode *node);
+
+    void afterAddScriptToPathSignal(WorldPath *path, int index, WorldScript *script);
+    void afterRemoveScriptFromPathSignal(WorldPath *path, int index, WorldScript *script);
+
+private:
+    void addChange(WorldChange *change);
 
 private:
     WorldChangeList mChanges;

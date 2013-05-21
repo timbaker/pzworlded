@@ -300,6 +300,7 @@
      <string>Path</string>
     </property>
     <addaction name="actionPathAlign"/>
+    <addaction name="actionAddScriptToPath"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -722,6 +723,11 @@
    </property>
    <property name="shortcut">
     <string>A</string>
+   </property>
+  </action>
+  <action name="actionAddScriptToPath">
+   <property name="text">
+    <string>Add Script</string>
    </property>
   </action>
  </widget>

@@ -261,6 +261,7 @@ class LuaPath @ Path
 class LuaWorldScript @ WorldScript
 {
     list<LuaPath*> paths();
+    list<LuaNode*> nodes();
     const char *value(const char *key);
 };
 
@@ -276,10 +277,16 @@ class LuaTilePainter @ TilePainter
 public:
     void setLayer(WorldTileLayer *layer);
     void setTile(WorldTile *tile);
+
+    void erase @ erasePath(LuaPath *path);
+    void erase @ eraseRect(const QRect &r);
+
     void fill @ fillPath(LuaPath *path);
     void fill @ fillRect(const QRect &r);
+
     void strokePath(LuaPath *path, double thickness);
     void drawMap(int x, int y, LuaMapInfo *mapInfo);
+    void tracePath(LuaPath *path, double offset);
 };
 
 class LuaMapInfo @ MapInfo

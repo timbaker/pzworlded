@@ -172,8 +172,24 @@ void BasePathScene::setDocument(PathDocument *doc)
 
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*)));
+    connect(mDocument->changer(), SIGNAL(afterAddNodeSignal(WorldNode*)),
+            SLOT(update()));
+    connect(mDocument->changer(), SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(update()));
 //    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(update())); // FIXME: only repaint what's needed
 
+    connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
+            SLOT(afterAddNode(WorldNode*)));
+    connect(mChanger, SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
+            SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
+    connect(mChanger, SIGNAL(afterAddPathSignal(WorldPath*)),
+            SLOT(afterAddPath(WorldPath*)));
+    connect(mChanger, SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
+            SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
+    connect(mChanger, SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterAddNodeToPath(WorldPath*,int,WorldNode*)));
+    connect(mChanger, SIGNAL(afterRemoveNodeFromPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterRemoveNodeFromPath(WorldPath*,int,WorldNode*)));
     connect(mChanger, SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*)));
 }
@@ -323,6 +339,44 @@ WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
     return closest;
 }
 
+void BasePathScene::afterAddNode(WorldNode *node)
+{
+    lookup()->nodeAdded(node);
+}
+
+void BasePathScene::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
+{
+    nodeItem()->nodeRemoved(node);
+    lookup()->nodeRemoved(layer, node);
+}
+
+void BasePathScene::afterMoveNode(WorldNode *node, const QPointF &prev)
+{
+}
+
+void BasePathScene::afterAddPath(WorldPath *path)
+{
+    lookup()->pathAdded(path);
+    nodeItem()->update();
+}
+
+void BasePathScene::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    lookup()->pathRemoved(layer, path);
+    nodeItem()->update();
+}
+
+void BasePathScene::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
+{
+    lookup()->pathChanged(path);
+    nodeItem()->update();
+}
+
+void BasePathScene::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
+{
+    lookup()->pathChanged(path);
+}
+
 void BasePathScene::nodeMoved(WorldNode *node)
 {
     Q_UNUSED(node)
@@ -431,7 +485,18 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
             if (mScene->mHighlightPath == path) {
                 painter->setPen(QPen(Qt::green, 4));
-                painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+
+                QPolygonF fwd, bwd;
+                offsetPath(path, 0.5, fwd, bwd);
+
+                fwd = mScene->renderer()->toScene(fwd, mLayer->level());
+                painter->drawPolyline(fwd);
+                foreach (QPointF p, fwd)
+                    painter->drawEllipse(p, 2, 2);
+                bwd = mScene->renderer()->toScene(bwd, mLayer->level());
+                painter->drawPolyline(bwd);
+                foreach (QPointF p, bwd)
+                    painter->drawEllipse(p, 2, 2);
             }
         }
     }
@@ -452,9 +517,11 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
 NodesItem::NodesItem(BasePathScene *scene, QGraphicsItem *parent) :
     QGraphicsItem(parent),
-    mScene(scene)
+    mScene(scene),
+    mHoverNode(InvalidId)
 {
     setFlag(ItemUsesExtendedStyleOption);
+//    setAcceptHoverEvents(true);
 }
 
 QRectF NodesItem::boundingRect() const
@@ -480,6 +547,27 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         QPointF scenePos = mScene->renderer()->toScene(node->pos());
         if (exposed.contains(scenePos))
             painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+    }
+
+    if (mHoverNode != InvalidId) {
+        if (WorldNode *node = mScene->currentPathLayer()->node(mHoverNode)) {
+            QPointF scenePos = mScene->renderer()->toScene(node->pos());
+            if (exposed.contains(scenePos)) {
+                painter->setBrush(QColor(0,128,128,128));
+                painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+            }
+        }
+    }
+}
+
+void NodesItem::trackMouse(QGraphicsSceneMouseEvent *event)
+{
+    WorldNode *node = topmostNodeAt(event->scenePos());
+    id_t id = node ? node->id : InvalidId;
+    if (id != mHoverNode) {
+        redrawNode(mHoverNode);
+        mHoverNode = id;
+        redrawNode(mHoverNode);
     }
 }
 
@@ -509,6 +597,15 @@ WorldNode *NodesItem::topmostNodeAt(const QPointF &scenePos)
     QList<WorldNode*> nodes = mScene->lookup()->nodes(mScene->currentPathLayer(),
                                                       mScene->renderer()->toWorld(sceneRect));
     return nodes.size() ? nodes.last() : 0;
+}
+
+void NodesItem::redrawNode(id_t id)
+{
+    if (WorldNode *node = mScene->currentPathLayer()->node(id)) {
+        QPointF scenePos = mScene->renderer()->toScene(node->pos());
+        update(scenePos.x() - nodeRadius(), scenePos.y() - nodeRadius(),
+               nodeRadius() * 2, nodeRadius() * 2);
+    }
 }
 
 qreal NodesItem::nodeRadius() const

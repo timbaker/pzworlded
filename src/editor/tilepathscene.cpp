@@ -20,9 +20,12 @@
 #include "luaworlded.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
+#include "path.h"
+#include "pathdocument.h"
 #include "pathworld.h"
 #include "preferences.h"
 #include "progress.h"
+#include "worldchanger.h"
 #include "worldchunkmap.h"
 
 #include "tile.h"
@@ -128,6 +131,10 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
 
     mChunkMap = new WorldChunkMap(document());
     connect(mChunkMap, SIGNAL(chunksUpdated()), SLOT(update()));
+    connect(doc->changer(), SIGNAL(afterAddScriptToPathSignal(WorldPath*,int,WorldScript*)),
+            SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
+    connect(doc->changer(), SIGNAL(afterRemoveScriptFromPathSignal(WorldPath*,int,WorldScript*)),
+            SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
 
 //    qDeleteAll(items());
 
@@ -165,6 +172,12 @@ void TilePathScene::centerOn(const QPointF &worldPos)
 int TilePathScene::currentLevel()
 {
     return 0; // FIXME
+}
+
+void TilePathScene::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
+{
+    if (path->nodeCount())
+        mChunkMap->nodeMoved(path->first(), path->first()->pos() + QPoint(1,1));
 }
 
 /////

@@ -88,6 +88,7 @@ public:
     LuaWorldScript(LuaWorld *world, WorldScript *worldScript);
     ~LuaWorldScript();
 
+    QList<LuaNode*> nodes();
     QList<LuaPath*> paths();
 
     const char *value(const char *key);
@@ -125,9 +126,15 @@ public:
 
     void setLayer(WorldTileLayer *layer);
     void setTile(WorldTile *tile);
+
+    void erase(LuaPath *path);
+    void erase(const QRect &r);
+
     void fill(LuaPath *path);
     void fill(const QRect &r);
+
     void strokePath(LuaPath *path, qreal thickness);
+    void tracePath(LuaPath *path, qreal offset);
     void drawMap(int wx, int wy, LuaMapInfo *mapInfo);
 
     TilePainter *mPainter;

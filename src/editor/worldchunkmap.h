@@ -20,12 +20,14 @@
 
 #include <QList>
 #include <QRectF>
+#include <QRegion>
 #include <QVector>
 
 class PathDocument;
 class PathWorld;
 class WorldNode;
 class WorldPath;
+class WorldScript;
 class WorldTile;
 
 class WorldChunk;
@@ -241,7 +243,11 @@ signals:
 
 public slots:
     void nodeMoved(WorldNode *node, const QPointF &prev);
+    void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
+    void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
+
     void nodesMoved();
+    void processScriptRegionChanges();
 
 public:
     //    static const int ChunkDiv = 10;
@@ -269,6 +275,7 @@ public:
 
 private:
     QRectF mMovedNodeArea;
+    QRegion mScriptChangeArea;
 };
 
 #endif // WORLDCHUNKMAP_H

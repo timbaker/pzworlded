@@ -71,6 +71,7 @@ private:
 
 class TilePathScene : public BasePathScene
 {
+    Q_OBJECT
 public:
     TilePathScene(PathDocument *doc, QObject *parent = 0);
     ~TilePathScene();
@@ -88,6 +89,9 @@ public:
 
     WorldChunkMap *chunkMap() const
     { return mChunkMap; }
+
+private slots:
+    void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
 
 private:
     TSGridItem *mGridItem;

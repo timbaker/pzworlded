@@ -107,6 +107,15 @@ MainWindow *MainWindow::instance()
 #include "pathdocument.h"
 #include "pathtools.h"
 #include "pathworld.h"
+static QString script(const char *name)
+{
+#if 1
+    return QString::fromLatin1("C:/Programming/Tiled/PZWorldEd/PZWorldEd/lua/%1").arg(QLatin1String(name));
+#else
+    return qApp->applicationDirPath() + QString::fromLatin1("/lua/%1").arg(name);
+#endif
+}
+
 static void testPathDocument()
 {
     PathWorld *newWorld = new PathWorld(30 * 300, 30 * 300);
@@ -115,6 +124,8 @@ static void testPathDocument()
     PROGRESS progress(QLatin1String("Reading OSM data"));
     OSM::File osm;
     QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
+    id_t highestNodeId = 1;
+    id_t highestPathId = 1;
     if (osm.read(f)) {
         WorldPathLayer *pathLayer = new WorldPathLayer();
         int i = 0;
@@ -126,10 +137,12 @@ static void testPathDocument()
 
         PROGRESS progress(QLatin1String("Creating nodes and paths"));
 
-        foreach (OSM::Node *n, osm.nodes())
+        foreach (OSM::Node *n, osm.nodes()) {
             pathLayer->insertNode(i++, new WorldNode(n->id,
                                                      n->pc.x * worldInPixels - worldGridX1,
                                                      n->pc.y * worldInPixels - worldGridY1));
+            highestNodeId = qMax(highestNodeId, n->id);
+        }
 
         i = 0;
         foreach (OSM::Way *w, osm.ways()) {
@@ -139,9 +152,12 @@ static void testPathDocument()
             foreach (OSM::Node *nd, w->nodes)
                 path->insertNode(j++, pathLayer->node(nd->id));
             pathLayer->insertPath(i++, path);
+            highestPathId = qMax(highestPathId, path->id);
         }
         newWorld->insertPathLayer(0, pathLayer);
     }
+
+    newWorld->setNextIds(highestNodeId + 1, highestPathId + 1);
 
     foreach (WorldPathLayer *layer, newWorld->pathLayers()) {
         foreach (WorldPath *path, layer->paths()) {
@@ -162,7 +178,7 @@ static void testPathDocument()
             } else if (path->tags.contains(QLatin1String("leisure"))) {
                 QString v = path->tags[QLatin1String("leisure")];
                 if (v == QLatin1String("park"))
-                    script = QLatin1String("C:/Programming/Tiled/PZWorldEd/park.lua");
+                    script = ::script("park.lua");
             }
             if (path->tags.contains(QLatin1String("highway"))) {
                 qreal width;
@@ -177,30 +193,50 @@ static void testPathDocument()
                 else if (v == QLatin1String("private")) width = 4;
                 else if (v == QLatin1String("service")) width = 6/2; /// #2
                 else if (v == QLatin1String("path")) width = 3; /// #2
+                else if (v == QLatin1String("footway")) width = 2;
                 else continue;
-                script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
+                script = ::script("road.lua");
+
+                if (v == QLatin1String("footway")) {
+                    script = ::script("footway.lua");
+                }
             }
 
             if (!script.isEmpty()) {
                 WorldScript *ws = new WorldScript;
                 ws->mFileName = script;
                 ws->mPaths += path;
-                newWorld->insertScript(newWorld->scriptCount(), ws);
+                path->insertScript(path->scriptCount(), ws);
+//                newWorld->insertScript(newWorld->scriptCount(), ws);
             }
 
             if (path->tags.contains(QLatin1String("building")))
             {
                 WorldScript *ws = new WorldScript;
-                ws->mFileName = QLatin1String("C:/Programming/Tiled/PZWorldEd/place-lot.lua");
+                ws->mFileName = ::script("place-lot.lua");
                 ws->mParams[QLatin1String("mapfile")] = QLatin1String("C:\\Users\\Tim\\Desktop\\ProjectZomboid\\Tools\\Buildings\\tiny-house.tbx");
                 ws->mParams[QLatin1String("pos")] = QString::fromLatin1("%1 %2").arg(path->bounds().center().x()).arg(path->bounds().center().y());
-                newWorld->insertScript(newWorld->scriptCount(), ws);
+                path->insertScript(path->scriptCount(), ws);
+//                newWorld->insertScript(newWorld->scriptCount(), ws);
             }
         }
     }
 
 
     progress.update(QLatin1String("Running scripts (region)"));
+
+    foreach (WorldPathLayer *layer, newWorld->pathLayers()) {
+        foreach (WorldPath *path, layer->paths()) {
+            foreach (WorldScript *ws, path->scripts()) {
+                Lua::LuaScript ls(newWorld, ws);
+                if (ls.runFunction("region")) {
+                    QRegion rgn;
+                    if (ls.getResultRegion(rgn))
+                        ws->mRegion = rgn;
+                }
+            }
+        }
+    }
 
     foreach (WorldScript *ws, newWorld->scripts()) {
         Lua::LuaScript ls(newWorld, ws);
@@ -218,6 +254,7 @@ static void testPathDocument()
     newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Doors")));
     newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Walls")));
     newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Windows")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Vegetation")));
 
     foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
         WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());
@@ -409,6 +446,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionSwitchOrthoIso, SIGNAL(triggered()), SLOT(switchOrthoIso()));
     connect(ui->actionPathAlign, SIGNAL(triggered()), SLOT(pathAlign()));
+    connect(ui->actionAddScriptToPath, SIGNAL(triggered()), SLOT(addScriptToPath()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
@@ -437,6 +475,7 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->addSeparator();
     toolManager->registerTool(SelectMoveNodeTool::instance());
     toolManager->registerTool(SelectMovePathTool::instance());
+    toolManager->registerTool(CreatePathTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -2005,12 +2044,10 @@ void MainWindow::pathAlign()
 {
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
         WorldScript ws;
-#if 1
-        ws.mFileName = QLatin1String("C:/Programming/Tiled/PZWorldEd/PZWorldEd/lua/path-align.lua");
-#else
-        ws.mFileName = qApp->applicationDirPath() + QLatin1String("/lua/path-align.lua");
-#endif
+        ws.mFileName = ::script("path-align.lua");
         ws.mPaths = doc->view()->scene()->selectedPaths().toList();
+
+        ws.mNodes = doc->view()->scene()->nodeItem()->selectedNodes().toList();
 
         Lua::LuaScript ls(doc->world(), &ws);
         if (!ls.runFunction("run"))
@@ -2020,6 +2057,27 @@ void MainWindow::pathAlign()
             doc->undoStack()->beginMacro(tr("Lua Script"));
             foreach (WorldChange *change, ls.mChanger->takeChanges()) {
                 change->setChanger(doc->changer());
+                doc->undoStack()->push(new WorldChangeUndoCommand(change));
+            }
+            doc->undoStack()->endMacro();
+        }
+    }
+}
+
+void MainWindow::addScriptToPath()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
+            WorldScript *ws = new WorldScript;
+            ws->mFileName = ::script("hayfield.lua");
+            ws->mPaths += path;
+            ws->mRegion = path->region();
+            doc->changer()->doAddScriptToPath(path, path->scriptCount(), ws);
+        }
+        // FIXME: just give me the WorldChange object
+        if (doc->changer()->changeCount()) {
+            doc->undoStack()->beginMacro(tr("Lua Script"));
+            foreach (WorldChange *change, doc->changer()->takeChanges()) {
                 doc->undoStack()->push(new WorldChangeUndoCommand(change));
             }
             doc->undoStack()->endMacro();
