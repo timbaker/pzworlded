@@ -204,7 +204,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         }
     }
 
-    generateHeader(cell, mapComposite);
+    if (!generateHeader(cell, mapComposite))
+        return false;
 
     MaxLevel = 15;
 
@@ -320,7 +321,8 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             return false;
     }
 
-    processObjectGroups(mapComposite);
+    if (!processObjectGroups(cell, mapComposite))
+        return false;
 
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
@@ -689,24 +691,29 @@ uint LotFilesManager::cellToGid(const Cell *cell)
     return i.value() + cell->tile->id();
 }
 
-void LotFilesManager::processObjectGroups(MapComposite *mapComposite)
+bool LotFilesManager::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
 {
     foreach (Layer *layer, mapComposite->map()->layers()) {
-        if (ObjectGroup *og = layer->asObjectGroup())
-            processObjectGroup(og, mapComposite->levelRecursive(),
-                               mapComposite->originRecursive());
+        if (ObjectGroup *og = layer->asObjectGroup()) {
+            if (!processObjectGroup(cell, og, mapComposite->levelRecursive(),
+                                    mapComposite->originRecursive()))
+                return false;
+        }
     }
 
     foreach (MapComposite *subMap, mapComposite->subMaps())
-        processObjectGroups(subMap);
+        if (!processObjectGroups(cell, subMap))
+            return false;
+
+    return true;
 }
 
-void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup,
+bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
                                          int levelOffset, const QPoint &offset)
 {
     int level;
     if (!MapComposite::levelForLayer(objectGroup, &level))
-        return;
+        return true;
     level += levelOffset;
 
     foreach (const MapObject *mapObject, objectGroup->objects()) {
@@ -736,6 +743,13 @@ void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup,
         y += offset.y();
 
         if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
+            if (x < 0 || y < 0 || x + w > 300 || y + h > 300) {
+                x = qBound(0, x, 300);
+                y = qBound(0, y, 300);
+                mError = tr("A RoomDef in cell %1,%2 overlaps cell boundaries.\nNear x,y=%3,%4")
+                        .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
+                return false;
+            }
             LotFile::RoomRect *rr = new LotFile::RoomRect(name, x, y, level,
                                                           w, h);
             mRoomRects += rr;
@@ -747,4 +761,5 @@ void LotFilesManager::processObjectGroup(ObjectGroup *objectGroup,
             ZoneList.append(z);
         }
     }
+    return true;
 }
