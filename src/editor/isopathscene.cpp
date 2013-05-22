@@ -50,10 +50,10 @@ QPointF IsoPathRenderer::toScene(qreal x, qreal y, int level)
 QPolygonF IsoPathRenderer::toScene(const QRectF &worldRect, int level)
 {
     QPolygonF pf;
-    pf << toScene(worldRect.topLeft());
-    pf << toScene(worldRect.topRight());
-    pf << toScene(worldRect.bottomRight());
-    pf << toScene(worldRect.bottomLeft());
+    pf << toScene(worldRect.topLeft(), level);
+    pf << toScene(worldRect.topRight(), level);
+    pf << toScene(worldRect.bottomRight(), level);
+    pf << toScene(worldRect.bottomLeft(), level);
     pf += pf.first();
     return pf;
 }
@@ -62,7 +62,7 @@ QPolygonF IsoPathRenderer::toScene(const QPolygonF &worldPoly, int level)
 {
     QPolygonF pf;
     foreach (QPointF p, worldPoly)
-        pf += toScene(p);
+        pf += toScene(p, level);
     return pf;
 }
 
