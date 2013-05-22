@@ -233,6 +233,8 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
             SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
     connect(mDocument->changer(), SIGNAL(afterRemoveScriptFromPathSignal(WorldPath*,int,WorldScript*)),
             SLOT(afterRemoveScriptFromPath(WorldPath*,int,WorldScript*)));
+    connect(mDocument->changer(), SIGNAL(afterChangeScriptParametersSignal(WorldScript*)),
+            SLOT(afterChangeScriptParameters(WorldScript*)));
 }
 
 void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
@@ -491,6 +493,13 @@ void WorldChunkMap::afterAddScriptToPath(WorldPath *path, int index, WorldScript
 void WorldChunkMap::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
     afterAddScriptToPath(path, index, script);
+}
+
+void WorldChunkMap::afterChangeScriptParameters(WorldScript *script)
+{
+    if (script->mPaths.size())
+        nodeMoved(script->mPaths.first()->first(),
+                  script->mPaths.first()->first()->pos() + QPoint(1,1));
 }
 
 void WorldChunkMap::processScriptRegionChanges()

@@ -117,7 +117,7 @@ public:
     WorldScript *clone(PathWorld *owner) const;
 
     QString mFileName;
-    QMap<QString,QString> mParams;
+    ScriptParams mParams;
     QList<WorldPath*> mPaths;
     QList<WorldNode*> mNodes;
     WorldPathLayer *mCurrentPathLayer; // FIXME

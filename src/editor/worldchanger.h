@@ -18,6 +18,8 @@
 #ifndef WORLDCHANGER_H
 #define WORLDCHANGER_H
 
+#include "global.h"
+
 #include <QList>
 #include <QObject>
 #include <QPointF>
@@ -75,6 +77,9 @@ public:
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
 
+    void doChangeScriptParameters(WorldScript *script, const ScriptParams &params);
+    void afterChangeScriptParameters(WorldScript *script);
+
     const WorldChangeList &changes() const
     { return mChanges; }
 
@@ -98,6 +103,8 @@ signals:
 
     void afterAddScriptToPathSignal(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPathSignal(WorldPath *path, int index, WorldScript *script);
+
+    void afterChangeScriptParametersSignal(WorldScript *script);
 
 private:
     void addChange(WorldChange *change);

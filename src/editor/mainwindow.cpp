@@ -164,6 +164,7 @@ static void testPathDocument()
     foreach (WorldPathLayer *layer, newWorld->pathLayers()) {
         foreach (WorldPath *path, layer->paths()) {
             QString script;
+            ScriptParams params;
             if (path->tags.contains(QLatin1String("landuse"))) {
                 QString v = path->tags[QLatin1String("landuse")];
                 if (v == QLatin1String("forest") || v == QLatin1String("wood"))
@@ -198,6 +199,7 @@ static void testPathDocument()
                 else if (v == QLatin1String("footway")) width = 2;
                 else continue;
                 script = ::script("road.lua");
+                params[QLatin1String("width")] = QString::number(width);
 
                 if (v == QLatin1String("footway")) {
                     script = ::script("footway.lua");
@@ -208,6 +210,7 @@ static void testPathDocument()
                 WorldScript *ws = new WorldScript;
                 ws->mFileName = script;
                 ws->mPaths += path;
+                ws->mParams = params;
                 path->insertScript(path->scriptCount(), ws);
 //                newWorld->insertScript(newWorld->scriptCount(), ws);
             }
@@ -2192,7 +2195,17 @@ void MainWindow::scriptParameters()
             if (dialog.exec() != QDialog::Accepted)
                 return;
 
-            // class ChangeScriptParameters : public WorldChange
+            foreach (WorldScript *ws, path->scripts())
+                doc->changer()->doChangeScriptParameters(ws, ws->mParams);
+
+            // FIXME: just give me the WorldChange object
+            if (doc->changer()->changeCount()) {
+                doc->undoStack()->beginMacro(tr("Change Script Parameters"));
+                foreach (WorldChange *change, doc->changer()->takeChanges()) {
+                    doc->undoStack()->push(new WorldChangeUndoCommand(change));
+                }
+                doc->undoStack()->endMacro();
+            }
         }
     }
 }

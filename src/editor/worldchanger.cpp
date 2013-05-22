@@ -18,6 +18,16 @@
 #include "worldchanger.h"
 
 #include "path.h"
+#include "pathworld.h"
+
+#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
+// Hmmmm.  libtiled.dll defines the MapRands class as so:
+// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QVector<QVector<int> >;
+#endif
 
 namespace WorldChanges
 {
@@ -198,6 +208,40 @@ public:
     WorldScript *mScript;
 };
 
+class ChangeScriptParameters : public WorldChange
+{
+public:
+    ChangeScriptParameters(WorldChanger *changer, WorldScript *script, const ScriptParams &params) :
+        WorldChange(changer),
+        mScript(script),
+        mNewParams(params),
+        mOldParams(script->mParams)
+    {
+
+    }
+
+    void redo()
+    {
+        mScript->mParams = mNewParams;
+        mChanger->afterChangeScriptParameters(mScript);
+    }
+
+    void undo()
+    {
+        mScript->mParams = mOldParams;
+        mChanger->afterChangeScriptParameters(mScript);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr("Change Script Parameters");
+    }
+
+    WorldScript *mScript;
+    ScriptParams mNewParams;
+    ScriptParams mOldParams;
+};
+
 } // namespace WorldChanges;
 
 /////
@@ -297,6 +341,16 @@ void WorldChanger::afterAddScriptToPath(WorldPath *path, int index, WorldScript 
 void WorldChanger::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
     emit afterRemoveScriptFromPathSignal(path, index, script);
+}
+
+void WorldChanger::doChangeScriptParameters(WorldScript *script, const ScriptParams &params)
+{
+    addChange(new ChangeScriptParameters(this, script, params));
+}
+
+void WorldChanger::afterChangeScriptParameters(WorldScript *script)
+{
+    emit afterChangeScriptParametersSignal(script);
 }
 
 WorldChangeList WorldChanger::takeChanges()

@@ -245,6 +245,7 @@ public slots:
     void nodeMoved(WorldNode *node, const QPointF &prev);
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
+    void afterChangeScriptParameters(WorldScript *script);
 
     void nodesMoved();
     void processScriptRegionChanges();
