@@ -233,6 +233,8 @@ WorldTileLayer *WorldTileLayer::clone(PathWorld *owner) const
 
 WorldScript *WorldScript::clone(PathWorld *owner) const
 {
+    Q_UNUSED(owner)
+
     WorldScript *clone = new WorldScript;
     clone->mFileName = mFileName;
     clone->mParams = mParams;

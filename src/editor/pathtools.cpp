@@ -681,6 +681,7 @@ void CreatePathTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void CreatePathTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+    Q_UNUSED(event)
 }
 
 void CreatePathTool::finishNewPath()

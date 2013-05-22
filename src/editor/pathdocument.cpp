@@ -81,11 +81,13 @@ void PathDocument::afterAddNode(WorldNode *node)
 
 void PathDocument::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
     lookup()->nodeRemoved(layer, node);
 }
 
 void PathDocument::afterMoveNode(WorldNode *node, const QPointF &prev)
 {
+    Q_UNUSED(prev)
     mLookup->nodeMoved(node);
 }
 
@@ -96,25 +98,34 @@ void PathDocument::afterAddPath(WorldPath *path)
 
 void PathDocument::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
+    Q_UNUSED(index)
     lookup()->pathRemoved(layer, path);
 }
 
 void PathDocument::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
+    Q_UNUSED(node)
     lookup()->pathChanged(path);
 }
 
 void PathDocument::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
+    Q_UNUSED(node)
     lookup()->pathChanged(path);
 }
 
 void PathDocument::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
 {
+    Q_UNUSED(path)
+    Q_UNUSED(index)
     lookup()->scriptAdded(script);
 }
 
 void PathDocument::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
+    Q_UNUSED(path)
+    Q_UNUSED(index)
     lookup()->scriptRemoved(script);
 }

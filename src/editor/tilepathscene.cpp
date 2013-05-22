@@ -176,6 +176,8 @@ int TilePathScene::currentLevel()
 
 void TilePathScene::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
 {
+    Q_UNUSED(index)
+    Q_UNUSED(script)
     if (path->nodeCount())
         mChunkMap->nodeMoved(path->first(), path->first()->pos() + QPoint(1,1));
 }

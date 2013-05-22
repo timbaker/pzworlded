@@ -348,12 +348,15 @@ void BasePathScene::afterAddNode(WorldNode *node)
 
 void BasePathScene::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
     nodeItem()->nodeRemoved(node);
     lookup()->nodeRemoved(layer, node);
 }
 
 void BasePathScene::afterMoveNode(WorldNode *node, const QPointF &prev)
 {
+    Q_UNUSED(node)
+    Q_UNUSED(prev)
 }
 
 void BasePathScene::afterAddPath(WorldPath *path)
@@ -364,18 +367,23 @@ void BasePathScene::afterAddPath(WorldPath *path)
 
 void BasePathScene::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
+    Q_UNUSED(index)
     lookup()->pathRemoved(layer, path);
     nodeItem()->update();
 }
 
 void BasePathScene::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
+    Q_UNUSED(node)
     lookup()->pathChanged(path);
     nodeItem()->update();
 }
 
 void BasePathScene::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
+    Q_UNUSED(node)
     lookup()->pathChanged(path);
 }
 
@@ -560,7 +568,7 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         if (WorldNode *node = mScene->currentPathLayer()->node(mHoverNode)) {
             QPointF scenePos = mScene->renderer()->toScene(node->pos());
             if (exposed.contains(scenePos)) {
-                painter->setPen(QPen(QColor(0,128,0,128), 3 / mScene->document()->view()->zoomable()->scale()));
+                painter->setPen(QPen(QColor(0,128,0,200), 3 / mScene->document()->view()->zoomable()->scale()));
                 painter->setBrush(Qt::NoBrush);
                 painter->drawEllipse(scenePos, nodeRadius() * 1.25, nodeRadius() * 1.25);
             }

@@ -485,6 +485,8 @@ void WorldChunkMap::nodesMoved()
 
 void WorldChunkMap::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
 {
+    Q_UNUSED(path)
+    Q_UNUSED(index)
     if (mScriptChangeArea.isEmpty())
         QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
     mScriptChangeArea |= script->mRegion;

@@ -85,6 +85,7 @@ int ScriptParamModel::rowCount(const QModelIndex &parent) const
 
 int ScriptParamModel::columnCount(const QModelIndex &parent) const
 {
+    Q_UNUSED(parent)
     return 2;
 }
 
