@@ -1,3 +1,9 @@
+-- place-lot.lua
+
+function params()
+    return 'mapfile', 'pos'
+end
+
 function region()
     local info = MapInfo:get(script:value('mapfile'))
     if not info then return Region:new() end

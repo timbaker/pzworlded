@@ -207,6 +207,7 @@ void WorldLookup::pathRemoved(WorldPathLayer *layer, WorldPath *path)
 
 void WorldLookup::pathChanged(WorldPath *path)
 {
+    path->nodeMoved();
     mPathTree[mWorld->indexOf(path->layer())]->Move(path);
 }
 

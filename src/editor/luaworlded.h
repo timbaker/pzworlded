@@ -66,6 +66,7 @@ public:
 
     int nodeCount();
     LuaNode *nodeAt(int index);
+    void addNode(LuaNode *node);
 
     LuaWorld *mWorld;
     WorldPath *mPath;
@@ -77,6 +78,8 @@ class LuaPathLayer
 public:
     LuaPathLayer(LuaWorld *world, WorldPathLayer *layer);
     ~LuaPathLayer();
+
+    LuaPath *newPath();
 
     LuaWorld *mWorld;
     WorldPathLayer *mLayer;
@@ -90,6 +93,7 @@ public:
 
     QList<LuaNode*> nodes();
     QList<LuaPath*> paths();
+    LuaPathLayer *currentPathLayer();
 
     const char *value(const char *key);
 
@@ -126,6 +130,8 @@ public:
 
     void setLayer(WorldTileLayer *layer);
     void setTile(WorldTile *tile);
+    void setTileAlias(const char *name);
+    void setTileRule(const char *name);
 
     void erase(LuaPath *path);
     void erase(const QRect &r);

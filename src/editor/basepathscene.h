@@ -66,11 +66,10 @@ public:
     WorldNode *topmostNodeAt(const QPointF &scenePos);
 
     void nodeRemoved(WorldNode *node)
-    { mSelectedNodes.remove(node); }
+    { mSelectedNodes.remove(node); mHoverNode = InvalidId; }
 
     void redrawNode(id_t id);
 
-private:
     qreal nodeRadius() const;
 
 private:

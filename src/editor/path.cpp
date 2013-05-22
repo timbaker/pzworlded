@@ -17,7 +17,7 @@
 
 #include "path.h"
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
 // class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
 // Suddenly I'm getting a 'multiply-defined symbol' error.
@@ -749,6 +749,78 @@ QRegion polygonRegion(const QPolygonF &poly)
                 if (x1 < IMAGE_LEFT) x1 = IMAGE_LEFT;
                 if (x2 > IMAGE_RIGHT) x2 = IMAGE_RIGHT;
                 ret += QRect(x1 /*- IMAGE_LEFT*/, pixelY /*- IMAGE_TOP*/, x2 - x1 + 1, 1);
+            }
+        }
+    }
+
+    return ret;
+}
+
+#include <QBitmap>
+#include <QPainter>
+QBitmap polygonBitmap(const QPolygonF &poly)
+{
+    QRect r = poly.boundingRect().toAlignedRect();
+    QBitmap ret(r.width(), r.height());
+
+    int IMAGE_LEFT = r.left();
+    int IMAGE_RIGHT = r.right() + 1;
+    int IMAGE_TOP = r.top();
+    int IMAGE_BOT = r.bottom() + 1;
+    const int MAX_POLY_CORNERS = 10000;
+    int polyCorners = poly.size();
+
+    // public-domain code by Darel Rex Finley, 2007
+    // http://alienryderflex.com/polygon_fill/
+
+    int nodes, pixelY, i, j;
+    double nodeX[MAX_POLY_CORNERS];
+
+    QPainter painter(&ret);
+    ret.fill(Qt::color0);
+
+    //  Loop through the rows of the image.
+    for (pixelY = IMAGE_TOP; pixelY < IMAGE_BOT; pixelY++) {
+
+        double testY = pixelY + 0.5; // test tile centers
+
+        //  Build a list of nodes.
+        nodes = 0;
+        j = polyCorners - 1;
+        for (i = 0; i < polyCorners; i++) {
+            if ((poly[i].y() < testY && poly[j].y() >= testY)
+                    || (poly[j].y() < testY && poly[i].y() >= testY)) {
+                nodeX[nodes++] =
+                        (poly[i].x() + (testY - poly[i].y()) / (poly[j].y() - poly[i].y())
+                         * (poly[j].x() - poly[i].x()));
+            }
+            j = i;
+        }
+
+        //  Sort the nodes, via a simple “Bubble” sort.
+        i = 0;
+        while (i < nodes - 1) {
+            if (nodeX[i] > nodeX[i+1]) {
+                double swap = nodeX[i];
+                nodeX[i] = nodeX[i+1];
+                nodeX[i + 1]=swap;
+                if (i) i--;
+            }  else {
+                i++;
+            }
+        }
+
+        //  Fill the pixels between node pairs.
+        for (i = 0; i < nodes; i += 2) {
+            int x1 = nodeX[i], x2 = nodeX[i+1];
+            if (nodeX[i] - x1 > 0.5) ++x1; // test tile centers
+            if (nodeX[i+1] - x2 < 0.5) --x2; // test tile centers
+
+            if (x1 >= IMAGE_RIGHT) break;
+            if (x2 >= IMAGE_LEFT) {
+                if (x1 < IMAGE_LEFT) x1 = IMAGE_LEFT;
+                if (x2 > IMAGE_RIGHT) x2 = IMAGE_RIGHT;
+                painter.fillRect(x1 - IMAGE_LEFT, pixelY - IMAGE_TOP, x2 - x1 + 1, 1, Qt::color1);
             }
         }
     }

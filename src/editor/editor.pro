@@ -131,11 +131,12 @@ SOURCES += main.cpp\
     pathview.cpp \
     tilepathscene.cpp \
     worldchunkmap.cpp \
-    shadowworld.cpp \
     pathworld.cpp \
     pathtools.cpp \
     pathundoredo.cpp \
-    worldchanger.cpp
+    worldchanger.cpp \
+    scriptparamdialog.cpp \
+    scriptparammodel.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -222,12 +223,13 @@ HEADERS  += mainwindow.h \
     pathview.h \
     tilepathscene.h \
     worldchunkmap.h \
-    shadowworld.h \
     pathworld.h \
     pathtools.h \
     global.h \
     pathundoredo.h \
-    worldchanger.h
+    worldchanger.h \
+    scriptparamdialog.h \
+    scriptparammodel.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -245,7 +247,8 @@ FORMS    += mainwindow.ui \
     lotpackwindow.ui \
     fromtodialog.ui \
     unknowncolorsdialog.ui \
-    luaconsole.ui
+    luaconsole.ui \
+    scriptparamdialog.ui
 
 OTHER_FILES += luatiled.pkg
 

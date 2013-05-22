@@ -84,6 +84,7 @@ public:
     class TileSink
     {
     public:
+        virtual QRect bounds() = 0;
         virtual void putTile(int x, int y, WorldTile *tile) = 0;
         virtual WorldTile *getTile(int x, int y) = 0;
     };
@@ -92,6 +93,22 @@ public:
     QString mName;
     int mLevel;
     QList<TileSink*> mSinks;
+};
+
+class WorldTileAlias
+{
+public:
+    QString mName;
+    TileList mTiles;
+};
+
+class WorldTileRule
+{
+public:
+    QString mName;
+    TileList mTiles;
+    QString mLayer;
+    WorldTileRule *mCondition;
 };
 
 class WorldScript
@@ -103,6 +120,7 @@ public:
     QMap<QString,QString> mParams;
     QList<WorldPath*> mPaths;
     QList<WorldNode*> mNodes;
+    WorldPathLayer *mCurrentPathLayer; // FIXME
     QRegion mRegion;
 };
 
@@ -161,7 +179,28 @@ public:
     int tilesetCount() const
     { return mTilesets.size(); }
 
+    void addTileAlias(WorldTileAlias *alias)
+    {
+        mTileAliases += alias;
+        mTileAliasByName[alias->mName] = alias;
+    }
+    WorldTileAlias *tileAlias(const QString &name)
+    {
+        return mTileAliasByName.contains(name) ? mTileAliasByName[name] : 0;
+    }
+
+    void addTileRule(WorldTileRule *rule)
+    {
+        mTileRules += rule;
+        mTileRuleByName[rule->mName] = rule;
+    }
+    WorldTileRule *tileRule(const QString &name)
+    {
+        return mTileRuleByName.contains(name) ? mTileRuleByName[name] : 0;
+    }
+
     WorldTile *tile(const QString &tilesetName, int index);
+    WorldTile *tile(const QString &tileName);
 
     void initClone(PathWorld *clone);
 
@@ -174,6 +213,13 @@ protected:
 
     QList<WorldTileLayer*> mTileLayers;
     QMap<QString,WorldTileLayer*> mTileLayerByName;
+
+    AliasList mTileAliases;
+    QMap<QString,WorldTileAlias*> mTileAliasByName;
+
+    TileRuleList mTileRules;
+    QMap<QString,WorldTileRule*> mTileRuleByName;
+
 
     QList<WorldPathLayer*> mPathLayers;
     QList<WorldScript*> mScripts;

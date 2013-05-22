@@ -78,7 +78,7 @@
 #include <QUndoGroup>
 #include <QUndoStack>
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
 // class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
 // Suddenly I'm getting a 'multiply-defined symbol' error.
@@ -98,6 +98,7 @@ MainWindow *MainWindow::instance()
 }
 
 #include "basepathrenderer.h"
+#include "bmpblender.h"
 #include "isopathscene.h"
 #include "luatiled.h"
 #include "osmfile.h"
@@ -107,6 +108,7 @@ MainWindow *MainWindow::instance()
 #include "pathdocument.h"
 #include "pathtools.h"
 #include "pathworld.h"
+#include "scriptparamdialog.h"
 static QString script(const char *name)
 {
 #if 1
@@ -263,6 +265,50 @@ static void testPathDocument()
         newWorld->insertTileset(newWorld->tilesetCount(), wts);
     }
     TileMetaInfoMgr::instance()->loadTilesets();
+
+    Tiled::Internal::BmpRulesFile file;
+    if (file.read(QCoreApplication::applicationDirPath() + QLatin1Char('/')
+                  + QLatin1String("Rules.txt"))) {
+        foreach (Tiled::BmpAlias *alias, file.aliases()) {
+            WorldTileAlias *tileAlias = new WorldTileAlias;
+            tileAlias->mName = alias->name;
+            foreach (QString tileName, alias->tiles) {
+                if (WorldTile *wtile = newWorld->tile(tileName)) {
+                    tileAlias->mTiles += wtile;
+                }
+            }
+            newWorld->addTileAlias(tileAlias);
+        }
+
+        QMap<QRgb,Tiled::BmpRule*> ruleByColor;
+        TileRuleList wrules;
+        for (int i = 0; i < file.rules().size(); i++) {
+            BmpRule *rule = file.rules()[i];
+            WorldTileRule *wrule = new WorldTileRule;
+            wrule->mName = rule->label.isEmpty() ? QString::fromLatin1("Rule %1").arg(i) : rule->label;
+            wrule->mLayer = rule->targetLayer;
+            foreach (QString tileOrAlias, rule->tileChoices) {
+                if (WorldTileAlias *alias = newWorld->tileAlias(tileOrAlias))
+                    wrule->mTiles += alias->mTiles;
+                else if (WorldTile *wtile = newWorld->tile(tileOrAlias))
+                    wrule->mTiles += wtile;
+            }
+            wrule->mCondition = 0;
+            ruleByColor[rule->color] = rule;
+            newWorld->addTileRule(wrule);
+            wrules += wrule;
+        }
+
+        for (int i = 0; i < file.rules().size(); i++) {
+            Tiled::BmpRule *rule = file.rules()[i];
+            if (rule->condition != qRgb(0,0,0)) {
+                if (ruleByColor.contains(rule->condition)) {
+                    int n = file.rules().indexOf(ruleByColor[rule->condition]);
+                    wrules[i]->mCondition = wrules[n];
+                }
+            }
+        }
+    }
 
 #else
     WorldPath::Node *n1 = new WorldPath::Node(1, 10, 10);
@@ -446,7 +492,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionSwitchOrthoIso, SIGNAL(triggered()), SLOT(switchOrthoIso()));
     connect(ui->actionPathAlign, SIGNAL(triggered()), SLOT(pathAlign()));
-    connect(ui->actionAddScriptToPath, SIGNAL(triggered()), SLOT(addScriptToPath()));
+    {
+        ui->menuAdd_Script->clear();
+        ui->menuAdd_Script->addAction(QLatin1String("fill-tile-alias.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("fill-tile-rule.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("hayfield.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("park.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("road.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("row-of-houses.lua"), this, SLOT(addScriptToPath()));
+    }
+    connect(ui->actionPathFromNodes, SIGNAL(triggered()), SLOT(pathFromNodes()));
+    connect(ui->actionScriptParams, SIGNAL(triggered()), SLOT(scriptParameters()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
@@ -2046,15 +2102,15 @@ void MainWindow::pathAlign()
         WorldScript ws;
         ws.mFileName = ::script("path-align.lua");
         ws.mPaths = doc->view()->scene()->selectedPaths().toList();
-
         ws.mNodes = doc->view()->scene()->nodeItem()->selectedNodes().toList();
+        ws.mCurrentPathLayer = doc->view()->scene()->currentPathLayer();
 
         Lua::LuaScript ls(doc->world(), &ws);
         if (!ls.runFunction("run"))
             return;
 
         if (ls.mChanger->changeCount()) {
-            doc->undoStack()->beginMacro(tr("Lua Script"));
+            doc->undoStack()->beginMacro(tr("Align Nodes"));
             foreach (WorldChange *change, ls.mChanger->takeChanges()) {
                 change->setChanger(doc->changer());
                 doc->undoStack()->push(new WorldChangeUndoCommand(change));
@@ -2066,17 +2122,19 @@ void MainWindow::pathAlign()
 
 void MainWindow::addScriptToPath()
 {
+    QAction *sender = (QAction*)QObject::sender();
+
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
         foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
             WorldScript *ws = new WorldScript;
-            ws->mFileName = ::script("hayfield.lua");
+            ws->mFileName = ::script(sender->text().toLatin1().constData());
             ws->mPaths += path;
             ws->mRegion = path->region();
             doc->changer()->doAddScriptToPath(path, path->scriptCount(), ws);
         }
         // FIXME: just give me the WorldChange object
         if (doc->changer()->changeCount()) {
-            doc->undoStack()->beginMacro(tr("Lua Script"));
+            doc->undoStack()->beginMacro(tr("Add Script To Path"));
             foreach (WorldChange *change, doc->changer()->takeChanges()) {
                 doc->undoStack()->push(new WorldChangeUndoCommand(change));
             }
@@ -2084,3 +2142,58 @@ void MainWindow::addScriptToPath()
         }
     }
 }
+
+void MainWindow::pathFromNodes()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        WorldScript ws;
+        ws.mFileName = ::script("path-from-nodes.lua");
+        ws.mPaths = doc->view()->scene()->selectedPaths().toList();
+        ws.mNodes = doc->view()->scene()->nodeItem()->selectedNodes().toList();
+        ws.mCurrentPathLayer = doc->view()->scene()->currentPathLayer();
+
+        Lua::LuaScript ls(doc->world(), &ws);
+        if (!ls.runFunction("run"))
+            return;
+
+        if (ls.mChanger->changeCount()) {
+            doc->undoStack()->beginMacro(tr("Path From Nodes"));
+            foreach (WorldChange *change, ls.mChanger->takeChanges()) {
+                change->setChanger(doc->changer());
+                doc->undoStack()->push(new WorldChangeUndoCommand(change));
+            }
+            doc->undoStack()->endMacro();
+        }
+    }
+}
+
+void MainWindow::scriptParameters()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        PathList paths = doc->view()->scene()->selectedPaths().toList();
+        if (paths.size()) {
+            WorldPath *path = paths.first();
+
+            // Get the up-to-date list of parameter names from the script.
+            foreach (WorldScript *ws, path->scripts()) {
+                Lua::LuaScript ls(doc->world(), ws);
+                if (ls.runFunction("params")) {
+                    QStringList params;
+                    if (ls.getResultStrings(params)) {
+                        foreach (QString key, params) {
+                            if (!ws->mParams.contains(key))
+                                ws->mParams[key] = QString();
+                        }
+                    }
+                }
+            }
+
+            ScriptParametersDialog dialog(path->scripts(), this);
+            if (dialog.exec() != QDialog::Accepted)
+                return;
+
+            // class ChangeScriptParameters : public WorldChange
+        }
+    }
+}
+

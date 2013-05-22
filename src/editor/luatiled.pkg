@@ -256,12 +256,19 @@ class LuaPath @ Path
 
     int nodeCount();
     LuaNode *nodeAt(int index);
+    void addNode(LuaNode *node);
+};
+
+class LuaPathLayer @ PathLayer
+{
+    LuaPath *newPath();
 };
 
 class LuaWorldScript @ WorldScript
 {
     list<LuaPath*> paths();
     list<LuaNode*> nodes();
+    LuaPathLayer *currentPathLayer();
     const char *value(const char *key);
 };
 
@@ -277,6 +284,8 @@ class LuaTilePainter @ TilePainter
 public:
     void setLayer(WorldTileLayer *layer);
     void setTile(WorldTile *tile);
+    void setTileAlias(const char *alias);
+    void setTileRule(const char *rule);
 
     void erase @ erasePath(LuaPath *path);
     void erase @ eraseRect(const QRect &r);

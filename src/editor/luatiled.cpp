@@ -309,11 +309,12 @@ bool LuaScript::runFunction(const char *name)
         status = lua_pcall(L, 0, 0, base);
         if (status == LUA_OK) {
             lua_getglobal(L, name);
-            status = lua_pcall(L, 0, 1, base);
+            status = lua_pcall(L, 0, LUA_MULTRET, base);
         }
         lua_remove(L, base);
     }
-    output = QString::fromLatin1(lua_tostring(L, -1));
+    if (status != LUA_OK)
+        output = QString::fromLatin1(lua_tostring(L, -1));
     LuaConsole::instance()->write(output, (status == LUA_OK) ? Qt::black : Qt::red);
     if (elapsed.elapsed() > 1000)
         LuaConsole::instance()->write(qApp->tr("---------- script completed in %1s ----------")
@@ -340,6 +341,16 @@ bool LuaScript::getResultRegion(QRegion &rgn)
         return true;
     }
     return false;
+}
+
+bool LuaScript::getResultStrings(QStringList &strings)
+{
+    strings.clear();
+    for (int i = 1; i <= lua_gettop(L); i++) {
+        if (!lua_isstring(L,i)) return false;
+        strings += QLatin1String(lua_tostring(L,i));
+    }
+    return true;
 }
 
 /////

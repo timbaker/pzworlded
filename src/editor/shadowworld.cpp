@@ -90,6 +90,7 @@ public:
 class WorldChange
 {
 public:
+    virtual ~WorldChange() {}
     virtual void apply(ShadowWorld *world) = 0;
 };
 

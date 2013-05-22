@@ -21,7 +21,10 @@
 #include <QRect>
 #include <QRegion>
 
+class MapInfo;
 class PathWorld;
+class WorldTileAlias;
+class WorldTileRule;
 class WorldPath;
 class WorldTile;
 class WorldTileLayer;
@@ -38,6 +41,8 @@ public:
     void setLayer(WorldTileLayer *layer);
 
     void setTile(WorldTile *tile);
+    void setTileAlias(WorldTileAlias *alias);
+    void setTileRule(WorldTileRule *rule);
 
     void erase(int x, int y, int width, int height);
     void erase(const QRect &r);
@@ -53,6 +58,8 @@ public:
     void fillPath(WorldPath *path);
     void tracePath(WorldPath *path, qreal offset);
 
+    void drawMap(int wx, int wy, MapInfo *mapInfo);
+
     void noClip();
     void setClip(const QRect &rect);
     void setClip(WorldPath *path);
@@ -64,6 +71,8 @@ private:
     PathWorld *mWorld;
     WorldTileLayer *mLayer;
     WorldTile *mTile;
+    WorldTileAlias *mTileAlias;
+    WorldTileRule *mTileRule;
 
     enum ClipType
     {

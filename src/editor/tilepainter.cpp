@@ -17,13 +17,23 @@
 
 #include "tilepainter.h"
 
+#include "mapmanager.h"
 #include "path.h"
 #include "pathworld.h"
+
+#include "map.h"
+#include "tile.h"
+#include "tileset.h"
+#include "tilelayer.h"
+
+#include <QDebug>
 
 TilePainter::TilePainter(PathWorld *world) :
     mWorld(world),
     mLayer(0),
     mTile(0),
+    mTileAlias(0),
+    mTileRule(0),
     mClipType(ClipNone),
     mClipPath(0)
 {
@@ -37,6 +47,23 @@ void TilePainter::setLayer(WorldTileLayer *layer)
 void TilePainter::setTile(WorldTile *tile)
 {
     mTile = tile;
+    mTileAlias = 0;
+    mTileRule = 0;
+}
+
+void TilePainter::setTileAlias(WorldTileAlias *alias)
+{
+    mTile = 0;
+    mTileAlias = alias;
+    mTileRule = 0;
+}
+
+void TilePainter::setTileRule(WorldTileRule *rule)
+{
+    mTile = 0;
+    mTileAlias = 0;
+    mTileRule = rule;
+    mLayer = rule ? mWorld->tileLayer(rule->mLayer) : 0;
 }
 
 void TilePainter::erase(int x, int y, int width, int height)
@@ -76,11 +103,23 @@ void TilePainter::fill(int x, int y, int width, int height)
     if (!mLayer)
         return;
 
+    WorldTileLayer *conditionLayer = (mTileRule && mTileRule->mCondition) ?
+                mWorld->tileLayer(mTileRule->mCondition->mLayer) : 0;
+
     for (int x1 = x; x1 < x + width; x1++) {
         for (int y1 = y; y1 < y + height; y1++) {
             if (mClipType == ClipRegion && !mClipRegion.contains(QPoint(x1, y1)))
                 continue;
-            mLayer->putTile(x1, y1, mTile);
+            if (mTileRule) {
+                if (false && conditionLayer) {
+                    if (mTileRule->mCondition->mTiles.contains(conditionLayer->getTile(x1, y1)))
+                        continue;
+                }
+                mLayer->putTile(x1, y1, mTileRule->mTiles[qrand() % mTileRule->mTiles.size()]);
+            } else if (mTileAlias)
+                mLayer->putTile(x1, y1, mTileAlias->mTiles[qrand() % mTileAlias->mTiles.size()]);
+            else
+                mLayer->putTile(x1, y1, mTile);
         }
     }
 }
@@ -96,9 +135,60 @@ void TilePainter::fill(const QRegion &rgn)
         fill(r);
 }
 
+#include <QBitmap>
+#include <QElapsedTimer>
 void TilePainter::fill(WorldPath *path)
 {
-    fill(path->region());
+#if 0
+    QBitmap b = polygonBitmap(path->polygon());
+    QRect r = path->bounds().toAlignedRect();
+    for (int x1 = r.x(); x1 < r.x() + r.width(); x1++) {
+        for (int y1 = r.y(); y1 < r.y() + r.height(); y1++) {
+            if (mClipType == ClipRegion && !mClipRegion.contains(QPoint(x1, y1)))
+                continue;
+            if (b.)
+            if (mTileRule) {
+                if (false && conditionLayer) {
+                    if (mTileRule->mCondition->mTiles.contains(conditionLayer->getTile(x1, y1)))
+                        continue;
+                }
+                mLayer->putTile(x1, y1, mTileRule->mTiles[qrand() % mTileRule->mTiles.size()]);
+            } else if (mTileAlias)
+                mLayer->putTile(x1, y1, mTileAlias->mTiles[qrand() % mTileAlias->mTiles.size()]);
+            else
+                mLayer->putTile(x1, y1, mTile);
+        }
+    }
+#else
+    QElapsedTimer timer;
+    timer.start();
+    QRegion region = path->region();
+
+    // Don't call QRegion:contains() for every tile location, it's too slow!
+    ClipType clipType = mClipType;
+    if (mClipType == ClipRegion) {
+        region &= mClipRegion;
+        mClipType = ClipNone;
+    }
+
+    // Clip to tile sink bounds
+    if (mLayer) {
+        QRegion sinkRgn;
+        foreach (WorldTileLayer::TileSink *sink, mLayer->mSinks)
+            sinkRgn |= sink->bounds();
+        region &= sinkRgn;
+    }
+
+    qint64 elapsed = timer.elapsed();
+    if (elapsed > 100) qDebug() << "TilePainter::fill(WorldPath) REGION took" << elapsed << "ms!";
+    timer.restart();
+    fill(region);
+    if (timer.elapsed() > 100) qDebug() << "TilePainter::fill(WorldPath) FILL took" << timer.elapsed() << "ms!" << "(#rects=" << region.rectCount() << ")";
+
+    // Re-enable clipping region
+    if (clipType == ClipRegion)
+        mClipType = ClipRegion;
+#endif
 }
 
 void TilePainter::strokePath(WorldPath *path, qreal thickness)
@@ -160,6 +250,57 @@ void TilePainter::tracePath(WorldPath *path, qreal offset)
             fill(QRect(p1.x(), p1.y(), p2.x() - p1.x(), 1).normalized());
         }
     }
+}
+
+void TilePainter::drawMap(int wx, int wy, MapInfo *mapInfo)
+{
+    if (!mapInfo || !mapInfo->map() || !mapInfo->map()->tileLayerCount())
+        return;
+
+    WorldTileAlias *alias = mTileAlias;
+    mTileAlias = 0;
+
+    // This is the classic map composition mode.
+    // If the map has a tile in 0_Floor, then erase all other layers/
+    // If the map doesn't have a tile in 0_Floor, then erase all other layers
+    // whose name doesn't start with 0_Floor.
+    int n = mapInfo->map()->indexOfLayer(QLatin1String("0_Floor"), Tiled::Layer::TileLayerType);
+    if (n >= 0) {
+        Tiled::TileLayer *tl = mapInfo->map()->layerAt(n)->asTileLayer();
+        QRegion floorRegion = tl->region().translated(wx, wy);
+        foreach (WorldTileLayer *wtl, world()->tileLayers()) {
+            if (wtl->mName.startsWith(QLatin1String("0_"))) {
+                setLayer(wtl);
+                erase(floorRegion);
+            }
+        }
+        QRegion nonFloorRegion = QRegion(mapInfo->bounds()) - floorRegion;
+        nonFloorRegion.translate(wx, wy);
+        foreach (WorldTileLayer *wtl, world()->tileLayers()) {
+            if (!wtl->mName.startsWith(QLatin1String("0_Floor"))) {
+                setLayer(wtl);
+                erase(nonFloorRegion);
+            }
+        }
+    }
+
+    foreach (Tiled::TileLayer *tl, mapInfo->map()->tileLayers()) {
+        if (WorldTileLayer *wtl = world()->tileLayer(tl->name())) {
+            setLayer(wtl);
+            for (int y = 0; y < tl->height(); y++) {
+                for (int x = 0; x < tl->width(); x++) {
+                    Tiled::Tile *tile = tl->cellAt(x, y).tile;
+                    if (!tile) continue;
+                    if (WorldTileset *wts = world()->tileset(tile->tileset()->name())) { // FIXME: slow
+                        setTile(wts->tileAt(tile->id())); // FIXME: assumes valid tile id
+                        fill(wx + x, wy + y, 1, 1);
+                    }
+                }
+            }
+        }
+    }
+
+    mTileAlias = alias;
 }
 
 void TilePainter::noClip()

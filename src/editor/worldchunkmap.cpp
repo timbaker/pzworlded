@@ -98,7 +98,6 @@ void WorldChunk::LoadForLater(int wx, int wy)
     qDebug() << QString::fromLatin1("Running scripts (%1) #paths=%2").arg(scripts.size())/*.arg(paths.size())*/;
 
     foreach (WorldScript *ws, scripts) {
-        QRect b = ws->mRegion.boundingRect();
         Tiled::Lua::LuaScript ls(mChunkMap->mWorld, ws);
         ls.runFunction("run");
     }
@@ -166,6 +165,14 @@ public:
 
     }
 
+    QRect bounds()
+    {
+        return QRect(mChunkMap->getWorldXMinTiles(),
+                     mChunkMap->getWorldYMinTiles(),
+                     mChunkMap->getWidthInTiles(),
+                     mChunkMap->getWidthInTiles());
+    }
+
     void putTile(int x, int y, WorldTile *tile)
     {
         WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->mLevel);
@@ -191,7 +198,10 @@ public:
 
     WorldTile *getTile(int x, int y)
     {
-        return 0; // FIXME
+        WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->mLevel);
+        if (sq && (mLayerIndex < sq->tiles.size()))
+            return sq->tiles[mLayerIndex];
+        return 0;
     }
 
     WorldChunkMap *mChunkMap;

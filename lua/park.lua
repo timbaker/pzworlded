@@ -1,3 +1,7 @@
+function params()
+    return
+end
+
 function region()
     -- print('park.lua:region')
     return script:paths()[1]:region()

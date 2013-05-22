@@ -22,16 +22,18 @@
 #include "path.h"
 #include "pathdocument.h"
 #include "pathtools.h"
+#include "pathview.h"
 #include "pathworld.h"
 #include "worldchanger.h"
 #include "worldlookup.h"
+#include "zoomable.h"
 
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
 // class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
 // Suddenly I'm getting a 'multiply-defined symbol' error.
@@ -300,22 +302,22 @@ QList<WorldPath*> BasePathScene::lookupPaths(const QRectF &sceneRect)
 
 #include <QVector2D>
 float minimum_distance(QVector2D v, QVector2D w, QVector2D p) {
-  // Return minimum distance between line segment vw and point p
+    // Return minimum distance between line segment vw and point p
     const qreal l2 = (v - w).lengthSquared();  // i.e. |w-v|^2 -  avoid a sqrt
     if (l2 == 0.0) return (p - v).length();   // v == w case
-  // Consider the line extending the segment, parameterized as v + t (w - v).
-  // We find projection of point p onto the line.
-  // It falls where t = [(p-v) . (w-v)] / |w-v|^2
-  const qreal t = QVector2D::dotProduct(p - v, w - v) / l2;
-  if (t < 0.0) return (p - v).length();       // Beyond the 'v' end of the segment
-  else if (t > 1.0) return (p - w).length();  // Beyond the 'w' end of the segment
-  const QVector2D projection = v + t * (w - v);  // Projection falls on the segment
-  return (p - projection).length();
+    // Consider the line extending the segment, parameterized as v + t (w - v).
+    // We find projection of point p onto the line.
+    // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+    const qreal t = QVector2D::dotProduct(p - v, w - v) / l2;
+    if (t < 0.0) return (p - v).length();       // Beyond the 'v' end of the segment
+    else if (t > 1.0) return (p - w).length();  // Beyond the 'w' end of the segment
+    const QVector2D projection = v + t * (w - v);  // Projection falls on the segment
+    return (p - projection).length();
 }
 
 WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
 {
-    qreal radius = 3;
+    qreal radius = 4 / document()->view()->zoomable()->scale();
     QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
     QList<WorldPath*> paths = lookup()->paths(currentPathLayer(),
                                               renderer()->toWorld(sceneRect));
@@ -329,9 +331,9 @@ WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
             QVector2D v(mRenderer->toScene(path->nodes[i]->p));
             QVector2D w(mRenderer->toScene(path->nodes[i+1]->p));
             qreal dist = minimum_distance(v, w, p);
-            if (dist <= radius && dist < min) {
+            if (dist <= radius && dist <= min) {
                 min = dist;
-                closest = path;
+                closest = path; // get the topmost path
             }
         }
     }
@@ -479,27 +481,31 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             }
 #endif
             if (mScene->selectedPaths().contains(path)) {
-                painter->setPen(QPen(Qt::blue, 4));
+                painter->setPen(QPen(Qt::blue, 4 / painter->worldMatrix().m22()));
                 painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
             }
 
             if (mScene->mHighlightPath == path) {
-                painter->setPen(QPen(Qt::green, 4));
+                painter->setPen(QPen(Qt::green, 4 / painter->worldMatrix().m22()));
 
                 QPolygonF fwd, bwd;
                 offsetPath(path, 0.5, fwd, bwd);
 
+                qreal radius = mScene->nodeItem()->nodeRadius();
+
                 fwd = mScene->renderer()->toScene(fwd, mLayer->level());
                 painter->drawPolyline(fwd);
                 foreach (QPointF p, fwd)
-                    painter->drawEllipse(p, 2, 2);
+                    painter->drawEllipse(p, radius, radius);
                 bwd = mScene->renderer()->toScene(bwd, mLayer->level());
                 painter->drawPolyline(bwd);
                 foreach (QPointF p, bwd)
-                    painter->drawEllipse(p, 2, 2);
+                    painter->drawEllipse(p, radius, radius);
             }
         }
     }
+
+    return;
 
     painter->setPen(Qt::NoPen);
     painter->setBrush(QColor(0,64,0,128));
@@ -531,7 +537,8 @@ QRectF NodesItem::boundingRect() const
 
 void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
-    if (!mScene->isTile() && painter->worldMatrix().m22() < 1) return;
+    if (!mScene->isTile() && painter->worldMatrix().m22() < 0.75) return;
+    if (mScene->isTile() && painter->worldMatrix().m22() < 0.10) return;
 
     QRectF exposed = option->exposedRect.adjusted(-nodeRadius(), -nodeRadius(),
                                                   nodeRadius(), nodeRadius());
@@ -553,8 +560,9 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         if (WorldNode *node = mScene->currentPathLayer()->node(mHoverNode)) {
             QPointF scenePos = mScene->renderer()->toScene(node->pos());
             if (exposed.contains(scenePos)) {
-                painter->setBrush(QColor(0,128,128,128));
-                painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+                painter->setPen(QPen(QColor(0,128,0,128), 3 / mScene->document()->view()->zoomable()->scale()));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawEllipse(scenePos, nodeRadius() * 1.25, nodeRadius() * 1.25);
             }
         }
     }
@@ -603,13 +611,12 @@ void NodesItem::redrawNode(id_t id)
 {
     if (WorldNode *node = mScene->currentPathLayer()->node(id)) {
         QPointF scenePos = mScene->renderer()->toScene(node->pos());
-        update(scenePos.x() - nodeRadius(), scenePos.y() - nodeRadius(),
-               nodeRadius() * 2, nodeRadius() * 2);
+        update(scenePos.x() - nodeRadius() * 2, scenePos.y() - nodeRadius() * 2,
+               nodeRadius() * 4, nodeRadius() * 4);
     }
 }
 
 qreal NodesItem::nodeRadius() const
 {
-    if (mScene->isTile()) return 8;
-    return 2;
+    return 6 / mScene->document()->view()->zoomable()->scale();
 }

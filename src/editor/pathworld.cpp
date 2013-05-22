@@ -19,7 +19,9 @@
 
 #include "path.h"
 
-#ifdef Q_OS_WIN
+#include "BuildingEditor/buildingtiles.h"
+
+#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
 // class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
 // Suddenly I'm getting a 'multiply-defined symbol' error.
@@ -139,6 +141,15 @@ WorldTile *PathWorld::tile(const QString &tilesetName, int index)
 {
     if (WorldTileset *ts = tileset(tilesetName))
         return ts->tileAt(index);
+    return 0;
+}
+
+WorldTile *PathWorld::tile(const QString &tileName)
+{
+    QString tilesetName;
+    int index;
+    if (BuildingEditor::BuildingTilesMgr::parseTileName(tileName, tilesetName, index))
+        return tile(tilesetName, index);
     return 0;
 }
 

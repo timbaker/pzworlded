@@ -125,6 +125,7 @@ public:
 QPolygonF strokePath(WorldPath *path, qreal thickness);
 void offsetPath(WorldPath *path, qreal offset, QPolygonF &fwd, QPolygonF &bwd);
 QRegion polygonRegion(const QPolygonF &poly);
+QBitmap polygonBitmap(const QPolygonF &poly);
 
 class WorldPathLayer
 {

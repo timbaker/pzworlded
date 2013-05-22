@@ -374,6 +374,7 @@ public:
 
     bool runFunction(const char *name);
     bool getResultRegion(QRegion &rgn);
+    bool getResultStrings(QStringList &strings);
 
     lua_State *L;
     PathWorld *mWorld;

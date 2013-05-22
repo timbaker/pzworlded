@@ -110,6 +110,12 @@ LuaNode *LuaPath::nodeAt(int index)
     return mWorld->luaNode(mPath->nodeAt(index));
 }
 
+void LuaPath::addNode(LuaNode *node)
+{
+    if (mPath->mLayer != node->mNode->layer) return; // error!
+    mWorld->mChanger->doAddNodeToPath(mPath, mPath->nodeCount(), node->mNode);
+}
+
 /////
 
 LuaPathLayer::LuaPathLayer(LuaWorld *world, WorldPathLayer *layer) :
@@ -120,6 +126,13 @@ LuaPathLayer::LuaPathLayer(LuaWorld *world, WorldPathLayer *layer) :
 
 LuaPathLayer::~LuaPathLayer()
 {
+}
+
+LuaPath *LuaPathLayer::newPath()
+{
+    WorldPath *path = mWorld->mWorld->allocPath();
+    mWorld->mChanger->doAddPath(mLayer, mLayer->pathCount(), path);
+    return mWorld->luaPath(path);
 }
 
 /////
@@ -152,6 +165,11 @@ QList<LuaPath *> LuaWorldScript::paths()
     return paths;
 }
 
+LuaPathLayer *LuaWorldScript::currentPathLayer()
+{
+    return mWorld->luaPathLayer(mWorldScript->mCurrentPathLayer);
+}
+
 const char *LuaWorldScript::value(const char *key)
 {
     if (mWorldScript->mParams.contains(QLatin1String(key)))
@@ -169,6 +187,9 @@ LuaWorld::LuaWorld(PathWorld *world, WorldChanger *changer) :
 
 LuaWorld::~LuaWorld()
 {
+    qDeleteAll(mPathLayers);
+    qDeleteAll(mPaths);
+    qDeleteAll(mNodes);
 }
 
 WorldTile *LuaWorld::tile(const char *tilesetName, int id)
@@ -199,6 +220,15 @@ LuaPath *LuaWorld::luaPath(WorldPath *path)
     return mPaths[path];
 }
 
+LuaPathLayer *LuaWorld::luaPathLayer(WorldPathLayer *layer)
+{
+    if (!layer) return 0;
+    if (mPathLayers.contains(layer))
+        return mPathLayers[layer];
+    mPathLayers[layer] = new LuaPathLayer(this, layer);
+    return mPathLayers[layer];
+}
+
 /////
 
 LuaTilePainter::LuaTilePainter(TilePainter *painter) :
@@ -215,6 +245,22 @@ void LuaTilePainter::setLayer(WorldTileLayer *layer)
 void LuaTilePainter::setTile(WorldTile *tile)
 {
     mPainter->setTile(tile);
+}
+
+void LuaTilePainter::setTileAlias(const char *name)
+{
+    if (!name || !name[0])
+        mPainter->setTileAlias(0);
+    else
+        mPainter->setTileAlias(mPainter->world()->tileAlias(QLatin1String(name)));
+}
+
+void LuaTilePainter::setTileRule(const char *name)
+{
+    if (!name || !name[0])
+        mPainter->setTileRule(0);
+    else
+        mPainter->setTileRule(mPainter->world()->tileRule(QLatin1String(name)));
 }
 
 void LuaTilePainter::erase(LuaPath *path)
@@ -252,6 +298,9 @@ void LuaTilePainter::drawMap(int wx, int wy, LuaMapInfo *mapInfo)
     if (mapInfo && !mapInfo->mMapInfo->map()) {
         MapManager::instance()->loadMap(mapInfo->mMapInfo->path());
     }
+#if 1
+    mPainter->drawMap(wx, wy, mapInfo->mMapInfo);
+#else
     if (!mapInfo || !mapInfo->mMapInfo->map() || !mapInfo->mMapInfo->map()->tileLayerCount())
         return;
 
@@ -270,6 +319,7 @@ void LuaTilePainter::drawMap(int wx, int wy, LuaMapInfo *mapInfo)
             }
         }
     }
+#endif
 }
 
 /////

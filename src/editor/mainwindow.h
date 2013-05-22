@@ -144,6 +144,8 @@ public slots:
     void switchOrthoIso();
     void pathAlign();
     void addScriptToPath();
+    void pathFromNodes();
+    void scriptParameters();
 
 private:
     void FromToAux(bool selectedOnly);

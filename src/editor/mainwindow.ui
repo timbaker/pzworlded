@@ -299,8 +299,17 @@
     <property name="title">
      <string>Path</string>
     </property>
+    <widget class="QMenu" name="menuAdd_Script">
+     <property name="title">
+      <string>Add Script</string>
+     </property>
+     <addaction name="actionPlaceholder"/>
+    </widget>
     <addaction name="actionPathAlign"/>
-    <addaction name="actionAddScriptToPath"/>
+    <addaction name="menuAdd_Script"/>
+    <addaction name="actionPathFromNodes"/>
+    <addaction name="separator"/>
+    <addaction name="actionScriptParams"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -725,9 +734,19 @@
     <string>A</string>
    </property>
   </action>
-  <action name="actionAddScriptToPath">
+  <action name="actionPathFromNodes">
    <property name="text">
-    <string>Add Script</string>
+    <string>Path From Nodes</string>
+   </property>
+  </action>
+  <action name="actionPlaceholder">
+   <property name="text">
+    <string>Placeholder</string>
+   </property>
+  </action>
+  <action name="actionScriptParams">
+   <property name="text">
+    <string>Script Parameters...</string>
    </property>
   </action>
  </widget>
