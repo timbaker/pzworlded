@@ -166,11 +166,15 @@ public:
 signals:
     void tilePositionChanged(const QPoint &tilePos);
 
+private slots:
+    void recenter();
+
 private:
     LotPackScene *mScene;
     IsoWorld *mWorld;
     LotPackMiniMapItem *mMiniMapItem;
     QPoint mTilePos;
+    bool mRecenterScheduled;
 };
 
 class LotPackWindow : public QMainWindow

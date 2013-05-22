@@ -186,7 +186,7 @@ QRectF IsoWorldGridItem::boundingRect() const
 }
 
 void IsoWorldGridItem::paint(QPainter *painter,
-                             const QStyleOptionGraphicsItem *option,
+                             const QStyleOptionGraphicsItem *,
                              QWidget *)
 {
 #if 1
@@ -411,7 +411,8 @@ LotPackView::LotPackView(QWidget *parent) :
     BaseGraphicsView(true, parent),
     mScene(new LotPackScene(this)),
     mWorld(0),
-    mMiniMapItem(0)
+    mMiniMapItem(0),
+    mRecenterScheduled(false)
 {
     setScene(mScene);
 
@@ -449,6 +450,31 @@ void LotPackView::setWorld(IsoWorld *world)
 void LotPackView::scrollContentsBy(int dx, int dy)
 {
     BaseGraphicsView::scrollContentsBy(dx, dy);
+
+    if (!mRecenterScheduled) {
+        QMetaObject::invokeMethod(this, "recenter", Qt::QueuedConnection);
+        mRecenterScheduled = true;
+    }
+}
+
+#include <QMouseEvent>
+bool LotPackView::viewportEvent(QEvent *event)
+{
+    if (event->type() == QEvent::MouseMove && mScene && mScene->renderer()) {
+        QMouseEvent *e = dynamic_cast<QMouseEvent*>(event);
+        QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(mapToScene(e->pos()));
+        if (tilePos != mTilePos) {
+            mTilePos = tilePos;
+            emit tilePositionChanged(mTilePos);
+        }
+    }
+
+    return BaseGraphicsView::viewportEvent(event);
+}
+
+void LotPackView::recenter()
+{
+    mRecenterScheduled = false;
 
     QPointF p = mapToScene(viewport()->rect().center());
     QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(p);
@@ -532,21 +558,6 @@ void LotPackView::scrollContentsBy(int dx, int dy)
 
         mScene->setMaxLevel(mWorld->CurrentCell->MaxHeight);
     }
-}
-
-#include <QMouseEvent>
-bool LotPackView::viewportEvent(QEvent *event)
-{
-    if (event->type() == QEvent::MouseMove && mScene && mScene->renderer()) {
-        QMouseEvent *e = dynamic_cast<QMouseEvent*>(event);
-        QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(mapToScene(e->pos()));
-        if (tilePos != mTilePos) {
-            mTilePos = tilePos;
-            emit tilePositionChanged(mTilePos);
-        }
-    }
-
-    return BaseGraphicsView::viewportEvent(event);
 }
 
 /////
