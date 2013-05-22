@@ -298,9 +298,9 @@ public slots:
     
 private:
     uint cellToGid(const Tiled::Cell *cell);
-    void processObjectGroups(MapComposite *mapComposite);
-    void processObjectGroup(Tiled::ObjectGroup *objectGroup, int levelOffset,
-                            const QPoint &offset);
+    bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
+    bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup,
+                            int levelOffset, const QPoint &offset);
 
 private:
     Q_DISABLE_COPY(LotFilesManager)
