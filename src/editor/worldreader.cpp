@@ -29,7 +29,7 @@
 
 class WorldReaderPrivate
 {
-    Q_DECLARE_TR_FUNCTIONS(MapReader)
+    Q_DECLARE_TR_FUNCTIONS(WorldReaderPrivate)
 
 public:
     WorldReaderPrivate()

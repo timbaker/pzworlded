@@ -13,6 +13,7 @@ class WorldNode;
 class WorldPath;
 class WorldScript;
 class WorldTile;
+class WorldTileset;
 class WorldTileAlias;
 class WorldTileRule;
 
@@ -23,8 +24,11 @@ typedef QList<WorldPath*> PathList;
 typedef QSet<WorldPath*> PathSet;
 
 typedef QList<WorldScript*> ScriptList;
+typedef QSet<WorldScript*> ScriptSet;
 
 typedef QList<WorldTile*> TileList;
+typedef QList<WorldTileset*> TilesetList;
+
 typedef QList<WorldTileAlias*> AliasList;
 typedef QList<WorldTileRule*> TileRuleList;
 

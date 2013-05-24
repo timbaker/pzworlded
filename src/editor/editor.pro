@@ -136,7 +136,9 @@ SOURCES += main.cpp\
     pathundoredo.cpp \
     worldchanger.cpp \
     scriptparamdialog.cpp \
-    scriptparammodel.cpp
+    scriptparammodel.cpp \
+    pathworldwriter.cpp \
+    pathworldreader.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -229,7 +231,9 @@ HEADERS  += mainwindow.h \
     pathundoredo.h \
     worldchanger.h \
     scriptparamdialog.h \
-    scriptparammodel.h
+    scriptparammodel.h \
+    pathworldwriter.h \
+    pathworldreader.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

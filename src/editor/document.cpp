@@ -50,3 +50,8 @@ bool Document::isModified() const
 {
     return mUndoStack->isClean() == false;
 }
+
+QString Document::suffix() const
+{
+    return isPathDocument() ? QLatin1String(".pzp") : QLatin1String(".pzw");
+}

@@ -40,6 +40,7 @@
 #include "objectsdock.h"
 #include "objectgroupsdialog.h"
 #include "objecttypesdialog.h"
+#include "pathworldreader.h"
 #include "preferences.h"
 #include "preferencesdialog.h"
 #include "progress.h"
@@ -850,7 +851,7 @@ void MainWindow::openFile()
     QString filter = tr("All Files (*)");
     filter += QLatin1String(";;");
 
-    QString selectedFilter = tr("PZWorldEd world files (*.pzw)");
+    QString selectedFilter = tr("WorldEd tile-world (*.pzw);;WorldEd path-world (*.pzp)");
     filter += selectedFilter;
 
     QStringList fileNames =
@@ -881,18 +882,31 @@ bool MainWindow::openFile(const QString &fileName)
     QFileInfo fileInfo(fileName);
     PROGRESS progress(tr("Reading %1").arg(fileInfo.fileName()));
 
-    WorldReader reader;
-    World *world = reader.readWorld(fileName);
-    if (!world) {
-        QMessageBox::critical(this, tr("Error Reading World"),
-                              reader.errorString());
-        return false;
+    if (fileInfo.suffix() == QLatin1String("pzp")) {
+        PathWorldReader reader;
+        PathWorld *world = reader.readWorld(fileName);
+        if (!world) {
+            QMessageBox::critical(this, tr("Error Reading World"),
+                                  reader.errorString());
+            return false;
+        }
+        docman()->addDocument(new PathDocument(world, fileName));
+    } else {
+        WorldReader reader;
+        World *world = reader.readWorld(fileName);
+        if (!world) {
+            QMessageBox::critical(this, tr("Error Reading World"),
+                                  reader.errorString());
+            return false;
+        }
+        docman()->addDocument(new WorldDocument(world, fileName));
     }
 
-    docman()->addDocument(new WorldDocument(world, fileName));
     if (docman()->failedToAdd())
         return false;
+
 //    setRecentFile(fileName);
+
     return true;
 }
 
@@ -1338,7 +1352,7 @@ bool MainWindow::saveFile()
 
     const QString currentFileName = mCurrentDocument->fileName();
 
-    if (currentFileName.endsWith(QLatin1String(".pzw"), Qt::CaseInsensitive))
+    if (currentFileName.endsWith(mCurrentDocument->suffix(), Qt::CaseInsensitive))
         return saveFile(currentFileName);
     else
         return saveFileAs();
@@ -1352,19 +1366,20 @@ bool MainWindow::saveFileAs()
         suggestedFileName = fileInfo.path();
         suggestedFileName += QLatin1Char('/');
         suggestedFileName += fileInfo.completeBaseName();
-        suggestedFileName += QLatin1String(".pzw");
+        suggestedFileName += mCurrentDocument->suffix();
     } else {
         QString path = Preferences::instance()->openFileDirectory();
         if (path.isEmpty() || !QDir(path).exists())
             path = QDir::currentPath();
         suggestedFileName = path;
         suggestedFileName += QLatin1Char('/');
-        suggestedFileName += tr("untitled.pzw");
+        suggestedFileName += tr("untitled") + mCurrentDocument->suffix();
     }
 
     const QString fileName =
             QFileDialog::getSaveFileName(this, QString(), suggestedFileName,
-                                         tr("PZWorldEd world files (*.pzw)"));
+                                         tr("PZWorldEd world files (*%1)")
+                                         .arg(mCurrentDocument->suffix()));
     if (!fileName.isEmpty()) {
         Preferences::instance()->setOpenFileDirectory(QFileInfo(fileName).absolutePath());
         return saveFile(fileName);
@@ -1940,6 +1955,11 @@ bool MainWindow::saveFile(const QString &fileName)
     }
 
     updateWindowTitle();
+
+    if (mCurrentDocument->asPathDocument()) {
+        ui->documentTabWidget->setTabToolTip(docman()->indexOf(mCurrentDocument), fileName);
+        return true;
+    }
 
     // Update tab tooltips
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();

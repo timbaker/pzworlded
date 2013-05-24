@@ -63,6 +63,8 @@ public:
     virtual const QString &fileName() const = 0;
     virtual bool save(const QString &filePath, QString &error) = 0;
 
+    QString suffix() const;
+
 protected:
     QUndoStack *mUndoStack;
 

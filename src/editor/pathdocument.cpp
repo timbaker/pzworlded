@@ -17,10 +17,16 @@
 
 #include "pathdocument.h"
 
+#include "luaworlded.h"
 #include "path.h"
 #include "pathworld.h"
+#include "pathworldwriter.h"
+#include "progress.h"
+#include "tilemetainfomgr.h"
 #include "worldchanger.h"
 #include "worldlookup.h"
+
+#include "tileset.h"
 
 #include <QUndoStack>
 
@@ -28,17 +34,53 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
     mFileName(fileName),
-    mLookup(new WorldLookup(world)),
+    mLookup(0),
     mChanger(new WorldChanger)
 {
     mUndoStack = new QUndoStack(this);
+
+    QList<Tiled::Tileset*> tilesets;
+    foreach (WorldTileset *wts, mWorld->tilesets()) {
+        if (Tiled::Tileset *ts = Tiled::TileMetaInfoMgr::instance()->tileset(wts->mName)) {
+            wts->resize(ts->columnCount(), ts->tileCount() / ts->columnCount());
+            for (int i = 0; i < ts->tileCount(); i++)
+                wts->tileAt(i)->mTiledTile = ts->tileAt(i); // HACK for convenience
+        }
+    }
+    Tiled::TileMetaInfoMgr::instance()->loadTilesets(tilesets);
+
+    PROGRESS progress(QLatin1String("Running scripts (region)"));
+
+    foreach (WorldPathLayer *layer, mWorld->pathLayers()) {
+        foreach (WorldPath *path, layer->paths()) {
+            foreach (WorldScript *ws, path->scripts()) {
+                Tiled::Lua::LuaScript ls(mWorld, ws);
+                if (ls.runFunction("region")) {
+                    QRegion rgn;
+                    if (ls.getResultRegion(rgn))
+                        ws->mRegion = rgn;
+                }
+            }
+        }
+    }
+
+    foreach (WorldScript *ws, mWorld->scripts()) {
+        Tiled::Lua::LuaScript ls(mWorld, ws);
+        if (ls.runFunction("region")) {
+            QRegion rgn;
+            if (ls.getResultRegion(rgn))
+                ws->mRegion = rgn;
+        }
+    }
+
+    mLookup = new WorldLookup(mWorld); // now that the script regions are valid
 
     connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
             SLOT(afterAddNode(WorldNode*)));
     connect(mChanger, SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
             SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
-    connect(mChanger, SIGNAL(afterAddPathSignal(WorldPath*)),
-            SLOT(afterAddPath(WorldPath*)));
+    connect(mChanger, SIGNAL(afterAddPathSignal(WorldPathLayer*,int,WorldPath*)),
+            SLOT(afterAddPath(WorldPathLayer*,int,WorldPath*)));
     connect(mChanger, SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
             SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
     connect(mChanger, SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
@@ -71,7 +113,14 @@ const QString &PathDocument::fileName() const
 
 bool PathDocument::save(const QString &filePath, QString &error)
 {
-    return false;
+    PathWorldWriter writer;
+    if (!writer.writeWorld(mWorld, filePath)) {
+        error = writer.errorString();
+        return false;
+    }
+    undoStack()->setClean();
+    setFileName(filePath);
+    return true;
 }
 
 void PathDocument::afterAddNode(WorldNode *node)
