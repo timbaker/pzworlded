@@ -60,7 +60,6 @@ public:
     LookupCoordType height;
 };
 
-class PathWorld;
 class WorldNode;
 class WorldPath;
 class WorldPathLayer;
@@ -223,14 +222,14 @@ public:
 class WorldLookup
 {
 public:
-    WorldLookup(PathWorld *world);
+    WorldLookup(WorldPathLayer *layer);
     ~WorldLookup();
 
     QList<WorldScript*> scripts(const QRectF &bounds) const;
-    QList<WorldPath*> paths(WorldPathLayer *layer, const QRectF &bounds) const;
-    QList<WorldPath*> paths(WorldPathLayer *layer, const QPolygonF &poly) const;
-    QList<WorldNode*> nodes(WorldPathLayer *layer, const QRectF &bounds) const;
-    QList<WorldNode*> nodes(WorldPathLayer *layer, const QPolygonF &bounds) const;
+    QList<WorldPath*> paths(const QRectF &bounds) const;
+    QList<WorldPath*> paths(const QPolygonF &poly) const;
+    QList<WorldNode*> nodes(const QRectF &bounds) const;
+    QList<WorldNode*> nodes(const QPolygonF &bounds) const;
 
     void nodeAdded(WorldNode *node);
     void nodeRemoved(WorldPathLayer *layer, WorldNode *node);
@@ -245,9 +244,9 @@ public:
     void scriptRegionChanged(WorldScript *script);
 
 private:
-    PathWorld *mWorld;
-    QVector<WorldQuadTree<WorldNode> *> mNodeTree;
-    QVector<WorldQuadTree<WorldPath> *> mPathTree;
+    WorldPathLayer *mLayer;
+    WorldQuadTree<WorldNode> *mNodeTree;
+    WorldQuadTree<WorldPath> *mPathTree;
     WorldQuadTree<WorldScript> *mScriptTree;
 };
 

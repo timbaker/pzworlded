@@ -152,7 +152,7 @@ LuaScript::LuaScript(PathWorld *world, WorldScript *script) :
     L(0),
     mWorld(world),
     mWorldScript(script),
-    mChanger(new WorldChanger)
+    mChanger(new WorldChanger(world))
 {
 }
 

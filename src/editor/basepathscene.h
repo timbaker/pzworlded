@@ -43,9 +43,26 @@ public:
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
 
+    PathList lookupPaths(const QRectF &sceneRect);
 private:
     WorldPathLayer *mLayer;
     BasePathScene *mScene;
+};
+
+class WorldLevelItem : public QGraphicsItem
+{
+public:
+    WorldLevelItem(WorldLevel *wlevel, BasePathScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const
+    { return QRectF(); }
+    void paint(QPainter *, const QStyleOptionGraphicsItem *, QWidget *)
+    {}
+
+private:
+    WorldLevel *mLevel;
+    BasePathScene *mScene;
+    QList<PathLayerItem*> mPathLayerItems;
 };
 
 class NodesItem : public QGraphicsItem
@@ -143,7 +160,6 @@ public slots:
 private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;
-    QList<PathLayerItem*> mPathLayerItems;
     PathSet mSelectedPaths;
     NodesItem *mNodeItem;
     WorldPathLayer *mCurrentPathLayer;

@@ -174,7 +174,7 @@ void TilePainter::fill(WorldPath *path)
     // Clip to tile sink bounds
     if (mLayer) {
         QRegion sinkRgn;
-        foreach (WorldTileLayer::TileSink *sink, mLayer->mSinks)
+        foreach (WorldTileLayer::TileSink *sink, mLayer->sinks())
             sinkRgn |= sink->bounds();
         region &= sinkRgn;
     }
@@ -215,8 +215,9 @@ void TilePainter::tracePath(WorldPath *path, qreal offset)
         return;
     }
 
-    WorldTileLayer *layer1 = mWorld->tileLayerAt(1);
-    WorldTileLayer *layer2 = mWorld->tileLayerAt(2);
+    WorldTileLayer *layer1 = mWorld->levelAt(0)->tileLayerAt(1);
+    WorldTileLayer *layer2 = mWorld->levelAt(0)->tileLayerAt(2);
+    if (!layer1 || !layer2) return;
 
     WorldTile *west = mWorld->tile(QLatin1String("street_trafficlines_01"), 0);
     WorldTile *north = mWorld->tile(QLatin1String("street_trafficlines_01"), 2);
@@ -261,23 +262,21 @@ void TilePainter::drawMap(int wx, int wy, MapInfo *mapInfo)
     mTileAlias = 0;
 
     // This is the classic map composition mode.
-    // If the map has a tile in 0_Floor, then erase all other layers/
+    // If the map has a tile in 0_Floor, then erase all other layers.
     // If the map doesn't have a tile in 0_Floor, then erase all other layers
     // whose name doesn't start with 0_Floor.
     int n = mapInfo->map()->indexOfLayer(QLatin1String("0_Floor"), Tiled::Layer::TileLayerType);
     if (n >= 0) {
         Tiled::TileLayer *tl = mapInfo->map()->layerAt(n)->asTileLayer();
         QRegion floorRegion = tl->region().translated(wx, wy);
-        foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-            if (wtl->mName.startsWith(QLatin1String("0_"))) {
-                setLayer(wtl);
-                erase(floorRegion);
-            }
+        foreach (WorldTileLayer *wtl, world()->levelAt(0)->tileLayers()) {
+            setLayer(wtl);
+            erase(floorRegion);
         }
         QRegion nonFloorRegion = QRegion(mapInfo->bounds()) - floorRegion;
         nonFloorRegion.translate(wx, wy);
-        foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-            if (!wtl->mName.startsWith(QLatin1String("0_Floor"))) {
+        foreach (WorldTileLayer *wtl, world()->levelAt(0)->tileLayers()) {
+            if (!wtl->name().startsWith(QLatin1String("0_Floor"))) {
                 setLayer(wtl);
                 erase(nonFloorRegion);
             }

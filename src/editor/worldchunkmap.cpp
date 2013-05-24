@@ -93,7 +93,11 @@ void WorldChunk::LoadForLater(int wx, int wy)
 //    qDebug() << "WorldChunk::LoadForLater" << bounds;
 
     // No event processing allowed during these scripts!
-    QList<WorldScript*> scripts = mChunkMap->mDocument->lookup()->scripts(bounds);
+    ScriptList scripts;
+    foreach (WorldLevel *wlevel, mChunkMap->mDocument->world()->levels())
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            scripts += layer->lookup()->scripts(bounds);
+
 //    QList<WorldPath::Path*> paths = mChunkMap->mDocument->lookupPaths(bounds);
     qDebug() << QString::fromLatin1("Running scripts (%1) #paths=%2").arg(scripts.size())/*.arg(paths.size())*/;
 
@@ -160,7 +164,7 @@ public:
     CMTileSink(WorldChunkMap *chunkMap, WorldTileLayer *wtl) :
         mChunkMap(chunkMap),
         mLayer(wtl),
-        mLayerIndex(chunkMap->mWorld->indexOf(wtl))
+        mLayerIndex(wtl->wlevel()->indexOf(wtl))
     {
 
     }
@@ -175,17 +179,17 @@ public:
 
     void putTile(int x, int y, WorldTile *tile)
     {
-        WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->mLevel);
+        WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->level());
         if (!sq && !tile) return;
         if (!sq && QRect(mChunkMap->getWorldXMinTiles(),
                          mChunkMap->getWorldYMinTiles(),
                          mChunkMap->getWidthInTiles(),
                          mChunkMap->getWidthInTiles()).contains(x,y)) {
             if (WorldChunk *chunk = mChunkMap->getChunkForWorldPos(x, y)) {
-                sq = WorldChunkSquare::getNew(x, y, mLayer->mLevel);
+                sq = WorldChunkSquare::getNew(x, y, mLayer->level());
                 chunk->setSquare(x - chunk->wx * mChunkMap->TilesPerChunk,
                                  y - chunk->wy * mChunkMap->TilesPerChunk,
-                                 mLayer->mLevel, sq);
+                                 mLayer->level(), sq);
             }
         }
         if (sq) {
@@ -198,7 +202,7 @@ public:
 
     WorldTile *getTile(int x, int y)
     {
-        WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->mLevel);
+        WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->level());
         if (sq && (mLayerIndex < sq->tiles.size()))
             return sq->tiles[mLayerIndex];
         return 0;
@@ -223,8 +227,9 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
     for (int x = 0; x < ChunkGridWidth; x++)
         Chunks[x].resize(ChunkGridWidth);
 
-    foreach (WorldTileLayer *wtl, mWorld->tileLayers()) {
-        wtl->mSinks += new CMTileSink(this, wtl);
+    foreach (WorldLevel *wlevel, mWorld->levels()) {
+        foreach (WorldTileLayer *wtl, wlevel->tileLayers())
+            wtl->addSink(new CMTileSink(this, wtl));
     }
 
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
@@ -447,7 +452,10 @@ void WorldChunkMap::nodesMoved()
     QRectF area = mMovedNodeArea;
     mMovedNodeArea = QRectF();
 
-    ScriptList scripts = mDocument->lookup()->scripts(area.adjusted(-1,-1,1,1));
+    ScriptList scripts;
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            scripts += layer->lookup()->scripts(area.adjusted(-1,-1,1,1));
     qDebug() << QString::fromLatin1("%1 scripts in nodesMoved area #1").arg(scripts.size());
 
     // erase tile layers where scripts used to be
@@ -470,7 +478,8 @@ void WorldChunkMap::nodesMoved()
                 if (rgn != ws->mRegion) {
 //                    mDocument->scriptRegionChanged(ws);
                     ws->mRegion = rgn;
-                    mDocument->lookup()->scriptRegionChanged(ws);
+                    if (ws->mPaths.size())
+                        ws->mPaths.first()->layer()->lookup()->scriptRegionChanged(ws);
                     if (!ws->mRegion.isEmpty()) {
                         if (dirty.isEmpty())
                             dirty = ws->mRegion;
@@ -482,13 +491,18 @@ void WorldChunkMap::nodesMoved()
         }
     }
 
-    foreach (WorldTileLayer *wtl, mWorld->tileLayers()) {
-        painter.setLayer(wtl);
-        painter.erase(dirty);
-    }
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldTileLayer *wtl, wlevel->tileLayers()) {
+            painter.setLayer(wtl);
+            painter.erase(dirty);
+        }
 
     dirty &= QRect(getWorldXMinTiles(), getWorldYMinTiles(), getWidthInTiles(), getWidthInTiles());
-    scripts = mDocument->lookup()->scripts(dirty.boundingRect());
+    scripts.clear();
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            scripts += layer->lookup()->scripts(dirty.boundingRect());
+
     int runN = 0;
     foreach (WorldScript *ws, scripts) {
         if (!ws->mRegion.intersects(dirty)) continue;
@@ -567,13 +581,19 @@ void WorldChunkMap::processScriptRegionChanges()
     mScriptChangeArea = QRegion();
 
     TilePainter painter(mWorld);
-    foreach (WorldTileLayer *wtl, mWorld->tileLayers()) {
-        painter.setLayer(wtl);
-        painter.erase(dirty);
-    }
+
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldTileLayer *wtl, wlevel->tileLayers()) {
+            painter.setLayer(wtl);
+            painter.erase(dirty);
+        }
 
     dirty &= QRect(getWorldXMinTiles(), getWorldYMinTiles(), getWidthInTiles(), getWidthInTiles());
-    ScriptList scripts = mDocument->lookup()->scripts(dirty.boundingRect());
+    ScriptList scripts;
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            scripts += layer->lookup()->scripts(dirty.boundingRect());
+
     int runN = 0;
     foreach (WorldScript *ws, scripts) {
         if (!ws->mRegion.intersects(dirty)) continue;

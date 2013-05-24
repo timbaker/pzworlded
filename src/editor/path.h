@@ -27,6 +27,7 @@
 #include <QPolygonF>
 #include <QString>
 
+class WorldLookup;
 class WorldPathLayer;
 class WorldScript;
 
@@ -134,14 +135,17 @@ class WorldPathLayer
 {
 public:
     WorldPathLayer();
-    WorldPathLayer(const QString &mName, int mLevel);
+    WorldPathLayer(const QString &mName);
     ~WorldPathLayer();
 
     const QString &name() const
     { return mName; }
 
-    int level() const
+    void setLevel(WorldLevel *wlevel)
+    { mLevel = wlevel; }
+    WorldLevel *wlevel() const
     { return mLevel; }
+    int level() const;
 
     void insertNode(int index, WorldNode *node);
     WorldNode *removeNode(int index);
@@ -161,17 +165,29 @@ public:
     WorldPath *path(id_t id);
     int indexOf(WorldPath *path);
 
+    void setVisible(bool visible)
+    { mVisible = visible; }
+    bool isVisible() const
+    { return mVisible; }
+
+    void initLookup();
+    WorldLookup *lookup() const
+    { return mLookup; }
+
 //    QList<WorldPath*> paths(QRectF &bounds);
 //    QList<WorldPath*> paths(qreal x, qreal y, qreal width, qreal height);
 
     WorldPathLayer *clone() const;
 
+private:
+    WorldLevel *mLevel;
     QString mName;
-    int mLevel;
     QList<WorldNode*> mNodes;
     QMap<id_t,WorldNode*> mNodeByID;
     QList<WorldPath*> mPaths;
     QMap<id_t,WorldPath*> mPathByID;
+    bool mVisible;
+    WorldLookup *mLookup;
 };
 
 #endif // PATH_H

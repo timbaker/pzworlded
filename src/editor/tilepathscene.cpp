@@ -83,21 +83,22 @@ private:
 
 /////
 
-TSLevelItem::TSLevelItem(int level,
-                                                     TilePathScene *scene,
-                                                     QGraphicsItem *parent)
+TSLevelItem::TSLevelItem(WorldLevel *wlevel, TilePathScene *scene,
+                         QGraphicsItem *parent)
     : QGraphicsItem(parent)
-    , mLevel(level)
+    , mLevel(wlevel)
     , mScene(scene)
 {
     setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
 
-    mBoundingRect = mScene->renderer()->sceneBounds(mScene->world()->bounds(), mLevel);
+    mBoundingRect = mScene->renderer()->sceneBounds(mScene->world()->bounds(),
+                                                    mLevel->level());
 }
 
 void TSLevelItem::synchWithTileLayers()
 {
-    QRectF bounds = mScene->renderer()->sceneBounds(mScene->world()->bounds(), mLevel);
+    QRectF bounds = mScene->renderer()->sceneBounds(mScene->world()->bounds(),
+                                                    mLevel->level());
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
@@ -110,8 +111,8 @@ QRectF TSLevelItem::boundingRect() const
 }
 
 void TSLevelItem::paint(QPainter *painter,
-                                      const QStyleOptionGraphicsItem *option,
-                                      QWidget *)
+                        const QStyleOptionGraphicsItem *option,
+                        QWidget *)
 {
     ((TilePathRenderer*)mScene->renderer())->drawLevel(
                 painter, mLevel, option->exposedRect);
@@ -138,14 +139,10 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
 
 //    qDeleteAll(items());
 
-    foreach (WorldTileLayer *wtl, world()->tileLayers()) {
-        int level;
-        MapComposite::levelForLayer(wtl->mName, &level);
-        while (level + 1 > mLayerGroupItems.size()) {
-            TSLevelItem *item = new TSLevelItem(level, this);
-            mLayerGroupItems += item;
-            addItem(item);
-        }
+    foreach (WorldLevel *wlevel, world()->levels()) {
+        TSLevelItem *item = new TSLevelItem(wlevel, this);
+        mLayerGroupItems += item;
+        addItem(item);
     }
 
     mGridItem->updateBoundingRect();
@@ -253,8 +250,10 @@ QRectF TilePathRenderer::sceneBounds(const QRectF &worldRect, int level)
     return toScene(worldRect, level).boundingRect();
 }
 
-void TilePathRenderer::drawLevel(QPainter *painter, int level, const QRectF &exposed)
+void TilePathRenderer::drawLevel(QPainter *painter, WorldLevel *wlevel, const QRectF &exposed)
 {
+    int level = wlevel->level();
+
     const int tileWidth = mScene->world()->tileWidth();
     const int tileHeight = mScene->world()->tileHeight();
 

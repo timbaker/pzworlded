@@ -138,7 +138,9 @@ SOURCES += main.cpp\
     scriptparamdialog.cpp \
     scriptparammodel.cpp \
     pathworldwriter.cpp \
-    pathworldreader.cpp
+    pathworldreader.cpp \
+    pathlayersmodel.cpp \
+    pathlayersdock.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -233,7 +235,9 @@ HEADERS  += mainwindow.h \
     scriptparamdialog.h \
     scriptparammodel.h \
     pathworldwriter.h \
-    pathworldreader.h
+    pathworldreader.h \
+    pathlayersmodel.h \
+    pathlayersdock.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -252,7 +256,8 @@ FORMS    += mainwindow.ui \
     fromtodialog.ui \
     unknowncolorsdialog.ui \
     luaconsole.ui \
-    scriptparamdialog.ui
+    scriptparamdialog.ui \
+    pathlayersdock.ui
 
 OTHER_FILES += luatiled.pkg
 

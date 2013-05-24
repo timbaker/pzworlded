@@ -80,19 +80,29 @@ public:
         foreach (WorldTileRule *tr, world->tileRules())
             writeTileRule(tr);
 
-        foreach (WorldPathLayer *layer, world->pathLayers())
-            writePathLayer(layer);
-
-        foreach (WorldTileLayer *layer, world->tileLayers())
-            writeTileLayer(layer);
+        foreach (WorldLevel *wlevel, world->levels())
+            writeLevel(wlevel);
 
         xml.writeEndElement(); // world
+    }
+
+    void writeLevel(WorldLevel *wlevel)
+    {
+        xml.writeStartElement(QLatin1String("level"));
+
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            writePathLayer(layer);
+
+        foreach (WorldTileLayer *layer, wlevel->tileLayers())
+            writeTileLayer(layer);
+
+        xml.writeEndElement(); // level
     }
 
     void writePathLayer(WorldPathLayer *layer)
     {
         xml.writeStartElement(QLatin1String("pathlayer"));
-        xml.writeAttribute(QLatin1String("name"), layer->mName);
+        xml.writeAttribute(QLatin1String("name"), layer->name());
         foreach (WorldNode *node, layer->nodes())
             writeNode(node);
         foreach (WorldPath *path, layer->paths())
@@ -165,7 +175,7 @@ public:
     void writeTileLayer(WorldTileLayer *layer)
     {
         xml.writeStartElement(QLatin1String("tilelayer"));
-        xml.writeAttribute(QLatin1String("name"), layer->mName);
+        xml.writeAttribute(QLatin1String("name"), layer->name());
         xml.writeEndElement(); // tilelayer
     }
 

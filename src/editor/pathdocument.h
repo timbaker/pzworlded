@@ -57,9 +57,6 @@ public:
     WorldChanger *changer() const
     { return mChanger; }
 
-    WorldLookup *lookup() const
-    { return mLookup; }
-
     const PathSet &hiddenPaths() const
     { return mHiddenPaths; }
 

@@ -9,19 +9,27 @@
 typedef unsigned long id_t;
 const id_t InvalidId = 0;
 
+class WorldLevel;
 class WorldNode;
 class WorldPath;
+class WorldPathLayer;
 class WorldScript;
 class WorldTile;
-class WorldTileset;
 class WorldTileAlias;
 class WorldTileRule;
+class WorldTileset;
+class WorldTileLayer;
+
+typedef QList<WorldLevel*> LevelList;
 
 typedef QList<WorldNode*> NodeList;
 typedef QSet<WorldNode*> NodeSet;
 
 typedef QList<WorldPath*> PathList;
 typedef QSet<WorldPath*> PathSet;
+
+typedef QList<WorldPathLayer*> PathLayerList;
+typedef QList<WorldTileLayer*> TileLayerList;
 
 typedef QList<WorldScript*> ScriptList;
 typedef QSet<WorldScript*> ScriptSet;

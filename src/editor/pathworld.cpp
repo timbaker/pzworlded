@@ -40,8 +40,22 @@ PathWorld::PathWorld(int width, int height) :
 
 PathWorld::~PathWorld()
 {
-    qDeleteAll(mPathLayers);
-    qDeleteAll(mTileLayers);
+    qDeleteAll(mLevels);
+}
+
+void PathWorld::insertLevel(int index, WorldLevel *level)
+{
+    level->setWorld(this);
+    mLevels.insert(index, level);
+    foreach (WorldTileLayer *wtl, level->tileLayers())
+        mTileLayerByName[wtl->name()] = wtl;
+}
+
+WorldLevel *PathWorld::levelAt(int index) const
+{
+    if (index >= 0 && index <= mLevels.size())
+        return mLevels[index];
+    return 0;
 }
 
 WorldNode *PathWorld::allocNode(const QPointF &pos)
@@ -52,61 +66,6 @@ WorldNode *PathWorld::allocNode(const QPointF &pos)
 WorldPath *PathWorld::allocPath()
 {
     return new WorldPath(mNextPathId++);
-}
-
-void PathWorld::insertPathLayer(int index, WorldPathLayer *layer)
-{
-    mPathLayers.insert(index, layer);
-}
-
-WorldPathLayer *PathWorld::removePathLayer(int index)
-{
-    return mPathLayers.takeAt(index);
-}
-
-WorldPathLayer *PathWorld::pathLayerAt(int index)
-{
-    return mPathLayers.at(index);
-}
-
-int PathWorld::pathLayerCount() const
-{
-    return mPathLayers.size();
-}
-
-int PathWorld::indexOf(WorldPathLayer *wtl)
-{
-    return mPathLayers.indexOf(wtl);
-}
-
-void PathWorld::insertTileLayer(int index, WorldTileLayer *layer)
-{
-    mTileLayers.insert(index, layer);
-    mTileLayerByName[layer->mName] = layer;
-}
-
-WorldTileLayer *PathWorld::removeTileLayer(int index)
-{
-    return mTileLayers.takeAt(index);
-}
-
-WorldTileLayer *PathWorld::tileLayerAt(int index)
-{
-    if (index >= 0 && index < mTileLayers.size())
-        return mTileLayers[index];
-    return 0;
-}
-
-WorldTileLayer *PathWorld::tileLayer(const QString &layerName)
-{
-    if (mTileLayerByName.contains(layerName))
-        return mTileLayerByName[layerName];
-    return 0;
-}
-
-int PathWorld::indexOf(WorldTileLayer *wtl)
-{
-    return mTileLayers.indexOf(wtl);
 }
 
 void PathWorld::insertScript(int index, WorldScript *script)
@@ -153,6 +112,13 @@ WorldTile *PathWorld::tile(const QString &tileName)
     return 0;
 }
 
+WorldTileLayer *PathWorld::tileLayer(const QString &layerName)
+{
+    if (mTileLayerByName.contains(layerName))
+        return mTileLayerByName[layerName];
+    return 0;
+}
+
 void PathWorld::initClone(PathWorld *clone)
 {
     clone->mWidth = mWidth;
@@ -161,14 +127,95 @@ void PathWorld::initClone(PathWorld *clone)
     foreach (WorldTileset *ts, tilesets())
         clone->insertTileset(clone->tilesetCount(), ts->clone());
 
+    foreach (WorldScript *script, scripts())
+        clone->insertScript(clone->scriptCount(), script->clone(clone));
+
+    foreach (WorldLevel *level, levels())
+        clone->insertLevel(clone->levelCount(), level->clone());
+}
+
+/////
+
+WorldLevel::WorldLevel(int level) :
+    mWorld(0),
+    mLevel(level),
+    mPathLayersVisible(true),
+    mTileLayersVisible(true)
+{
+}
+
+WorldLevel::~WorldLevel()
+{
+    qDeleteAll(mPathLayers);
+    qDeleteAll(mTileLayers);
+}
+
+void WorldLevel::insertPathLayer(int index, WorldPathLayer *layer)
+{
+    layer->setLevel(this);
+    mPathLayers.insert(index, layer);
+}
+
+WorldPathLayer *WorldLevel::removePathLayer(int index)
+{
+    WorldPathLayer *layer = mPathLayers.takeAt(index);
+    layer->setLevel(0);
+    return layer;
+}
+
+WorldPathLayer *WorldLevel::pathLayerAt(int index)
+{
+    return mPathLayers.at(index);
+}
+
+int WorldLevel::pathLayerCount() const
+{
+    return mPathLayers.size();
+}
+
+int WorldLevel::indexOf(WorldPathLayer *wtl)
+{
+    return mPathLayers.indexOf(wtl);
+}
+
+void WorldLevel::insertTileLayer(int index, WorldTileLayer *layer)
+{
+    layer->setLevel(this);
+    mTileLayers.insert(index, layer);
+    if (world()) world()->tileLayerMap()[layer->name()] = layer;
+}
+
+WorldTileLayer *WorldLevel::removeTileLayer(int index)
+{
+    WorldTileLayer *layer = mTileLayers.takeAt(index);
+    layer->setLevel(0);
+    if (world()) world()->tileLayerMap().remove(layer->name());
+    return layer;
+}
+
+WorldTileLayer *WorldLevel::tileLayerAt(int index)
+{
+    if (index >= 0 && index < mTileLayers.size())
+        return mTileLayers[index];
+    return 0;
+}
+
+int WorldLevel::indexOf(WorldTileLayer *wtl)
+{
+    return mTileLayers.indexOf(wtl);
+}
+
+WorldLevel *WorldLevel::clone() const
+{
+    WorldLevel *clone = new WorldLevel(mLevel);
+
     foreach (WorldPathLayer *layer, pathLayers())
         clone->insertPathLayer(clone->pathLayerCount(), layer->clone());
 
     foreach (WorldTileLayer *layer, tileLayers())
-        clone->insertTileLayer(clone->tileLayerCount(), layer->clone(clone));
+        clone->insertTileLayer(clone->tileLayerCount(), layer->clone());
 
-    foreach (WorldScript *script, scripts())
-        clone->insertScript(clone->scriptCount(), script->clone(clone));
+    return clone;
 }
 
 /////
@@ -217,6 +264,11 @@ WorldTileset *WorldTileset::clone() const
 
 /////
 
+int WorldTileLayer::level() const
+{
+    return mLevel ? mLevel->level() : 0;
+}
+
 void WorldTileLayer::putTile(int x, int y, WorldTile *tile)
 {
     foreach (TileSink *sink, mSinks)
@@ -233,10 +285,9 @@ WorldTile *WorldTileLayer::getTile(int x, int y)
     return 0;
 }
 
-WorldTileLayer *WorldTileLayer::clone(PathWorld *owner) const
+WorldTileLayer *WorldTileLayer::clone() const
 {
-    WorldTileLayer *clone = new WorldTileLayer(owner, mName);
-    clone->mLevel = mLevel;
+    WorldTileLayer *clone = new WorldTileLayer(mName);
     // don't clone the sinks
     return clone;
 }

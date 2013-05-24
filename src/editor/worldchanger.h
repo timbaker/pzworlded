@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QPointF>
 
+class PathWorld;
 class WorldNode;
 class WorldPath;
 class WorldPathLayer;
@@ -56,8 +57,11 @@ class WorldChanger : public QObject
 {
     Q_OBJECT
 public:
-    WorldChanger();
+    WorldChanger(PathWorld *world);
     ~WorldChanger();
+
+    PathWorld *world() const
+    { return mWorld; }
 
     void doAddNode(WorldPathLayer *layer, int index, WorldNode *node);
     void doRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
@@ -86,6 +90,12 @@ public:
 
     void doSetPathVisible(WorldPath *path, bool visible);
     void afterSetPathVisible(WorldPath *path, bool visible);
+
+    void doSetPathLayerVisible(WorldPathLayer *layer, bool visible);
+    void afterSetPathLayerVisible(WorldPathLayer *layer, bool visible);
+
+    void doSetPathLayersVisible(WorldLevel *wlevel, bool visible);
+    void afterSetPathLayersVisible(WorldLevel *wlevel, bool visible);
 
     const WorldChangeList &changes() const
     { return mChanges; }
@@ -117,11 +127,14 @@ signals:
     void afterChangeScriptParametersSignal(WorldScript *script);
 
     void afterSetPathVisibleSignal(WorldPath *path, bool visible);
+    void afterSetPathLayerVisibleSignal(WorldPathLayer *layer, bool visible);
+    void afterSetPathLayersVisibleSignal(WorldLevel *wlevel, bool visible);
 
 private:
     void addChange(WorldChange *change);
 
 private:
+    PathWorld *mWorld;
     WorldChangeList mChanges;
     WorldChangeList mChangesReversed;
     QUndoStack *mUndoStack;

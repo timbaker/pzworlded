@@ -22,6 +22,7 @@
 #include <QMap>
 #include <QRegion>
 #include <QStringList>
+#include <QVector>
 
 #include "global.h"
 
@@ -72,16 +73,24 @@ public:
 class WorldTileLayer
 {
 public:
-    WorldTileLayer(PathWorld *world, const QString &name) :
-        mWorld(world),
-        mName(name),
-        mLevel(0)
+    WorldTileLayer(const QString &name) :
+        mLevel(0),
+        mName(name)
     {}
+
+    const QString &name() const
+    { return mName; }
+
+    void setLevel(WorldLevel *wlevel)
+    { mLevel = wlevel; }
+    WorldLevel *wlevel() const
+    { return mLevel; }
+    int level() const;
 
     void putTile(int x, int y, WorldTile *tile);
     WorldTile *getTile(int x, int y);
 
-    WorldTileLayer *clone(PathWorld *owner) const;
+    WorldTileLayer *clone() const;
 
     class TileSink
     {
@@ -91,10 +100,67 @@ public:
         virtual WorldTile *getTile(int x, int y) = 0;
     };
 
-    PathWorld *mWorld;
+    void addSink(TileSink *sink)
+    { mSinks += sink; }
+    const QList<TileSink*> &sinks() const
+    { return mSinks; }
+
+private:
+    WorldLevel *mLevel;
     QString mName;
-    int mLevel;
     QList<TileSink*> mSinks;
+};
+
+class WorldLevel
+{
+public:
+    WorldLevel(int level);
+    ~WorldLevel();
+
+    void setWorld(PathWorld *world)
+    { mWorld = world; }
+    PathWorld *world() const
+    { return mWorld; }
+
+    int level() const
+    { return mLevel; }
+
+    void insertPathLayer(int index, WorldPathLayer *layer);
+    WorldPathLayer *removePathLayer(int index);
+    const QList<WorldPathLayer*> &pathLayers() const
+    { return mPathLayers; }
+    WorldPathLayer *pathLayerAt(int index);
+    int pathLayerCount() const;
+    int indexOf(WorldPathLayer *wtl);
+
+    void insertTileLayer(int index, WorldTileLayer *layer);
+    WorldTileLayer *removeTileLayer(int index);
+    const QList<WorldTileLayer*> &tileLayers() const
+    { return mTileLayers; }
+    WorldTileLayer *tileLayerAt(int index);
+    int tileLayerCount() const
+    { return mTileLayers.size(); }
+    int indexOf(WorldTileLayer *wtl);
+
+    void setPathLayersVisible(bool visible)
+    { mPathLayersVisible = visible; }
+    bool isPathLayersVisible() const
+    { return mPathLayersVisible; }
+
+    void setTileLayersVisible(bool visible)
+    { mTileLayersVisible = visible; }
+    bool isTileLayersVisible() const
+    { return mTileLayersVisible; }
+
+    WorldLevel *clone() const;
+
+private:
+    PathWorld *mWorld;
+    int mLevel;
+    PathLayerList mPathLayers;
+    TileLayerList mTileLayers;
+    bool mPathLayersVisible;
+    bool mTileLayersVisible;
 };
 
 class WorldTileAlias
@@ -145,7 +211,14 @@ public:
     int tileHeight() const { return 32; }
     int tileWidth() const { return 64; }
 
-    int maxLevel() const { return 16; }
+    int maxLevel() const { return 16 - 1; }
+
+    void insertLevel(int index, WorldLevel *level);
+    const LevelList &levels() const
+    { return mLevels; }
+    WorldLevel *levelAt(int index) const;
+    int levelCount() const
+    { return mLevels.size(); }
 
     void setNextIds(id_t node, id_t path)
     { mNextNodeId = node, mNextPathId = path; }
@@ -153,23 +226,9 @@ public:
     WorldNode *allocNode(const QPointF &pos);
     WorldPath *allocPath();
 
-    void insertPathLayer(int index, WorldPathLayer *layer);
-    WorldPathLayer *removePathLayer(int index);
-    const QList<WorldPathLayer*> &pathLayers() const
-    { return mPathLayers; }
-    WorldPathLayer *pathLayerAt(int index);
-    int pathLayerCount() const;
-    int indexOf(WorldPathLayer *wtl);
-
-    void insertTileLayer(int index, WorldTileLayer *layer);
-    WorldTileLayer *removeTileLayer(int index);
-    const QList<WorldTileLayer*> &tileLayers() const
-    { return mTileLayers; }
-    WorldTileLayer *tileLayerAt(int index);
     WorldTileLayer *tileLayer(const QString &layerName);
-    int tileLayerCount() const
-    { return mTileLayers.size(); }
-    int indexOf(WorldTileLayer *wtl);
+    QMap<QString,WorldTileLayer*> &tileLayerMap() // for use by WorldLevel only
+    { return mTileLayerByName; }
 
     void insertScript(int index, WorldScript *script);
     WorldScript *removeScript(int index);
@@ -215,14 +274,16 @@ public:
 
     void initClone(PathWorld *clone);
 
+
 protected:
     int mWidth;
     int mHeight;
 
+    LevelList mLevels;
+
     TilesetList mTilesets;
     QMap<QString,WorldTileset*> mTilesetByName;
 
-    QList<WorldTileLayer*> mTileLayers;
     QMap<QString,WorldTileLayer*> mTileLayerByName;
 
     AliasList mTileAliases;
@@ -231,8 +292,6 @@ protected:
     TileRuleList mTileRules;
     QMap<QString,WorldTileRule*> mTileRuleByName;
 
-
-    QList<WorldPathLayer*> mPathLayers;
     ScriptList mScripts;
 
     id_t mNextPathId;

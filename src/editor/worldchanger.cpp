@@ -310,6 +310,72 @@ public:
     bool mWasVisible;
 };
 
+class SetPathLayerVisible : public WorldChange
+{
+public:
+    SetPathLayerVisible(WorldChanger *changer, WorldPathLayer *layer, bool visible) :
+        WorldChange(changer),
+        mLayer(layer),
+        mVisible(visible),
+        mWasVisible(layer->isVisible())
+    {
+    }
+
+    void redo()
+    {
+        mLayer->setVisible(mVisible);
+        mChanger->afterSetPathLayerVisible(mLayer, mVisible);
+    }
+
+    void undo()
+    {
+        mLayer->setVisible(mWasVisible);
+        mChanger->afterSetPathLayerVisible(mLayer, mWasVisible);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr(mVisible ? "Show PathLayer" : "Hide PathLayer");
+    }
+
+    WorldPathLayer *mLayer;
+    bool mVisible;
+    bool mWasVisible;
+};
+
+class SetPathLayersVisible : public WorldChange
+{
+public:
+    SetPathLayersVisible(WorldChanger *changer, WorldLevel *wlevel, bool visible) :
+        WorldChange(changer),
+        mLevel(wlevel),
+        mVisible(visible),
+        mWasVisible(wlevel->isPathLayersVisible())
+    {
+    }
+
+    void redo()
+    {
+        mLevel->setPathLayersVisible(mVisible);
+        mChanger->afterSetPathLayersVisible(mLevel, mVisible);
+    }
+
+    void undo()
+    {
+        mLevel->setPathLayersVisible(mWasVisible);
+        mChanger->afterSetPathLayersVisible(mLevel, mWasVisible);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr(mVisible ? "Show Level (Paths)" : "Hide Level (Paths)");
+    }
+
+    WorldLevel *mLevel;
+    bool mVisible;
+    bool mWasVisible;
+};
+
 } // namespace WorldChanges;
 
 /////
@@ -332,7 +398,8 @@ using namespace WorldChanges;
 
 /////
 
-WorldChanger::WorldChanger() :
+WorldChanger::WorldChanger(PathWorld *world) :
+    mWorld(world),
     mUndoStack(0)
 {
 }
@@ -445,6 +512,26 @@ void WorldChanger::doSetPathVisible(WorldPath *path, bool visible)
 void WorldChanger::afterSetPathVisible(WorldPath *path, bool visible)
 {
     emit afterSetPathVisibleSignal(path, visible);
+}
+
+void WorldChanger::doSetPathLayerVisible(WorldPathLayer *layer, bool visible)
+{
+    addChange(new SetPathLayerVisible(this, layer, visible));
+}
+
+void WorldChanger::afterSetPathLayerVisible(WorldPathLayer *layer, bool visible)
+{
+    emit afterSetPathLayerVisibleSignal(layer, visible);
+}
+
+void WorldChanger::doSetPathLayersVisible(WorldLevel *wlevel, bool visible)
+{
+    addChange(new SetPathLayersVisible(this, wlevel, visible));
+}
+
+void WorldChanger::afterSetPathLayersVisible(WorldLevel *wlevel, bool visible)
+{
+    emit afterSetPathLayersVisibleSignal(wlevel, visible);
 }
 
 WorldChangeList WorldChanger::takeChanges(bool undoFirst)

@@ -44,7 +44,7 @@ public:
 
     QRectF sceneBounds(const QRectF &worldRect, int level = 0);
 
-    void drawLevel(QPainter *painter, int level, const QRectF &exposed);
+    void drawLevel(QPainter *painter, WorldLevel *wlevel, const QRectF &exposed);
     void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level);
 
     TilePathScene *mScene;
@@ -56,7 +56,7 @@ public:
 class TSLevelItem : public QGraphicsItem
 {
 public:
-    TSLevelItem(int level, TilePathScene *scene, QGraphicsItem *parent = 0);
+    TSLevelItem(WorldLevel *wlevel, TilePathScene *scene, QGraphicsItem *parent = 0);
 
     void synchWithTileLayers();
 
@@ -64,7 +64,7 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
 
 private:
-    int mLevel;
+    WorldLevel *mLevel;
     TilePathScene *mScene;
     QRectF mBoundingRect;
 };

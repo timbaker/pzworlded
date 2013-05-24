@@ -34,8 +34,7 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
     mFileName(fileName),
-    mLookup(0),
-    mChanger(new WorldChanger)
+    mChanger(new WorldChanger(world))
 {
     mUndoStack = new QUndoStack(this);
 
@@ -51,14 +50,16 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
 
     PROGRESS progress(QLatin1String("Running scripts (region)"));
 
-    foreach (WorldPathLayer *layer, mWorld->pathLayers()) {
-        foreach (WorldPath *path, layer->paths()) {
-            foreach (WorldScript *ws, path->scripts()) {
-                Tiled::Lua::LuaScript ls(mWorld, ws);
-                if (ls.runFunction("region")) {
-                    QRegion rgn;
-                    if (ls.getResultRegion(rgn))
-                        ws->mRegion = rgn;
+    foreach (WorldLevel *wlevel, mWorld->levels()) {
+        foreach (WorldPathLayer *layer, wlevel->pathLayers()) {
+            foreach (WorldPath *path, layer->paths()) {
+                foreach (WorldScript *ws, path->scripts()) {
+                    Tiled::Lua::LuaScript ls(mWorld, ws);
+                    if (ls.runFunction("region")) {
+                        QRegion rgn;
+                        if (ls.getResultRegion(rgn))
+                            ws->mRegion = rgn;
+                    }
                 }
             }
         }
@@ -73,7 +74,10 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
         }
     }
 
-    mLookup = new WorldLookup(mWorld); // now that the script regions are valid
+    // Now that the script regions are up-to-date...
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            layer->initLookup();
 
     connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
             SLOT(afterAddNode(WorldNode*)));
@@ -99,7 +103,6 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
 
 PathDocument::~PathDocument()
 {
-    delete mLookup;
     delete mChanger;
 }
 
@@ -127,26 +130,26 @@ bool PathDocument::save(const QString &filePath, QString &error)
 
 void PathDocument::afterAddNode(WorldNode *node)
 {
-    lookup()->nodeAdded(node);
+    node->layer->lookup()->nodeAdded(node);
 }
 
 void PathDocument::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
 {
     Q_UNUSED(index)
-    lookup()->nodeRemoved(layer, node);
+    node->layer->lookup()->nodeRemoved(layer, node);
 }
 
 void PathDocument::afterMoveNode(WorldNode *node, const QPointF &prev)
 {
     Q_UNUSED(prev)
-    mLookup->nodeMoved(node);
+    node->layer->lookup()->nodeMoved(node);
 }
 
 void PathDocument::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     Q_UNUSED(layer)
     Q_UNUSED(index)
-    lookup()->pathAdded(path);
+    layer->lookup()->pathAdded(path);
     if (!path->isVisible())
         mHiddenPaths += path;
 }
@@ -154,7 +157,7 @@ void PathDocument::afterAddPath(WorldPathLayer *layer, int index, WorldPath *pat
 void PathDocument::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     Q_UNUSED(index)
-    lookup()->pathRemoved(layer, path);
+    layer->lookup()->pathRemoved(layer, path);
     if (!path->isVisible())
         mHiddenPaths.remove(path);
 }
@@ -163,28 +166,28 @@ void PathDocument::afterAddNodeToPath(WorldPath *path, int index, WorldNode *nod
 {
     Q_UNUSED(index)
     Q_UNUSED(node)
-    lookup()->pathChanged(path);
+    path->layer()->lookup()->pathChanged(path);
 }
 
 void PathDocument::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
 {
     Q_UNUSED(index)
     Q_UNUSED(node)
-    lookup()->pathChanged(path);
+    path->layer()->lookup()->pathChanged(path);
 }
 
 void PathDocument::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
 {
     Q_UNUSED(path)
     Q_UNUSED(index)
-    lookup()->scriptAdded(script);
+    path->layer()->lookup()->scriptAdded(script);
 }
 
 void PathDocument::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
     Q_UNUSED(path)
     Q_UNUSED(index)
-    lookup()->scriptRemoved(script);
+    path->layer()->lookup()->scriptRemoved(script);
 }
 
 void PathDocument::afterSetPathVisible(WorldPath *path, bool visible)

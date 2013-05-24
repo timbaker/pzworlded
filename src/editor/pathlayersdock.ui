@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PathLayersDock</class>
+ <widget class="QDockWidget" name="PathLayersDock">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Path Layers</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QGridLayout" name="gridLayout">
+    <property name="margin">
+     <number>2</number>
+    </property>
+    <item row="0" column="0">
+     <widget class="PathLayersView" name="view"/>
+    </item>
+    <item row="1" column="0">
+     <layout class="QHBoxLayout" name="toolbarLayout"/>
+    </item>
+   </layout>
+  </widget>
+  <action name="actionNewPathLayer">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-new.png</normaloff>:/images/16x16/document-new.png</iconset>
+   </property>
+   <property name="text">
+    <string>New Path Layer</string>
+   </property>
+   <property name="toolTip">
+    <string>New Path Layer</string>
+   </property>
+  </action>
+  <action name="actionRemovePathLayer">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove Path Layer</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove Path Layer</string>
+   </property>
+  </action>
+  <action name="actionMoveLayerUp">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/go-up.png</normaloff>:/images/16x16/go-up.png</iconset>
+   </property>
+   <property name="text">
+    <string>Move Layer Up</string>
+   </property>
+   <property name="toolTip">
+    <string>Move Layer Up</string>
+   </property>
+  </action>
+  <action name="actionMoveLayerDown">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/go-down.png</normaloff>:/images/16x16/go-down.png</iconset>
+   </property>
+   <property name="text">
+    <string>Move Layer Down</string>
+   </property>
+   <property name="toolTip">
+    <string>Move Layer Down</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PathLayersView</class>
+   <extends>QTreeView</extends>
+   <header>pathlayersdock.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="editor.qrc"/>
+ </resources>
+ <connections/>
+</ui>

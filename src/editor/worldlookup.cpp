@@ -43,55 +43,48 @@ static LookupCoordType LOOKUP_LENGTH(qreal w)
     return w * FUDGE;
 }
 
-WorldLookup::WorldLookup(PathWorld *world) :
-    mWorld(world),
-    mScriptTree(new WorldQuadTree<WorldScript>(0, 0,
-                                  LOOKUP_LENGTH(world->width()),
-                                  LOOKUP_LENGTH(world->height())))
+WorldLookup::WorldLookup(WorldPathLayer *layer) :
+    mLayer(layer),
+    mNodeTree(new WorldQuadTree<WorldNode>(
+                  0, 0,
+                  LOOKUP_LENGTH(layer->wlevel()->world()->width()),
+                  LOOKUP_LENGTH(layer->wlevel()->world()->height()))),
+    mPathTree(new WorldQuadTree<WorldPath>(
+                  0, 0,
+                  LOOKUP_LENGTH(layer->wlevel()->world()->width()),
+                  LOOKUP_LENGTH(layer->wlevel()->world()->height()))),
+    mScriptTree(new WorldQuadTree<WorldScript>(
+                    0, 0,
+                    LOOKUP_LENGTH(layer->wlevel()->world()->width()),
+                    LOOKUP_LENGTH(layer->wlevel()->world()->height())))
 {
-    // FIXME: when inserting or deleting objects, the index becomes invalid
+    // FIXME: when inserting or deleting objects, these indices becomes invalid
     int index = 0;
     int scriptIndex = 0;
 
-    foreach (WorldPathLayer *layer, mWorld->pathLayers()) {
-        mNodeTree += new WorldQuadTree<WorldNode>(0, 0,
-                                      LOOKUP_LENGTH(world->width()),
-                                      LOOKUP_LENGTH(world->height()));
-        mPathTree += new WorldQuadTree<WorldPath>(0, 0,
-                                      LOOKUP_LENGTH(world->width()),
-                                      LOOKUP_LENGTH(world->height()));
-        index = 0;
-        foreach (WorldNode *node, layer->nodes())
-            mNodeTree.last()->Add(index++, node);
+    index = 0;
+    foreach (WorldNode *node, mLayer->nodes())
+        mNodeTree->Add(index++, node);
 
-        index = 0;
-        foreach (WorldPath *path, layer->paths()) {
-            mPathTree.last()->Add(index++, path);
+    index = 0;
+    foreach (WorldPath *path, mLayer->paths()) {
+        mPathTree->Add(index++, path);
 
-            foreach (WorldScript *ws, path->scripts()) {
-                if (ws->mRegion.isEmpty()) {
-                    qCritical("script has empty region - IGNORING");
-                    continue;
-                }
-                mScriptTree->Add(scriptIndex++, ws);
+        foreach (WorldScript *ws, path->scripts()) {
+            if (ws->mRegion.isEmpty()) {
+                qCritical("script has empty region - IGNORING");
+                continue;
             }
-            scriptIndex += 10 - scriptIndex % 10; // FIXME: see scriptAdded()
+            mScriptTree->Add(scriptIndex++, ws);
         }
-    }
-
-    foreach (WorldScript *ws, mWorld->scripts()) {
-        if (ws->mRegion.isEmpty()) {
-            qCritical("script has empty region - IGNORING");
-            continue;
-        }
-        mScriptTree->Add(scriptIndex++, ws);
+        scriptIndex += 10 - scriptIndex % 10; // FIXME: see scriptAdded()
     }
 }
 
 WorldLookup::~WorldLookup()
 {
-    qDeleteAll(mNodeTree);
-    qDeleteAll(mPathTree);
+    delete mNodeTree;
+    delete mPathTree;
     delete mScriptTree;
 }
 
@@ -111,15 +104,15 @@ QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds) const
     return ret.values();
 }
 
-QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QRectF &bounds) const
+QList<WorldPath *> WorldLookup::paths(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
     QMap<int,WorldPath *> ret;
     WorldQuadSubTree<WorldPath>::ObjectList objects;
-    mPathTree[mWorld->indexOf(layer)]->GetObjects(topLeft.x, topLeft.y,
-                                                  LOOKUP_LENGTH(bounds.width()),
-                                                  LOOKUP_LENGTH(bounds.height()),
-                                                  objects);
+    mPathTree->GetObjects(topLeft.x, topLeft.y,
+                          LOOKUP_LENGTH(bounds.width()),
+                          LOOKUP_LENGTH(bounds.height()),
+                          objects);
     foreach (WorldQuadTreeObject<WorldPath> *o, objects) {
         Q_ASSERT(o->data);
         if (!o->data->isVisible()) continue; /////
@@ -128,7 +121,7 @@ QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QRectF &bound
     return ret.values();
 }
 
-QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QPolygonF &poly) const
+QList<WorldPath *> WorldLookup::paths(const QPolygonF &poly) const
 {
     static QPolygonF lpoly;
     lpoly.resize(0);
@@ -137,7 +130,7 @@ QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QPolygonF &po
 
     QMap<int,WorldPath *> ret;
     WorldQuadSubTree<WorldPath>::ObjectList objects;
-    mPathTree[mWorld->indexOf(layer)]->GetObjects(lpoly, objects);
+    mPathTree->GetObjects(lpoly, objects);
     foreach (WorldQuadTreeObject<WorldPath> *o, objects) {
         Q_ASSERT(o->data);
         if (!o->data->isVisible()) continue; /////
@@ -146,14 +139,14 @@ QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QPolygonF &po
     return ret.values();
 }
 
-QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QRectF &bounds) const
+QList<WorldNode *> WorldLookup::nodes(const QRectF &bounds) const
 {
     LookupCoordinate topLeft(bounds.topLeft());
     WorldQuadSubTree<WorldNode>::ObjectList objects;
-    mNodeTree[mWorld->indexOf(layer)]->GetObjects(topLeft.x, topLeft.y,
-                                                  LOOKUP_LENGTH(bounds.width()),
-                                                  LOOKUP_LENGTH(bounds.height()),
-                                                  objects);
+    mNodeTree->GetObjects(topLeft.x, topLeft.y,
+                          LOOKUP_LENGTH(bounds.width()),
+                          LOOKUP_LENGTH(bounds.height()),
+                          objects);
     QMap<int,WorldNode *> ret;
     foreach (WorldQuadTreeObject<WorldNode> *o, objects) {
         Q_ASSERT(o->data);
@@ -162,14 +155,14 @@ QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QRectF &bound
     return ret.values();
 }
 
-QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QPolygonF &poly) const
+QList<WorldNode *> WorldLookup::nodes(const QPolygonF &poly) const
 {
     static QPolygonF lpoly;
     lpoly.resize(0);
     foreach (QPointF p, poly)
         lpoly += LookupCoordinate(p).toPointF();
     WorldQuadSubTree<WorldNode>::ObjectList objects;
-    mNodeTree[mWorld->indexOf(layer)]->GetObjects(lpoly, objects);
+    mNodeTree->GetObjects(lpoly, objects);
     QMap<int,WorldNode *> ret;
     foreach (WorldQuadTreeObject<WorldNode> *o, objects) {
         Q_ASSERT(o->data);
@@ -180,33 +173,33 @@ QList<WorldNode *> WorldLookup::nodes(WorldPathLayer *layer, const QPolygonF &po
 
 void WorldLookup::nodeAdded(WorldNode *node)
 {
-    mNodeTree[mWorld->indexOf(node->layer)]->Add(node->layer->indexOf(node), node);
+    mNodeTree->Add(node->layer->indexOf(node), node);
 }
 
 void WorldLookup::nodeRemoved(WorldPathLayer *layer, WorldNode *node)
 {
-    mNodeTree[mWorld->indexOf(layer)]->Remove(node);
+    mNodeTree->Remove(node);
 }
 
 void WorldLookup::nodeMoved(WorldNode *node)
 {
-    mNodeTree[mWorld->indexOf(node->layer)]->Move(node);
+    mNodeTree->Move(node);
     foreach (WorldPath *path, node->mPaths.keys()) {// FIXME: do this once after all the nodes have moved
         path->nodeMoved();
-        mPathTree[mWorld->indexOf(path->layer())]->Move(path);
+        mPathTree->Move(path);
     }
 }
 
 void WorldLookup::pathAdded(WorldPath *path)
 {
-    mPathTree[mWorld->indexOf(path->layer())]->Add(path->layer()->indexOf(path), path);
+    mPathTree->Add(path->layer()->indexOf(path), path);
     foreach (WorldScript *script, path->scripts())
         scriptAdded(script);
 }
 
 void WorldLookup::pathRemoved(WorldPathLayer *layer, WorldPath *path)
 {
-    mPathTree[mWorld->indexOf(layer)]->Remove(path);
+    mPathTree->Remove(path);
     foreach (WorldScript *script, path->scripts())
         scriptRemoved(script);
 }
@@ -214,7 +207,7 @@ void WorldLookup::pathRemoved(WorldPathLayer *layer, WorldPath *path)
 void WorldLookup::pathChanged(WorldPath *path)
 {
     path->nodeMoved();
-    mPathTree[mWorld->indexOf(path->layer())]->Move(path);
+    mPathTree->Move(path);
 }
 
 void WorldLookup::scriptAdded(WorldScript *script)
@@ -222,7 +215,7 @@ void WorldLookup::scriptAdded(WorldScript *script)
     // A script was added to a Path.  The 'index' should be the position in a
     // global list of scripts in the order they are applied.
     WorldPath *path = script->mPaths.first();
-    int index = path->layer()->indexOf(path) * 10 + path->scripts().indexOf(script); // FIXME: totally bogus, must push following scripts up
+    int index = mLayer->indexOf(path) * 10 + path->scripts().indexOf(script); // FIXME: totally bogus, must push following scripts up
     mScriptTree->Add(index, script);
 }
 

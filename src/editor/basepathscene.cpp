@@ -48,9 +48,9 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     BaseGraphicsScene(PathSceneType, parent),
     mDocument(doc),
     mNodeItem(new NodesItem(this)),
-    mCurrentPathLayer(doc->world()->pathLayers().first()),
+    mCurrentPathLayer(doc->world()->levelAt(0)->pathLayers().first()),
     mActiveTool(0),
-    mChanger(new WorldChanger)
+    mChanger(new WorldChanger(doc->world()))
 {
 }
 
@@ -63,8 +63,6 @@ void BasePathScene::setDocument(PathDocument *doc)
 {
     mDocument = doc;
 
-    mPathLayerItems.clear();
-
 #if 0
 
     foreach (WorldScript *ws, world()->scripts()) {
@@ -76,97 +74,10 @@ void BasePathScene::setDocument(PathDocument *doc)
 #endif
 
     int z = 1;
-    foreach (WorldPathLayer *layer, world()->pathLayers()) {
-        PathLayerItem *item = new PathLayerItem(layer, this);
-#if 0
-        if (floor && ts) {
-            foreach (WorldPath::Path *path, layer->paths()) {
-                if (path->bounds().intersects(QRect(cell()->pos()*300, QSize(300,300)))) {
-                    QString script;
-                    if (path->tags.contains(QLatin1String("landuse"))) {
-                        QString v = path->tags[QLatin1String("landuse")];
-                        if (v == QLatin1String("forest") || v == QLatin1String("wood"))
-                            ;
-                        else if (v == QLatin1String("park"))
-                            ;
-                        else if (v == QLatin1String("grass"))
-                            ;
-                    } else if (path->tags.contains(QLatin1String("natural"))) {
-                        QString v = path->tags[QLatin1String("natural")];
-                        if (v == QLatin1String("water"))
-                            ;
-
-                    } else if (path->tags.contains(QLatin1String("leisure"))) {
-                        QString v = path->tags[QLatin1String("leisure")];
-                        if (v == QLatin1String("park"))
-                            script = QLatin1String("C:/Programming/Tiled/PZWorldEd/park.lua");
-                    }
-                    if (path->tags.contains(QLatin1String("highway"))) {
-                        qreal width;
-                        QString v = path->tags[QLatin1String("highway")];
-                        if (v == QLatin1String("residential")) width = 6; /// #1
-                        else if (v == QLatin1String("pedestrian")) width = 5;
-                        else if (v == QLatin1String("secondary")) width = 5;
-                        else if (v == QLatin1String("secondary_link")) width = 5;
-                        else if (v == QLatin1String("tertiary")) width = 4; /// #3
-                        else if (v == QLatin1String("tertiary_link")) width = 4;
-                        else if (v == QLatin1String("bridleway")) width = 4;
-                        else if (v == QLatin1String("private")) width = 4;
-                        else if (v == QLatin1String("service")) width = 6/2; /// #2
-                        else if (v == QLatin1String("path")) width = 3; /// #2
-                        else continue;
-                        script = QLatin1String("C:/Programming/Tiled/PZWorldEd/road.lua");
-                    }
-                    if (!script.isEmpty()) {
-#if 1
-#else
-                        Lua::LuaScript ls(mMap);
-                        ls.mMap.mCellPos = cell()->pos();
-                        Lua::LuaPath lp(path);
-                        ls.mPath = &lp;
-                        QString output;
-                        if (ls.dofile(script, output)) {
-                            foreach (Lua::LuaLayer *ll, ls.mMap.mLayers) {
-                                // Apply changes to tile layers.
-                                if (Lua::LuaTileLayer *tl = ll->asTileLayer()) {
-                                    if (tl->mOrig == 0)
-                                        continue; // Ignore new layers.
-                                    if (!tl->mCloneTileLayer || tl->mAltered.isEmpty())
-                                        continue; // No changes.
-                                    TileLayer *source = tl->mCloneTileLayer->copy(tl->mAltered);
-                                    QRect r = tl->mAltered.boundingRect();
-                                    tl->mOrig->asTileLayer()->setCells(r.x(), r.y(), source, tl->mAltered);
-                                    delete source;
-                                }
-                            }
-                        }
-#endif
-#if 0
-                        QPolygonF poly = WorldPath::strokePath(path, width);
-                        QRegion rgn = WorldPath::polygonRegion(poly);
-                        rgn.translate(poly.boundingRect().toAlignedRect().topLeft() - cell()->pos() * 300);
-                        if (!rgn.boundingRect().intersects(floor->bounds()))
-                            continue;
-                        foreach (QRect r, rgn.rects()) {
-                            for (int y = r.top(); y <= r.bottom(); y++) {
-                                for (int x = r.left(); x <= r.right(); x++) {
-                                    if (floor->contains(x, y))
-                                        floor->setCell(x, y, Cell(ts->tileAt(96)));
-                                }
-                            }
-                        }
-#endif
-                    }
-                }
-            }
-        }
-
-#endif
+    foreach (WorldLevel *wlevel, world()->levels()) {
+        WorldLevelItem *item = new WorldLevelItem(wlevel, this);
         item->setZValue(z++);
-        if (isTile())
-            item->setOpacity(0.5);
         addItem(item);
-        mPathLayerItems += item;
     }
 
     mNodeItem->setZValue(z++);
@@ -208,7 +119,7 @@ PathWorld *BasePathScene::world() const
 
 WorldLookup *BasePathScene::lookup() const
 {
-    return mDocument ? mDocument->lookup() : 0;
+    return currentPathLayer() ? currentPathLayer()->lookup() : 0;
 }
 
 void BasePathScene::setRenderer(BasePathRenderer *renderer)
@@ -305,7 +216,7 @@ bool PolygonContainsPolyline(const QPolygonF &polygon, const QPolygonF &polyLine
 QList<WorldPath*> BasePathScene::lookupPaths(const QRectF &sceneRect)
 {
     QPolygonF worldPoly = renderer()->toWorld(sceneRect);
-    QList<WorldPath*> paths = lookup()->paths(currentPathLayer(), worldPoly);
+    QList<WorldPath*> paths = mCurrentPathLayer->lookup()->paths(worldPoly);
     foreach (WorldPath *path, paths) {
         if (PolygonContainsPolyline(worldPoly, path->polygon()))
             continue;
@@ -334,8 +245,7 @@ WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
 {
     qreal radius = 4 / document()->view()->zoomable()->scale();
     QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
-    QList<WorldPath*> paths = lookup()->paths(currentPathLayer(),
-                                              renderer()->toWorld(sceneRect));
+    QList<WorldPath*> paths = currentPathLayer()->lookup()->paths(renderer()->toWorld(sceneRect));
 
     // Do distance check in scene coords otherwise isometric testing is 1/2 height
     QVector2D p(scenePos);
@@ -422,7 +332,8 @@ PathLayerItem::PathLayerItem(WorldPathLayer *layer, BasePathScene *scene, QGraph
 
 QRectF PathLayerItem::boundingRect() const
 {
-    return mScene->renderer()->sceneBounds(mScene->world()->bounds(), mLayer->mLevel);
+    return mScene->renderer()->sceneBounds(mScene->world()->bounds(),
+                                           mLayer->wlevel()->level());
 }
 
 void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
@@ -445,8 +356,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 #endif
 #if 1
     QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
-    foreach (WorldPathLayer *wpl, mScene->world()->pathLayers()) {
-        foreach (WorldPath *path, mScene->lookup()->paths(wpl, exposed)) {
+        foreach (WorldPath *path, mLayer->lookup()->paths(exposed)) {
 #if 1
             if (!path->isVisible()) continue;
             painter->setPen(QPen());
@@ -529,13 +439,12 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                     painter->drawEllipse(p, radius, radius);
             }
         }
-    }
 
     return;
 
     painter->setPen(Qt::NoPen);
     painter->setBrush(QColor(0,64,0,128));
-    foreach (WorldScript *ws, mScene->lookup()->scripts(exposed.boundingRect())) {
+    foreach (WorldScript *ws, mLayer->lookup()->scripts(exposed.boundingRect())) {
         if (!ws->mRegion.isEmpty()) {
             foreach (QRect rect, ws->mRegion.rects())
                 painter->drawPolygon(mScene->renderer()->toScene(rect));
@@ -543,6 +452,19 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     }
 
 #endif
+}
+
+PathList PathLayerItem::lookupPaths(const QRectF &sceneRect)
+{
+    QPolygonF worldPoly = mScene->renderer()->toWorld(sceneRect);
+    PathList paths = mLayer->lookup()->paths(worldPoly);
+    foreach (WorldPath *path, paths) {
+        if (PolygonContainsPolyline(worldPoly, path->polygon()))
+            continue;
+        if (!PolylineIntersectsPolygon(path->polygon(), worldPoly))
+            paths.removeOne(path);
+    }
+    return paths;
 }
 
 /////
@@ -615,10 +537,11 @@ QList<WorldNode *> NodesItem::lookupNodes(const QRectF &sceneRect)
 {
     QRectF testRect = sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
                                          nodeRadius(), nodeRadius());
-    NodeList nodes =  mScene->lookup()->nodes(mScene->currentPathLayer(),
-                                              mScene->renderer()->toWorld(testRect));
+    NodeList nodes =  mScene->currentPathLayer()->lookup()->nodes(
+                mScene->renderer()->toWorld(testRect));
     foreach(WorldNode *node, nodes) {
-        if (!testRect.contains(mScene->renderer()->toScene(node->pos())))
+        if (!testRect.contains(mScene->renderer()->toScene(node->pos(),
+                                                           mScene->currentPathLayer()->level())))
             nodes.removeOne(node);
     }
     return nodes;
@@ -628,8 +551,8 @@ WorldNode *NodesItem::topmostNodeAt(const QPointF &scenePos)
 {
     QRectF sceneRect(scenePos.x() - nodeRadius(), scenePos.y() - nodeRadius(),
                      nodeRadius() * 2, nodeRadius() * 2);
-    QList<WorldNode*> nodes = mScene->lookup()->nodes(mScene->currentPathLayer(),
-                                                      mScene->renderer()->toWorld(sceneRect));
+    QList<WorldNode*> nodes = mScene->currentPathLayer()->lookup()->nodes(
+                mScene->renderer()->toWorld(sceneRect));
     return nodes.size() ? nodes.last() : 0;
 }
 
@@ -645,4 +568,23 @@ void NodesItem::redrawNode(id_t id)
 qreal NodesItem::nodeRadius() const
 {
     return 6 / mScene->document()->view()->zoomable()->scale();
+}
+
+/////
+
+WorldLevelItem::WorldLevelItem(WorldLevel *wlevel, BasePathScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mLevel(wlevel),
+    mScene(scene)
+{
+    setFlag(ItemHasNoContents);
+
+    int z = 1;
+    foreach (WorldPathLayer *layer, mLevel->pathLayers()) {
+        PathLayerItem *item = new PathLayerItem(layer, scene, this);
+        item->setZValue(z++);
+        if (mScene->isTile())
+            item->setOpacity(0.5);
+        mPathLayerItems += item;
+    }
 }

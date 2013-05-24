@@ -40,6 +40,7 @@
 #include "objectsdock.h"
 #include "objectgroupsdialog.h"
 #include "objecttypesdialog.h"
+#include "pathlayersdock.h"
 #include "pathworldreader.h"
 #include "preferences.h"
 #include "preferencesdialog.h"
@@ -140,6 +141,9 @@ static void testPathDocument()
 
         PROGRESS progress(QLatin1String("Creating nodes and paths"));
 
+        for (int z = 0; z < newWorld->maxLevel(); z++)
+            newWorld->insertLevel(z, new WorldLevel(z));
+
         foreach (OSM::Node *n, osm.nodes()) {
             pathLayer->insertNode(i++, new WorldNode(n->id,
                                                      n->pc.x * worldInPixels - worldGridX1,
@@ -157,12 +161,12 @@ static void testPathDocument()
                 path->insertNode(j++, pathLayer->node(nd->id));
             highestPathId = qMax(highestPathId, path->id);
         }
-        newWorld->insertPathLayer(0, pathLayer);
+        newWorld->levelAt(0)->insertPathLayer(0, pathLayer);
     }
 
     newWorld->setNextIds(highestNodeId + 1, highestPathId + 1);
 
-    foreach (WorldPathLayer *layer, newWorld->pathLayers()) {
+    foreach (WorldPathLayer *layer, newWorld->levelAt(0)->pathLayers()) {
         foreach (WorldPath *path, layer->paths()) {
             QString script;
             ScriptParams params;
@@ -228,12 +232,18 @@ static void testPathDocument()
         }
     }
 
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Frames")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Doors")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Walls")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Windows")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Vegetation")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Floor")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Frames")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Doors")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Walls")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Windows")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Vegetation")));
 
 #if 0
     progress.update(QLatin1String("Running scripts (region)"));
@@ -347,6 +357,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
     , mRoadsDock(new RoadsDock(this))
+    , mPathLayersDock(new PathLayersDock(this))
     , mCurrentDocument(0)
     , mCurrentLevelMenu(new QMenu(this))
     , mObjectGroupMenu(new QMenu(this))
@@ -434,12 +445,14 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
     ui->menuView->addAction(mRoadsDock->toggleViewAction());
+    ui->menuView->addAction(mPathLayersDock->toggleViewAction());
 
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mRoadsDock);
     addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
     addDockWidget(Qt::RightDockWidgetArea, mLayersDock);
+    addDockWidget(Qt::RightDockWidgetArea, mPathLayersDock);
     addDockWidget(Qt::RightDockWidgetArea, mMapsDock);
     tabifyDockWidget(mPropertiesDock, mLayersDock);
     tabifyDockWidget(mLayersDock, mMapsDock);
@@ -785,6 +798,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLotsDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
         mRoadsDock->setDocument(doc);
+        mPathLayersDock->setDocument(doc->asPathDocument());
 
         mZoomable = mCurrentDocument->view()->zoomable();
         mZoomable->connectToComboBox(mZoomComboBox);
@@ -798,6 +812,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLotsDock->clearDocument();
         mObjectsDock->clearDocument();
         mRoadsDock->clearDocument();
+        mPathLayersDock->setDocument(0);
     }
 
     ToolManager::instance()->setScene(doc ? doc->view()->scene() : 0);

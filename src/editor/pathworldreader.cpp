@@ -98,12 +98,9 @@ private:
             if (xml.name() == "tileset") {
                 if (WorldTileset *tileset = readTileset())
                     mWorld->insertTileset(mWorld->tilesetCount(), tileset);
-            } else if (xml.name() == "pathlayer") {
-                if (WorldPathLayer *layer = readPathLayer())
-                    mWorld->insertPathLayer(mWorld->pathLayerCount(), layer);
-            } else if (xml.name() == "tilelayer") {
-                if (WorldTileLayer *layer = readTileLayer())
-                    mWorld->insertTileLayer(mWorld->tileLayerCount(), layer);
+            } else if (xml.name() == "level") {
+                if (WorldLevel *level = readLevel())
+                    mWorld->insertLevel(mWorld->levelCount(), level);
             } else if (xml.name() == "tile-alias") {
                 if (WorldTileAlias *alias = readTileAlias())
                     mWorld->addTileAlias(alias);
@@ -140,6 +137,28 @@ private:
         return tileset;
     }
 
+    WorldLevel *readLevel()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "level");
+
+        const QXmlStreamAttributes atts = xml.attributes();
+
+        WorldLevel *wlevel = new WorldLevel(mWorld->levelCount());
+
+        while (xml.readNextStartElement()) {
+            if (xml.name() == "pathlayer") {
+                if (WorldPathLayer *layer = readPathLayer())
+                    wlevel->insertPathLayer(wlevel->pathLayerCount(), layer);
+            } else if (xml.name() == "tilelayer") {
+                if (WorldTileLayer *layer = readTileLayer())
+                    wlevel->insertTileLayer(wlevel->tileLayerCount(), layer);
+            } else
+                readUnknownElement();
+        }
+
+        return wlevel;
+    }
+
     WorldPathLayer *readPathLayer()
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == "pathlayer");
@@ -147,7 +166,7 @@ private:
         const QXmlStreamAttributes atts = xml.attributes();
         const QString name = atts.value(QLatin1String("name")).toString();
 
-        WorldPathLayer *layer = new WorldPathLayer(name, 0);
+        WorldPathLayer *layer = new WorldPathLayer(name);
 
         while (xml.readNextStartElement()) {
             if (xml.name() == "node") {
@@ -242,7 +261,7 @@ private:
 
         xml.skipCurrentElement();
 
-        WorldTileLayer *layer = new WorldTileLayer(mWorld, name);
+        WorldTileLayer *layer = new WorldTileLayer(name);
         return layer;
     }
 

@@ -17,6 +17,9 @@
 
 #include "path.h"
 
+#include "pathworld.h"
+#include "worldlookup.h"
+
 #if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
 // class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
@@ -200,20 +203,30 @@ WorldScript *WorldPath::removeScript(int index)
 /////
 
 WorldPathLayer::WorldPathLayer() :
-    mLevel(0)
+    mLevel(0),
+    mVisible(true),
+    mLookup(0)
 {
 }
 
-WorldPathLayer::WorldPathLayer(const QString &name, int level) :
+WorldPathLayer::WorldPathLayer(const QString &name) :
+    mLevel(0),
     mName(name),
-    mLevel(level)
+    mVisible(true),
+    mLookup(0)
 {
 }
 
 WorldPathLayer::~WorldPathLayer()
 {
+    delete mLookup;
     qDeleteAll(mPaths);
     qDeleteAll(mNodes);
+}
+
+int WorldPathLayer::level() const
+{
+    return mLevel ? mLevel->level() : 0;
 }
 
 void WorldPathLayer::insertNode(int index, WorldNode *node)
@@ -273,9 +286,14 @@ int WorldPathLayer::indexOf(WorldPath *path)
     return mPaths.indexOf(path); // FIXME: slow
 }
 
+void WorldPathLayer::initLookup()
+{
+    mLookup = new WorldLookup(this);
+}
+
 WorldPathLayer *WorldPathLayer::clone() const
 {
-    WorldPathLayer *clone = new WorldPathLayer(mName, mLevel);
+    WorldPathLayer *clone = new WorldPathLayer(mName);
     foreach (WorldNode *node, nodes())
         clone->insertNode(clone->nodeCount(), node->clone());
     foreach (WorldPath *path, paths())
