@@ -177,6 +177,9 @@ public:
     static CreatePathTool *instance();
     static void deleteInstance();
 
+    void activate();
+    void deactivate();
+
     void setScene(BaseGraphicsScene *scene);
 
     void keyPressEvent(QKeyEvent *event);
@@ -190,7 +193,8 @@ public:
         //setShortcut(QKeySequence(tr("S")));
     }
 
-    void finishNewPath();
+    void finishNewPath(bool close);
+    void clearNewPath();
 
 private:
     Q_DISABLE_COPY(CreatePathTool)
@@ -200,6 +204,14 @@ private:
 
     WorldPath *mNewPath;
     QPointF mStartScenePos;
+#if 1
+    QGraphicsLineItem *mSegmentItem;
+#else
+    QGraphicsPathItem *mPolyItem;
+    QGraphicsEllipseItem *mFirstNodeItem;
+    QPolygonF mPoly;
+    NodeList mNodes;
+#endif
 };
 
 #endif // PATHTOOLS_H

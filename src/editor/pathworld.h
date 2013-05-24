@@ -21,7 +21,7 @@
 #include <QList>
 #include <QMap>
 #include <QRegion>
-#include <QString>
+#include <QStringList>
 
 #include "global.h"
 
@@ -58,6 +58,8 @@ public:
     ~WorldTileset();
 
     WorldTile *tileAt(int index);
+
+    void resize(int columns, int rows);
 
     WorldTileset *clone() const;
 
@@ -99,13 +101,18 @@ class WorldTileAlias
 {
 public:
     QString mName;
+    QStringList mTileNames;
     TileList mTiles;
 };
 
 class WorldTileRule
 {
 public:
+    WorldTileRule() :
+        mCondition(0)
+    {}
     QString mName;
+    QStringList mTileNames; // tile or alias names
     TileList mTiles;
     QString mLayer;
     WorldTileRule *mCondition;
@@ -166,14 +173,14 @@ public:
 
     void insertScript(int index, WorldScript *script);
     WorldScript *removeScript(int index);
-    const QList<WorldScript*> &scripts() const
+    const ScriptList &scripts() const
     { return mScripts; }
     WorldScript *scriptAt(int index);
     int scriptCount() const
     { return mScripts.size(); }
 
     void insertTileset(int index, WorldTileset *tileset);
-    const QList<WorldTileset*> &tilesets() const
+    const TilesetList &tilesets() const
     { return mTilesets; }
     WorldTileset *tileset(const QString &tilesetName);
     int tilesetCount() const
@@ -184,6 +191,8 @@ public:
         mTileAliases += alias;
         mTileAliasByName[alias->mName] = alias;
     }
+    const AliasList &tileAliases() const
+    { return mTileAliases; }
     WorldTileAlias *tileAlias(const QString &name)
     {
         return mTileAliasByName.contains(name) ? mTileAliasByName[name] : 0;
@@ -194,6 +203,8 @@ public:
         mTileRules += rule;
         mTileRuleByName[rule->mName] = rule;
     }
+    const TileRuleList &tileRules() const
+    { return mTileRules; }
     WorldTileRule *tileRule(const QString &name)
     {
         return mTileRuleByName.contains(name) ? mTileRuleByName[name] : 0;
@@ -208,7 +219,7 @@ protected:
     int mWidth;
     int mHeight;
 
-    QList<WorldTileset*> mTilesets;
+    TilesetList mTilesets;
     QMap<QString,WorldTileset*> mTilesetByName;
 
     QList<WorldTileLayer*> mTileLayers;
@@ -222,7 +233,7 @@ protected:
 
 
     QList<WorldPathLayer*> mPathLayers;
-    QList<WorldScript*> mScripts;
+    ScriptList mScripts;
 
     id_t mNextPathId;
     id_t mNextNodeId;

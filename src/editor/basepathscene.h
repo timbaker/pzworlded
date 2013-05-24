@@ -133,7 +133,7 @@ public slots:
     void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
 
-    void afterAddPath(WorldPath *path);
+    void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);

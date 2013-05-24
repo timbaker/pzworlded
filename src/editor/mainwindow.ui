@@ -307,9 +307,15 @@
     </widget>
     <addaction name="actionPathAlign"/>
     <addaction name="menuAdd_Script"/>
+    <addaction name="actionJoinPaths"/>
     <addaction name="actionPathFromNodes"/>
+    <addaction name="actionRemoveNodes"/>
+    <addaction name="actionRemovePaths"/>
     <addaction name="separator"/>
     <addaction name="actionScriptParams"/>
+    <addaction name="separator"/>
+    <addaction name="actionHidePaths"/>
+    <addaction name="actionShowPaths"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -747,6 +753,37 @@
   <action name="actionScriptParams">
    <property name="text">
     <string>Script Parameters...</string>
+   </property>
+  </action>
+  <action name="actionRemoveNodes">
+   <property name="text">
+    <string>Remove Selected Nodes</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove Selected Nodes</string>
+   </property>
+  </action>
+  <action name="actionRemovePaths">
+   <property name="text">
+    <string>Remove Selected Paths</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove Selected Paths</string>
+   </property>
+  </action>
+  <action name="actionJoinPaths">
+   <property name="text">
+    <string>Join Paths</string>
+   </property>
+  </action>
+  <action name="actionHidePaths">
+   <property name="text">
+    <string>Hide Selected Paths</string>
+   </property>
+  </action>
+  <action name="actionShowPaths">
+   <property name="text">
+    <string>Show Hidden Paths</string>
    </property>
   </action>
  </widget>

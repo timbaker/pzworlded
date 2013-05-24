@@ -60,12 +60,15 @@ public:
     WorldLookup *lookup() const
     { return mLookup; }
 
+    const PathSet &hiddenPaths() const
+    { return mHiddenPaths; }
+
 private slots:
     void afterAddNode(WorldNode *node);
     void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
 
-    void afterAddPath(WorldPath *path);
+    void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
@@ -73,11 +76,14 @@ private slots:
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
 
+    void afterSetPathVisible(WorldPath *path, bool visible);
+
 private:
     PathWorld *mWorld;
     QString mFileName;
     WorldLookup *mLookup;
     WorldChanger *mChanger;
+    PathSet mHiddenPaths;
 };
 
 #endif // PATHWORLDDOCUMENT_H

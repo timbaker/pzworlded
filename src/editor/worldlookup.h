@@ -168,6 +168,7 @@ public:
 
     void Add(int index, T *object)
     {
+        Q_ASSERT(!mMap.contains(object));
         WorldQuadTreeObject<T> *wrapped = new WorldQuadTreeObject<T>(index, object);
         mMap[object] = wrapped;
         mRoot->Insert(wrapped);
@@ -175,6 +176,7 @@ public:
 
     void Remove(T *object)
     {
+        Q_ASSERT(mMap.contains(object));
         if (mMap.contains(object)) {
             mRoot->Delete(mMap[object], true);
             mMap.remove(object);
@@ -183,6 +185,7 @@ public:
 
     void Move(T *object)
     {
+        Q_ASSERT(mMap.contains(object));
         if (mMap.contains(object)) {
             mMap[object]->updateBounds(object);
             mRoot->Move(mMap[object]);

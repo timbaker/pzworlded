@@ -1,7 +1,7 @@
 -- fill-tile-alias.lua
 
 function params()
-    return 'alias', 'layer', 'foo', 'bar'
+    return 'alias', 'layer'
 end
 
 function region()

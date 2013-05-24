@@ -616,16 +616,36 @@ void CreatePathTool::deleteInstance()
     delete mInstance;
 }
 
-CreatePathTool::CreatePathTool()
-    : BasePathTool(tr("Create Path"),
-                   QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
-                   QKeySequence())
-    , mNewPath(0)
+CreatePathTool::CreatePathTool() :
+    BasePathTool(tr("Create Path"),
+                 QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                 QKeySequence()),
+#if 1
+    mNewPath(0),
+    mSegmentItem(new QGraphicsLineItem)
+#else
+    mPolyItem(new QGraphicsPathItem),
+    mFirstNodeItem(new QGraphicsEllipseItem)
+#endif
 {
+#if 1
+#else
+    mPolyItem->setPen(QPen(QColor(0,255,0), 2));
+    mFirstNodeItem->setPen(QPen(QColor(0,255,0), 2));
+#endif
 }
 
 CreatePathTool::~CreatePathTool()
 {
+}
+
+void CreatePathTool::activate()
+{
+}
+
+void CreatePathTool::deactivate()
+{
+    clearNewPath();
 }
 
 void CreatePathTool::setScene(BaseGraphicsScene *scene)
@@ -635,6 +655,16 @@ void CreatePathTool::setScene(BaseGraphicsScene *scene)
 
 void CreatePathTool::keyPressEvent(QKeyEvent *event)
 {
+#if 0
+    if ((event->key() == Qt::Key_Escape) && mPoly.size()) {
+        clearNewPath();
+        event->accept();
+    }
+    if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) && mPoly.size()) {
+        finishNewPath(false);
+        event->accept();
+    }
+#else
     if ((event->key() == Qt::Key_Escape) && mNewPath) {
         mScene->changer()->undoAndForget();
         // FIXME: delete path and nodes
@@ -642,25 +672,54 @@ void CreatePathTool::keyPressEvent(QKeyEvent *event)
         event->accept();
     }
     if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) && mNewPath) {
-        finishNewPath();
+        finishNewPath(false);
         event->accept();
     }
+#endif
 }
 
 void CreatePathTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         WorldNode *node = mScene->nodeItem()->topmostNodeAt(event->scenePos());
+#if 0
+        if (mPoly.size() > 1 && QLineF(mPoly.first(), event->scenePos()).length() < mScene->nodeItem()->nodeRadius()) {
+            finishNewPath(true);
+            return;
+        }
+        mNodes += node;
+        if (node) {
+            mPoly += mScene->renderer()->toScene(node->pos());
+        } else {
+            mPoly += event->scenePos();
+        }
+        QPainterPath path;
+        path.moveTo(mPoly.first());
+        foreach (QPointF p, mPoly.mid(1))
+            path.lineTo(p);
+        mPolyItem->setPath(path);
+        if (mPoly.size() == 1) {
+            if (!node) {
+                mFirstNodeItem->setRect(mPoly.first().x() - mScene->nodeItem()->nodeRadius(),
+                                        mPoly.first().y() - mScene->nodeItem()->nodeRadius(),
+                                        mScene->nodeItem()->nodeRadius() * 2,
+                                        mScene->nodeItem()->nodeRadius() * 2);
+            }
+            mScene->addItem(mFirstNodeItem);
+            mScene->addItem(mPolyItem);
+        }
+#else
         if (!mNewPath) {
             mNewPath = mScene->world()->allocPath();
             mScene->changer()->doAddPath(mScene->currentPathLayer(),
                                          mScene->currentPathLayer()->pathCount(),
                                          mNewPath);
+            mScene->addItem(mSegmentItem);
         }
         if (node) {
             mScene->changer()->doAddNodeToPath(mNewPath, mNewPath->nodeCount(), node);
             if (mNewPath->nodeCount() > 1 && node == mNewPath->first())
-                finishNewPath();
+                finishNewPath(true);
         } else {
             WorldNode *node = mScene->world()->allocNode(mScene->renderer()->toWorld(event->scenePos()));
             mScene->changer()->doAddNode(mScene->currentPathLayer(),
@@ -668,15 +727,31 @@ void CreatePathTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                                          node);
             mScene->changer()->doAddNodeToPath(mNewPath, mNewPath->nodeCount(), node);
         }
+#endif
     }
     if (event->button() == Qt::RightButton) {
-        finishNewPath();
+        clearNewPath();
     }
 }
 
 void CreatePathTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     mScene->nodeItem()->trackMouse(event);
+
+#if 1
+    if (mNewPath) {
+        mSegmentItem->setLine(QLineF(mScene->renderer()->toScene(mNewPath->last()->pos()), event->scenePos()));
+    }
+#else
+    if (mPoly.size()) {
+        QPainterPath path;
+        path.moveTo(mPoly.first());
+        foreach (QPointF p, mPoly.mid(1))
+            path.lineTo(p);
+        path.lineTo(event->scenePos());
+        mPolyItem->setPath(path);
+    }
+#endif
 }
 
 void CreatePathTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -684,8 +759,32 @@ void CreatePathTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     Q_UNUSED(event)
 }
 
-void CreatePathTool::finishNewPath()
+void CreatePathTool::finishNewPath(bool close)
 {
+#if 0
+    if (mPoly.size()) {
+        document()->changer()->beginUndoMacro(document()->undoStack(), tr("Create Path"));
+        WorldPath *path = mScene->world()->allocPath();
+        document()->changer()->doAddPath(mScene->currentPathLayer(),
+                                         mScene->currentPathLayer()->pathCount(),
+                                         path);
+        for (int i = 0; i < mPoly.size(); i++) {
+            if (mNodes[i])
+                document()->changer()->doAddNodeToPath(path, path->nodeCount(), mNodes[i]);
+            else {
+                WorldNode *node = mScene->world()->allocNode(mScene->renderer()->toWorld(mPoly[i]));
+                document()->changer()->doAddNode(mScene->currentPathLayer(),
+                                             mScene->currentPathLayer()->nodeCount(),
+                                             node);
+                document()->changer()->doAddNodeToPath(path, path->nodeCount(), node);
+            }
+        }
+        if (close)
+            document()->changer()->doAddNodeToPath(path, path->nodeCount(), path->first());
+        document()->changer()->endUndoMacro();
+        clearNewPath();
+    }
+#else
     if (mNewPath) {
         beginUndoMacro(tr("Create Path"));
         foreach (WorldChange *c, mScene->changer()->takeChanges()) {
@@ -693,6 +792,25 @@ void CreatePathTool::finishNewPath()
             document()->undoStack()->push(new WorldChangeUndoCommand(c));
         }
         endUndoMacro();
+        clearNewPath();
+    }
+#endif
+}
+
+void CreatePathTool::clearNewPath()
+{
+#if 1
+    if (mNewPath) {
+        mScene->changer()->undoAndForget();
+        mScene->removeItem(mSegmentItem);
         mNewPath = 0;
     }
+#else
+    if (mPoly.size()) {
+        mPoly.clear();
+        mNodes.clear();
+        mScene->removeItem(mFirstNodeItem);
+        mScene->removeItem(mPolyItem);
+    }
+#endif
 }

@@ -172,11 +172,16 @@ void BasePathScene::setDocument(PathDocument *doc)
     mNodeItem->setZValue(z++);
     addItem(mNodeItem);
 
+    setSceneRect(mRenderer->toScene(world()->bounds(), 16).boundingRect()
+                 | mRenderer->toScene(world()->bounds(), 0).boundingRect());
+
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*)));
     connect(mDocument->changer(), SIGNAL(afterAddNodeSignal(WorldNode*)),
             SLOT(update()));
     connect(mDocument->changer(), SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(update()));
+    connect(mDocument->changer(), SIGNAL(afterSetPathVisibleSignal(WorldPath*,bool)),
             SLOT(update()));
 //    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(update())); // FIXME: only repaint what's needed
 
@@ -184,8 +189,8 @@ void BasePathScene::setDocument(PathDocument *doc)
             SLOT(afterAddNode(WorldNode*)));
     connect(mChanger, SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
             SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
-    connect(mChanger, SIGNAL(afterAddPathSignal(WorldPath*)),
-            SLOT(afterAddPath(WorldPath*)));
+    connect(mChanger, SIGNAL(afterAddPathSignal(WorldPathLayer*,int,WorldPath*)),
+            SLOT(afterAddPath(WorldPathLayer*,int,WorldPath*)));
     connect(mChanger, SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
             SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
     connect(mChanger, SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
@@ -289,11 +294,21 @@ bool PolylineIntersectsPolygon(const QPolygonF &polyLine, const QPolygonF &polyT
     return false;
 }
 
+bool PolygonContainsPolyline(const QPolygonF &polygon, const QPolygonF &polyLine)
+{
+    foreach (QPointF p, polyLine)
+        if (!polygon.containsPoint(p, Qt::OddEvenFill))
+            return false;
+    return true;
+}
+
 QList<WorldPath*> BasePathScene::lookupPaths(const QRectF &sceneRect)
 {
     QPolygonF worldPoly = renderer()->toWorld(sceneRect);
     QList<WorldPath*> paths = lookup()->paths(currentPathLayer(), worldPoly);
     foreach (WorldPath *path, paths) {
+        if (PolygonContainsPolyline(worldPoly, path->polygon()))
+            continue;
         if (!PolylineIntersectsPolygon(path->polygon(), worldPoly))
             paths.removeOne(path);
     }
@@ -359,8 +374,10 @@ void BasePathScene::afterMoveNode(WorldNode *node, const QPointF &prev)
     Q_UNUSED(prev)
 }
 
-void BasePathScene::afterAddPath(WorldPath *path)
+void BasePathScene::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
 {
+    Q_UNUSED(layer)
+    Q_UNUSED(index)
     lookup()->pathAdded(path);
     nodeItem()->update();
 }
@@ -431,6 +448,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     foreach (WorldPathLayer *wpl, mScene->world()->pathLayers()) {
         foreach (WorldPath *path, mScene->lookup()->paths(wpl, exposed)) {
 #if 1
+            if (!path->isVisible()) continue;
             painter->setPen(QPen());
             QPolygonF pf = path->polygon();
             painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));

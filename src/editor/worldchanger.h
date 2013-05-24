@@ -29,6 +29,8 @@ class WorldPath;
 class WorldPathLayer;
 class WorldScript;
 
+class QUndoStack;
+
 class WorldChanger;
 
 class WorldChange
@@ -58,18 +60,20 @@ public:
     ~WorldChanger();
 
     void doAddNode(WorldPathLayer *layer, int index, WorldNode *node);
+    void doRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterAddNode(WorldNode *node);
-
     void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
 
     void doMoveNode(WorldNode *node, const QPointF &pos);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
 
     void doAddPath(WorldPathLayer *layer, int index, WorldPath *path);
-    void afterAddPath(WorldPath *path);
+    void doRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
 
     void doAddNodeToPath(WorldPath *path, int index, WorldNode *node);
+    void doRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
 
@@ -80,14 +84,20 @@ public:
     void doChangeScriptParameters(WorldScript *script, const ScriptParams &params);
     void afterChangeScriptParameters(WorldScript *script);
 
+    void doSetPathVisible(WorldPath *path, bool visible);
+    void afterSetPathVisible(WorldPath *path, bool visible);
+
     const WorldChangeList &changes() const
     { return mChanges; }
 
     int changeCount() const
     { return mChanges.size(); }
 
-    WorldChangeList takeChanges();
+    WorldChangeList takeChanges(bool undoFirst = true);
     void undoAndForget();
+
+    void beginUndoMacro(QUndoStack *undoStack, const QString &text);
+    void endUndoMacro();
 
     void undo();
 
@@ -96,7 +106,7 @@ signals:
     void afterRemoveNodeSignal(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNodeSignal(WorldNode *node, const QPointF &prev);
 
-    void afterAddPathSignal(WorldPath *path);
+    void afterAddPathSignal(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePathSignal(WorldPathLayer *layer, int index, WorldPath *path);
     void afterAddNodeToPathSignal(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPathSignal(WorldPath *path, int index, WorldNode *node);
@@ -106,12 +116,15 @@ signals:
 
     void afterChangeScriptParametersSignal(WorldScript *script);
 
+    void afterSetPathVisibleSignal(WorldPath *path, bool visible);
+
 private:
     void addChange(WorldChange *change);
 
 private:
     WorldChangeList mChanges;
     WorldChangeList mChangesReversed;
+    QUndoStack *mUndoStack;
 };
 
 #endif // WORLDCHANGER_H

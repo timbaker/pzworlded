@@ -23,10 +23,13 @@
 #include <QRegion>
 #include <QVector>
 
+#include "global.h"
+
 class PathDocument;
 class PathWorld;
 class WorldNode;
 class WorldPath;
+class WorldPathLayer;
 class WorldScript;
 class WorldTile;
 
@@ -243,9 +246,16 @@ signals:
 
 public slots:
     void nodeMoved(WorldNode *node, const QPointF &prev);
+    void afterRemoveNode(WorldPathLayer *laye, int index, WorldNode *node);
+
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
     void afterChangeScriptParameters(WorldScript *script);
+
+    void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
+
+    void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
 
     void nodesMoved();
     void processScriptRegionChanges();
@@ -277,6 +287,7 @@ public:
 private:
     QRectF mMovedNodeArea;
     QRegion mScriptChangeArea;
+    ScriptSet mScriptsThatChanged;
 };
 
 #endif // WORLDCHUNKMAP_H

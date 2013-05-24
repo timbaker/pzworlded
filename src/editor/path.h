@@ -49,16 +49,8 @@ public:
 
     WorldNode *clone() const;
 
-    void addedToPath(WorldPath *path)
-    {
-        mPaths[path] += 1;
-    }
-
-    void removedFromPath(WorldPath *path)
-    {
-        if (--mPaths[path] <= 0)
-            mPaths.remove(path);
-    }
+    void addedToPath(WorldPath *path);
+    void removedFromPath(WorldPath *path);
 
     WorldPathLayer *layer;
     id_t id;
@@ -81,10 +73,15 @@ public:
     WorldNode *nodeAt(int index);
     int nodeCount() const
     { return nodes.size(); }
+    int nodeCount(WorldNode *node)
+    { return nodes.count(node); }
     WorldNode *first() const
     { return nodes.size() ? nodes.first() : 0; }
     WorldNode *last() const
     { return nodes.last() ? nodes.last() : 0; }
+
+    void registerWithNodes();
+    void unregisterFromNodes();
 
     bool isClosed() const;
 
@@ -93,8 +90,7 @@ public:
 
     QRegion region();
 
-    void setOwner(WorldPathLayer *owner)
-    { mLayer = owner; }
+    void setOwner(WorldPathLayer *owner);
 
     WorldPath *clone(WorldPathLayer *layer) const;
 
@@ -111,6 +107,12 @@ public:
     int scriptCount() const
     { return mScripts.size(); }
 
+    bool isVisible() const
+    { return mVisible; }
+
+    void setVisible(bool visible)
+    { mVisible = visible; }
+
     id_t id;
     QList<WorldNode*> nodes;
     QMap<QString,QString> tags;
@@ -120,6 +122,7 @@ public:
 
     WorldPathLayer *mLayer;
     ScriptList mScripts;
+    bool mVisible;
 };
 
 QPolygonF strokePath(WorldPath *path, qreal thickness);

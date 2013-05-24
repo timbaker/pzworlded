@@ -229,12 +229,23 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
 
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*,QPointF)));
+    connect(mDocument->changer(), SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
+            SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
+
     connect(mDocument->changer(), SIGNAL(afterAddScriptToPathSignal(WorldPath*,int,WorldScript*)),
             SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
     connect(mDocument->changer(), SIGNAL(afterRemoveScriptFromPathSignal(WorldPath*,int,WorldScript*)),
             SLOT(afterRemoveScriptFromPath(WorldPath*,int,WorldScript*)));
     connect(mDocument->changer(), SIGNAL(afterChangeScriptParametersSignal(WorldScript*)),
             SLOT(afterChangeScriptParameters(WorldScript*)));
+
+    connect(mDocument->changer(), SIGNAL(afterAddPathSignal(WorldPathLayer*,int,WorldPath*)),
+            SLOT(afterAddPath(WorldPathLayer*,int,WorldPath*)));
+    connect(mDocument->changer(), SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
+            SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
+
+    connect(mDocument->changer(), SIGNAL(afterRemoveNodeFromPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterRemoveNodeFromPath(WorldPath*,int,WorldNode*)));
 }
 
 void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
@@ -422,6 +433,14 @@ void WorldChunkMap::nodeMoved(WorldNode *node, const QPointF &prev)
     }
 }
 
+void WorldChunkMap::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
+{
+    Q_UNUSED(layer)
+    Q_UNUSED(index)
+    Q_UNUSED(node)
+    // Removing nodes from paths is what matters
+}
+
 #include "tilepainter.h"
 void WorldChunkMap::nodesMoved()
 {
@@ -494,7 +513,11 @@ void WorldChunkMap::afterAddScriptToPath(WorldPath *path, int index, WorldScript
 
 void WorldChunkMap::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
-    afterAddScriptToPath(path, index, script);
+    Q_UNUSED(path)
+    Q_UNUSED(index)
+    if (mScriptChangeArea.isEmpty())
+        QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+    mScriptChangeArea |= script->mRegion;
 }
 
 void WorldChunkMap::afterChangeScriptParameters(WorldScript *script)
@@ -502,6 +525,40 @@ void WorldChunkMap::afterChangeScriptParameters(WorldScript *script)
     if (script->mPaths.size())
         nodeMoved(script->mPaths.first()->first(),
                   script->mPaths.first()->first()->pos() + QPoint(1,1));
+}
+
+void WorldChunkMap::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    Q_UNUSED(layer)
+    Q_UNUSED(index)
+    // Regenerate tiles where the path's scripts are.
+    foreach (WorldScript *script, path->scripts()) {
+        if (mScriptChangeArea.isEmpty())
+            QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+        mScriptChangeArea |= script->mRegion;
+    }
+}
+
+void WorldChunkMap::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    Q_UNUSED(layer)
+    Q_UNUSED(index)
+    // Regenerate tiles where the path's scripts used to be.
+    foreach (WorldScript *script, path->scripts()) {
+        if (mScriptChangeArea.isEmpty())
+            QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+        mScriptChangeArea |= script->mRegion;
+    }
+}
+
+void WorldChunkMap::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
+{
+    // Removed a node from a path.  Do script:region() and script:run() on every
+    // script used by the path, and update lookup for the script.
+    foreach (WorldScript *script, path->scripts()) {
+        mScriptsThatChanged += script;
+    }
+
 }
 
 void WorldChunkMap::processScriptRegionChanges()

@@ -81,6 +81,11 @@ LuaPath::~LuaPath()
     }
 }
 
+LuaPathLayer *LuaPath::layer()
+{
+    return mWorld->luaPathLayer(mPath->layer());
+}
+
 LuaPath *LuaPath::stroke(double thickness)
 {
     QPolygonF poly = ::strokePath(mPath, thickness);
@@ -105,9 +110,27 @@ int LuaPath::nodeCount()
     return mPath->nodeCount();
 }
 
+QList<LuaNode *> LuaPath::nodes()
+{
+    QList<LuaNode*> ret;
+    foreach (WorldNode *node, mPath->nodes)
+        ret += mWorld->luaNode(node);
+    return ret;
+}
+
 LuaNode *LuaPath::nodeAt(int index)
 {
     return mWorld->luaNode(mPath->nodeAt(index));
+}
+
+LuaNode *LuaPath::first()
+{
+    return mWorld->luaNode(mPath->first());
+}
+
+LuaNode *LuaPath::last()
+{
+    return mWorld->luaNode(mPath->last());
 }
 
 void LuaPath::addNode(LuaNode *node)
@@ -133,6 +156,12 @@ LuaPath *LuaPathLayer::newPath()
     WorldPath *path = mWorld->mWorld->allocPath();
     mWorld->mChanger->doAddPath(mLayer, mLayer->pathCount(), path);
     return mWorld->luaPath(path);
+}
+
+void LuaPathLayer::removePath(LuaPath *path)
+{
+    if (path->mPath->layer() != mLayer) return; // error!
+    mWorld->mChanger->doRemovePath(mLayer, mLayer->indexOf(path->mPath), path->mPath);
 }
 
 /////

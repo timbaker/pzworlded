@@ -58,17 +58,30 @@ WorldNode *WorldNode::clone() const
     return clone;
 }
 
+void WorldNode::addedToPath(WorldPath *path)
+{
+    mPaths[path] += 1;
+}
+
+void WorldNode::removedFromPath(WorldPath *path)
+{
+    if (--mPaths[path] <= 0)
+        mPaths.remove(path);
+}
+
 /////
 
 WorldPath::WorldPath() :
     id(InvalidId),
-    mLayer(0)
+    mLayer(0),
+    mVisible(true)
 {
 }
 
 WorldPath::WorldPath(id_t id) :
     id(id),
-    mLayer(0)
+    mLayer(0),
+    mVisible(true)
 {
 }
 
@@ -78,10 +91,11 @@ WorldPath::~WorldPath()
 
 void WorldPath::insertNode(int index, WorldNode *node)
 {
+    Q_ASSERT(mLayer == node->layer);
     mPolygon.clear();
     mBounds = QRectF();
     nodes.insert(index, node);
-    node->addedToPath(this);
+    if (mLayer) node->addedToPath(this);
 }
 
 WorldNode *WorldPath::removeNode(int index)
@@ -89,13 +103,33 @@ WorldNode *WorldPath::removeNode(int index)
     mPolygon.clear();
     mBounds = QRectF();
     WorldNode *node = nodes.takeAt(index);
-    node->removedFromPath(this);
+    if (mLayer) node->removedFromPath(this);
     return node;
 }
 
 WorldNode *WorldPath::nodeAt(int index)
 {
     return (index >= 0 && index < nodes.size()) ? nodes[index] : 0;
+}
+
+void WorldPath::registerWithNodes()
+{
+    foreach (WorldNode *node, nodes)
+        node->addedToPath(this);
+#ifndef QT_NO_DEBUG
+    foreach (WorldNode *node, nodes)
+        Q_ASSERT(node->mPaths[this] == nodes.count(node));
+#endif
+}
+
+void WorldPath::unregisterFromNodes()
+{
+    foreach (WorldNode *node, nodes)
+        node->removedFromPath(this);
+#ifndef QT_NO_DEBUG
+    foreach (WorldNode *node, nodes)
+        Q_ASSERT(!node->mPaths.contains(this));
+#endif
 }
 
 bool WorldPath::isClosed() const
@@ -133,6 +167,14 @@ QRegion WorldPath::region()
         return QRegion();
 
     return polygonRegion(polygon());
+}
+
+void WorldPath::setOwner(WorldPathLayer *owner)
+{
+    if (mLayer == owner)
+        return;
+    mLayer = owner;
+    mLayer ? registerWithNodes() : unregisterFromNodes();
 }
 
 WorldPath *WorldPath::clone(WorldPathLayer *owner) const

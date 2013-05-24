@@ -61,11 +61,17 @@ public:
     LuaPath(LuaWorld *world, WorldPath *path, bool owner = false);
     ~LuaPath();
 
+    LuaPathLayer *layer();
+
     LuaPath *stroke(double thickness);
     LuaRegion region();
 
     int nodeCount();
+    QList<LuaNode*> nodes();
     LuaNode *nodeAt(int index);
+    LuaNode *first();
+    LuaNode *last();
+
     void addNode(LuaNode *node);
 
     LuaWorld *mWorld;
@@ -80,6 +86,7 @@ public:
     ~LuaPathLayer();
 
     LuaPath *newPath();
+    void removePath(LuaPath *path);
 
     LuaWorld *mWorld;
     WorldPathLayer *mLayer;

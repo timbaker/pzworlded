@@ -150,11 +150,11 @@ static void testPathDocument()
         i = 0;
         foreach (OSM::Way *w, osm.ways()) {
             WorldPath *path = new WorldPath(w->id);
+            pathLayer->insertPath(i++, path);
             path->tags = w->tags;
             int j = 0;
             foreach (OSM::Node *nd, w->nodes)
                 path->insertNode(j++, pathLayer->node(nd->id));
-            pathLayer->insertPath(i++, path);
             highestPathId = qMax(highestPathId, path->id);
         }
         newWorld->insertPathLayer(0, pathLayer);
@@ -228,7 +228,14 @@ static void testPathDocument()
         }
     }
 
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Frames")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Doors")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Walls")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Windows")));
+    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Vegetation")));
 
+#if 0
     progress.update(QLatin1String("Running scripts (region)"));
 
     foreach (WorldPathLayer *layer, newWorld->pathLayers()) {
@@ -255,20 +262,19 @@ static void testPathDocument()
 
     progress.update(QLatin1String("Loading tilesets"));
 
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Floor")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Frames")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Doors")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Walls")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Windows")));
-    newWorld->insertTileLayer(newWorld->tileLayerCount(), new WorldTileLayer(newWorld, QLatin1String("0_Vegetation")));
-
     foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
         WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());
         for (int i = 0; i < ts->tileCount(); i++)
             wts->tileAt(i)->mTiledTile = ts->tileAt(i); // HACK for convenience
         newWorld->insertTileset(newWorld->tilesetCount(), wts);
     }
-    TileMetaInfoMgr::instance()->loadTilesets();
+//    TileMetaInfoMgr::instance()->loadTilesets();
+#endif
+
+    foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets()) {
+        WorldTileset *wts = new WorldTileset(ts->name(), ts->columnCount(), ts->tileCount() / ts->columnCount());
+        newWorld->insertTileset(newWorld->tilesetCount(), wts);
+    }
 
     Tiled::Internal::BmpRulesFile file;
     if (file.read(QCoreApplication::applicationDirPath() + QLatin1Char('/')
@@ -276,6 +282,7 @@ static void testPathDocument()
         foreach (Tiled::BmpAlias *alias, file.aliases()) {
             WorldTileAlias *tileAlias = new WorldTileAlias;
             tileAlias->mName = alias->name;
+            tileAlias->mTileNames = alias->tiles;
             foreach (QString tileName, alias->tiles) {
                 if (WorldTile *wtile = newWorld->tile(tileName)) {
                     tileAlias->mTiles += wtile;
@@ -291,6 +298,7 @@ static void testPathDocument()
             WorldTileRule *wrule = new WorldTileRule;
             wrule->mName = rule->label.isEmpty() ? QString::fromLatin1("Rule %1").arg(i) : rule->label;
             wrule->mLayer = rule->targetLayer;
+            wrule->mTileNames = rule->tileChoices;
             foreach (QString tileOrAlias, rule->tileChoices) {
                 if (WorldTileAlias *alias = newWorld->tileAlias(tileOrAlias))
                     wrule->mTiles += alias->mTiles;
@@ -500,13 +508,20 @@ MainWindow::MainWindow(QWidget *parent)
         ui->menuAdd_Script->clear();
         ui->menuAdd_Script->addAction(QLatin1String("fill-tile-alias.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("fill-tile-rule.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("footway.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("hayfield.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("park.lua"), this, SLOT(addScriptToPath()));
+        ui->menuAdd_Script->addAction(QLatin1String("place-lot.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("road.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("row-of-houses.lua"), this, SLOT(addScriptToPath()));
     }
+    connect(ui->actionJoinPaths, SIGNAL(triggered()), SLOT(joinPaths()));
     connect(ui->actionPathFromNodes, SIGNAL(triggered()), SLOT(pathFromNodes()));
+    connect(ui->actionRemoveNodes, SIGNAL(triggered()), SLOT(removeSelectedNodes()));
+    connect(ui->actionRemovePaths, SIGNAL(triggered()), SLOT(removeSelectedPaths()));
     connect(ui->actionScriptParams, SIGNAL(triggered()), SLOT(scriptParameters()));
+    connect(ui->actionHidePaths, SIGNAL(triggered()), SLOT(hidePaths()));
+    connect(ui->actionShowPaths, SIGNAL(triggered()), SLOT(showPaths()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
@@ -2148,6 +2163,7 @@ void MainWindow::addScriptToPath()
     QAction *sender = (QAction*)QObject::sender();
 
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        doc->changer()->beginUndoMacro(doc->undoStack(), tr("Add Script To Path"));
         foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
             WorldScript *ws = new WorldScript;
             ws->mFileName = ::script(sender->text().toLatin1().constData());
@@ -2155,14 +2171,7 @@ void MainWindow::addScriptToPath()
             ws->mRegion = path->region();
             doc->changer()->doAddScriptToPath(path, path->scriptCount(), ws);
         }
-        // FIXME: just give me the WorldChange object
-        if (doc->changer()->changeCount()) {
-            doc->undoStack()->beginMacro(tr("Add Script To Path"));
-            foreach (WorldChange *change, doc->changer()->takeChanges()) {
-                doc->undoStack()->push(new WorldChangeUndoCommand(change));
-            }
-            doc->undoStack()->endMacro();
-        }
+        doc->changer()->endUndoMacro();
     }
 }
 
@@ -2181,6 +2190,30 @@ void MainWindow::pathFromNodes()
 
         if (ls.mChanger->changeCount()) {
             doc->undoStack()->beginMacro(tr("Path From Nodes"));
+            foreach (WorldChange *change, ls.mChanger->takeChanges()) {
+                change->setChanger(doc->changer());
+                doc->undoStack()->push(new WorldChangeUndoCommand(change));
+            }
+            doc->undoStack()->endMacro();
+        }
+    }
+}
+
+void MainWindow::joinPaths()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        WorldScript ws;
+        ws.mFileName = ::script("join-paths.lua");
+        ws.mPaths = doc->view()->scene()->selectedPaths().toList();
+        ws.mNodes = doc->view()->scene()->nodeItem()->selectedNodes().toList();
+        ws.mCurrentPathLayer = doc->view()->scene()->currentPathLayer();
+
+        Lua::LuaScript ls(doc->world(), &ws);
+        if (!ls.runFunction("run"))
+            return;
+
+        if (ls.mChanger->changeCount()) {
+            doc->undoStack()->beginMacro(tr("Join Paths"));
             foreach (WorldChange *change, ls.mChanger->takeChanges()) {
                 change->setChanger(doc->changer());
                 doc->undoStack()->push(new WorldChangeUndoCommand(change));
@@ -2215,18 +2248,64 @@ void MainWindow::scriptParameters()
             if (dialog.exec() != QDialog::Accepted)
                 return;
 
+            doc->changer()->beginUndoMacro(doc->undoStack(), tr("Change Script Parameters"));
             foreach (WorldScript *ws, path->scripts())
                 doc->changer()->doChangeScriptParameters(ws, ws->mParams);
-
-            // FIXME: just give me the WorldChange object
-            if (doc->changer()->changeCount()) {
-                doc->undoStack()->beginMacro(tr("Change Script Parameters"));
-                foreach (WorldChange *change, doc->changer()->takeChanges()) {
-                    doc->undoStack()->push(new WorldChangeUndoCommand(change));
-                }
-                doc->undoStack()->endMacro();
-            }
+            doc->changer()->endUndoMacro();
         }
     }
 }
 
+void MainWindow::removeSelectedNodes()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        NodeList nodes = doc->view()->scene()->nodeItem()->selectedNodes().toList();
+        if (nodes.size()) {
+            doc->changer()->beginUndoMacro(doc->undoStack(), tr("Remove Nodes"));
+            foreach (WorldNode *node, nodes) {
+                foreach (WorldPath *path, node->mPaths.keys()) {
+                    for (int i = 0; i < path->nodeCount(); i++) {
+                        if (path->nodeAt(i) == node) {
+                            doc->changer()->doRemoveNodeFromPath(path, i, node);
+                            --i;
+                        }
+                    }
+                }
+                doc->changer()->doRemoveNode(node->layer, node->layer->indexOf(node), node);
+            }
+            doc->changer()->endUndoMacro();
+        }
+    }
+}
+
+void MainWindow::removeSelectedPaths()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        PathList paths = doc->view()->scene()->selectedPaths().toList();
+        if (paths.size()) {
+            doc->changer()->beginUndoMacro(doc->undoStack(), tr("Remove Paths"));
+            foreach (WorldPath *path, paths)
+                doc->changer()->doRemovePath(path->layer(), path->layer()->indexOf(path), path);
+            doc->changer()->endUndoMacro();
+        }
+    }
+}
+
+void MainWindow::hidePaths()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        PathList paths = doc->view()->scene()->selectedPaths().toList();
+        foreach (WorldPath *path, paths)
+            doc->changer()->doSetPathVisible(path, false);
+    }
+}
+
+void MainWindow::showPaths()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        PathSet paths = doc->hiddenPaths();
+        foreach (WorldPath *path, paths)
+            doc->changer()->doSetPathVisible(path, true);
+        doc->changer()->takeChanges(false);
+    }
+}

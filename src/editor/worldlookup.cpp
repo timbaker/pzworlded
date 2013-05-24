@@ -122,6 +122,7 @@ QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QRectF &bound
                                                   objects);
     foreach (WorldQuadTreeObject<WorldPath> *o, objects) {
         Q_ASSERT(o->data);
+        if (!o->data->isVisible()) continue; /////
         ret[o->index] = o->data;
     }
     return ret.values();
@@ -139,6 +140,7 @@ QList<WorldPath *> WorldLookup::paths(WorldPathLayer *layer, const QPolygonF &po
     mPathTree[mWorld->indexOf(layer)]->GetObjects(lpoly, objects);
     foreach (WorldQuadTreeObject<WorldPath> *o, objects) {
         Q_ASSERT(o->data);
+        if (!o->data->isVisible()) continue; /////
         ret[o->index] = o->data;
     }
     return ret.values();
@@ -198,11 +200,15 @@ void WorldLookup::nodeMoved(WorldNode *node)
 void WorldLookup::pathAdded(WorldPath *path)
 {
     mPathTree[mWorld->indexOf(path->layer())]->Add(path->layer()->indexOf(path), path);
+    foreach (WorldScript *script, path->scripts())
+        scriptAdded(script);
 }
 
 void WorldLookup::pathRemoved(WorldPathLayer *layer, WorldPath *path)
 {
     mPathTree[mWorld->indexOf(layer)]->Remove(path);
+    foreach (WorldScript *script, path->scripts())
+        scriptRemoved(script);
 }
 
 void WorldLookup::pathChanged(WorldPath *path)

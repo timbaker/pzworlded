@@ -19,6 +19,9 @@
 
 #include "path.h"
 #include "pathworld.h"
+#include "pathundoredo.h"
+
+#include <QUndoStack>
 
 #if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the MapRands class as so:
@@ -100,6 +103,17 @@ public:
     WorldNode *mNode;
 };
 
+class RemoveNode : public AddNode
+{
+public:
+    RemoveNode(WorldChanger *changer, WorldPathLayer *layer, int index, WorldNode *node) :
+        AddNode(changer, layer, index, node)
+    {}
+    void redo() { AddNode::undo(); }
+    void undo() { AddNode::redo(); }
+    QString text() { return mChanger->tr("Remove Node"); }
+};
+
 class AddPath : public WorldChange
 {
 public:
@@ -109,13 +123,12 @@ public:
         mIndex(index),
         mPath(path)
     {
-
     }
 
     void redo()
     {
         mLayer->insertPath(mIndex, mPath);
-        mChanger->afterAddPath(mPath);
+        mChanger->afterAddPath(mLayer, mIndex, mPath);
     }
 
     void undo()
@@ -132,6 +145,17 @@ public:
     WorldPathLayer *mLayer;
     int mIndex;
     WorldPath *mPath;
+};
+
+class RemovePath : public AddPath
+{
+public:
+    RemovePath(WorldChanger *changer, WorldPathLayer *layer, int index, WorldPath *path) :
+        AddPath(changer, layer, index, path)
+    { }
+    void redo() { AddPath::undo(); }
+    void undo() { AddPath::redo(); }
+    QString text() const { return mChanger->tr("Remove Path"); }
 };
 
 class AddNodeToPath : public WorldChange
@@ -166,6 +190,17 @@ public:
     WorldPath *mPath;
     int mIndex;
     WorldNode *mNode;
+};
+
+class RemoveNodeFromPath : public AddNodeToPath
+{
+public:
+    RemoveNodeFromPath(WorldChanger *changer, WorldPath *path, int index, WorldNode *node) :
+        AddNodeToPath(changer, path, index, node)
+    {}
+    void redo() { AddNodeToPath::undo(); }
+    void undo() { AddNodeToPath::redo(); }
+    QString text() const { return mChanger->tr("Remove Node From Path"); }
 };
 
 class AddScriptToPath : public WorldChange
@@ -242,6 +277,39 @@ public:
     ScriptParams mOldParams;
 };
 
+class SetPathVisible : public WorldChange
+{
+public:
+    SetPathVisible(WorldChanger *changer, WorldPath *path, bool visible) :
+        WorldChange(changer),
+        mPath(path),
+        mVisible(visible),
+        mWasVisible(path->isVisible())
+    {
+    }
+
+    void redo()
+    {
+        mPath->setVisible(mVisible);
+        mChanger->afterSetPathVisible(mPath, mVisible);
+    }
+
+    void undo()
+    {
+        mPath->setVisible(mWasVisible);
+        mChanger->afterSetPathVisible(mPath, mWasVisible);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr(mVisible ? "Show Path" : "Hide Path");
+    }
+
+    WorldPath *mPath;
+    bool mVisible;
+    bool mWasVisible;
+};
+
 } // namespace WorldChanges;
 
 /////
@@ -264,7 +332,8 @@ using namespace WorldChanges;
 
 /////
 
-WorldChanger::WorldChanger()
+WorldChanger::WorldChanger() :
+    mUndoStack(0)
 {
 }
 
@@ -276,6 +345,11 @@ WorldChanger::~WorldChanger()
 void WorldChanger::doAddNode(WorldPathLayer *layer, int index, WorldNode *node)
 {
     addChange(new AddNode(this, layer, index, node));
+}
+
+void WorldChanger::doRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
+{
+    addChange(new RemoveNode(this, layer, index, node));
 }
 
 void WorldChanger::afterAddNode(WorldNode *node)
@@ -303,9 +377,14 @@ void WorldChanger::doAddPath(WorldPathLayer *layer, int index, WorldPath *path)
     addChange(new AddPath(this, layer, index, path));
 }
 
-void WorldChanger::afterAddPath(WorldPath *path)
+void WorldChanger::doRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
-    emit afterAddPathSignal(path);
+    addChange(new RemovePath(this, layer, index, path));
+}
+
+void WorldChanger::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    emit afterAddPathSignal(layer, index, path);
 }
 
 void WorldChanger::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
@@ -316,6 +395,11 @@ void WorldChanger::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *
 void WorldChanger::doAddNodeToPath(WorldPath *path, int index, WorldNode *node)
 {
     addChange(new AddNodeToPath(this, path, index, node));
+}
+
+void WorldChanger::doRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
+{
+    addChange(new RemoveNodeFromPath(this, path, index, node));
 }
 
 void WorldChanger::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
@@ -353,9 +437,19 @@ void WorldChanger::afterChangeScriptParameters(WorldScript *script)
     emit afterChangeScriptParametersSignal(script);
 }
 
-WorldChangeList WorldChanger::takeChanges()
+void WorldChanger::doSetPathVisible(WorldPath *path, bool visible)
 {
-    undo(); /////
+    addChange(new SetPathVisible(this, path, visible));
+}
+
+void WorldChanger::afterSetPathVisible(WorldPath *path, bool visible)
+{
+    emit afterSetPathVisibleSignal(path, visible);
+}
+
+WorldChangeList WorldChanger::takeChanges(bool undoFirst)
+{
+    if (undoFirst) undo();
     WorldChangeList changes = mChanges;
     mChanges.clear();
     mChangesReversed.clear();
@@ -367,6 +461,20 @@ void WorldChanger::undoAndForget()
     qDeleteAll(takeChanges());
 }
 
+void WorldChanger::beginUndoMacro(QUndoStack *undoStack, const QString &text)
+{
+    Q_ASSERT(mUndoStack == 0);
+    mUndoStack = undoStack;
+    mUndoStack->beginMacro(text);
+}
+
+void WorldChanger::endUndoMacro()
+{
+    Q_ASSERT(mUndoStack != 0);
+    mUndoStack->endMacro();
+    mUndoStack = 0;
+}
+
 void WorldChanger::undo()
 {
     foreach (WorldChange *c, mChangesReversed)
@@ -375,6 +483,10 @@ void WorldChanger::undo()
 
 void WorldChanger::addChange(WorldChange *change)
 {
+    if (mUndoStack != 0) {
+        mUndoStack->push(new WorldChangeUndoCommand(change));
+        return;
+    }
     mChanges += change;
     mChangesReversed.insert(0, change);
     change->redo();

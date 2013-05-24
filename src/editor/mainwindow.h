@@ -145,7 +145,12 @@ public slots:
     void pathAlign();
     void addScriptToPath();
     void pathFromNodes();
+    void joinPaths();
     void scriptParameters();
+    void removeSelectedNodes();
+    void removeSelectedPaths();
+    void hidePaths();
+    void showPaths();
 
 private:
     void FromToAux(bool selectedOnly);

@@ -194,6 +194,18 @@ WorldTile *WorldTileset::tileAt(int index)
     return 0;
 }
 
+void WorldTileset::resize(int columns, int rows)
+{
+    if (columns != mColumns || rows != mRows) {
+        qDeleteAll(mTiles);
+        mTiles.clear();
+        mColumns = columns;
+        mRows = rows;
+        for (int i = 0; i < mColumns * mRows; i++)
+            mTiles += new WorldTile(this, i);
+    }
+}
+
 WorldTileset *WorldTileset::clone() const
 {
     WorldTileset *clone = new WorldTileset(mName, mColumns, mRows);

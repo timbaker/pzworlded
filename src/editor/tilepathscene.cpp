@@ -151,7 +151,7 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
     mGridItem->updateBoundingRect();
     addItem(mGridItem);
 
-    setSceneRect(mGridItem->boundingRect());
+//    setSceneRect(mGridItem->boundingRect());
 }
 
 TilePathScene::~TilePathScene()
@@ -178,8 +178,10 @@ void TilePathScene::afterAddScriptToPath(WorldPath *path, int index, WorldScript
 {
     Q_UNUSED(index)
     Q_UNUSED(script)
+#if 0
     if (path->nodeCount())
         mChunkMap->nodeMoved(path->first(), path->first()->pos() + QPoint(1,1));
+#endif
 }
 
 /////

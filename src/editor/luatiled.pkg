@@ -254,14 +254,21 @@ class LuaPath @ Path
     LuaPath *stroke(double thickness);
     LuaRegion region();
 
+    LuaPathLayer *layer();
+
     int nodeCount();
     LuaNode *nodeAt(int index);
+    list<LuaNode*> nodes();
+    LuaNode *first();
+    LuaNode *last();
+
     void addNode(LuaNode *node);
 };
 
 class LuaPathLayer @ PathLayer
 {
     LuaPath *newPath();
+    void removePath(LuaPath *path);
 };
 
 class LuaWorldScript @ WorldScript

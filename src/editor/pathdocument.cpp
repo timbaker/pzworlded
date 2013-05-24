@@ -93,6 +93,8 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
             SLOT(afterRemoveScriptFromPath(WorldPath*,int,WorldScript*)));
     connect(mChanger, SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(afterMoveNode(WorldNode*,QPointF)));
+    connect(mChanger, SIGNAL(afterSetPathVisibleSignal(WorldPath*,bool)),
+            SLOT(afterSetPathVisible(WorldPath*,bool)));
 }
 
 PathDocument::~PathDocument()
@@ -140,15 +142,21 @@ void PathDocument::afterMoveNode(WorldNode *node, const QPointF &prev)
     mLookup->nodeMoved(node);
 }
 
-void PathDocument::afterAddPath(WorldPath *path)
+void PathDocument::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
 {
+    Q_UNUSED(layer)
+    Q_UNUSED(index)
     lookup()->pathAdded(path);
+    if (!path->isVisible())
+        mHiddenPaths += path;
 }
 
 void PathDocument::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     Q_UNUSED(index)
     lookup()->pathRemoved(layer, path);
+    if (!path->isVisible())
+        mHiddenPaths.remove(path);
 }
 
 void PathDocument::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
@@ -177,4 +185,12 @@ void PathDocument::afterRemoveScriptFromPath(WorldPath *path, int index, WorldSc
     Q_UNUSED(path)
     Q_UNUSED(index)
     lookup()->scriptRemoved(script);
+}
+
+void PathDocument::afterSetPathVisible(WorldPath *path, bool visible)
+{
+    if (visible)
+        mHiddenPaths.remove(path);
+    else
+        mHiddenPaths += path;
 }
