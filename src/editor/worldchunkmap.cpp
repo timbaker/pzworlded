@@ -179,6 +179,22 @@ public:
 
     void putTile(int x, int y, WorldTile *tile)
     {
+#if 1
+        WorldChunk *chunk = mChunkMap->getChunkForWorldPos(x, y);
+        if (!chunk) return;
+        if (mChunkMap->mLoadingChunk && (chunk != mChunkMap->mLoadingChunk)) return;
+        WorldChunkSquare *sq = chunk->getGridSquare(x - chunk->wx * mChunkMap->TilesPerChunk,
+                                                    y - chunk->wy * mChunkMap->TilesPerChunk,
+                                                    mLayer->level());
+        if (!sq && !tile) return;
+        if (!sq) {
+            sq = WorldChunkSquare::getNew(x, y, mLayer->level());
+            chunk->setSquare(x - chunk->wx * mChunkMap->TilesPerChunk,
+                             y - chunk->wy * mChunkMap->TilesPerChunk,
+                             mLayer->level(), sq);
+
+        }
+#else
         WorldChunkSquare *sq = mChunkMap->getGridSquare(x, y, mLayer->level());
         if (!sq && !tile) return;
         if (!sq && QRect(mChunkMap->getWorldXMinTiles(),
@@ -192,6 +208,7 @@ public:
                                  mLayer->level(), sq);
             }
         }
+#endif
         if (sq) {
             if (sq->tiles.size() < mLayerIndex + 1)
                 sq->tiles.resize(mLayerIndex + 1);
@@ -218,6 +235,7 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
     mWorld(doc->world()),
     WorldX(5),
     WorldY(5),
+    mLoadingChunk(0),
     XMinTiles(-1),
     XMaxTiles(-1),
     YMinTiles(-1),
@@ -260,7 +278,9 @@ void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
     WorldChunk *chunk = WorldChunk::getNew(this);
     setChunk(x, y, chunk);
 
+    mLoadingChunk = chunk;
     chunk->LoadForLater(wx, wy);
+    mLoadingChunk = 0;
 }
 
 WorldChunkSquare *WorldChunkMap::getGridSquare(int x, int y, int z)

@@ -279,6 +279,7 @@ public:
     int WorldY;
 
     QVector<QVector<WorldChunk*> > Chunks;
+    WorldChunk *mLoadingChunk;
 
     int XMinTiles;
     int XMaxTiles;
