@@ -138,6 +138,8 @@ public:
     WorldPathLayer(const QString &mName);
     ~WorldPathLayer();
 
+    void setName(const QString &name)
+    { mName = name; }
     const QString &name() const
     { return mName; }
 
@@ -170,9 +172,7 @@ public:
     bool isVisible() const
     { return mVisible; }
 
-    void initLookup();
-    WorldLookup *lookup() const
-    { return mLookup; }
+    WorldLookup *lookup();
 
 //    QList<WorldPath*> paths(QRectF &bounds);
 //    QList<WorldPath*> paths(qreal x, qreal y, qreal width, qreal height);

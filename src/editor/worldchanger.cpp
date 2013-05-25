@@ -243,6 +243,88 @@ public:
     WorldScript *mScript;
 };
 
+class AddPathLayer : public WorldChange
+{
+public:
+    AddPathLayer(WorldChanger *changer, WorldLevel *wlevel, int index, WorldPathLayer *layer) :
+        WorldChange(changer),
+        mLevel(wlevel),
+        mIndex(index),
+        mLayer(layer)
+    {
+    }
+
+    void redo()
+    {
+        mLevel->insertPathLayer(mIndex, mLayer);
+        mChanger->afterAddPathLayer(mLevel, mIndex, mLayer);
+    }
+
+    void undo()
+    {
+        mChanger->beforeRemovePathLayer(mLevel, mIndex, mLayer);
+        mLevel->removePathLayer(mIndex);
+        mChanger->afterRemovePathLayer(mLevel, mIndex, mLayer);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr("Add Path Layer");
+    }
+
+    WorldLevel *mLevel;
+    int mIndex;
+    WorldPathLayer *mLayer;
+};
+
+class RemovePathLayer : public AddPathLayer
+{
+public:
+    RemovePathLayer(WorldChanger *changer, WorldLevel *wlevel, int index, WorldPathLayer *layer) :
+        AddPathLayer(changer, wlevel, index, layer)
+    { }
+    void redo() { AddPathLayer::undo(); }
+    void undo() { AddPathLayer::redo(); }
+    QString text() const { return mChanger->tr("Remove Path Layer"); }
+};
+
+class ReorderPathLayer : public WorldChange
+{
+public:
+    ReorderPathLayer(WorldChanger *changer, WorldLevel *wlevel, WorldPathLayer *layer, int newIndex) :
+        WorldChange(changer),
+        mLevel(wlevel),
+        mNewIndex(newIndex),
+        mOldIndex(wlevel->indexOf(layer)),
+        mLayer(layer)
+    {
+    }
+
+    void redo()
+    {
+        mLevel->removePathLayer(mOldIndex);
+        mLevel->insertPathLayer(mNewIndex, mLayer);
+        mChanger->afterReorderPathLayer(mLevel, mLayer, mOldIndex);
+    }
+
+    void undo()
+    {
+        mLevel->removePathLayer(mNewIndex);
+        mLevel->insertPathLayer(mOldIndex, mLayer);
+        mChanger->afterReorderPathLayer(mLevel, mLayer, mNewIndex);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr((mNewIndex > mOldIndex) ? "Move Path Layer Up" : "Move Path Layer Down");
+    }
+
+    WorldLevel *mLevel;
+    int mNewIndex;
+    int mOldIndex;
+    WorldPathLayer *mLayer;
+};
+
 class ChangeScriptParameters : public WorldChange
 {
 public:
@@ -494,6 +576,41 @@ void WorldChanger::afterRemoveScriptFromPath(WorldPath *path, int index, WorldSc
     emit afterRemoveScriptFromPathSignal(path, index, script);
 }
 
+void WorldChanger::doAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    addChange(new AddPathLayer(this, wlevel, index, layer));
+}
+
+void WorldChanger::doRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    addChange(new RemovePathLayer(this, wlevel, index, layer));
+}
+
+void WorldChanger::afterAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    emit afterAddPathLayerSignal(wlevel, index, layer);
+}
+
+void WorldChanger::beforeRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    emit beforeRemovePathLayerSignal(wlevel, index, layer);
+}
+
+void WorldChanger::afterRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    emit afterRemovePathLayerSignal(wlevel, index, layer);
+}
+
+void WorldChanger::doReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int newIndex)
+{
+    addChange(new ReorderPathLayer(this, wlevel, layer, newIndex));
+}
+
+void WorldChanger::afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex)
+{
+    emit afterReorderPathLayerSignal(wlevel, layer, oldIndex);
+}
+
 void WorldChanger::doChangeScriptParameters(WorldScript *script, const ScriptParams &params)
 {
     addChange(new ChangeScriptParameters(this, script, params));
@@ -559,6 +676,18 @@ void WorldChanger::endUndoMacro()
 {
     Q_ASSERT(mUndoStack != 0);
     mUndoStack->endMacro();
+    mUndoStack = 0;
+}
+
+void WorldChanger::beginUndoCommand(QUndoStack *undoStack)
+{
+    Q_ASSERT(mUndoStack == 0);
+    mUndoStack = undoStack;
+}
+
+void WorldChanger::endUndoCommand()
+{
+    Q_ASSERT(mUndoStack != 0);
     mUndoStack = 0;
 }
 

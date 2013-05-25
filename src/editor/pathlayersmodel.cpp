@@ -122,7 +122,7 @@ bool PathLayersModel::setData(const QModelIndex &index, const QVariant &value,
         case Qt::CheckStateRole:  {
             Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
             document()->changer()->doSetPathLayerVisible(layer, c == Qt::Checked);
-            emit dataChanged(index, index);
+//            emit dataChanged(index, index);
             return true;
         }
         case Qt::EditRole:  {
@@ -136,7 +136,7 @@ bool PathLayersModel::setData(const QModelIndex &index, const QVariant &value,
         case Qt::CheckStateRole: {
             Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
             document()->changer()->doSetPathLayersVisible(wlevel, c == Qt::Checked);
-            emit dataChanged(index, index);
+//            emit dataChanged(index, index);
             return true;
         }
         case Qt::EditRole: {
@@ -233,6 +233,14 @@ void PathLayersModel::setDocument(PathDocument *doc)
     mDocument = doc;
 
     if (mDocument) {
+        connect(mDocument->changer(), SIGNAL(afterAddPathLayerSignal(WorldLevel*,int,WorldPathLayer*)),
+                SLOT(afterAddPathLayer(WorldLevel*,int,WorldPathLayer*)));
+        connect(mDocument->changer(), SIGNAL(beforeRemovePathLayerSignal(WorldLevel*,int,WorldPathLayer*)),
+                SLOT(beforeRemovePathLayer(WorldLevel*,int,WorldPathLayer*)));
+        connect(mDocument->changer(), SIGNAL(afterReorderPathLayerSignal(WorldLevel*,WorldPathLayer*,int)),
+                SLOT(afterReorderPathLayer(WorldLevel*,WorldPathLayer*,int)));
+        connect(mDocument->changer(), SIGNAL(afterSetPathLayerVisibleSignal(WorldPathLayer*,bool)),
+                SLOT(afterSetPathLayerVisible(WorldPathLayer*,bool)));
     }
 
     setModelData();
@@ -245,7 +253,7 @@ void PathLayersModel::afterAddPathLayer(WorldLevel *wlevel, int index, WorldPath
     if (Item *item = toItem(wlevel)) {
         int row = wlevel->pathLayerCount() - index - 1;
         beginInsertRows(this->index(item), row, row);
-        new Item(mRootItem, row, layer);
+        new Item(item, row, layer);
         endInsertRows();
     }
 }
@@ -257,6 +265,20 @@ void PathLayersModel::beforeRemovePathLayer(WorldLevel *wlevel, int index, World
         beginRemoveRows(this->index(item), row, row);
         delete item->children.takeAt(row);
         endRemoveRows();
+    }
+}
+
+void PathLayersModel::afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex)
+{
+    if (Item *item = toItem(wlevel)) {
+        int oldRow = wlevel->pathLayerCount() - oldIndex - 1;
+        int newRow = wlevel->pathLayerCount() - wlevel->indexOf(layer) - 1;
+        int destRow = newRow;
+        if (destRow > oldRow)
+            ++destRow;
+        beginMoveRows(index(item), oldRow, oldRow, index(item), destRow);
+        item->children.move(oldRow, newRow);
+        endMoveRows();
     }
 }
 

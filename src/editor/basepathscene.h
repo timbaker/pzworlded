@@ -56,8 +56,15 @@ public:
 
     QRectF boundingRect() const
     { return QRectF(); }
+
     void paint(QPainter *, const QStyleOptionGraphicsItem *, QWidget *)
     {}
+
+    void afterAddPathLayer(int index, WorldPathLayer *layer);
+    void beforeRemovePathLayer(int index, WorldPathLayer *layer);
+    void afterReorderPathLayer(WorldPathLayer *layer, int oldIndex);
+
+    void afterSetPathLayerVisible(WorldPathLayer *layer, bool visible);
 
 private:
     WorldLevel *mLevel;
@@ -79,15 +86,16 @@ public:
     { return mSelectedNodes; }
     void setSelectedNodes(const NodeSet &selection);
 
-    QList<WorldNode*> lookupNodes(const QRectF &sceneRect);
+    NodeList lookupNodes(const QRectF &sceneRect);
     WorldNode *topmostNodeAt(const QPointF &scenePos);
 
-    void nodeRemoved(WorldNode *node)
-    { mSelectedNodes.remove(node); mHoverNode = InvalidId; }
+    void nodeRemoved(WorldNode *node);
 
     void redrawNode(id_t id);
 
     qreal nodeRadius() const;
+
+    void currentPathLayerChanged();
 
 private:
     BasePathScene *mScene;
@@ -131,8 +139,7 @@ public:
     NodesItem *nodeItem() const
     { return mNodeItem; }
 
-    WorldPathLayer *currentPathLayer() const
-    { return mCurrentPathLayer; }
+    WorldPathLayer *currentPathLayer() const;
 
     void setSelectedPaths(const PathSet &selection);
     const PathSet &selectedPaths() const
@@ -155,16 +162,24 @@ public slots:
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
 
+    void afterAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void beforeRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
+
+    void afterSetPathLayerVisible(WorldPathLayer *layer, bool visible);
+
     void nodeMoved(WorldNode *node);
+
+    void currentPathLayerChanged(WorldPathLayer *layer);
 
 private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;
     PathSet mSelectedPaths;
     NodesItem *mNodeItem;
-    WorldPathLayer *mCurrentPathLayer;
     BasePathTool *mActiveTool;
     WorldChanger *mChanger;
+    QList<WorldLevelItem*> mLevelItems;
 };
 
 #endif // BASEWORLDSCENE_H

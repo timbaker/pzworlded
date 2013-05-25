@@ -34,7 +34,10 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     Document(PathDocType),
     mWorld(world),
     mFileName(fileName),
-    mChanger(new WorldChanger(world))
+    mChanger(new WorldChanger(world)),
+    mCurrentLevel(0),
+    mCurrentPathLayer(0),
+    mCurrentTileLayer(0)
 {
     mUndoStack = new QUndoStack(this);
 
@@ -73,11 +76,16 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
                 ws->mRegion = rgn;
         }
     }
-
+#if 0
     // Now that the script regions are up-to-date...
     foreach (WorldLevel *wlevel, mWorld->levels())
         foreach (WorldPathLayer *layer, wlevel->pathLayers())
             layer->initLookup();
+#endif
+
+    setCurrentLevel(mWorld->levelAt(0));
+    setCurrentPathLayer(mWorld->levelAt(0)->pathLayerAt(0));
+    setCurrentTileLayer(mWorld->levelAt(0)->tileLayerAt(0));
 
     connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
             SLOT(afterAddNode(WorldNode*)));
@@ -128,6 +136,29 @@ bool PathDocument::save(const QString &filePath, QString &error)
     return true;
 }
 
+void PathDocument::setCurrentLevel(WorldLevel *wlevel)
+{
+    if (wlevel == mCurrentLevel) return;
+    mCurrentLevel = wlevel;
+    emit currentLevelChanged(mCurrentLevel);
+}
+
+void PathDocument::setCurrentPathLayer(WorldPathLayer *layer)
+{
+    if (layer == mCurrentPathLayer) return;
+    mCurrentPathLayer = layer;
+    setCurrentLevel(layer ? layer->wlevel() : 0);
+    emit currentPathLayerChanged(mCurrentPathLayer);
+}
+
+void PathDocument::setCurrentTileLayer(WorldTileLayer *layer)
+{
+    if (layer == mCurrentTileLayer) return;
+    mCurrentTileLayer = layer;
+    setCurrentLevel(layer ? layer->wlevel() : 0);
+    emit currentTileLayerChanged(mCurrentTileLayer);
+}
+
 void PathDocument::afterAddNode(WorldNode *node)
 {
     node->layer->lookup()->nodeAdded(node);
@@ -136,7 +167,7 @@ void PathDocument::afterAddNode(WorldNode *node)
 void PathDocument::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
 {
     Q_UNUSED(index)
-    node->layer->lookup()->nodeRemoved(layer, node);
+    layer->lookup()->nodeRemoved(node);
 }
 
 void PathDocument::afterMoveNode(WorldNode *node, const QPointF &prev)
@@ -157,7 +188,7 @@ void PathDocument::afterAddPath(WorldPathLayer *layer, int index, WorldPath *pat
 void PathDocument::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     Q_UNUSED(index)
-    layer->lookup()->pathRemoved(layer, path);
+    layer->lookup()->pathRemoved(path);
     if (!path->isVisible())
         mHiddenPaths.remove(path);
 }

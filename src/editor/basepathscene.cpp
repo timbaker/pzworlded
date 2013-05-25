@@ -48,7 +48,6 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     BaseGraphicsScene(PathSceneType, parent),
     mDocument(doc),
     mNodeItem(new NodesItem(this)),
-    mCurrentPathLayer(doc->world()->levelAt(0)->pathLayers().first()),
     mActiveTool(0),
     mChanger(new WorldChanger(doc->world()))
 {
@@ -77,6 +76,7 @@ void BasePathScene::setDocument(PathDocument *doc)
     foreach (WorldLevel *wlevel, world()->levels()) {
         WorldLevelItem *item = new WorldLevelItem(wlevel, this);
         item->setZValue(z++);
+        mLevelItems += item;
         addItem(item);
     }
 
@@ -95,6 +95,17 @@ void BasePathScene::setDocument(PathDocument *doc)
     connect(mDocument->changer(), SIGNAL(afterSetPathVisibleSignal(WorldPath*,bool)),
             SLOT(update()));
 //    connect(mDocument->shadow(), SIGNAL(nodesMoved(QRectF)), SLOT(update())); // FIXME: only repaint what's needed
+    connect(mDocument, SIGNAL(currentPathLayerChanged(WorldPathLayer*)),
+            SLOT(currentPathLayerChanged(WorldPathLayer*)));
+
+    connect(mDocument->changer(), SIGNAL(afterAddPathLayerSignal(WorldLevel*,int,WorldPathLayer*)),
+            SLOT(afterAddPathLayer(WorldLevel*,int,WorldPathLayer*)));
+    connect(mDocument->changer(), SIGNAL(beforeRemovePathLayerSignal(WorldLevel*,int,WorldPathLayer*)),
+            SLOT(beforeRemovePathLayer(WorldLevel*,int,WorldPathLayer*)));
+    connect(mDocument->changer(), SIGNAL(afterReorderPathLayerSignal(WorldLevel*,WorldPathLayer*,int)),
+            SLOT(afterReorderPathLayer(WorldLevel*,WorldPathLayer*,int)));
+    connect(mDocument->changer(), SIGNAL(afterSetPathLayerVisibleSignal(WorldPathLayer*,bool)),
+            SLOT(afterSetPathLayerVisible(WorldPathLayer*,bool)));
 
     connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
             SLOT(afterAddNode(WorldNode*)));
@@ -185,6 +196,11 @@ void BasePathScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         mActiveTool->mouseReleaseEvent(event);
 }
 
+WorldPathLayer *BasePathScene::currentPathLayer() const
+{
+    return document()->currentPathLayer();
+}
+
 void BasePathScene::setSelectedPaths(const PathSet &selection)
 {
     mSelectedPaths = selection;
@@ -216,7 +232,7 @@ bool PolygonContainsPolyline(const QPolygonF &polygon, const QPolygonF &polyLine
 QList<WorldPath*> BasePathScene::lookupPaths(const QRectF &sceneRect)
 {
     QPolygonF worldPoly = renderer()->toWorld(sceneRect);
-    QList<WorldPath*> paths = mCurrentPathLayer->lookup()->paths(worldPoly);
+    QList<WorldPath*> paths = lookup()->paths(worldPoly);
     foreach (WorldPath *path, paths) {
         if (PolygonContainsPolyline(worldPoly, path->polygon()))
             continue;
@@ -245,7 +261,7 @@ WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
 {
     qreal radius = 4 / document()->view()->zoomable()->scale();
     QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
-    QList<WorldPath*> paths = currentPathLayer()->lookup()->paths(renderer()->toWorld(sceneRect));
+    QList<WorldPath*> paths = lookup()->paths(renderer()->toWorld(sceneRect));
 
     // Do distance check in scene coords otherwise isometric testing is 1/2 height
     QVector2D p(scenePos);
@@ -275,7 +291,7 @@ void BasePathScene::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode 
 {
     Q_UNUSED(index)
     nodeItem()->nodeRemoved(node);
-    lookup()->nodeRemoved(layer, node);
+    lookup()->nodeRemoved(node);
 }
 
 void BasePathScene::afterMoveNode(WorldNode *node, const QPointF &prev)
@@ -295,7 +311,7 @@ void BasePathScene::afterAddPath(WorldPathLayer *layer, int index, WorldPath *pa
 void BasePathScene::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     Q_UNUSED(index)
-    lookup()->pathRemoved(layer, path);
+    lookup()->pathRemoved(path);
     nodeItem()->update();
 }
 
@@ -314,10 +330,35 @@ void BasePathScene::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNod
     lookup()->pathChanged(path);
 }
 
+void BasePathScene::afterAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    mLevelItems[wlevel->level()]->afterAddPathLayer(index, layer);
+}
+
+void BasePathScene::beforeRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
+{
+    mLevelItems[wlevel->level()]->beforeRemovePathLayer(index, layer);
+}
+
+void BasePathScene::afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex)
+{
+    mLevelItems[wlevel->level()]->afterReorderPathLayer(layer, oldIndex);
+}
+
+void BasePathScene::afterSetPathLayerVisible(WorldPathLayer *layer, bool visible)
+{
+    mLevelItems[layer->wlevel()->level()]->afterSetPathLayerVisible(layer, visible);
+}
+
 void BasePathScene::nodeMoved(WorldNode *node)
 {
     Q_UNUSED(node)
     nodeItem()->update(); // FIXME: redraw only as needed
+}
+
+void BasePathScene::currentPathLayerChanged(WorldPathLayer *layer)
+{
+    nodeItem()->currentPathLayerChanged();
 }
 
 /////
@@ -533,11 +574,12 @@ void NodesItem::setSelectedNodes(const NodeSet &selection)
     update(); // FIXME: don't redraw everything
 }
 
-QList<WorldNode *> NodesItem::lookupNodes(const QRectF &sceneRect)
+NodeList NodesItem::lookupNodes(const QRectF &sceneRect)
 {
+    if (!mScene->currentPathLayer()) return NodeList();
     QRectF testRect = sceneRect.adjusted(-nodeRadius(), -nodeRadius(),
                                          nodeRadius(), nodeRadius());
-    NodeList nodes =  mScene->currentPathLayer()->lookup()->nodes(
+    NodeList nodes =  mScene->lookup()->nodes(
                 mScene->renderer()->toWorld(testRect));
     foreach(WorldNode *node, nodes) {
         if (!testRect.contains(mScene->renderer()->toScene(node->pos(),
@@ -549,11 +591,25 @@ QList<WorldNode *> NodesItem::lookupNodes(const QRectF &sceneRect)
 
 WorldNode *NodesItem::topmostNodeAt(const QPointF &scenePos)
 {
+    if (!mScene->currentPathLayer()) return 0;
     QRectF sceneRect(scenePos.x() - nodeRadius(), scenePos.y() - nodeRadius(),
                      nodeRadius() * 2, nodeRadius() * 2);
-    QList<WorldNode*> nodes = mScene->currentPathLayer()->lookup()->nodes(
+    QList<WorldNode*> nodes = mScene->lookup()->nodes(
                 mScene->renderer()->toWorld(sceneRect));
     return nodes.size() ? nodes.last() : 0;
+}
+
+void NodesItem::nodeRemoved(WorldNode *node)
+{
+    if (mSelectedNodes.contains(node)) {
+        mSelectedNodes.remove(node);
+        redrawNode(node->id);
+    }
+
+    if (mHoverNode == node->id) {
+        mHoverNode = InvalidId;
+        redrawNode(node->id);
+    }
 }
 
 void NodesItem::redrawNode(id_t id)
@@ -568,6 +624,13 @@ void NodesItem::redrawNode(id_t id)
 qreal NodesItem::nodeRadius() const
 {
     return 6 / mScene->document()->view()->zoomable()->scale();
+}
+
+void NodesItem::currentPathLayerChanged()
+{
+    mSelectedNodes.clear();
+    mHoverNode = InvalidId;
+    update();
 }
 
 /////
@@ -587,4 +650,32 @@ WorldLevelItem::WorldLevelItem(WorldLevel *wlevel, BasePathScene *scene, QGraphi
             item->setOpacity(0.5);
         mPathLayerItems += item;
     }
+}
+
+void WorldLevelItem::afterAddPathLayer(int index, WorldPathLayer *layer)
+{
+    PathLayerItem *item = new PathLayerItem(layer, mScene, this);
+    mPathLayerItems.insert(index, item);
+    for (int z = index; z < mPathLayerItems.size(); z++)
+        mPathLayerItems[z]->setZValue(z + 1);
+}
+
+void WorldLevelItem::beforeRemovePathLayer(int index, WorldPathLayer *layer)
+{
+    Q_UNUSED(layer)
+    delete mPathLayerItems.takeAt(index);
+    for (int z = index; z < mPathLayerItems.size(); z++)
+        mPathLayerItems[z]->setZValue(z + 1);
+}
+
+void WorldLevelItem::afterReorderPathLayer(WorldPathLayer *layer, int oldIndex)
+{
+    mPathLayerItems.move(oldIndex, mLevel->indexOf(layer));
+    for (int z = 0; z < mPathLayerItems.size(); z++)
+        mPathLayerItems[z]->setZValue(z + 1);
+}
+
+void WorldLevelItem::afterSetPathLayerVisible(WorldPathLayer *layer, bool visible)
+{
+    mPathLayerItems[mLevel->indexOf(layer)]->setVisible(visible);
 }

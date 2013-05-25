@@ -20,6 +20,7 @@
 
 #include "documentmanager.h"
 #include "pathdocument.h"
+#include "path.h"
 #include "pathlayersmodel.h"
 #include "pathworld.h"
 #include "worldchanger.h"
@@ -46,10 +47,18 @@ PathLayersDock::PathLayersDock(QWidget *parent) :
 
     retranslateUi();
 
+    connect(ui->actionNewPathLayer, SIGNAL(triggered()), SLOT(newLayer()));
+    connect(ui->actionRemovePathLayer, SIGNAL(triggered()), SLOT(removeLayer()));
+    connect(ui->actionMoveLayerUp, SIGNAL(triggered()), SLOT(moveUp()));
+    connect(ui->actionMoveLayerDown, SIGNAL(triggered()), SLOT(moveDown()));
+
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
     connect(this, SIGNAL(visibilityChanged(bool)),
             mView, SLOT(setVisible(bool)));
+
+    connect(mView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+            SLOT(updateActions()));
 
     connect(DocumentManager::instance(), SIGNAL(documentAboutToClose(int,Document*)),
             SLOT(documentAboutToClose(int,Document*)));
@@ -59,6 +68,7 @@ void PathLayersDock::setDocument(PathDocument *doc)
 {
     if (mDocument) {
         saveExpandedLevels(doc);
+        mDocument->changer()->disconnect(this);
     }
 
     mDocument = doc;
@@ -66,7 +76,15 @@ void PathLayersDock::setDocument(PathDocument *doc)
 
     if (mDocument) {
         restoreExpandedLevels(doc);
+        connect(mDocument->changer(), SIGNAL(afterAddPathLayerSignal(WorldLevel*,int,WorldPathLayer*)),
+                SLOT(updateActions()));
+        connect(mDocument->changer(), SIGNAL(afterRemovePathLayerSignal(WorldLevel*,int,WorldPathLayer*)),
+                SLOT(updateActions()));
+        connect(mDocument->changer(), SIGNAL(afterReorderPathLayerSignal(WorldLevel*,WorldPathLayer*,int)),
+                SLOT(updateActions()));
     }
+
+    updateActions();
 }
 
 PathWorld *PathLayersDock::world() const
@@ -88,19 +106,43 @@ void PathLayersDock::changeEvent(QEvent *e)
 
 void PathLayersDock::newLayer()
 {
-//    mDocument->changer()->doAddPathLayer(world()->pathLayerCount(), layer);
+    WorldPathLayer *layer = world()->allocPathLayer();
+    WorldLevel *wlevel = document()->currentLevel();
+    int n = 1;
+    QString name = tr("PathLayer%1").arg(n);
+    while (wlevel->pathLayerByName(name))
+        name = tr("PathLayer%1").arg(++n);
+    layer->setName(name);
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doAddPathLayer(wlevel, wlevel->pathLayerCount(), layer);
+    mDocument->changer()->endUndoCommand();
 }
 
 void PathLayersDock::removeLayer()
 {
+    WorldLevel *wlevel = document()->currentLevel();
+    WorldPathLayer *layer = document()->currentPathLayer();
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doRemovePathLayer(wlevel, wlevel->indexOf(layer), layer);
+    mDocument->changer()->endUndoCommand();
 }
 
 void PathLayersDock::moveUp()
 {
+    WorldLevel *wlevel = document()->currentLevel();
+    WorldPathLayer *layer = document()->currentPathLayer();
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doReorderPathLayer(wlevel, layer, wlevel->indexOf(layer) + 1);
+    mDocument->changer()->endUndoCommand();
 }
 
 void PathLayersDock::moveDown()
 {
+    WorldLevel *wlevel = document()->currentLevel();
+    WorldPathLayer *layer = document()->currentPathLayer();
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doReorderPathLayer(wlevel, layer, wlevel->indexOf(layer) - 1);
+    mDocument->changer()->endUndoCommand();
 }
 
 void PathLayersDock::documentAboutToClose(int index, Document *doc)
@@ -110,6 +152,15 @@ void PathLayersDock::documentAboutToClose(int index, Document *doc)
         if (mExpandedLevels.contains(pathDoc))
             mExpandedLevels.remove(pathDoc);
     }
+}
+
+void PathLayersDock::updateActions()
+{
+    WorldPathLayer *layer = mDocument ? mDocument->currentPathLayer() : 0;
+    int index = layer ? layer->wlevel()->indexOf(layer) : -1;
+    ui->actionRemovePathLayer->setEnabled(layer != 0);
+    ui->actionMoveLayerUp->setEnabled(layer && (index + 1 < layer->wlevel()->pathLayerCount()));
+    ui->actionMoveLayerDown->setEnabled(layer && (index > 0));
 }
 
 void PathLayersDock::retranslateUi()
@@ -154,16 +205,56 @@ QSize PathLayersView::sizeHint() const
 void PathLayersView::setDocument(PathDocument *doc)
 {
     if (mDocument) {
+        mDocument->disconnect(this);
     }
 
     mDocument = doc;
     mModel->setDocument(doc);
 
     if (mDocument) {
+        currentPathLayerChanged(mDocument->currentPathLayer());
+        connect(mDocument, SIGNAL(currentPathLayerChanged(WorldPathLayer*)),
+                SLOT(currentPathLayerChanged(WorldPathLayer*)));
     }
 }
 
 void PathLayersView::selectionChanged(const QItemSelection &selected,
                                       const QItemSelection &deselected)
 {
+    QTreeView::selectionChanged(selected, deselected);
+
+    if (!mDocument || mSynching)
+        return;
+
+    QModelIndexList selectedRows = selectionModel()->selectedRows();
+    int count = selectedRows.count();
+
+    mSynching = true;
+    if (count == 1) {
+        QModelIndex index = selectedRows.first();
+        if (WorldPathLayer *layer = model()->toPathLayer(index))
+            mDocument->setCurrentPathLayer(layer);
+        if (WorldLevel *level = model()->toLevel(index))
+            mDocument->setCurrentLevel(level);
+    } else if (!count) {
+        mDocument->setCurrentPathLayer(0);
+    }
+    mSynching = false;
+}
+
+void PathLayersView::currentPathLayerChanged(WorldPathLayer *layer)
+{
+    if (mSynching)
+        return;
+
+    if (layer) {
+        mSynching = true;
+        setCurrentIndex(model()->index(layer));
+        mSynching = false;
+        return;
+    }
+
+    mSynching = true;
+    setCurrentIndex(QModelIndex());
+    mSynching = false;
 }

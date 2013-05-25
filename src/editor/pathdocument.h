@@ -29,12 +29,14 @@
 
 class PathView;
 class PathWorld;
+class WorldChangeAtom;
 class WorldChanger;
 class WorldLookup;
 class WorldNode;
 class WorldPath;
 class WorldPathLayer;
 class WorldScript;
+class WorldTileLayer;
 
 class PathDocument : public Document
 {
@@ -57,8 +59,22 @@ public:
     WorldChanger *changer() const
     { return mChanger; }
 
+    void setCurrentLevel(WorldLevel *wlevel);
+    WorldLevel *currentLevel() { return mCurrentLevel; }
+
+    void setCurrentPathLayer(WorldPathLayer *layer);
+    WorldPathLayer *currentPathLayer() { return mCurrentPathLayer; }
+
+    void setCurrentTileLayer(WorldTileLayer *layer);
+    WorldTileLayer *currentTileLayer() { return mCurrentTileLayer; }
+
     const PathSet &hiddenPaths() const
     { return mHiddenPaths; }
+
+signals:
+    void currentLevelChanged(WorldLevel *wlevel);
+    void currentPathLayerChanged(WorldPathLayer *layer);
+    void currentTileLayerChanged(WorldTileLayer *layer);
 
 private slots:
     void afterAddNode(WorldNode *node);
@@ -81,6 +97,10 @@ private:
     WorldLookup *mLookup;
     WorldChanger *mChanger;
     PathSet mHiddenPaths;
+
+    WorldLevel *mCurrentLevel;
+    WorldPathLayer *mCurrentPathLayer;
+    WorldTileLayer *mCurrentTileLayer;
 };
 
 #endif // PATHWORLDDOCUMENT_H

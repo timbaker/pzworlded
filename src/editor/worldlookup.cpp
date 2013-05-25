@@ -176,7 +176,7 @@ void WorldLookup::nodeAdded(WorldNode *node)
     mNodeTree->Add(node->layer->indexOf(node), node);
 }
 
-void WorldLookup::nodeRemoved(WorldPathLayer *layer, WorldNode *node)
+void WorldLookup::nodeRemoved(WorldNode *node)
 {
     mNodeTree->Remove(node);
 }
@@ -197,7 +197,7 @@ void WorldLookup::pathAdded(WorldPath *path)
         scriptAdded(script);
 }
 
-void WorldLookup::pathRemoved(WorldPathLayer *layer, WorldPath *path)
+void WorldLookup::pathRemoved(WorldPath *path)
 {
     mPathTree->Remove(path);
     foreach (WorldScript *script, path->scripts())

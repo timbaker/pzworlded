@@ -85,6 +85,15 @@ public:
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
 
+    void doAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void doRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void afterAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void beforeRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void afterRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+
+    void doReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int newIndex);
+    void afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
+
     void doChangeScriptParameters(WorldScript *script, const ScriptParams &params);
     void afterChangeScriptParameters(WorldScript *script);
 
@@ -109,6 +118,9 @@ public:
     void beginUndoMacro(QUndoStack *undoStack, const QString &text);
     void endUndoMacro();
 
+    void beginUndoCommand(QUndoStack *undoStack);
+    void endUndoCommand();
+
     void undo();
 
 signals:
@@ -123,6 +135,12 @@ signals:
 
     void afterAddScriptToPathSignal(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPathSignal(WorldPath *path, int index, WorldScript *script);
+
+    void afterAddPathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void beforeRemovePathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+    void afterRemovePathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
+
+    void afterReorderPathLayerSignal(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
 
     void afterChangeScriptParametersSignal(WorldScript *script);
 

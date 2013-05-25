@@ -68,6 +68,11 @@ WorldPath *PathWorld::allocPath()
     return new WorldPath(mNextPathId++);
 }
 
+WorldPathLayer *PathWorld::allocPathLayer()
+{
+    return new WorldPathLayer();
+}
+
 void PathWorld::insertScript(int index, WorldScript *script)
 {
     mScripts.insert(index, script);
@@ -166,6 +171,14 @@ WorldPathLayer *WorldLevel::removePathLayer(int index)
 WorldPathLayer *WorldLevel::pathLayerAt(int index)
 {
     return mPathLayers.at(index);
+}
+
+WorldPathLayer *WorldLevel::pathLayerByName(const QString &name)
+{
+    foreach (WorldPathLayer *layer, mPathLayers)
+        if (layer->name() == name)
+            return layer;
+    return 0;
 }
 
 int WorldLevel::pathLayerCount() const

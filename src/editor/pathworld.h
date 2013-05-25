@@ -130,6 +130,7 @@ public:
     const QList<WorldPathLayer*> &pathLayers() const
     { return mPathLayers; }
     WorldPathLayer *pathLayerAt(int index);
+    WorldPathLayer *pathLayerByName(const QString &name);
     int pathLayerCount() const;
     int indexOf(WorldPathLayer *wtl);
 
@@ -225,6 +226,7 @@ public:
 
     WorldNode *allocNode(const QPointF &pos);
     WorldPath *allocPath();
+    WorldPathLayer *allocPathLayer();
 
     WorldTileLayer *tileLayer(const QString &layerName);
     QMap<QString,WorldTileLayer*> &tileLayerMap() // for use by WorldLevel only

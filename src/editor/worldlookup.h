@@ -232,11 +232,11 @@ public:
     QList<WorldNode*> nodes(const QPolygonF &bounds) const;
 
     void nodeAdded(WorldNode *node);
-    void nodeRemoved(WorldPathLayer *layer, WorldNode *node);
+    void nodeRemoved(WorldNode *node);
     void nodeMoved(WorldNode *node);
 
     void pathAdded(WorldPath *path);
-    void pathRemoved(WorldPathLayer *layer, WorldPath *path);
+    void pathRemoved(WorldPath *path);
     void pathChanged(WorldPath *path);
 
     void scriptAdded(WorldScript *script);

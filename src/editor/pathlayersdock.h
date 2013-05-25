@@ -56,6 +56,8 @@ private slots:
 
     void documentAboutToClose(int index, Document *doc);
 
+    void updateActions();
+
 private:
     void retranslateUi();
 
@@ -83,7 +85,7 @@ protected slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
 private slots:
-//    void currentLevelOrLayerIndexChanged(int index);
+    void currentPathLayerChanged(WorldPathLayer *layer);
 //    void onActivated(const QModelIndex &index);
 
 private:

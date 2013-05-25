@@ -110,8 +110,8 @@ void SelectMoveNodeTool::setScene(BaseGraphicsScene *scene)
     BasePathTool::setScene(scene);
 
     if (mScene) {
-        connect(mScene->document(), SIGNAL(nodeAboutToBeRemoved(int)),
-                SLOT(nodeAboutToBeRemoved(int)));
+        connect(mScene->document()->changer(), SIGNAL(beforeRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
+                SLOT(beforeRemoveNode(int)));
     }
 }
 

@@ -286,9 +286,12 @@ int WorldPathLayer::indexOf(WorldPath *path)
     return mPaths.indexOf(path); // FIXME: slow
 }
 
-void WorldPathLayer::initLookup()
+WorldLookup *WorldPathLayer::lookup()
 {
-    mLookup = new WorldLookup(this);
+    Q_ASSERT(mLevel != 0);
+    if (!mLookup)
+        mLookup = new WorldLookup(this);
+    return mLookup;
 }
 
 WorldPathLayer *WorldPathLayer::clone() const
