@@ -2244,11 +2244,9 @@ void MainWindow::scriptParameters()
         PathList paths = doc->view()->scene()->selectedPaths().toList();
         if (paths.size()) {
             WorldPath *path = paths.first();
-            QMap<WorldScript*,ScriptParams> oldParams;
 
             // Get the up-to-date list of parameter names from the script.
             foreach (WorldScript *ws, path->scripts()) {
-                oldParams[ws] = ws->mParams;
                 Lua::LuaScript ls(doc->world(), ws);
                 if (ls.runFunction("params")) {
                     QStringList params;
@@ -2262,21 +2260,12 @@ void MainWindow::scriptParameters()
             }
 
             ScriptParametersDialog dialog(path->scripts(), this);
-            if (dialog.exec() != QDialog::Accepted) {
-                foreach (WorldScript *ws, path->scripts())
-                    ws->mParams = oldParams[ws];
+            if (dialog.exec() != QDialog::Accepted)
                 return;
-            }
-
-            QMap<WorldScript*,ScriptParams> newParams;
-            foreach (WorldScript *ws, path->scripts()) {
-                newParams[ws] = ws->mParams;
-                ws->mParams = oldParams[ws];
-            }
 
             doc->changer()->beginUndoMacro(doc->undoStack(), tr("Change Script Parameters"));
             foreach (WorldScript *ws, path->scripts())
-                doc->changer()->doChangeScriptParameters(ws, newParams[ws]);
+                doc->changer()->doChangeScriptParameters(ws, ws->mParams);
             doc->changer()->endUndoMacro();
         }
     }

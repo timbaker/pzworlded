@@ -255,6 +255,7 @@ public slots:
     void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
 
+    void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
 
     void nodesMoved();

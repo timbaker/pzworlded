@@ -249,6 +249,8 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
     connect(mDocument->changer(), SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
             SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
 
+    connect(mDocument->changer(), SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterAddNodeToPath(WorldPath*,int,WorldNode*)));
     connect(mDocument->changer(), SIGNAL(afterRemoveNodeFromPathSignal(WorldPath*,int,WorldNode*)),
             SLOT(afterRemoveNodeFromPath(WorldPath*,int,WorldNode*)));
 }
@@ -430,11 +432,10 @@ void WorldChunkMap::setCenter(int x, int y)
 
 void WorldChunkMap::nodeMoved(WorldNode *node, const QPointF &prev)
 {
-    if (mMovedNodeArea.isNull()) {
-        mMovedNodeArea = QRectF(prev, node->pos()).normalized();
-        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
-    } else {
-        mMovedNodeArea |= QRectF(prev, node->pos()).normalized();
+    foreach (WorldPath *path, node->mPaths.keys()) {
+        if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+            QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+        mScriptsThatChanged += path->scripts().toSet();
     }
 }
 
@@ -449,8 +450,66 @@ void WorldChunkMap::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode 
 #include "tilepainter.h"
 void WorldChunkMap::nodesMoved()
 {
-    QRectF area = mMovedNodeArea;
-    mMovedNodeArea = QRectF();
+    ScriptList scripts = mScriptsThatChanged.toList();
+    mScriptsThatChanged.clear();
+    qDebug() << QString::fromLatin1("%1 scripts in nodesMoved").arg(scripts.size());
+
+    QRegion dirty = mScriptChangeArea;
+    mScriptChangeArea = QRegion();
+
+    // Accumulate the old regions, and calculate the new region for each script.
+    foreach (WorldScript *ws, scripts) {
+        if (dirty.isEmpty())
+            dirty = ws->mRegion;
+        else
+            dirty |= ws->mRegion;
+        Tiled::Lua::LuaScript ls(mWorld, ws);
+        if (ls.runFunction("region")) {
+            QRegion rgn;
+            if (ls.getResultRegion(rgn)) {
+                if (rgn != ws->mRegion) {
+                    ws->mRegion = rgn;
+                    if (ws->mPaths.size())
+                        ws->mPaths.first()->layer()->lookup()->scriptRegionChanged(ws);
+                    if (!ws->mRegion.isEmpty()) {
+                        if (dirty.isEmpty())
+                            dirty = ws->mRegion;
+                        else
+                            dirty |= ws->mRegion;
+                    }
+                }
+            }
+        }
+    }
+
+    dirty &= QRect(getWorldXMinTiles(), getWorldYMinTiles(), getWidthInTiles(), getWidthInTiles());
+
+    TilePainter painter(mWorld);
+    foreach (WorldLevel *wlevel, mWorld->levels()) {
+        foreach (WorldTileLayer *wtl, wlevel->tileLayers()) {
+            painter.setLayer(wtl);
+            painter.erase(dirty);
+        }
+    }
+
+    scripts.clear();
+    foreach (WorldLevel *wlevel, mWorld->levels())
+        foreach (WorldPathLayer *layer, wlevel->pathLayers())
+            scripts += layer->lookup()->scripts(dirty.boundingRect());
+
+    int runN = 0;
+    foreach (WorldScript *ws, scripts) {
+        if (!ws->mRegion.intersects(dirty)) continue;
+        Tiled::Lua::LuaScript ls(mWorld, ws);
+        ls.runFunction("run");
+        runN++;
+    }
+    qDebug() << QString::fromLatin1("%1 (down from %2) scripts in nodesMoved area")
+                .arg(runN).arg(scripts.size());
+
+    emit chunksUpdated(); // for the GUI
+#if 0
+    ///////////
 
     ScriptList scripts;
     foreach (WorldLevel *wlevel, mWorld->levels())
@@ -514,31 +573,32 @@ void WorldChunkMap::nodesMoved()
                 .arg(runN).arg(scripts.size());
 
     emit chunksUpdated(); // for the GUI
+#endif
 }
 
 void WorldChunkMap::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
 {
     Q_UNUSED(path)
     Q_UNUSED(index)
-    if (mScriptChangeArea.isEmpty())
-        QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
-    mScriptChangeArea |= script->mRegion;
+    if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+    mScriptsThatChanged += script;
 }
 
 void WorldChunkMap::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
     Q_UNUSED(path)
     Q_UNUSED(index)
-    if (mScriptChangeArea.isEmpty())
-        QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+    if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
     mScriptChangeArea |= script->mRegion;
 }
 
 void WorldChunkMap::afterChangeScriptParameters(WorldScript *script)
 {
-    if (script->mPaths.size())
-        nodeMoved(script->mPaths.first()->first(),
-                  script->mPaths.first()->first()->pos() + QPoint(1,1));
+    if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+    mScriptsThatChanged += script;
 }
 
 void WorldChunkMap::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
@@ -547,8 +607,8 @@ void WorldChunkMap::afterAddPath(WorldPathLayer *layer, int index, WorldPath *pa
     Q_UNUSED(index)
     // Regenerate tiles where the path's scripts are.
     foreach (WorldScript *script, path->scripts()) {
-        if (mScriptChangeArea.isEmpty())
-            QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+        if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+            QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
         mScriptChangeArea |= script->mRegion;
     }
 }
@@ -559,20 +619,28 @@ void WorldChunkMap::afterRemovePath(WorldPathLayer *layer, int index, WorldPath 
     Q_UNUSED(index)
     // Regenerate tiles where the path's scripts used to be.
     foreach (WorldScript *script, path->scripts()) {
-        if (mScriptChangeArea.isEmpty())
-            QMetaObject::invokeMethod(this, "processScriptRegionChanges", Qt::QueuedConnection);
+        if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+            QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
         mScriptChangeArea |= script->mRegion;
     }
 }
 
+void WorldChunkMap::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)
+{
+    if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+    mScriptsThatChanged += path->scripts().toSet();
+}
+
 void WorldChunkMap::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
 {
+    Q_UNUSED(index)
+    Q_UNUSED(node)
     // Removed a node from a path.  Do script:region() and script:run() on every
     // script used by the path, and update lookup for the script.
-    foreach (WorldScript *script, path->scripts()) {
-        mScriptsThatChanged += script;
-    }
-
+    if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+    mScriptsThatChanged += path->scripts().toSet();
 }
 
 void WorldChunkMap::processScriptRegionChanges()
