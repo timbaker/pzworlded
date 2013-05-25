@@ -225,11 +225,11 @@ public:
     WorldLookup(WorldPathLayer *layer);
     ~WorldLookup();
 
-    QList<WorldScript*> scripts(const QRectF &bounds) const;
-    QList<WorldPath*> paths(const QRectF &bounds) const;
-    QList<WorldPath*> paths(const QPolygonF &poly) const;
-    QList<WorldNode*> nodes(const QRectF &bounds) const;
-    QList<WorldNode*> nodes(const QPolygonF &bounds) const;
+    QList<WorldScript*> scripts(const QRectF &bounds);
+    QList<WorldPath*> paths(const QRectF &bounds);
+    QList<WorldPath*> paths(const QPolygonF &poly);
+    QList<WorldNode*> nodes(const QRectF &bounds);
+    QList<WorldNode*> nodes(const QPolygonF &bounds);
 
     void nodeAdded(WorldNode *node);
     void nodeRemoved(WorldNode *node);
@@ -244,10 +244,19 @@ public:
     void scriptRegionChanged(WorldScript *script);
 
 private:
+    void checkInvalidNodeIndex(int index);
+    void checkInvalidPathIndex(int index);
+    void checkInvalidScriptIndex(int index);
+
+private:
     WorldPathLayer *mLayer;
     WorldQuadTree<WorldNode> *mNodeTree;
     WorldQuadTree<WorldPath> *mPathTree;
     WorldQuadTree<WorldScript> *mScriptTree;
+
+    int mFirstInvalidNodeIndex;
+    int mFirstInvalidPathIndex;
+    int mFirstInvalidScriptIndex;
 };
 
 #endif // WORLDLOOKUP_H
