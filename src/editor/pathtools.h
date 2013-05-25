@@ -214,4 +214,44 @@ private:
 #endif
 };
 
+class AddPathSegmentsTool : public BasePathTool
+{
+    Q_OBJECT
+
+public:
+    static AddPathSegmentsTool *instance();
+    static void deleteInstance();
+
+    void activate();
+    void deactivate();
+
+    void setScene(BaseGraphicsScene *scene);
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Add Segments To Path"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+    WorldPath *currentPath();
+
+    void finishNewPath(bool close);
+    void clearNewPath();
+
+private:
+    Q_DISABLE_COPY(AddPathSegmentsTool)
+    static AddPathSegmentsTool *mInstance;
+    explicit AddPathSegmentsTool();
+    ~AddPathSegmentsTool();
+
+    WorldPath *mPath;
+    bool mAppend;
+    QGraphicsLineItem *mSegmentItem;
+};
+
 #endif // PATHTOOLS_H

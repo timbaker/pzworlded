@@ -564,6 +564,7 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(SelectMoveNodeTool::instance());
     toolManager->registerTool(SelectMovePathTool::instance());
     toolManager->registerTool(CreatePathTool::instance());
+    toolManager->registerTool(AddPathSegmentsTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);

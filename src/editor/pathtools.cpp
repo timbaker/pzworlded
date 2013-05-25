@@ -710,10 +710,12 @@ void CreatePathTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         }
 #else
         if (!mNewPath) {
+            Q_ASSERT(mScene->changer()->changeCount() == 0);
             mNewPath = mScene->world()->allocPath();
             mScene->changer()->doAddPath(mScene->currentPathLayer(),
                                          mScene->currentPathLayer()->pathCount(),
                                          mNewPath);
+            mSegmentItem->setLine(QLineF());
             mScene->addItem(mSegmentItem);
         }
         if (node) {
@@ -813,4 +815,146 @@ void CreatePathTool::clearNewPath()
         mScene->removeItem(mPolyItem);
     }
 #endif
+}
+
+/////
+
+AddPathSegmentsTool *AddPathSegmentsTool::mInstance = 0;
+
+AddPathSegmentsTool *AddPathSegmentsTool::instance()
+{
+    if (!mInstance)
+        mInstance = new AddPathSegmentsTool();
+    return mInstance;
+}
+
+void AddPathSegmentsTool::deleteInstance()
+{
+    delete mInstance;
+}
+
+AddPathSegmentsTool::AddPathSegmentsTool() :
+    BasePathTool(tr("Add Sements To Path"),
+                 QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                 QKeySequence()),
+    mPath(0),
+    mSegmentItem(new QGraphicsLineItem)
+{
+}
+
+AddPathSegmentsTool::~AddPathSegmentsTool()
+{
+}
+
+void AddPathSegmentsTool::activate()
+{
+}
+
+void AddPathSegmentsTool::deactivate()
+{
+    clearNewPath();
+}
+
+void AddPathSegmentsTool::setScene(BaseGraphicsScene *scene)
+{
+    BasePathTool::setScene(scene);
+}
+
+void AddPathSegmentsTool::keyPressEvent(QKeyEvent *event)
+{
+    if ((event->key() == Qt::Key_Escape) && mPath) {
+        mScene->changer()->undoAndForget();
+        // FIXME: delete path and nodes
+        mPath = 0;
+        event->accept();
+    }
+    if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) && mPath) {
+        finishNewPath(false);
+        event->accept();
+    }
+}
+
+void AddPathSegmentsTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        WorldNode *node = mScene->nodeItem()->topmostNodeAt(event->scenePos());
+        WorldPath *current = currentPath();
+        if (!mPath && !current) {
+            if (node && node->mPaths.size() == 1)
+                current = node->mPaths.keys().first();
+            else
+                return;
+        }
+        if (!mPath) {
+            if (current->isClosed())
+                return;
+            if (node != current->first() && node != current->last())
+                return;
+            mPath = current;
+            mAppend = node == mPath->last();
+            mSegmentItem->setLine(QLineF());
+            mScene->addItem(mSegmentItem);
+            Q_ASSERT(mScene->changer()->changeCount() == 0);
+            return;
+        }
+        if (node) {
+            mScene->changer()->doAddNodeToPath(mPath, mAppend ? mPath->nodeCount() : 0, node);
+            if (node == (mAppend ? mPath->first() : mPath->last()))
+                finishNewPath(true);
+        } else {
+            WorldNode *node = mScene->world()->allocNode(mScene->renderer()->toWorld(event->scenePos()));
+            mScene->changer()->doAddNode(mScene->currentPathLayer(),
+                                         mScene->currentPathLayer()->nodeCount(),
+                                         node);
+            mScene->changer()->doAddNodeToPath(mPath, mAppend ? mPath->nodeCount() : 0, node);
+        }
+    }
+    if (event->button() == Qt::RightButton) {
+        clearNewPath();
+    }
+}
+
+void AddPathSegmentsTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    mScene->nodeItem()->trackMouse(event);
+
+    if (mPath) {
+        WorldNode *node = mAppend ? mPath->last() : mPath->first();
+        mSegmentItem->setLine(QLineF(mScene->renderer()->toScene(node->pos()),
+                                     event->scenePos()));
+    }
+}
+
+void AddPathSegmentsTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    Q_UNUSED(event)
+}
+
+WorldPath *AddPathSegmentsTool::currentPath()
+{
+    if (mScene->selectedPaths().size() == 1)
+        return mScene->selectedPaths().values().first();
+    return 0;
+}
+
+void AddPathSegmentsTool::finishNewPath(bool close)
+{
+    if (mPath) {
+        beginUndoMacro(tr("Add Segments To Path"));
+        foreach (WorldChange *c, mScene->changer()->takeChanges()) {
+            c->setChanger(document()->changer());
+            document()->undoStack()->push(new WorldChangeUndoCommand(c));
+        }
+        endUndoMacro();
+        clearNewPath();
+    }
+}
+
+void AddPathSegmentsTool::clearNewPath()
+{
+    if (mPath) {
+        mScene->changer()->undoAndForget();
+        mScene->removeItem(mSegmentItem);
+        mPath = 0;
+    }
 }
