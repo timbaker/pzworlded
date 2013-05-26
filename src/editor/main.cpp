@@ -20,6 +20,7 @@
 
 #ifdef ZOMBOID
 #include "documentmanager.h"
+#include "glwindow.h"
 #include "toolmanager.h"
 #include "preferences.h"
 #include "mapimagemanager.h"
@@ -58,6 +59,9 @@ int main(int argc, char *argv[])
 #endif
 
     w.openLastFiles();
+
+    GLWindow glwindow;
+    glwindow.show();
 
 #if 1
     int ret = a.exec();

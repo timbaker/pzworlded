@@ -26,6 +26,7 @@ macx {
     LIBS += -framework Foundation
 } else:win32 {
     LIBS += -L$$OUT_PWD/../../lib
+    LIBS += -lglu32
 } else {
     QMAKE_LIBDIR_FLAGS += -L$$OUT_PWD/../../lib
 }
@@ -140,7 +141,8 @@ SOURCES += main.cpp\
     pathworldwriter.cpp \
     pathworldreader.cpp \
     pathlayersmodel.cpp \
-    pathlayersdock.cpp
+    pathlayersdock.cpp \
+    glwindow.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -237,7 +239,8 @@ HEADERS  += mainwindow.h \
     pathworldwriter.h \
     pathworldreader.h \
     pathlayersmodel.h \
-    pathlayersdock.h
+    pathlayersdock.h \
+    glwindow.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -257,7 +260,8 @@ FORMS    += mainwindow.ui \
     unknowncolorsdialog.ui \
     luaconsole.ui \
     scriptparamdialog.ui \
-    pathlayersdock.ui
+    pathlayersdock.ui \
+    glwindow.ui
 
 OTHER_FILES += luatiled.pkg
 
