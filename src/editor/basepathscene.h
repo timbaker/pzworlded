@@ -152,6 +152,8 @@ public:
 
     WorldPath *mHighlightPath;
 
+    unsigned int loadGLTexture(const QString &fileName);
+
 public slots:
     void afterAddNode(WorldNode *node);
     void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
@@ -172,6 +174,10 @@ public slots:
 
     void currentPathLayerChanged(WorldPathLayer *layer);
 
+    void pathTextureChanged(WorldPath *path);
+
+public:
+    unsigned int mTextureId;
 private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;

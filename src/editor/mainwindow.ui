@@ -305,8 +305,23 @@
      </property>
      <addaction name="actionPlaceholder"/>
     </widget>
+    <widget class="QMenu" name="menuApply_Texture">
+     <property name="title">
+      <string>Apply Texture</string>
+     </property>
+     <addaction name="actionFirstTexture"/>
+    </widget>
+    <widget class="QMenu" name="menuTexture_Transform">
+     <property name="title">
+      <string>Texture Transform</string>
+     </property>
+     <addaction name="actionRotateTexture"/>
+     <addaction name="actionResetTextureRotation"/>
+    </widget>
     <addaction name="actionPathAlign"/>
     <addaction name="menuAdd_Script"/>
+    <addaction name="menuApply_Texture"/>
+    <addaction name="menuTexture_Transform"/>
     <addaction name="actionJoinPaths"/>
     <addaction name="actionPathFromNodes"/>
     <addaction name="actionRemoveNodes"/>
@@ -784,6 +799,21 @@
   <action name="actionShowPaths">
    <property name="text">
     <string>Show Hidden Paths</string>
+   </property>
+  </action>
+  <action name="actionFirstTexture">
+   <property name="text">
+    <string>First Texture</string>
+   </property>
+  </action>
+  <action name="actionRotateTexture">
+   <property name="text">
+    <string>Rotate 45 Degrees</string>
+   </property>
+  </action>
+  <action name="actionResetTextureRotation">
+   <property name="text">
+    <string>Reset Rotation</string>
    </property>
   </action>
  </widget>

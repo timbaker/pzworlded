@@ -3,6 +3,7 @@ include(../libtiled/libtiled.pri)
 include(../lua/lua.pri)
 include(../worldgen/worldgen.pri)
 include(../osm/osm.pri)
+include(../poly2tri/poly2tri.pri)
 include(../qtlockedfile/qtlockedfile.pri)
 
 QT       += core gui xml
@@ -142,7 +143,8 @@ SOURCES += main.cpp\
     pathworldreader.cpp \
     pathlayersmodel.cpp \
     pathlayersdock.cpp \
-    glwindow.cpp
+    glwindow.cpp \
+    textureeditdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -240,7 +242,8 @@ HEADERS  += mainwindow.h \
     pathworldreader.h \
     pathlayersmodel.h \
     pathlayersdock.h \
-    glwindow.h
+    glwindow.h \
+    textureeditdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -261,7 +264,8 @@ FORMS    += mainwindow.ui \
     luaconsole.ui \
     scriptparamdialog.ui \
     pathlayersdock.ui \
-    glwindow.ui
+    glwindow.ui \
+    textureeditdialog.ui
 
 OTHER_FILES += luatiled.pkg
 

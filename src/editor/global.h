@@ -14,6 +14,7 @@ class WorldNode;
 class WorldPath;
 class WorldPathLayer;
 class WorldScript;
+class WorldTexture;
 class WorldTile;
 class WorldTileAlias;
 class WorldTileRule;
@@ -41,6 +42,9 @@ typedef QList<WorldTileAlias*> AliasList;
 typedef QList<WorldTileRule*> TileRuleList;
 
 typedef QMap<QString,QString> ScriptParams;
+
+typedef QList<WorldTexture*> TextureList;
+typedef QMap<QString,WorldTexture*> TextureMap;
 
 #if defined(Q_OS_WIN) && (_MSC_VER == 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:

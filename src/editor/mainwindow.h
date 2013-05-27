@@ -145,6 +145,9 @@ public slots:
     void switchOrthoIso();
     void pathAlign();
     void addScriptToPath();
+    void applyTexture();
+    void rotateTexture();
+    void resetTextureRotation();
     void pathFromNodes();
     void joinPaths();
     void scriptParameters();

@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
 
     w.openLastFiles();
 
-    GLWindow glwindow;
-    glwindow.show();
+//    GLWindow glwindow;
+//    glwindow.show();
 
 #if 1
     int ret = a.exec();

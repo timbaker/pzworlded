@@ -8,6 +8,8 @@ function region()
     local info = MapInfo:get(script:value('mapfile'))
     if not info then return Region:new() end
     local v = split(script:value('pos'), ' ')
+    if #v ~= 2 then v = { script:paths()[1]:region():boundingRect():x(),
+                          script:paths()[1]:region():boundingRect():y()} end
 	local x = tonumber(v[1])
 	local y = tonumber(v[2])
     local r = info:bounds():translated(x,y):adjusted(-2,-2,0,0)
@@ -31,6 +33,8 @@ function run()
     if info then
         local pos = script:value('pos')
 	local v = split(pos)
+    if #v ~= 2 then v = { script:paths()[1]:region():boundingRect():x(),
+                          script:paths()[1]:region():boundingRect():y()} end
 	local x = tonumber(v[1])
 	local y = tonumber(v[2])
 

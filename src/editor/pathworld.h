@@ -185,6 +185,33 @@ public:
     WorldTileRule *mCondition;
 };
 
+#if 0
+class WorldTileBlend
+{
+public:
+    WorldTileBlend();
+
+    class BlendDir
+    {
+    public:
+        QString mLayer;
+        QString mMainTile;
+        QString mBlendTile;
+        QStringList mExclude;
+        QStringList mExclude2;
+    };
+
+    enum Dir {
+        N, E, S, W, NW, NE, SE, SW
+    };
+
+    QString mName;
+    QStringList mTileNames;
+    TileList mTiles;
+    QStringList mLayers;
+};
+#endif
+
 class WorldScript
 {
 public:
@@ -276,6 +303,8 @@ public:
 
     void initClone(PathWorld *clone);
 
+    TextureList &textureList() { return mTextures; }
+    TextureMap &textureMap() { return mTextureMap; }
 
 protected:
     int mWidth;
@@ -295,6 +324,9 @@ protected:
     QMap<QString,WorldTileRule*> mTileRuleByName;
 
     ScriptList mScripts;
+
+    TextureList mTextures;
+    TextureMap mTextureMap;
 
     id_t mNextPathId;
     id_t mNextNodeId;

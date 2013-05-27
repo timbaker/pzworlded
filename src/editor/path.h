@@ -26,6 +26,7 @@
 #include <QRegion>
 #include <QPolygonF>
 #include <QString>
+#include <QTransform>
 
 class WorldLookup;
 class WorldPathLayer;
@@ -57,6 +58,27 @@ public:
     id_t id;
     QPointF p;
     QMap<WorldPath*,int> mPaths;
+};
+
+class WorldTexture
+{
+public:
+    QString mName;
+    QString mFileName;
+    QSize mSize;
+    unsigned int mGLid;
+};
+
+class PathTexture
+{
+public:
+    PathTexture() : mTexture(0), mScale(1, 1), mRotation(0), mAlignWorld(false) {}
+    WorldTexture *mTexture;
+    QTransform mTransform;
+    QSizeF mScale;
+    qreal mRotation;
+    QPointF mTranslation;
+    bool mAlignWorld;
 };
 
 class WorldPath
@@ -124,6 +146,9 @@ public:
     WorldPathLayer *mLayer;
     ScriptList mScripts;
     bool mVisible;
+
+    PathTexture mTexture;
+    qreal mStrokeWidth;
 };
 
 QPolygonF strokePath(WorldPath *path, qreal thickness);

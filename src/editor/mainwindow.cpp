@@ -528,6 +528,8 @@ MainWindow::MainWindow(QWidget *parent)
         ui->menuAdd_Script->addAction(QLatin1String("road.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("row-of-houses.lua"), this, SLOT(addScriptToPath()));
     }
+    connect(ui->actionRotateTexture, SIGNAL(triggered()), SLOT(rotateTexture()));
+    connect(ui->actionResetTextureRotation, SIGNAL(triggered()), SLOT(resetTextureRotation()));
     connect(ui->actionJoinPaths, SIGNAL(triggered()), SLOT(joinPaths()));
     connect(ui->actionPathFromNodes, SIGNAL(triggered()), SLOT(pathFromNodes()));
     connect(ui->actionRemoveNodes, SIGNAL(triggered()), SLOT(removeSelectedNodes()));
@@ -2108,6 +2110,12 @@ void MainWindow::updateActions()
         ui->objectGroupButton->setText(tr("Obj Grp: <none> "));
         ui->objectGroupButton->setEnabled(false);
     }
+
+    ui->menuApply_Texture->clear();
+    if (mCurrentDocument && mCurrentDocument->isPathDocument()) {
+        foreach (WorldTexture *wtex, mCurrentDocument->asPathDocument()->world()->textureList())
+            ui->menuApply_Texture->addAction(wtex->mName, this, SLOT(applyTexture()));
+    }
 }
 
 void MainWindow::updateZoom()
@@ -2184,10 +2192,51 @@ void MainWindow::addScriptToPath()
             WorldScript *ws = new WorldScript;
             ws->mFileName = ::script(sender->text().toLatin1().constData());
             ws->mPaths += path;
-            ws->mRegion = path->region();
+
+            Lua::LuaScript ls(doc->world(), ws);
+            if (ls.runFunction("region")) {
+                QRegion rgn;
+                if (ls.getResultRegion(rgn))
+                    ws->mRegion = rgn;
+            }
+
             doc->changer()->doAddScriptToPath(path, path->scriptCount(), ws);
         }
         doc->changer()->endUndoMacro();
+    }
+}
+
+void MainWindow::applyTexture()
+{
+    QAction *sender = (QAction*)QObject::sender();
+
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        if (WorldTexture *wtex = doc->world()->textureMap()[QLatin1String(sender->text().toLatin1().constData())]) {
+            foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
+                path->mTexture.mTexture = wtex;
+            }
+        }
+    }
+}
+
+void MainWindow::rotateTexture()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
+//            path->mTexture.mTransform.rotate(45);
+            path->mTexture.mRotation += 45;
+            if (path->mTexture.mRotation >= 360)
+                path->mTexture.mRotation -= 360;
+        }
+    }
+}
+
+void MainWindow::resetTextureRotation()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
+            path->mTexture.mRotation = 0;
+        }
     }
 }
 

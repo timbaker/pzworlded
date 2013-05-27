@@ -28,6 +28,9 @@
 
 #include "tileset.h"
 
+#include <QDir>
+#include <QFileInfo>
+#include <QImageReader>
 #include <QUndoStack>
 
 PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
@@ -76,6 +79,51 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
                 ws->mRegion = rgn;
         }
     }
+
+    WorldTexture *wtex = new WorldTexture;
+    wtex->mGLid = 0;
+    wtex->mFileName = QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/francegrassfull.jpg");
+    wtex->mName = QFileInfo(wtex->mFileName).baseName();
+    QImageReader ir(wtex->mFileName);
+    wtex->mSize = ir.size();
+    mWorld->textureList() += wtex;
+    mWorld->textureMap()[wtex->mName] = wtex;
+
+    wtex = new WorldTexture;
+    wtex->mGLid = 0;
+    wtex->mFileName = QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/pebbles.png");
+    wtex->mName = QFileInfo(wtex->mFileName).baseName();
+    ir.setFileName(wtex->mFileName);
+    wtex->mSize = ir.size();
+    mWorld->textureList() += wtex;
+    mWorld->textureMap()[wtex->mName] = wtex;
+
+    QDir fo(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/street_lines"));
+    QStringList filters(QString::fromLatin1("*.png"));
+    foreach (QFileInfo info, fo.entryInfoList(filters)) {
+        wtex = new WorldTexture;
+        wtex->mGLid = 0;
+        wtex->mFileName = info.filePath();
+        wtex->mName = info.baseName();
+        ir.setFileName(wtex->mFileName);
+        wtex->mSize = ir.size();
+        mWorld->textureList() += wtex;
+        mWorld->textureMap()[wtex->mName] = wtex;
+    }
+
+    fo.setPath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/real_asphalt_texture_pack"));
+//    QStringList filters(QString::fromLatin1("*.png"));
+    foreach (QFileInfo info, fo.entryInfoList(filters)) {
+        wtex = new WorldTexture;
+        wtex->mGLid = 0;
+        wtex->mFileName = info.filePath();
+        wtex->mName = info.baseName();
+        ir.setFileName(wtex->mFileName);
+        wtex->mSize = ir.size();
+        mWorld->textureList() += wtex;
+        mWorld->textureMap()[wtex->mName] = wtex;
+    }
+
 #if 0
     // Now that the script regions are up-to-date...
     foreach (WorldLevel *wlevel, mWorld->levels())

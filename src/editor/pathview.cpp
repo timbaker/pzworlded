@@ -53,6 +53,10 @@ void PathView::switchToIso()
     setScene(mIsoScene);
     zoomable()->setScale(mOrthoIsoScale);
 
+#if 0
+    setTransform(QTransform());
+#endif
+
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 
@@ -69,6 +73,11 @@ void PathView::switchToOrtho()
 
     setScene(mOrthoScene);
     zoomable()->setScale(mOrthoIsoScale);
+
+#if 0
+    scale(1, 0.5);
+    rotate(45);
+#endif
 
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
@@ -87,6 +96,10 @@ void PathView::switchToTile()
     mTileScene->centerOn(worldPos);
     setScene(mTileScene);
     zoomable()->setScale(mTileScale);
+
+#if 0
+    setTransform(QTransform());
+#endif
 
     centerOn(scene()->renderer()->toScene(worldPos));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));

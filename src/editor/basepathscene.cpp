@@ -24,12 +24,15 @@
 #include "pathtools.h"
 #include "pathview.h"
 #include "pathworld.h"
+#include "textureeditdialog.h"
 #include "worldchanger.h"
 #include "worldlookup.h"
 #include "zoomable.h"
 
+#include <QGLWidget>
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
+#include <QtOpenGL>
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 
@@ -51,6 +54,10 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     mActiveTool(0),
     mChanger(new WorldChanger(doc->world()))
 {
+    mTextureId = 0;
+
+    connect(TextureEditDialog::instance(), SIGNAL(ffsItChangedYo(WorldPath*)),
+            SLOT(pathTextureChanged(WorldPath*)));
 }
 
 BasePathScene::~BasePathScene()
@@ -205,6 +212,14 @@ void BasePathScene::setSelectedPaths(const PathSet &selection)
 {
     mSelectedPaths = selection;
     update(); // FIXME: redraw only as needed
+
+    if (mSelectedPaths.size() == 1) {
+        TextureEditDialog::instance()->setPath(mSelectedPaths.values().first());
+        TextureEditDialog::instance()->show();
+    } else {
+        TextureEditDialog::instance()->setPath(0);
+        TextureEditDialog::instance()->hide();
+    }
 }
 
 bool PolylineIntersectsPolygon(const QPolygonF &polyLine, const QPolygonF &polyTest)
@@ -328,6 +343,7 @@ void BasePathScene::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNod
     Q_UNUSED(index)
     Q_UNUSED(node)
     lookup()->pathChanged(path);
+    update();
 }
 
 void BasePathScene::afterAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)
@@ -361,6 +377,40 @@ void BasePathScene::currentPathLayerChanged(WorldPathLayer *layer)
     nodeItem()->currentPathLayerChanged();
 }
 
+void BasePathScene::pathTextureChanged(WorldPath *path)
+{
+    update();
+}
+
+unsigned int BasePathScene::loadGLTexture(const QString &fileName)
+{
+    QImage t;
+    QImage b;
+
+    if (b.load(fileName)) {
+        QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
+        QPainter painter(&fixedImage);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(fixedImage.rect(), Qt::transparent);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        painter.drawImage( 0, 0, b);
+        painter.end();
+        b = fixedImage;
+
+        t = QGLWidget::convertToGLFormat( b );
+        GLuint texture;
+        glGenTextures( 1, &texture );
+        glBindTexture( GL_TEXTURE_2D, texture );
+        glTexImage2D( GL_TEXTURE_2D, 0, 4, t.width(), t.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, t.bits() );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
+        return texture;
+    }
+
+    return 0;
+}
+
 /////
 
 PathLayerItem::PathLayerItem(WorldPathLayer *layer, BasePathScene *scene, QGraphicsItem *parent) :
@@ -377,6 +427,7 @@ QRectF PathLayerItem::boundingRect() const
                                            mLayer->wlevel()->level());
 }
 
+#include "poly2tri/poly2tri.h"
 void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
 #if 0
@@ -396,92 +447,247 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     return;
 #endif
 #if 1
+    QVector<QVector3D> vertices;
+    QVector<QVector2D> texcoords;
+    QVector<GLushort> indices;
+    int numcdt = 0;
     QPolygonF exposed = mScene->renderer()->toWorld(option->exposedRect);
-        foreach (WorldPath *path, mLayer->lookup()->paths(exposed)) {
+    foreach (WorldPath *path, mLayer->lookup()->paths(exposed)) {
 #if 1
-            if (!path->isVisible()) continue;
-            painter->setPen(QPen());
-            QPolygonF pf = path->polygon();
-            painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+        if (!path->isVisible()) continue;
+        painter->setPen(QPen());
+        QPolygonF worldPoly = path->polygon();
+        QPolygonF scenePoly = mScene->renderer()->toScene(worldPoly, mLayer->level());
+        painter->drawPolyline(scenePoly);
+
+        if (numcdt < 50 && path->isClosed() && (path->mTexture.mTexture != 0)) {
+            std::vector<p2t::Point*> polyline;
+            qreal factor = 1;
+            foreach (QPointF p, worldPoly.mid(0,worldPoly.size()-1)) {
+                if (polyline.size() && p.x() == polyline.back()->x && p.y() == polyline.back()->y) continue; // forbidden
+                polyline.push_back(new p2t::Point(p.x() * factor, p.y() * factor));
+            }
+            p2t::CDT cdt(polyline);
+            cdt.Triangulate();
+            std::vector<p2t::Triangle*> triangles = cdt.GetTriangles();
+            foreach (p2t::Triangle *tri, triangles) {
+#if 1
+                QPointF p0 = QPointF(tri->GetPoint(0)->x, tri->GetPoint(0)->y);
+                QPointF p1 = QPointF(tri->GetPoint(1)->x, tri->GetPoint(1)->y);
+                QPointF p2 = QPointF(tri->GetPoint(2)->x, tri->GetPoint(2)->y);
+                indices << indices.size() << indices.size() + 1 << indices.size() + 2;
+                QPointF sp0 = mScene->renderer()->toScene(p0);
+                QPointF sp1 = mScene->renderer()->toScene(p1);
+                QPointF sp2 = mScene->renderer()->toScene(p2);
+                vertices << QVector3D(sp0.x(), sp0.y(), 0)
+                         << QVector3D(sp1.x(), sp1.y(), 0)
+                         << QVector3D(sp2.x(), sp2.y(), 0);
+
+                // 1 world "unit" == 1 tile
+                // 1 tile == 64/64 pixels
+                qreal texw = path->mTexture.mTexture->mSize.width()/*/64.0f*/;
+                qreal texh = path->mTexture.mTexture->mSize.height()/*/64.0f*/;
+#if 1
+                if (path->mTexture.mAlignWorld) {
+                    texcoords << QVector2D(p0.x()/texw, (mScene->world()->height() - p0.y())/texh);
+                    texcoords << QVector2D(p1.x()/texw, (mScene->world()->height() - p1.y())/texh);
+                    texcoords << QVector2D(p2.x()/texw, (mScene->world()->height() - p2.y())/texh);
+                } else {
+                    QRectF bounds = path->bounds();
+#if 1
+                    QTransform xform;
+//                    xform.translate(bounds.x(), bounds.y());
+//                    xform.scale(1.0, texh/texw);
+                    xform.scale(64/texw, -64/texh); // inverting the Y-axis as well
+                    xform.translate(path->mTexture.mTranslation.x()*(1.0f/64), path->mTexture.mTranslation.y()*(1.0f/64));
+                    xform.scale(1/path->mTexture.mScale.width(), 1/path->mTexture.mScale.height());
+                    xform.rotate(path->mTexture.mRotation);
+//                    texcoords << QVector2D(xform.map(QPointF((p0.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p0.y() - bounds.y())/texh)));
+//                    texcoords << QVector2D(xform.map(QPointF((p1.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p1.y() - bounds.y())/texh)));
+//                    texcoords << QVector2D(xform.map(QPointF((p2.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p2.y() - bounds.y())/texh)));
+                    texcoords << QVector2D(xform.map(p0-bounds.topLeft()/*+path->mTexture.mTranslation*(1.0f/64)*/));
+                    texcoords << QVector2D(xform.map(p1-bounds.topLeft()/*+path->mTexture.mTranslation*(1.0f/64)*/));
+                    texcoords << QVector2D(xform.map(p2-bounds.topLeft()/*+path->mTexture.mTranslation*(1.0f/64)*/));
 #else
-            painter->setBrush(Qt::NoBrush);
-            QPolygonF pf = path->polygon();
-            if (path->isClosed()) {
-                if (path->tags.contains(QLatin1String("landuse"))) {
-                    QString v = path->tags[QLatin1String("landuse")];
-                    if (v == QLatin1String("forest") || v == QLatin1String("wood"))
-                        painter->setBrush(Qt::darkGreen);
-                    else if (v == QLatin1String("park"))
-                        painter->setBrush(Qt::green);
-                    else if (v == QLatin1String("grass"))
-                        painter->setBrush(QColor(Qt::green).lighter());
-                } else if (path->tags.contains(QLatin1String("natural"))) {
-                    QString v = path->tags[QLatin1String("natural")];
-                    if (v == QLatin1String("water"))
-                        painter->setBrush(Qt::blue);
-
-                } else if (path->tags.contains(QLatin1String("leisure"))) {
-                    QString v = path->tags[QLatin1String("leisure")];
-                    if (v == QLatin1String("park"))
-                        painter->setBrush(Qt::green);
-                }
-                painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
-            } else {
-                painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
-                if (path->tags.contains(QLatin1String("highway"))) {
-                    qreal width = 6;
-                    QColor color = QColor(0,0,0,128);
-                    QString v = path->tags[QLatin1String("highway")];
-                    qreal residentialWidth = 6;
-                    if (v == QLatin1String("residential")) width = 6; /// #1
-                    else if (v == QLatin1String("pedestrian")) width = 5, color = QColor(0,64,0,128);
-                    else if (v == QLatin1String("secondary")) width = 5, color = QColor(0,0,128,128);
-                    else if (v == QLatin1String("secondary_link")) width = 5, color = QColor(0,0,128,128);
-                    else if (v == QLatin1String("tertiary")) width = 4, color = QColor(0,128,0,128); /// #3
-                    else if (v == QLatin1String("tertiary_link")) width = 4, color = QColor(0,128,0,128);
-                    else if (v == QLatin1String("bridleway")) width = 4, color = QColor(128,128,0,128);
-                    else if (v == QLatin1String("private")) width = 4, color = QColor(128,0,0,128);
-                    else if (v == QLatin1String("service")) width = residentialWidth/2, color = QColor(0,0,64,128); /// #2
-                    else if (v == QLatin1String("path")) width = 3, color = QColor(128,64,64,128); /// #2
-                    else continue;
-
-                    pf = strokePath(path, width);
-                    painter->setBrush(color);
-                    painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
-                }
-            }
-
-            if (path->tags.contains(QLatin1String("name"))
-                    && path->tags[QLatin1String("name")] == QLatin1String("Plant Science Field Building")) {
-                painter->setBrush(Qt::red);
-                painter->drawPolygon(pf);
-            }
+                    texcoords << QVector2D((p0.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p0.y() - bounds.y())/texh);
+                    texcoords << QVector2D((p1.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p1.y() - bounds.y())/texh);
+                    texcoords << QVector2D((p2.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p2.y() - bounds.y())/texh);
 #endif
-            if (mScene->selectedPaths().contains(path)) {
-                painter->setPen(QPen(Qt::blue, 4 / painter->worldMatrix().m22()));
-                painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+                }
+#else
+                texcoords << QVector2D(fmod(p0.x(), texw)/texw, fmod(p0.y(), texh)/texh);
+                texcoords << QVector2D(fmod(p1.x(), texw)/texw, fmod(p1.y(), texh)/texh);
+                texcoords << QVector2D(fmod(p2.x(), texw)/texw, fmod(p2.y(), texh)/texh);
+#endif
+#else
+                indices << indices.size() << indices.size() + 1 << indices.size() + 2;
+                vertices << QVector3D(tri->GetPoint(0)->x, tri->GetPoint(0)->y, 0)
+                         << QVector3D(tri->GetPoint(1)->x, tri->GetPoint(1)->y, 0)
+                         << QVector3D(tri->GetPoint(2)->x, tri->GetPoint(2)->y, 0);
+                texcoords << QVector2D((tri->GetPoint(0)->x - int(tri->GetPoint(0)->x / 1024)*1024)/1024.0f,
+                                       (tri->GetPoint(0)->y - int(tri->GetPoint(0)->y / 1024)*1024)/1024.0f);
+                texcoords << QVector2D((tri->GetPoint(1)->x - int(tri->GetPoint(1)->x / 1024)*1024)/1024.0f,
+                                       (tri->GetPoint(1)->y - int(tri->GetPoint(1)->y / 1024)*1024)/1024.0f);
+                texcoords << QVector2D((tri->GetPoint(2)->x - int(tri->GetPoint(2)->x / 1024)*1024)/1024.0f,
+                                       (tri->GetPoint(2)->y - int(tri->GetPoint(2)->y / 1024)*1024)/1024.0f);
+                painter->drawLine(tri->GetPoint(0)->x / factor, tri->GetPoint(0)->y / factor,
+                                  tri->GetPoint(1)->x / factor, tri->GetPoint(1)->y / factor);
+                painter->drawLine(tri->GetPoint(1)->x / factor, tri->GetPoint(1)->y / factor,
+                                  tri->GetPoint(2)->x / factor, tri->GetPoint(2)->y / factor);
+                painter->drawLine(tri->GetPoint(2)->x / factor, tri->GetPoint(2)->y / factor,
+                                  tri->GetPoint(0)->x / factor, tri->GetPoint(0)->y / factor);
+#endif
             }
+            qDeleteAll(polyline);
+            //                qDeleteAll(triangles);
+            numcdt++;
 
-            if (mScene->mHighlightPath == path) {
-                painter->setPen(QPen(Qt::green, 4 / painter->worldMatrix().m22()));
+            if (path->mTexture.mTexture != 0 && path->mTexture.mTexture->mSize.isValid()) {
+                painter->beginNativePainting();
 
-                QPolygonF fwd, bwd;
-                offsetPath(path, 0.5, fwd, bwd);
+                if (path->mTexture.mTexture->mGLid == 0) {
+                    path->mTexture.mTexture->mGLid = mScene->loadGLTexture(path->mTexture.mTexture->mFileName);
+                }
 
-                qreal radius = mScene->nodeItem()->nodeRadius();
+                if (path->mTexture.mTexture->mGLid != 0) {
+                    glEnableClientState(GL_VERTEX_ARRAY);
+                    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+                    glVertexPointer(3, GL_FLOAT, 0, vertices.constData());
+                    glTexCoordPointer(2, GL_FLOAT, 0, texcoords.constData());
+                    glEnable(GL_TEXTURE_2D); glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                    glBindTexture(GL_TEXTURE_2D, path->mTexture.mTexture->mGLid);
+                    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, indices.constData());
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                    glDisable(GL_TEXTURE_2D); glDisable(GL_BLEND);
+                    glDisableClientState(GL_VERTEX_ARRAY);
+                    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+                }
 
-                fwd = mScene->renderer()->toScene(fwd, mLayer->level());
-                painter->drawPolyline(fwd);
-                foreach (QPointF p, fwd)
-                    painter->drawEllipse(p, radius, radius);
-                bwd = mScene->renderer()->toScene(bwd, mLayer->level());
-                painter->drawPolyline(bwd);
-                foreach (QPointF p, bwd)
-                    painter->drawEllipse(p, radius, radius);
+                painter->endNativePainting();
+
+                indices.resize(0);
+                texcoords.resize(0);
+                vertices.resize(0);
+            }
+        }
+#else
+        painter->setBrush(Qt::NoBrush);
+        QPolygonF pf = path->polygon();
+        if (path->isClosed()) {
+            if (path->tags.contains(QLatin1String("landuse"))) {
+                QString v = path->tags[QLatin1String("landuse")];
+                if (v == QLatin1String("forest") || v == QLatin1String("wood"))
+                    painter->setBrush(Qt::darkGreen);
+                else if (v == QLatin1String("park"))
+                    painter->setBrush(Qt::green);
+                else if (v == QLatin1String("grass"))
+                    painter->setBrush(QColor(Qt::green).lighter());
+            } else if (path->tags.contains(QLatin1String("natural"))) {
+                QString v = path->tags[QLatin1String("natural")];
+                if (v == QLatin1String("water"))
+                    painter->setBrush(Qt::blue);
+
+            } else if (path->tags.contains(QLatin1String("leisure"))) {
+                QString v = path->tags[QLatin1String("leisure")];
+                if (v == QLatin1String("park"))
+                    painter->setBrush(Qt::green);
+            }
+            painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
+        } else {
+            painter->drawPolyline(mScene->renderer()->toScene(pf, mLayer->level()));
+            if (path->tags.contains(QLatin1String("highway"))) {
+                qreal width = 6;
+                QColor color = QColor(0,0,0,128);
+                QString v = path->tags[QLatin1String("highway")];
+                qreal residentialWidth = 6;
+                if (v == QLatin1String("residential")) width = 6; /// #1
+                else if (v == QLatin1String("pedestrian")) width = 5, color = QColor(0,64,0,128);
+                else if (v == QLatin1String("secondary")) width = 5, color = QColor(0,0,128,128);
+                else if (v == QLatin1String("secondary_link")) width = 5, color = QColor(0,0,128,128);
+                else if (v == QLatin1String("tertiary")) width = 4, color = QColor(0,128,0,128); /// #3
+                else if (v == QLatin1String("tertiary_link")) width = 4, color = QColor(0,128,0,128);
+                else if (v == QLatin1String("bridleway")) width = 4, color = QColor(128,128,0,128);
+                else if (v == QLatin1String("private")) width = 4, color = QColor(128,0,0,128);
+                else if (v == QLatin1String("service")) width = residentialWidth/2, color = QColor(0,0,64,128); /// #2
+                else if (v == QLatin1String("path")) width = 3, color = QColor(128,64,64,128); /// #2
+                else continue;
+
+                pf = strokePath(path, width);
+                painter->setBrush(color);
+                painter->drawPolygon(mScene->renderer()->toScene(pf, mLayer->level()));
             }
         }
 
-    return;
+        if (path->tags.contains(QLatin1String("name"))
+                && path->tags[QLatin1String("name")] == QLatin1String("Plant Science Field Building")) {
+            painter->setBrush(Qt::red);
+            painter->drawPolygon(pf);
+        }
+#endif
+        if (mScene->selectedPaths().contains(path)) {
+            painter->setPen(QPen(Qt::blue, 4 / painter->worldMatrix().m22()));
+            painter->drawPolyline(mScene->renderer()->toScene(worldPoly, mLayer->level()));
+        }
+
+        if (mScene->mHighlightPath == path) {
+            painter->setPen(QPen(Qt::green, 4 / painter->worldMatrix().m22()));
+
+            QPolygonF fwd, bwd;
+            offsetPath(path, 0.5, fwd, bwd);
+
+            qreal radius = mScene->nodeItem()->nodeRadius();
+
+            fwd = mScene->renderer()->toScene(fwd, mLayer->level());
+            painter->drawPolyline(fwd);
+            foreach (QPointF p, fwd)
+                painter->drawEllipse(p, radius, radius);
+            bwd = mScene->renderer()->toScene(bwd, mLayer->level());
+            painter->drawPolyline(bwd);
+            foreach (QPointF p, bwd)
+                painter->drawEllipse(p, radius, radius);
+        }
+    }
+#if 0
+    if (indices.size()) {
+        painter->beginNativePainting();
+
+        if (mScene->mTextureId == 0)
+            mScene->mTextureId = mScene->loadGLTexture(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/francegrassfull.jpg"));
+
+#if 0
+        for (int i = 0; i < texcoords.size(); i++) {
+            texcoords[i].setX(qBound(qreal(0), texcoords[i].x(), qreal(1)));
+            texcoords[i].setY(qBound(qreal(0), texcoords[i].y(), qreal(1)));
+        }
+#endif
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glVertexPointer(3, GL_FLOAT, 0, vertices.constData());
+        glTexCoordPointer(2, GL_FLOAT, 0, texcoords.constData());
+        glEnable(GL_TEXTURE_2D); glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBindTexture(GL_TEXTURE_2D, mScene->mTextureId);
+        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, indices.constData());
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDisable(GL_TEXTURE_2D); glDisable(GL_BLEND);
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+        painter->endNativePainting();
+    }
+#endif
+    QVector<QPointF> pts;
+    for (int i = 0; i < vertices.size() - 2; i += 3) {
+        pts << vertices[i].toPointF() << vertices[i + 1].toPointF();
+        pts << vertices[i+1].toPointF() << vertices[i + 2].toPointF();
+        pts << vertices[i+2].toPointF() << vertices[i].toPointF();
+    }
+    painter->drawLines(pts.constData(), pts.size() / 2);
+#if 0
+    for (int i = 0; i < texcoords.size(); i++) {
+        painter->drawText(vertices[i].toPointF(), QString::fromLatin1("%1,%2").arg(texcoords[i].x()).arg(texcoords[i].y()));
+    }
+#endif
+    return; ////////////////////////////////////////
 
     painter->setPen(Qt::NoPen);
     painter->setBrush(QColor(0,64,0,128));
@@ -491,7 +697,6 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 painter->drawPolygon(mScene->renderer()->toScene(rect));
         }
     }
-
 #endif
 }
 

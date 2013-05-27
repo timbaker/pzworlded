@@ -278,6 +278,8 @@ void WorldChunkMap::LoadChunkForLater(int wx, int wy, int x, int y)
     WorldChunk *chunk = WorldChunk::getNew(this);
     setChunk(x, y, chunk);
 
+    return; //////////////////////////////////
+
     mLoadingChunk = chunk;
     chunk->LoadForLater(wx, wy);
     mLoadingChunk = 0;
