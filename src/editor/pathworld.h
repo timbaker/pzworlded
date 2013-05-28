@@ -248,9 +248,6 @@ public:
     int levelCount() const
     { return mLevels.size(); }
 
-    void setNextIds(id_t node, id_t path)
-    { mNextNodeId = node, mNextPathId = path; }
-
     WorldNode *allocNode(const QPointF &pos);
     WorldPath *allocPath();
     WorldPathLayer *allocPathLayer();
@@ -327,9 +324,6 @@ protected:
 
     TextureList mTextures;
     TextureMap mTextureMap;
-
-    id_t mNextPathId;
-    id_t mNextNodeId;
 };
 
 #endif // PATHWORLD_H

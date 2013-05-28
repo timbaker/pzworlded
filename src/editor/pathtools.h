@@ -79,7 +79,7 @@ public:
     }
 
 private slots:
-    void nodeAboutToBeRemoved(WorldNode *node);
+    void beforeRemoveNode(WorldPath *path, int index, WorldNode *node);
 
 private:
     Q_DISABLE_COPY(SelectMoveNodeTool)
@@ -160,7 +160,7 @@ public:
     }
 
 private slots:
-    void pathAboutToBeRemoved(WorldPath *path);
+    void beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
 
 private:
     Q_DISABLE_COPY(SelectMovePathTool)

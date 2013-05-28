@@ -29,6 +29,8 @@ typedef QSet<WorldNode*> NodeSet;
 typedef QList<WorldPath*> PathList;
 typedef QSet<WorldPath*> PathSet;
 
+typedef QMap<QString,QString> PathTags;
+
 typedef QList<WorldPathLayer*> PathLayerList;
 typedef QList<WorldTileLayer*> TileLayerList;
 

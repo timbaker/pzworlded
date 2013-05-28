@@ -28,13 +28,13 @@ public:
     OrthoPathRenderer(PathWorld *world);
 
     using BasePathRenderer::toScene;
-    QPointF toScene(qreal x, qreal y, int level = 0);
-    QPolygonF toScene(const QRectF &worldRect, int level = 0);
+    QPointF toScene(qreal x, qreal y, int level);
+    QPolygonF toScene(const QRectF &worldRect, int level);
     QPolygonF toScene(const QPolygonF &worldPoly, int level);
 
-    QPointF toWorld(qreal x, qreal y, int level = 0);
+    QPointF toWorld(qreal x, qreal y, int level);
 
-    QRectF sceneBounds(const QRectF &worldRect, int level = 0);
+    QRectF sceneBounds(const QRectF &worldRect, int level);
 
 };
 

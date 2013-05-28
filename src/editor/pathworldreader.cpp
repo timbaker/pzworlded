@@ -91,8 +91,6 @@ private:
         const int height = atts.value(QLatin1String("height")).toString().toInt();
 
         mWorld = new PathWorld(width, height);
-        mNextNodeId = 0;
-        mNextPathId = 0;
 
         while (xml.readNextStartElement()) {
             if (xml.name() == "tileset") {
@@ -116,8 +114,6 @@ private:
             delete mWorld;
             mWorld = 0;
         }
-
-        mWorld->setNextIds(mNextNodeId + 1, mNextPathId + 1);
 
         return mWorld;
     }
@@ -169,12 +165,7 @@ private:
         WorldPathLayer *layer = new WorldPathLayer(name);
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == "node") {
-                if (WorldNode *node = readNode(layer)) {
-                    layer->insertNode(layer->nodeCount(), node);
-                    mNextNodeId = qMax(mNextNodeId, node->id);
-                }
-            } else if (xml.name() == "path") {
+            if (xml.name() == "path") {
                 readPath(layer);
             } else
                 readUnknownElement();
@@ -183,45 +174,20 @@ private:
         return layer;
     }
 
-    WorldNode *readNode(WorldPathLayer *layer)
-    {
-        Q_ASSERT(xml.isStartElement() && xml.name() == "node");
-        const QXmlStreamAttributes atts = xml.attributes();
-        id_t id = atts.value(QLatin1String("id")).toString().toULong();
-        // TODO: verify unique id
-        qreal x = atts.value(QLatin1String("x")).toString().toDouble();
-        qreal y = atts.value(QLatin1String("y")).toString().toDouble();
-        // TODO: verify reasonable coords
-        xml.skipCurrentElement();
-        return new WorldNode(id, x, y);
-    }
-
     WorldPath *readPath(WorldPathLayer *layer)
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == "path");
         const QXmlStreamAttributes atts = xml.attributes();
-        id_t id = atts.value(QLatin1String("id")).toString().toULong();
-        // TODO: verify unique id
-        const QStringList nodeIds = atts.value(QLatin1String("nodes")).toString()
-                .split(QLatin1Char(' '), QString::SkipEmptyParts);
-        NodeList nodes;
-        foreach (QString nodeId, nodeIds) {
-            if (WorldNode *node = layer->node(nodeId.toULong()))
-                nodes += node;
-            else {
-                xml.raiseError(tr("Invalid node id '%1' in path '%2'").arg(nodeId).arg(id));
-            }
-        }
 
-        WorldPath *path = new WorldPath(id);
+        WorldPath *path = new WorldPath();
         layer->insertPath(layer->pathCount(), path);
-        mNextPathId = qMax(mNextPathId, path->id);
-
-        foreach (WorldNode *node, nodes)
-            path->insertNode(path->nodeCount(), node);
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == "script") {
+            if (xml.name() == "node") {
+                if (WorldNode *node = readNode()) {
+                    path->insertNode(path->nodeCount(), node);
+                }
+            } else if (xml.name() == "script") {
                 if (WorldScript *script = readScript()) {
                     script->mPaths += path;
                     path->insertScript(path->scriptCount(), script);
@@ -230,6 +196,17 @@ private:
                 readUnknownElement();
         }
         return path;
+    }
+
+    WorldNode *readNode()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "node");
+        const QXmlStreamAttributes atts = xml.attributes();
+        qreal x = atts.value(QLatin1String("x")).toString().toDouble();
+        qreal y = atts.value(QLatin1String("y")).toString().toDouble();
+        // TODO: verify reasonable coords
+        xml.skipCurrentElement();
+        return new WorldNode(x, y);
     }
 
     WorldScript *readScript()
@@ -345,8 +322,6 @@ private:
     PathWorld *mWorld;
     QString mError;
     QXmlStreamReader xml;
-    id_t mNextNodeId;
-    id_t mNextPathId;
 };
 
 /////

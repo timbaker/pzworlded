@@ -30,18 +30,18 @@ public:
     BasePathRenderer(PathWorld *world);
     virtual ~BasePathRenderer();
 
-    virtual QPointF toScene(qreal x, qreal y, int level = 0) = 0;
-    inline QPointF toScene(const QPointF &worldPt, int level = 0)
+    virtual QPointF toScene(qreal x, qreal y, int level) = 0;
+    inline QPointF toScene(const QPointF &worldPt, int level)
     { return toScene(worldPt.x(), worldPt.y(), level); }
-    virtual QPolygonF toScene(const QRectF &worldRect, int level = 0) = 0;
+    virtual QPolygonF toScene(const QRectF &worldRect, int level) = 0;
     virtual QPolygonF toScene(const QPolygonF &worldPoly, int level) = 0;
 
-    virtual QPointF toWorld(qreal x, qreal y, int level = 0) = 0;
-    inline QPointF toWorld(const QPointF &scenePos, int level = 0)
+    virtual QPointF toWorld(qreal x, qreal y, int level) = 0;
+    inline QPointF toWorld(const QPointF &scenePos, int level)
     { return toWorld(scenePos.x(), scenePos.y(), level); }
-    virtual QPolygonF toWorld(const QRectF &sceneRect, int level = 0);
+    virtual QPolygonF toWorld(const QRectF &sceneRect, int level);
 
-    virtual QRectF sceneBounds(const QRectF &worldRect, int level = 0) = 0;
+    virtual QRectF sceneBounds(const QRectF &worldRect, int level) = 0;
 
 protected:
     PathWorld *mWorld;

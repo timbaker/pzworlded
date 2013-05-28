@@ -69,52 +69,6 @@ public:
     QPointF mOldPos;
 };
 
-class AddNode : public WorldChange
-{
-public:
-    AddNode(WorldChanger *changer, WorldPathLayer *layer, int index, WorldNode *node) :
-        WorldChange(changer),
-        mLayer(layer),
-        mIndex(index),
-        mNode(node)
-    {
-
-    }
-
-    void redo()
-    {
-        mLayer->insertNode(mIndex, mNode);
-        mChanger->afterAddNode(mNode);
-    }
-
-    void undo()
-    {
-        mChanger->beforeRemoveNode(mLayer, mIndex, mNode);
-        mLayer->removeNode(mIndex);
-        mChanger->afterRemoveNode(mLayer, mIndex, mNode);
-    }
-
-    QString text() const
-    {
-        return mChanger->tr("Add Node");
-    }
-
-    WorldPathLayer *mLayer;
-    int mIndex;
-    WorldNode *mNode;
-};
-
-class RemoveNode : public AddNode
-{
-public:
-    RemoveNode(WorldChanger *changer, WorldPathLayer *layer, int index, WorldNode *node) :
-        AddNode(changer, layer, index, node)
-    {}
-    void redo() { AddNode::undo(); }
-    void undo() { AddNode::redo(); }
-    QString text() const { return mChanger->tr("Remove Node"); }
-};
-
 class AddPath : public WorldChange
 {
 public:
@@ -134,6 +88,7 @@ public:
 
     void undo()
     {
+        mChanger->beforeRemovePath(mLayer, mIndex, mPath);
         mLayer->removePath(mIndex);
         mChanger->afterRemovePath(mLayer, mIndex, mPath);
     }
@@ -216,6 +171,7 @@ public:
 
     void undo()
     {
+        mChanger->beforeRemoveNodeFromPath(mPath, mIndex, mNode);
         mPath->removeNode(mIndex);
         mChanger->afterRemoveNodeFromPath(mPath, mIndex, mNode);
     }
@@ -463,6 +419,39 @@ public:
     bool mWasVisible;
 };
 
+class SetPathClosed : public WorldChange
+{
+public:
+    SetPathClosed(WorldChanger *changer, WorldPath *path, bool closed) :
+        WorldChange(changer),
+        mPath(path),
+        mClosed(closed),
+        mWasClosed(path->isClosed())
+    {
+    }
+
+    void redo()
+    {
+        mPath->setClosed(mClosed);
+        mChanger->afterSetPathClosed(mPath, mClosed);
+    }
+
+    void undo()
+    {
+        mPath->setClosed(mWasClosed);
+        mChanger->afterSetPathClosed(mPath, mWasClosed);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr(mClosed ? "Close Path" : "Open Path");
+    }
+
+    WorldPath *mPath;
+    bool mClosed;
+    bool mWasClosed;
+};
+
 class SetPathLayerVisible : public WorldChange
 {
 public:
@@ -562,31 +551,6 @@ WorldChanger::~WorldChanger()
     qDeleteAll(mChanges);
 }
 
-void WorldChanger::doAddNode(WorldPathLayer *layer, int index, WorldNode *node)
-{
-    addChange(new AddNode(this, layer, index, node));
-}
-
-void WorldChanger::doRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
-{
-    addChange(new RemoveNode(this, layer, index, node));
-}
-
-void WorldChanger::afterAddNode(WorldNode *node)
-{
-    emit afterAddNodeSignal(node);
-}
-
-void WorldChanger::beforeRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
-{
-    emit beforeRemoveNodeSignal(layer, index, node);
-}
-
-void WorldChanger::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
-{
-    emit afterRemoveNodeSignal(layer, index, node);
-}
-
 void WorldChanger::doMoveNode(WorldNode *node, const QPointF &pos)
 {
     addChange(new MoveNode(this, node, pos));
@@ -612,6 +576,11 @@ void WorldChanger::afterAddPath(WorldPathLayer *layer, int index, WorldPath *pat
     emit afterAddPathSignal(layer, index, path);
 }
 
+void WorldChanger::beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    emit beforeRemovePathSignal(layer, index, path);
+}
+
 void WorldChanger::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     emit afterRemovePathSignal(layer, index, path);
@@ -632,9 +601,24 @@ void WorldChanger::afterAddNodeToPath(WorldPath *path, int index, WorldNode *nod
     emit afterAddNodeToPathSignal(path, index, node);
 }
 
+void WorldChanger::beforeRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
+{
+    emit beforeRemoveNodeFromPathSignal(path, index, node);
+}
+
 void WorldChanger::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node)
 {
     emit afterRemoveNodeFromPathSignal(path, index, node);
+}
+
+void WorldChanger::doSetPathClosed(WorldPath *path, bool closed)
+{
+    addChange(new SetPathClosed(this, path, closed));
+}
+
+void WorldChanger::afterSetPathClosed(WorldPath *path, bool wasClosed)
+{
+    emit afterSetPathClosedSignal(path, wasClosed);
 }
 
 void WorldChanger::doAddScriptToPath(WorldPath *path, int index, WorldScript *script)

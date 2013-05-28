@@ -46,7 +46,7 @@ void PathView::switchToIso()
 {
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
-    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
 
     if (scene()->isTile()) mTileScale = zoomable()->scale();
 
@@ -57,7 +57,7 @@ void PathView::switchToIso()
     setTransform(QTransform());
 #endif
 
-    centerOn(scene()->renderer()->toScene(worldPos));
+    centerOn(scene()->renderer()->toScene(worldPos, 0));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 
     ToolManager::instance()->setScene(scene());
@@ -67,7 +67,7 @@ void PathView::switchToOrtho()
 {
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
-    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
 
     if (scene()->isTile()) mTileScale = zoomable()->scale();
 
@@ -79,7 +79,7 @@ void PathView::switchToOrtho()
     rotate(45);
 #endif
 
-    centerOn(scene()->renderer()->toScene(worldPos));
+    centerOn(scene()->renderer()->toScene(worldPos, 0));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 
     ToolManager::instance()->setScene(scene());
@@ -89,7 +89,7 @@ void PathView::switchToTile()
 {
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
-    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
 
     mOrthoIsoScale = zoomable()->scale();
 
@@ -101,7 +101,7 @@ void PathView::switchToTile()
     setTransform(QTransform());
 #endif
 
-    centerOn(scene()->renderer()->toScene(worldPos));
+    centerOn(scene()->renderer()->toScene(worldPos, 0));
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 
     ToolManager::instance()->setScene(scene());
@@ -113,7 +113,7 @@ void PathView::recenter()
 
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
-    QPointF worldPos = scene()->renderer()->toWorld(scenePos);
+    QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
 
     scene()->scrollContentsBy(worldPos);
 }

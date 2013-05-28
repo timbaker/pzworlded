@@ -229,11 +229,11 @@ void TilePainter::tracePath(WorldPath *path, qreal offset)
         QPointF p1 = fwd[i], p2 = fwd[i+1];
         if (closeEnough(p1.x(), p2.x())) { // vertical
             if (p1.y() > p2.y()) qSwap(p1.ry(), p2.ry());
-            setTile((p1.x() >= path->nodeAt(i)->p.x()) ? west : east);
+            setTile((p1.x() >= path->nodeAt(i)->pos().x()) ? west : east);
             fill(QRect(p1.x(), p1.y(), 1, p2.y() - p1.y()).normalized());
         } else if (closeEnough(p1.y(), p2.y())) { // horizontal
             if (p1.x() > p2.x()) qSwap(p1.rx(), p2.rx());
-            setTile((p1.y() >= path->nodeAt(i)->p.y()) ? north : south);
+            setTile((p1.y() >= path->nodeAt(i)->pos().y()) ? north : south);
             fill(QRect(p1.x(), p1.y(), p2.x() - p1.x(), 1).normalized());
         }
     }
@@ -243,11 +243,11 @@ void TilePainter::tracePath(WorldPath *path, qreal offset)
         QPointF p1 = bwd[i], p2 = bwd[i+1];
         if (closeEnough(p1.x(), p2.x())) { // vertical
             if (p1.y() > p2.y()) qSwap(p1.ry(), p2.ry());
-            setTile((p1.x() >= path->nodeAt(i)->p.x()) ? west : east);
+            setTile((p1.x() >= path->nodeAt(i)->pos().x()) ? west : east);
             fill(QRect(p1.x(), p1.y(), 1, p2.y() - p1.y()).normalized());
         } else if (closeEnough(p1.y(), p2.y())) { // horizontal
             if (p1.x() > p2.x()) qSwap(p1.rx(), p2.rx());
-            setTile((p1.y() >= path->nodeAt(i)->p.y()) ? north : south);
+            setTile((p1.y() >= path->nodeAt(i)->pos().y()) ? north : south);
             fill(QRect(p1.x(), p1.y(), p2.x() - p1.x(), 1).normalized());
         }
     }

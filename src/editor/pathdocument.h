@@ -77,8 +77,6 @@ signals:
     void currentTileLayerChanged(WorldTileLayer *layer);
 
 private slots:
-    void afterAddNode(WorldNode *node);
-    void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
 
     void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);

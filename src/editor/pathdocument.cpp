@@ -148,10 +148,6 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
     setCurrentPathLayer(mWorld->levelAt(0)->pathLayerAt(0));
     setCurrentTileLayer(mWorld->levelAt(0)->tileLayerAt(0));
 
-    connect(mChanger, SIGNAL(afterAddNodeSignal(WorldNode*)),
-            SLOT(afterAddNode(WorldNode*)));
-    connect(mChanger, SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
-            SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
     connect(mChanger, SIGNAL(afterAddPathSignal(WorldPathLayer*,int,WorldPath*)),
             SLOT(afterAddPath(WorldPathLayer*,int,WorldPath*)));
     connect(mChanger, SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
@@ -222,21 +218,11 @@ void PathDocument::setCurrentTileLayer(WorldTileLayer *layer)
     emit currentTileLayerChanged(mCurrentTileLayer);
 }
 
-void PathDocument::afterAddNode(WorldNode *node)
-{
-    node->layer->lookup()->nodeAdded(node);
-}
-
-void PathDocument::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
-{
-    Q_UNUSED(index)
-    layer->lookup()->nodeRemoved(node);
-}
 
 void PathDocument::afterMoveNode(WorldNode *node, const QPointF &prev)
 {
     Q_UNUSED(prev)
-    node->layer->lookup()->nodeMoved(node);
+    node->layer()->lookup()->nodeMoved(node);
 }
 
 void PathDocument::afterAddPath(WorldPathLayer *layer, int index, WorldPath *path)
@@ -266,6 +252,7 @@ void PathDocument::afterAddNodeToPath(WorldPath *path, int index, WorldNode *nod
 {
     Q_UNUSED(index)
     Q_UNUSED(node)
+    path->layer()->lookup()->nodeAdded(node);
     path->layer()->lookup()->pathChanged(path);
 }
 
@@ -273,6 +260,7 @@ void PathDocument::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode
 {
     Q_UNUSED(index)
     Q_UNUSED(node)
+    path->layer()->lookup()->nodeRemoved(node);
     path->layer()->lookup()->pathChanged(path);
 }
 

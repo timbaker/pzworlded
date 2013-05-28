@@ -315,8 +315,6 @@
      <property name="title">
       <string>Texture Transform</string>
      </property>
-     <addaction name="actionRotateTexture"/>
-     <addaction name="actionResetTextureRotation"/>
     </widget>
     <addaction name="actionPathAlign"/>
     <addaction name="menuAdd_Script"/>
@@ -806,16 +804,6 @@
   <action name="actionFirstTexture">
    <property name="text">
     <string>First Texture</string>
-   </property>
-  </action>
-  <action name="actionRotateTexture">
-   <property name="text">
-    <string>Rotate 45 Degrees</string>
-   </property>
-  </action>
-  <action name="actionResetTextureRotation">
-   <property name="text">
-    <string>Reset Rotation</string>
    </property>
   </action>
   <action name="actionRaisePath">

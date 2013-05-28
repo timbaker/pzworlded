@@ -76,7 +76,6 @@ LuaPath::LuaPath(LuaWorld *world, WorldPath *path, bool owner) :
 LuaPath::~LuaPath()
 {
     if (mOwner) {
-        qDeleteAll(mPath->nodes);
         delete mPath;
     }
 }
@@ -91,10 +90,10 @@ LuaPath *LuaPath::stroke(double thickness)
     QPolygonF poly = ::strokePath(mPath, thickness);
     WorldPath *newPath = new WorldPath;
     for (int i = 0; i < poly.size(); i++) {
-        newPath->insertNode(i, new WorldNode(InvalidId, poly[i]));
+        newPath->insertNode(i, new WorldNode(poly[i]));
     }
-    if (newPath->nodes.size() && !mPath->isClosed()) {
-        newPath->insertNode(newPath->nodes.size(), newPath->nodes[0]);
+    if (newPath->nodes().size() && !mPath->isClosed()) {
+        newPath->insertNode(newPath->nodeCount(), newPath->first());
     }
 
     return new LuaPath(mWorld, newPath, true); // FIXME: never freed
@@ -113,7 +112,7 @@ int LuaPath::nodeCount()
 QList<LuaNode *> LuaPath::nodes()
 {
     QList<LuaNode*> ret;
-    foreach (WorldNode *node, mPath->nodes)
+    foreach (WorldNode *node, mPath->nodes())
         ret += mWorld->luaNode(node);
     return ret;
 }
@@ -135,7 +134,7 @@ LuaNode *LuaPath::last()
 
 void LuaPath::addNode(LuaNode *node)
 {
-    if (mPath->mLayer != node->mNode->layer) return; // error!
+    if (node->mNode->path() != 0) return; // error!
     mWorld->mChanger->doAddNodeToPath(mPath, mPath->nodeCount(), node->mNode);
 }
 

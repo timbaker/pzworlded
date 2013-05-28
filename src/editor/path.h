@@ -29,6 +29,7 @@
 #include <QTransform>
 
 class WorldLookup;
+class WorldPath;
 class WorldPathLayer;
 class WorldScript;
 
@@ -36,30 +37,33 @@ class WorldNode
 {
 public:
     WorldNode();
-    WorldNode(id_t id, qreal x, qreal y);
-    WorldNode(id_t id, const QPointF &p);
+    WorldNode(qreal x, qreal y);
+    WorldNode(const QPointF &mPos);
     ~WorldNode();
 
+    void setPath(WorldPath *path)
+    { Q_ASSERT(!path || !mPath); mPath = path; }
+    WorldPath *path() const
+    { return mPath; }
+
+    WorldPathLayer *layer() const;
+
     void setPos(const QPointF &pos)
-    { p = pos; }
+    { mPos = pos; }
     void setX(qreal x)
-    { p.rx() = x; }
+    { mPos.rx() = x; }
     void setY(qreal y)
-    { p.ry() = y; }
+    { mPos.ry() = y; }
     const QPointF &pos() const
-    { return p; }
+    { return mPos; }
 
     WorldNode *clone() const;
 
-    void addedToPath(WorldPath *path);
-    void removedFromPath(WorldPath *path);
-
     int index();
 
-    WorldPathLayer *layer;
-    id_t id;
-    QPointF p;
-    QMap<WorldPath*,int> mPaths;
+private:
+    WorldPath *mPath;
+    QPointF mPos;
 };
 
 class WorldTexture
@@ -87,7 +91,7 @@ class WorldPath
 {
 public:
     WorldPath();
-    WorldPath(id_t id);
+    WorldPath(WorldPathLayer *layer);
     ~WorldPath();
 
     WorldPathLayer *layer() const
@@ -95,29 +99,43 @@ public:
 
     void insertNode(int index, WorldNode *node);
     WorldNode *removeNode(int index);
+    const NodeList &nodes() const
+    { return mNodes; }
     WorldNode *nodeAt(int index);
     int nodeCount() const
-    { return nodes.size(); }
+    { return mNodes.size(); }
     int nodeCount(WorldNode *node)
-    { return nodes.count(node); }
+    { return mNodes.count(node); }
+    int indexOf(WorldNode *node)
+    { return mNodes.indexOf(node); }
     WorldNode *first() const
-    { return nodes.size() ? nodes.first() : 0; }
+    { return mNodes.size() ? mNodes.first() : 0; }
     WorldNode *last() const
-    { return nodes.last() ? nodes.last() : 0; }
+    { return mNodes.last() ? mNodes.last() : 0; }
 
-    void registerWithNodes();
-    void unregisterFromNodes();
+    QPointF nodePos(int index)
+    {
+        if (WorldNode *node = nodeAt(index))
+            return node->pos();
+        Q_ASSERT(false);
+        return QPointF();
+    }
 
-    bool isClosed() const;
+    int index();
+
+    void setClosed(bool closed)
+    { mClosed = closed; }
+    bool isClosed() const
+    { return mClosed; }
 
     QRectF bounds();
-    QPolygonF polygon();
+    QPolygonF polygon(bool stroked = true);
 
     QRegion region();
 
-    void setOwner(WorldPathLayer *owner);
+    void setLayer(WorldPathLayer *layer);
 
-    WorldPath *clone(WorldPathLayer *layer) const;
+    WorldPath *clone() const;
 
     void nodeMoved()
     {
@@ -132,6 +150,8 @@ public:
     int scriptCount() const
     { return mScripts.size(); }
 
+    PathTags &tags() { return mTags; }
+
     bool isVisible() const
     { return mVisible; }
 
@@ -143,9 +163,12 @@ public:
     qreal strokeWidth() const
     { return mStrokeWidth; }
 
-    id_t id;
-    QList<WorldNode*> nodes;
-    QMap<QString,QString> tags;
+    PathTexture &texture()
+    { return mTexture; }
+
+private:
+    QList<WorldNode*> mNodes;
+    PathTags mTags;
 
     QRectF mBounds;
     QPolygonF mPolygon;
@@ -153,6 +176,7 @@ public:
     WorldPathLayer *mLayer;
     ScriptList mScripts;
     bool mVisible;
+    bool mClosed;
 
     PathTexture mTexture;
     qreal mStrokeWidth;
@@ -181,22 +205,12 @@ public:
     { return mLevel; }
     int level() const;
 
-    void insertNode(int index, WorldNode *node);
-    WorldNode *removeNode(int index);
-    const QList<WorldNode*> &nodes() const
-    { return mNodes; }
-    int nodeCount() const
-    { return mNodes.size(); }
-    WorldNode *node(id_t id);
-    int indexOf(WorldNode *node);
-
     void insertPath(int index, WorldPath *path);
     WorldPath *removePath(int index);
     const QList<WorldPath*> &paths() const
     { return mPaths; }
     int pathCount() const
     { return mPaths.size(); }
-    WorldPath *path(id_t id);
     int indexOf(WorldPath *path);
 
     void setVisible(bool visible)
@@ -214,10 +228,7 @@ public:
 private:
     WorldLevel *mLevel;
     QString mName;
-    QList<WorldNode*> mNodes;
-    QMap<id_t,WorldNode*> mNodeByID;
     QList<WorldPath*> mPaths;
-    QMap<id_t,WorldPath*> mPathByID;
     bool mVisible;
     WorldLookup *mLookup;
 };

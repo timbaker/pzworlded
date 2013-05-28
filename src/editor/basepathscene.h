@@ -91,7 +91,7 @@ public:
 
     void nodeRemoved(WorldNode *node);
 
-    void redrawNode(id_t id);
+    void redrawNode(WorldNode *node);
 
     qreal nodeRadius() const;
 
@@ -101,7 +101,7 @@ private:
     BasePathScene *mScene;
     NodeSet mSelectedNodes;
     QMap<WorldNode*,QPointF> mNodeOffset;
-    id_t mHoverNode;
+    WorldNode *mHoverNode;
 };
 
 struct PathSegment
@@ -195,22 +195,19 @@ public:
     unsigned int loadGLTexture(const QString &fileName);
 
 public slots:
-    void afterAddNode(WorldNode *node);
-    void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
 
     void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
+    void afterSetPathClosed(WorldPath *path, bool wasClosed);
 
     void afterAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void beforeRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
 
     void afterSetPathLayerVisible(WorldPathLayer *layer, bool visible);
-
-    void nodeMoved(WorldNode *node);
 
     void currentPathLayerChanged(WorldPathLayer *layer);
 

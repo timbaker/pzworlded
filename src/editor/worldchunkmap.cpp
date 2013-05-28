@@ -252,8 +252,8 @@ WorldChunkMap::WorldChunkMap(PathDocument *doc) :
 
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*,QPointF)));
-    connect(mDocument->changer(), SIGNAL(afterRemoveNodeSignal(WorldPathLayer*,int,WorldNode*)),
-            SLOT(afterRemoveNode(WorldPathLayer*,int,WorldNode*)));
+    connect(mDocument->changer(), SIGNAL(afterRemoveNodeFromPathSignal(WorldPath*,int,WorldNode*)),
+            SLOT(afterRemoveNodeFromPath(WorldPath*,int,WorldNode*)));
 
     connect(mDocument->changer(), SIGNAL(afterAddScriptToPathSignal(WorldPath*,int,WorldScript*)),
             SLOT(afterAddScriptToPath(WorldPath*,int,WorldScript*)));
@@ -454,11 +454,9 @@ void WorldChunkMap::setCenter(int x, int y)
 
 void WorldChunkMap::nodeMoved(WorldNode *node, const QPointF &prev)
 {
-    foreach (WorldPath *path, node->mPaths.keys()) {
-        if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
-            QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
-        mScriptsThatChanged += path->scripts().toSet();
-    }
+    if (mScriptChangeArea.isEmpty() && mScriptsThatChanged.isEmpty())
+        QMetaObject::invokeMethod(this, "nodesMoved", Qt::QueuedConnection);
+    mScriptsThatChanged += node->path()->scripts().toSet();
 }
 
 void WorldChunkMap::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)

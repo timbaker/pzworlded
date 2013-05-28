@@ -63,24 +63,23 @@ public:
     PathWorld *world() const
     { return mWorld; }
 
-    void doAddNode(WorldPathLayer *layer, int index, WorldNode *node);
-    void doRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
-    void afterAddNode(WorldNode *node);
-    void beforeRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
-    void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
-
     void doMoveNode(WorldNode *node, const QPointF &pos);
     void afterMoveNode(WorldNode *node, const QPointF &prev);
 
     void doAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void doRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
+    void beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
 
     void doAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void doRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
+    void beforeRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
+
+    void doSetPathClosed(WorldPath *path, bool closed);
+    void afterSetPathClosed(WorldPath *path, bool wasClosed);
 
     void doAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
@@ -131,15 +130,17 @@ public:
     void undo();
 
 signals:
-    void afterAddNodeSignal(WorldNode *node);
-    void beforeRemoveNodeSignal(WorldPathLayer *layer, int index, WorldNode *node);
-    void afterRemoveNodeSignal(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNodeSignal(WorldNode *node, const QPointF &prev);
 
     void afterAddPathSignal(WorldPathLayer *layer, int index, WorldPath *path);
+    void beforeRemovePathSignal(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePathSignal(WorldPathLayer *layer, int index, WorldPath *path);
+
     void afterAddNodeToPathSignal(WorldPath *path, int index, WorldNode *node);
+    void beforeRemoveNodeFromPathSignal(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPathSignal(WorldPath *path, int index, WorldNode *node);
+
+    void afterSetPathClosedSignal(WorldPath *path, bool wasClosed);
 
     void afterReorderPathSignal(WorldPath *path, int oldIndex);
 

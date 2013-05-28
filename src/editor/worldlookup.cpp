@@ -59,22 +59,18 @@ WorldLookup::WorldLookup(WorldPathLayer *layer) :
                     LOOKUP_LENGTH(layer->wlevel()->world()->height())))
 {
     // FIXME: when inserting or deleting objects, these indices becomes invalid
-    int index = 0;
+    int pathIndex = 0;
     int scriptIndex = 0;
 
-    index = 0;
-    foreach (WorldNode *node, mLayer->nodes())
-        mNodeTree->Add(index++, node);
-
-    mFirstInvalidNodeIndex = index;
-
-    index = 0;
     foreach (WorldPath *path, mLayer->paths()) {
-        mPathTree->Add(index++, path);
+        mPathTree->Add(pathIndex++, path);
+
+        foreach (WorldNode *node, path->nodes())
+            mNodeTree->Add(pathIndex, node);
 
         foreach (WorldScript *ws, path->scripts()) {
             if (ws->mRegion.isEmpty()) {
-                qCritical("script has empty region - IGNORING");
+//                qCritical("script has empty region - IGNORING");
                 continue;
             }
             mScriptTree->Add(scriptIndex++, ws);
@@ -82,7 +78,7 @@ WorldLookup::WorldLookup(WorldPathLayer *layer) :
         scriptIndex += 10 - scriptIndex % 10; // FIXME: see scriptAdded()
     }
 
-    mFirstInvalidPathIndex = index;
+    mFirstInvalidPathIndex = pathIndex + 1;
 }
 
 WorldLookup::~WorldLookup()
@@ -157,7 +153,7 @@ QList<WorldNode *> WorldLookup::nodes(const QRectF &bounds)
     foreach (WorldQuadTreeObject<WorldNode> *o, objects) {
         Q_ASSERT(o->data);
         checkInvalidNodeIndex(o->index);
-        ret[o->index] = o->data;
+        ret[o->index * 100 + o->data->index()] = o->data;
     }
     return ret.values();
 }
@@ -174,42 +170,39 @@ QList<WorldNode *> WorldLookup::nodes(const QPolygonF &poly)
     foreach (WorldQuadTreeObject<WorldNode> *o, objects) {
         Q_ASSERT(o->data);
         checkInvalidNodeIndex(o->index);
-        ret[o->index] = o->data;
+        ret[o->index * 100 + o->data->index()] = o->data;
     }
     return ret.values();
 }
 
 void WorldLookup::nodeAdded(WorldNode *node)
 {
-    int index = node->index();
-    mFirstInvalidNodeIndex = qMin(mFirstInvalidNodeIndex, index);
+    int index = mPathTree->mMap[node->path()]->index;
     mNodeTree->Add(index, node);
 }
 
 void WorldLookup::nodeRemoved(WorldNode *node)
 {
-    if (mNodeTree->mMap.contains(node)) {
-        // all indices after this are invalid
-        mFirstInvalidNodeIndex = qMin(mFirstInvalidNodeIndex, mNodeTree->mMap[node]->index);
-    }
     mNodeTree->Remove(node);
 }
 
 void WorldLookup::nodeMoved(WorldNode *node)
 {
     mNodeTree->Move(node);
-    foreach (WorldPath *path, node->mPaths.keys()) {// FIXME: do this once after all the nodes have moved
-        path->nodeMoved();
-        mPathTree->Move(path);
-    }
+    mPathTree->Move(node->path());
 }
 
 void WorldLookup::pathAdded(WorldPath *path)
 {
-    int index = path->layer()->indexOf(path);
+    int index = path->index();
      // all indices at or after this are invalid
     mFirstInvalidPathIndex = qMin(mFirstInvalidPathIndex, index);
     mPathTree->Add(index, path);
+
+    int nodeIndex = index;
+    foreach (WorldNode *node, path->nodes())
+        mNodeTree->Add(nodeIndex, node);
+
     foreach (WorldScript *script, path->scripts())
         scriptAdded(script);
 }
@@ -221,6 +214,8 @@ void WorldLookup::pathRemoved(WorldPath *path)
         mFirstInvalidPathIndex = qMin(mFirstInvalidPathIndex, mPathTree->mMap[path]->index);
     }
     mPathTree->Remove(path);
+    foreach (WorldNode *node, path->nodes())
+        mNodeTree->Remove(node);
     foreach (WorldScript *script, path->scripts())
         scriptRemoved(script);
 }
@@ -228,10 +223,10 @@ void WorldLookup::pathRemoved(WorldPath *path)
 void WorldLookup::pathReordered(WorldPath *path, int oldIndex)
 {
     if (mPathTree->mMap.contains(path)) {
-        int index = path->layer()->indexOf(path);
+        int index = path->index();
         mFirstInvalidPathIndex = qMin(mFirstInvalidPathIndex, qMin(index, oldIndex));
     }
-    mPathTree->Move(path);
+//    mPathTree->Move(path);
 }
 
 void WorldLookup::pathChanged(WorldPath *path)
@@ -242,10 +237,7 @@ void WorldLookup::pathChanged(WorldPath *path)
 
 void WorldLookup::scriptAdded(WorldScript *script)
 {
-    // A script was added to a Path.  The 'index' should be the position in a
-    // global list of scripts in the order they are applied.
-    WorldPath *path = script->mPaths.first();
-    int index = mLayer->indexOf(path) * 10 + path->scripts().indexOf(script); // FIXME: totally bogus, must push following scripts up
+    int index = 123;
     mScriptTree->Add(index, script);
 }
 
@@ -261,15 +253,7 @@ void WorldLookup::scriptRegionChanged(WorldScript *script)
 
 void WorldLookup::checkInvalidNodeIndex(int index)
 {
-    if (index >= mFirstInvalidNodeIndex) {
-        NodeList::const_iterator it = mLayer->nodes().begin() + mFirstInvalidNodeIndex;
-        while (it != mLayer->nodes().end()) {
-            WorldNode *node = *it;
-            mNodeTree->mMap[node]->index = mFirstInvalidNodeIndex++;
-            ++it;
-            if (mFirstInvalidNodeIndex < index) break;
-        }
-    }
+    checkInvalidPathIndex(index);
 }
 
 // Update the indices for every path from the first out-of-date one up to
@@ -281,6 +265,9 @@ void WorldLookup::checkInvalidPathIndex(int index)
         while (it != mLayer->paths().end()) {
             WorldPath *path = *it;
             mPathTree->mMap[path]->index = mFirstInvalidPathIndex++;
+            foreach (WorldNode *node, path->nodes())
+                if (mNodeTree->mMap.contains(node))
+                    mNodeTree->mMap[node]->index = mPathTree->mMap[path]->index;
             ++it;
             if (mFirstInvalidPathIndex < index) break;
         }

@@ -103,34 +103,27 @@ public:
     {
         xml.writeStartElement(QLatin1String("pathlayer"));
         xml.writeAttribute(QLatin1String("name"), layer->name());
-        foreach (WorldNode *node, layer->nodes())
-            writeNode(node);
         foreach (WorldPath *path, layer->paths())
             writePath(path);
         xml.writeEndElement(); // pathlayer
     }
 
-    void writeNode(WorldNode *node)
-    {
-        xml.writeStartElement(QLatin1String("node"));
-        xml.writeAttribute(QLatin1String("id"), QString::number(node->id));
-        xml.writeAttribute(QLatin1String("x"), QString::number(node->pos().x(), 'g', 5 + 7));
-        xml.writeAttribute(QLatin1String("y"), QString::number(node->pos().y(), 'g', 5 + 7));
-        xml.writeEndElement(); // node
-    }
-
     void writePath(WorldPath *path)
     {
         xml.writeStartElement(QLatin1String("path"));
-        xml.writeAttribute(QLatin1String("id"), QString::number(path->id));
-        QStringList nodes;
-        foreach (WorldNode *node, path->nodes) {
-            nodes += QString::number(node->id);
-        }
-        xml.writeAttribute(QLatin1String("nodes"), nodes.join(QLatin1String(" ")));
+        foreach (WorldNode *node, path->nodes())
+            writeNode(node);
         foreach (WorldScript *script, path->scripts())
             writeScript(script);
         xml.writeEndElement(); // path
+    }
+
+    void writeNode(WorldNode *node)
+    {
+        xml.writeStartElement(QLatin1String("node"));
+        xml.writeAttribute(QLatin1String("x"), QString::number(node->pos().x(), 'g', 5 + 7));
+        xml.writeAttribute(QLatin1String("y"), QString::number(node->pos().y(), 'g', 5 + 7));
+        xml.writeEndElement(); // node
     }
 
     void writeScript(WorldScript *script)

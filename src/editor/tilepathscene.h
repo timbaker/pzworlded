@@ -35,14 +35,14 @@ public:
     ~TilePathRenderer();
 
     using BasePathRenderer::toScene;
-    QPointF toScene(qreal x, qreal y, int level = 0);
-    QPolygonF toScene(const QRectF &worldRect, int level = 0);
+    QPointF toScene(qreal x, qreal y, int level);
+    QPolygonF toScene(const QRectF &worldRect, int level);
     QPolygonF toScene(const QPolygonF &worldPoly, int level);
 
     using BasePathRenderer::toWorld;
-    QPointF toWorld(qreal x, qreal y, int level = 0);
+    QPointF toWorld(qreal x, qreal y, int level);
 
-    QRectF sceneBounds(const QRectF &worldRect, int level = 0);
+    QRectF sceneBounds(const QRectF &worldRect, int level);
 
     void drawLevel(QPainter *painter, WorldLevel *wlevel, const QRectF &exposed);
     void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level);

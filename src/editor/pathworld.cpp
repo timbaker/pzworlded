@@ -32,9 +32,7 @@ template class __declspec(dllimport) QMap<QString, QString>;
 
 PathWorld::PathWorld(int width, int height) :
     mWidth(width),
-    mHeight(height),
-    mNextPathId(InvalidId),
-    mNextNodeId(InvalidId)
+    mHeight(height)
 {
 }
 
@@ -60,12 +58,12 @@ WorldLevel *PathWorld::levelAt(int index) const
 
 WorldNode *PathWorld::allocNode(const QPointF &pos)
 {
-    return new WorldNode(mNextNodeId++, pos);
+    return new WorldNode(pos);
 }
 
 WorldPath *PathWorld::allocPath()
 {
-    return new WorldPath(mNextPathId++);
+    return new WorldPath();
 }
 
 WorldPathLayer *PathWorld::allocPathLayer()
@@ -314,10 +312,12 @@ WorldScript *WorldScript::clone(PathWorld *owner) const
     WorldScript *clone = new WorldScript;
     clone->mFileName = mFileName;
     clone->mParams = mParams;
+#if 0 // FIXME:
     foreach (WorldPath *path, mPaths) {
         if (WorldPath *clonePath = path->layer()->path(path->id))
             clone->mPaths += clonePath;
     }
+#endif
     clone->mRegion = mRegion;
     return clone;
 }

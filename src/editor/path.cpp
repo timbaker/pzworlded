@@ -34,22 +34,19 @@ extern QPolygonF strokePolygon(const QPolygonF &poly, qreal thickness);
 /////
 
 WorldNode::WorldNode() :
-    layer(0),
-    id(InvalidId)
+    mPath(0)
 {
 }
 
-WorldNode::WorldNode(id_t id, qreal x, qreal y) :
-    layer(0),
-    id(id),
-    p(x, y)
+WorldNode::WorldNode(qreal x, qreal y) :
+    mPath(0),
+    mPos(x, y)
 {
 }
 
-WorldNode::WorldNode(id_t id, const QPointF &p) :
-    layer(0),
-    id(id),
-    p(p)
+WorldNode::WorldNode(const QPointF &p) :
+    mPath(0),
+    mPos(p)
 {
 }
 
@@ -57,42 +54,36 @@ WorldNode::~WorldNode()
 {
 }
 
+WorldPathLayer *WorldNode::layer() const
+{
+    return path()->layer();
+}
+
 WorldNode *WorldNode::clone() const
 {
-    WorldNode *clone = new WorldNode(id, p.x(), p.y());
+    WorldNode *clone = new WorldNode(mPos);
     return clone;
-}
-
-void WorldNode::addedToPath(WorldPath *path)
-{
-    mPaths[path] += 1;
-}
-
-void WorldNode::removedFromPath(WorldPath *path)
-{
-    if (--mPaths[path] <= 0)
-        mPaths.remove(path);
 }
 
 int WorldNode::index()
 {
-    return layer ? layer->indexOf(this) : -1;
+    return path()->indexOf(this);
 }
 
 /////
 
 WorldPath::WorldPath() :
-    id(InvalidId),
     mLayer(0),
     mVisible(true),
+    mClosed(false),
     mStrokeWidth(0)
 {
 }
 
-WorldPath::WorldPath(id_t id) :
-    id(id),
-    mLayer(0),
+WorldPath::WorldPath(WorldPathLayer *layer) :
+    mLayer(layer),
     mVisible(true),
+    mClosed(false),
     mStrokeWidth(0)
 {
 }
@@ -103,50 +94,30 @@ WorldPath::~WorldPath()
 
 void WorldPath::insertNode(int index, WorldNode *node)
 {
-    Q_ASSERT(mLayer == node->layer);
+    Q_ASSERT(node->path() == 0);
     mPolygon.clear();
     mBounds = QRectF();
-    nodes.insert(index, node);
-    if (mLayer) node->addedToPath(this);
+    mNodes.insert(index, node);
+    node->setPath(this);
 }
 
 WorldNode *WorldPath::removeNode(int index)
 {
     mPolygon.clear();
     mBounds = QRectF();
-    WorldNode *node = nodes.takeAt(index);
-    if (mLayer) node->removedFromPath(this);
+    WorldNode *node = mNodes.takeAt(index);
+    node->setPath(0);
     return node;
 }
 
 WorldNode *WorldPath::nodeAt(int index)
 {
-    return (index >= 0 && index < nodes.size()) ? nodes[index] : 0;
+    return (index >= 0 && index < mNodes.size()) ? mNodes[index] : 0;
 }
 
-void WorldPath::registerWithNodes()
+int WorldPath::index()
 {
-    foreach (WorldNode *node, nodes)
-        node->addedToPath(this);
-#ifndef QT_NO_DEBUG
-    foreach (WorldNode *node, nodes)
-        Q_ASSERT(node->mPaths[this] == nodes.count(node));
-#endif
-}
-
-void WorldPath::unregisterFromNodes()
-{
-    foreach (WorldNode *node, nodes)
-        node->removedFromPath(this);
-#ifndef QT_NO_DEBUG
-    foreach (WorldNode *node, nodes)
-        Q_ASSERT(!node->mPaths.contains(this));
-#endif
-}
-
-bool WorldPath::isClosed() const
-{
-    return (nodes.size() > 1) && (nodes.first() == nodes.last());
+    return layer()->indexOf(this);
 }
 
 QRectF WorldPath::bounds()
@@ -157,20 +128,24 @@ QRectF WorldPath::bounds()
     return mBounds;
 }
 
-QPolygonF WorldPath::polygon()
+QPolygonF WorldPath::polygon(bool stroked)
 {
 #if 1 // FIXME: should be caching this, can't remember why I stopped doing that
     mPolygon.resize(0);
-    if (strokeWidth() != 0.0) {
+    if (stroked && strokeWidth() > 0.0) {
         QPolygonF polygon;
-        foreach (WorldNode *node, nodes)
-            polygon += node->p;
+        foreach (WorldNode *node, mNodes)
+            polygon += node->pos();
+        if (isClosed() && nodeCount() > 1)
+            polygon += polygon.first();
         mPolygon = ::strokePolygon(polygon, strokeWidth());
         if (mPolygon.size() > 1 && !isClosed())
             mPolygon += mPolygon.first();
     } else {
-        foreach (WorldNode *node, nodes)
-            mPolygon += node->p;
+        foreach (WorldNode *node, mNodes)
+            mPolygon += node->pos();
+        if (isClosed() && nodeCount() > 1)
+            mPolygon += mPolygon.first();
     }
     mBounds = QRectF();
     return mPolygon;
@@ -185,27 +160,23 @@ QPolygonF WorldPath::polygon()
 
 QRegion WorldPath::region()
 {
-    if (!isClosed() || nodes.size() < 3)
+    if (!isClosed() || mNodes.size() < 3)
         return QRegion();
 
     return polygonRegion(polygon());
 }
 
-void WorldPath::setOwner(WorldPathLayer *owner)
+void WorldPath::setLayer(WorldPathLayer *layer)
 {
-    if (mLayer == owner)
-        return;
-    mLayer = owner;
-    mLayer ? registerWithNodes() : unregisterFromNodes();
+    mLayer = layer;
 }
 
-WorldPath *WorldPath::clone(WorldPathLayer *owner) const
+WorldPath *WorldPath::clone() const
 {
-    WorldPath *clone = new WorldPath(id);
-    foreach (WorldNode *node, nodes)
-        if (WorldNode *cloneNode = owner->node(node->id))
-            clone->insertNode(clone->nodeCount(), cloneNode);
-    clone->tags = tags;
+    WorldPath *clone = new WorldPath();
+    foreach (WorldNode *node, mNodes)
+        clone->insertNode(clone->nodeCount(), node->clone());
+    clone->mTags = mTags;
     return clone;
 }
 
@@ -240,7 +211,6 @@ WorldPathLayer::~WorldPathLayer()
 {
     delete mLookup;
     qDeleteAll(mPaths);
-    qDeleteAll(mNodes);
 }
 
 int WorldPathLayer::level() const
@@ -248,56 +218,19 @@ int WorldPathLayer::level() const
     return mLevel ? mLevel->level() : 0;
 }
 
-void WorldPathLayer::insertNode(int index, WorldNode *node)
-{
-    mNodes.insert(index, node);
-    mNodeByID[node->id] = node;
-    Q_ASSERT(node->layer == 0);
-    node->layer = this;
-}
-
-WorldNode *WorldPathLayer::removeNode(int index)
-{
-    WorldNode *node = mNodes.takeAt(index);
-    mNodeByID.remove(node->id);
-    node->layer = 0;
-    return node;
-}
-
-WorldNode *WorldPathLayer::node(id_t id)
-{
-    if (mNodeByID.contains(id))
-        return mNodeByID[id];
-    return 0;
-}
-
-int WorldPathLayer::indexOf(WorldNode *node)
-{
-    return mNodes.indexOf(node); // FIXME: slow
-}
-
 void WorldPathLayer::insertPath(int index, WorldPath *path)
 {
     Q_ASSERT(path->layer() == 0);
-    path->setOwner(this);
+    path->setLayer(this);
     mPaths.insert(index, path);
-    mPathByID[path->id] = path;
 }
 
 WorldPath *WorldPathLayer::removePath(int index)
 {
     WorldPath *path = mPaths.takeAt(index);
-    mPathByID.remove(path->id);
     Q_ASSERT(path->layer() == this);
-    path->setOwner(0);
+    path->setLayer(0);
     return path;
-}
-
-WorldPath *WorldPathLayer::path(id_t id)
-{
-    if (mPathByID.contains(id))
-        return mPathByID[id];
-    return 0;
 }
 
 int WorldPathLayer::indexOf(WorldPath *path)
@@ -316,10 +249,8 @@ WorldLookup *WorldPathLayer::lookup()
 WorldPathLayer *WorldPathLayer::clone() const
 {
     WorldPathLayer *clone = new WorldPathLayer(mName);
-    foreach (WorldNode *node, nodes())
-        clone->insertNode(clone->nodeCount(), node->clone());
     foreach (WorldPath *path, paths())
-        clone->insertPath(clone->pathCount(), path->clone(clone));
+        clone->insertPath(clone->pathCount(), path->clone());
     return clone;
 }
 

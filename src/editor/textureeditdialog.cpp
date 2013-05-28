@@ -75,35 +75,35 @@ void TextureEditDialog::setPath(WorldPath *path)
     if (mPath) {
         mSynching = true;
 
-        ui->xScale->setValue(mPath->mTexture.mScale.width());
-        ui->yScale->setValue(mPath->mTexture.mScale.height());
+        ui->xScale->setValue(mPath->texture().mScale.width());
+        ui->yScale->setValue(mPath->texture().mScale.height());
 
-        if (mPath->mTexture.mTexture) {
-            ui->xShift->setRange(-mPath->mTexture.mTexture->mSize.width(),
-                                 mPath->mTexture.mTexture->mSize.width());
-            ui->yShift->setRange(-mPath->mTexture.mTexture->mSize.height(),
-                                 mPath->mTexture.mTexture->mSize.height());
+        if (mPath->texture().mTexture) {
+            ui->xShift->setRange(-mPath->texture().mTexture->mSize.width(),
+                                 mPath->texture().mTexture->mSize.width());
+            ui->yShift->setRange(-mPath->texture().mTexture->mSize.height(),
+                                 mPath->texture().mTexture->mSize.height());
         }
 
-        ui->xShift->setValue(mPath->mTexture.mTranslation.x());
-        ui->yShift->setValue(mPath->mTexture.mTranslation.y());
+        ui->xShift->setValue(mPath->texture().mTranslation.x());
+        ui->yShift->setValue(mPath->texture().mTranslation.y());
 
-        ui->rotation->setValue(mPath->mTexture.mRotation);
+        ui->rotation->setValue(mPath->texture().mRotation);
 
         if (ui->textureCombo->count() == 0) {
             ui->textureCombo->addItem(QLatin1String("<none>"));
-            foreach (WorldTexture *wtex, path->mLayer->wlevel()->world()->textureList()) {
+            foreach (WorldTexture *wtex, path->layer()->wlevel()->world()->textureList()) {
                 ui->textureCombo->addItem(wtex->mName);
             }
         }
 
         int index = 0;
-        if (mPath->mTexture.mTexture)
-            index = path->mLayer->wlevel()->world()->textureList().indexOf(mPath->mTexture.mTexture) + 1;
+        if (mPath->texture().mTexture)
+            index = path->layer()->wlevel()->world()->textureList().indexOf(mPath->texture().mTexture) + 1;
         ui->textureCombo->setCurrentIndex(index);
 
-        ui->alignWorld->setChecked(mPath->mTexture.mAlignWorld);
-        ui->alignPath->setChecked(!mPath->mTexture.mAlignWorld);
+        ui->alignWorld->setChecked(mPath->texture().mAlignWorld);
+        ui->alignPath->setChecked(!mPath->texture().mAlignWorld);
 
         mSynching = false;
     }
@@ -113,7 +113,7 @@ void TextureEditDialog::xScaleChanged(double scale)
 {
     if (!mPath || mSynching) return;
     scale = qBound(0.01, scale, 100.0);
-    mPath->mTexture.mScale.setWidth(scale);
+    mPath->texture().mScale.setWidth(scale);
     emit ffsItChangedYo(mPath);
 }
 
@@ -121,7 +121,7 @@ void TextureEditDialog::yScaleChanged(double scale)
 {
     if (!mPath || mSynching) return;
     scale = qBound(0.01, scale, 100.0);
-    mPath->mTexture.mScale.setHeight(scale);
+    mPath->texture().mScale.setHeight(scale);
     emit ffsItChangedYo(mPath);
 }
 
@@ -130,7 +130,7 @@ void TextureEditDialog::xShiftChanged(int shift)
     if (!mPath || mSynching) return;
     if (shift == ui->xShift->minimum() || shift == ui->xShift->maximum())
         shift = 0;
-    mPath->mTexture.mTranslation.setX(shift);
+    mPath->texture().mTranslation.setX(shift);
     emit ffsItChangedYo(mPath);
 }
 
@@ -139,14 +139,14 @@ void TextureEditDialog::yShiftChanged(int shift)
     if (!mPath || mSynching) return;
     if (shift == ui->yShift->minimum() || shift == ui->yShift->maximum())
         shift = 0;
-    mPath->mTexture.mTranslation.setY(shift);
+    mPath->texture().mTranslation.setY(shift);
     emit ffsItChangedYo(mPath);
 }
 
 void TextureEditDialog::rotationChanged(double rotation)
 {
     if (!mPath || mSynching) return;
-    mPath->mTexture.mRotation = rotation;
+    mPath->texture().mRotation = rotation;
     emit ffsItChangedYo(mPath);
 }
 
@@ -154,16 +154,16 @@ void TextureEditDialog::textureComboActivated(int index)
 {
     if (!mPath || mSynching) return;
     if (index == 0)
-        mPath->mTexture.mTexture = 0;
+        mPath->texture().mTexture = 0;
     else
-        mPath->mTexture.mTexture = mPath->mLayer->wlevel()->world()->textureList().at(index - 1);
+        mPath->texture().mTexture = mPath->layer()->wlevel()->world()->textureList().at(index - 1);
     emit ffsItChangedYo(mPath);
 }
 
 void TextureEditDialog::alignChanged()
 {
     if (!mPath || mSynching) return;
-    mPath->mTexture.mAlignWorld = ui->alignWorld->isChecked();
+    mPath->texture().mAlignWorld = ui->alignWorld->isChecked();
     emit ffsItChangedYo(mPath);
 }
 

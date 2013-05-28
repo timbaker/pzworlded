@@ -128,8 +128,6 @@ static void testPathDocument()
     PROGRESS progress(QLatin1String("Reading OSM data"));
     OSM::File osm;
     QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
-    id_t highestNodeId = 1;
-    id_t highestPathId = 1;
     if (osm.read(f)) {
         WorldPathLayer *pathLayer = new WorldPathLayer();
         int i = 0;
@@ -144,53 +142,50 @@ static void testPathDocument()
         for (int z = 0; z < newWorld->maxLevel(); z++)
             newWorld->insertLevel(z, new WorldLevel(z));
 
+        QMap<unsigned long,QPointF> nodeMap;
         foreach (OSM::Node *n, osm.nodes()) {
-            pathLayer->insertNode(i++, new WorldNode(n->id,
-                                                     n->pc.x * worldInPixels - worldGridX1,
-                                                     n->pc.y * worldInPixels - worldGridY1));
-            highestNodeId = qMax(highestNodeId, n->id);
+            nodeMap[n->id] = QPointF(n->pc.x * worldInPixels - worldGridX1,
+                                     n->pc.y * worldInPixels - worldGridY1);
         }
 
         i = 0;
         foreach (OSM::Way *w, osm.ways()) {
-            WorldPath *path = new WorldPath(w->id);
+            WorldPath *path = new WorldPath();
             pathLayer->insertPath(i++, path);
-            path->tags = w->tags;
-            int j = 0;
-            foreach (OSM::Node *nd, w->nodes)
-                path->insertNode(j++, pathLayer->node(nd->id));
-            highestPathId = qMax(highestPathId, path->id);
+            path->tags() = w->tags;
+            foreach (OSM::Node *nd, w->isClosed() ? w->nodes.mid(0, w->nodes.size() - 1) : w->nodes) {
+                path->insertNode(path->nodeCount(), new WorldNode(nodeMap[nd->id]));
+            }
+            path->setClosed(w->isClosed());
         }
         newWorld->levelAt(0)->insertPathLayer(0, pathLayer);
     }
-
-    newWorld->setNextIds(highestNodeId + 1, highestPathId + 1);
 
     foreach (WorldPathLayer *layer, newWorld->levelAt(0)->pathLayers()) {
         foreach (WorldPath *path, layer->paths()) {
             QString script;
             ScriptParams params;
-            if (path->tags.contains(QLatin1String("landuse"))) {
-                QString v = path->tags[QLatin1String("landuse")];
+            if (path->tags().contains(QLatin1String("landuse"))) {
+                QString v = path->tags()[QLatin1String("landuse")];
                 if (v == QLatin1String("forest") || v == QLatin1String("wood"))
                     ;
                 else if (v == QLatin1String("park"))
                     ;
                 else if (v == QLatin1String("grass"))
                     ;
-            } else if (path->tags.contains(QLatin1String("natural"))) {
-                QString v = path->tags[QLatin1String("natural")];
+            } else if (path->tags().contains(QLatin1String("natural"))) {
+                QString v = path->tags()[QLatin1String("natural")];
                 if (v == QLatin1String("water"))
                     ;
 
-            } else if (path->tags.contains(QLatin1String("leisure"))) {
-                QString v = path->tags[QLatin1String("leisure")];
+            } else if (path->tags().contains(QLatin1String("leisure"))) {
+                QString v = path->tags()[QLatin1String("leisure")];
                 if (v == QLatin1String("park"))
                     script = ::script("park.lua");
             }
-            if (path->tags.contains(QLatin1String("highway"))) {
+            if (path->tags().contains(QLatin1String("highway"))) {
                 qreal width;
-                QString v = path->tags[QLatin1String("highway")];
+                QString v = path->tags()[QLatin1String("highway")];
                 if (v == QLatin1String("residential")) width = 6; /// #1
                 else if (v == QLatin1String("pedestrian")) width = 5;
                 else if (v == QLatin1String("secondary")) width = 5;
@@ -222,7 +217,7 @@ static void testPathDocument()
 //                newWorld->insertScript(newWorld->scriptCount(), ws);
             }
 
-            if (path->tags.contains(QLatin1String("building")))
+            if (path->tags().contains(QLatin1String("building")))
             {
                 WorldScript *ws = new WorldScript;
                 ws->mFileName = ::script("place-lot.lua");
@@ -530,8 +525,6 @@ MainWindow::MainWindow(QWidget *parent)
         ui->menuAdd_Script->addAction(QLatin1String("road.lua"), this, SLOT(addScriptToPath()));
         ui->menuAdd_Script->addAction(QLatin1String("row-of-houses.lua"), this, SLOT(addScriptToPath()));
     }
-    connect(ui->actionRotateTexture, SIGNAL(triggered()), SLOT(rotateTexture()));
-    connect(ui->actionResetTextureRotation, SIGNAL(triggered()), SLOT(resetTextureRotation()));
     connect(ui->actionJoinPaths, SIGNAL(triggered()), SLOT(joinPaths()));
     connect(ui->actionPathFromNodes, SIGNAL(triggered()), SLOT(pathFromNodes()));
     connect(ui->actionRemoveNodes, SIGNAL(triggered()), SLOT(removeSelectedNodes()));
@@ -741,7 +734,7 @@ void MainWindow::documentAdded(Document *doc)
         int pos = docman()->documents().indexOf(doc);
         ui->documentTabWidget->insertTab(pos, view, tr("The World"));
         ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
-        view->centerOn(view->scene()->renderer()->toScene(QPoint()));
+        view->centerOn(view->scene()->renderer()->toScene(QPoint(), 0));
     }
 }
 
@@ -2218,29 +2211,8 @@ void MainWindow::applyTexture()
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
         if (WorldTexture *wtex = doc->world()->textureMap()[QLatin1String(sender->text().toLatin1().constData())]) {
             foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
-                path->mTexture.mTexture = wtex;
+                path->texture().mTexture = wtex;
             }
-        }
-    }
-}
-
-void MainWindow::rotateTexture()
-{
-    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
-        foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
-//            path->mTexture.mTransform.rotate(45);
-            path->mTexture.mRotation += 45;
-            if (path->mTexture.mRotation >= 360)
-                path->mTexture.mRotation -= 360;
-        }
-    }
-}
-
-void MainWindow::resetTextureRotation()
-{
-    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
-        foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
-            path->mTexture.mRotation = 0;
         }
     }
 }
@@ -2344,15 +2316,9 @@ void MainWindow::removeSelectedNodes()
         if (nodes.size()) {
             doc->changer()->beginUndoMacro(doc->undoStack(), tr("Remove Nodes"));
             foreach (WorldNode *node, nodes) {
-                foreach (WorldPath *path, node->mPaths.keys()) {
-                    for (int i = 0; i < path->nodeCount(); i++) {
-                        if (path->nodeAt(i) == node) {
-                            doc->changer()->doRemoveNodeFromPath(path, i, node);
-                            --i;
-                        }
-                    }
-                }
-                doc->changer()->doRemoveNode(node->layer, node->layer->indexOf(node), node);
+                doc->changer()->doRemoveNodeFromPath(node->path(), node->index(), node);
+                if (node->path()->nodeCount() == 0)
+                    doc->changer()->doRemovePath(node->path()->layer(), node->path()->index(), node->path());
             }
             doc->changer()->endUndoMacro();
         }
