@@ -83,6 +83,7 @@ private slots:
 
     void afterAddPath(WorldPathLayer *layer, int index, WorldPath *path);
     void afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterReorderPath(WorldPath *path, int oldIndex);
     void afterAddNodeToPath(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPath(WorldPath *path, int index, WorldNode *node);
 

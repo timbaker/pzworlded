@@ -209,6 +209,8 @@ static void testPathDocument()
                 if (v == QLatin1String("footway")) {
                     script = ::script("footway.lua");
                 }
+
+                path->setStrokeWidth(width);
             }
 
             if (!script.isEmpty()) {
@@ -537,6 +539,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionScriptParams, SIGNAL(triggered()), SLOT(scriptParameters()));
     connect(ui->actionHidePaths, SIGNAL(triggered()), SLOT(hidePaths()));
     connect(ui->actionShowPaths, SIGNAL(triggered()), SLOT(showPaths()));
+    connect(ui->actionRaisePath, SIGNAL(triggered()), SLOT(raisePath()));
+    connect(ui->actionLowerPath, SIGNAL(triggered()), SLOT(lowerPath()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionWorldGen, SIGNAL(triggered()), SLOT(WorldGen()));
@@ -567,6 +571,7 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(SelectMovePathTool::instance());
     toolManager->registerTool(CreatePathTool::instance());
     toolManager->registerTool(AddPathSegmentsTool::instance());
+    toolManager->registerTool(AddRemoveNodeTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -2371,6 +2376,7 @@ void MainWindow::hidePaths()
 {
     if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
         PathList paths = doc->view()->scene()->selectedPaths().toList();
+        doc->view()->scene()->setSelectedPaths(PathSet());
         foreach (WorldPath *path, paths)
             doc->changer()->doSetPathVisible(path, false);
     }
@@ -2383,5 +2389,47 @@ void MainWindow::showPaths()
         foreach (WorldPath *path, paths)
             doc->changer()->doSetPathVisible(path, true);
         doc->changer()->takeChanges(false);
+    }
+}
+
+void MainWindow::raisePath()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        PathList paths = doc->view()->scene()->selectedPaths().toList();
+        QMap<int,WorldPath*> indexToPath;
+        foreach (WorldPath *path, paths) {
+            int index = path->layer()->indexOf(path);
+            if (index + 1 < path->layer()->pathCount())
+                indexToPath[index] = path;
+        }
+        if (indexToPath.count()) {
+            doc->changer()->beginUndoMacro(doc->undoStack(), tr("Raise Paths"));
+            for (int i = indexToPath.count() - 1; i >= 0; i--) {
+                int index = indexToPath.keys()[i];
+                doc->changer()->doReorderPath(indexToPath[index], index + 1);
+            }
+            doc->changer()->endUndoMacro();
+        }
+    }
+}
+
+void MainWindow::lowerPath()
+{
+    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
+        PathList paths = doc->view()->scene()->selectedPaths().toList();
+        QMap<int,WorldPath*> indexToPath;
+        foreach (WorldPath *path, paths) {
+            int index = path->layer()->indexOf(path);
+            if (index > 0)
+                indexToPath[index] = path;
+        }
+        if (indexToPath.count()) {
+            doc->changer()->beginUndoMacro(doc->undoStack(), tr("Lower Paths"));
+            for (int i = indexToPath.count() - 1; i >= 0; i--) {
+                int index = indexToPath.keys()[i];
+                doc->changer()->doReorderPath(indexToPath[index], index - 1);
+            }
+            doc->changer()->endUndoMacro();
+        }
     }
 }

@@ -89,6 +89,7 @@ public:
 
     void undo()
     {
+        mChanger->beforeRemoveNode(mLayer, mIndex, mNode);
         mLayer->removeNode(mIndex);
         mChanger->afterRemoveNode(mLayer, mIndex, mNode);
     }
@@ -111,7 +112,7 @@ public:
     {}
     void redo() { AddNode::undo(); }
     void undo() { AddNode::redo(); }
-    QString text() { return mChanger->tr("Remove Node"); }
+    QString text() const { return mChanger->tr("Remove Node"); }
 };
 
 class AddPath : public WorldChange
@@ -156,6 +157,43 @@ public:
     void redo() { AddPath::undo(); }
     void undo() { AddPath::redo(); }
     QString text() const { return mChanger->tr("Remove Path"); }
+};
+
+class ReorderPath : public WorldChange
+{
+public:
+    ReorderPath(WorldChanger *changer, WorldPath *path, int newIndex) :
+        WorldChange(changer),
+        mLayer(path->layer()),
+        mPath(path),
+        mNewIndex(newIndex),
+        mOldIndex(path->layer()->indexOf(path))
+    {
+    }
+
+    void redo()
+    {
+        mLayer->removePath(mOldIndex);
+        mLayer->insertPath(mNewIndex, mPath);
+        mChanger->afterReorderPath(mPath, mOldIndex);
+    }
+
+    void undo()
+    {
+        mLayer->removePath(mNewIndex);
+        mLayer->insertPath(mOldIndex, mPath);
+        mChanger->afterReorderPath(mPath, mNewIndex);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr((mNewIndex > mOldIndex) ? "Move Path Up" : "Move Path Down");
+    }
+
+    WorldPathLayer *mLayer;
+    WorldPath *mPath;
+    int mNewIndex;
+    int mOldIndex;
 };
 
 class AddNodeToPath : public WorldChange
@@ -323,6 +361,39 @@ public:
     int mNewIndex;
     int mOldIndex;
     WorldPathLayer *mLayer;
+};
+
+class RenamePathLayer : public WorldChange
+{
+public:
+    RenamePathLayer(WorldChanger *changer, WorldPathLayer *layer, const QString &name) :
+        WorldChange(changer),
+        mLayer(layer),
+        mNewName(name),
+        mOldName(layer->name())
+    {
+    }
+
+    void redo()
+    {
+        mLayer->setName(mNewName);
+        mChanger->afterRenamePathLayer(mLayer, mOldName);
+    }
+
+    void undo()
+    {
+        mLayer->setName(mOldName);
+        mChanger->afterRenamePathLayer(mLayer, mNewName);
+    }
+
+    QString text() const
+    {
+        return mChanger->tr("Rename Path Layer");
+    }
+
+    WorldPathLayer *mLayer;
+    QString mNewName;
+    QString mOldName;
 };
 
 class ChangeScriptParameters : public WorldChange
@@ -506,6 +577,11 @@ void WorldChanger::afterAddNode(WorldNode *node)
     emit afterAddNodeSignal(node);
 }
 
+void WorldChanger::beforeRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
+{
+    emit beforeRemoveNodeSignal(layer, index, node);
+}
+
 void WorldChanger::afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node)
 {
     emit afterRemoveNodeSignal(layer, index, node);
@@ -631,6 +707,16 @@ void WorldChanger::afterSetPathVisible(WorldPath *path, bool visible)
     emit afterSetPathVisibleSignal(path, visible);
 }
 
+void WorldChanger::doReorderPath(WorldPath *path, int newIndex)
+{
+    addChange(new ReorderPath(this, path, newIndex));
+}
+
+void WorldChanger::afterReorderPath(WorldPath *path, int oldIndex)
+{
+    emit afterReorderPathSignal(path, oldIndex);
+}
+
 void WorldChanger::doSetPathLayerVisible(WorldPathLayer *layer, bool visible)
 {
     addChange(new SetPathLayerVisible(this, layer, visible));
@@ -639,6 +725,16 @@ void WorldChanger::doSetPathLayerVisible(WorldPathLayer *layer, bool visible)
 void WorldChanger::afterSetPathLayerVisible(WorldPathLayer *layer, bool visible)
 {
     emit afterSetPathLayerVisibleSignal(layer, visible);
+}
+
+void WorldChanger::doRenamePathLayer(WorldPathLayer *layer, const QString &name)
+{
+    addChange(new RenamePathLayer(this, layer, name));
+}
+
+void WorldChanger::afterRenamePathLayer(WorldPathLayer *layer, const QString &oldName)
+{
+    emit afterRenamePathLayerSignal(layer, oldName);
 }
 
 void WorldChanger::doSetPathLayersVisible(WorldLevel *wlevel, bool visible)

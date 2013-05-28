@@ -54,6 +54,8 @@ public:
     void addedToPath(WorldPath *path);
     void removedFromPath(WorldPath *path);
 
+    int index();
+
     WorldPathLayer *layer;
     id_t id;
     QPointF p;
@@ -135,6 +137,11 @@ public:
 
     void setVisible(bool visible)
     { mVisible = visible; }
+
+    void setStrokeWidth(qreal width)
+    { mStrokeWidth = width; }
+    qreal strokeWidth() const
+    { return mStrokeWidth; }
 
     id_t id;
     QList<WorldNode*> nodes;

@@ -331,6 +331,8 @@
     <addaction name="separator"/>
     <addaction name="actionHidePaths"/>
     <addaction name="actionShowPaths"/>
+    <addaction name="actionRaisePath"/>
+    <addaction name="actionLowerPath"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -814,6 +816,16 @@
   <action name="actionResetTextureRotation">
    <property name="text">
     <string>Reset Rotation</string>
+   </property>
+  </action>
+  <action name="actionRaisePath">
+   <property name="text">
+    <string>Raise Path</string>
+   </property>
+  </action>
+  <action name="actionLowerPath">
+   <property name="text">
+    <string>Lower Path</string>
    </property>
   </action>
  </widget>

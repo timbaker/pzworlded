@@ -119,13 +119,19 @@ bool PathLayersModel::setData(const QModelIndex &index, const QVariant &value,
 {
     if (WorldPathLayer *layer = toPathLayer(index)) {
         switch (role) {
-        case Qt::CheckStateRole:  {
+        case Qt::CheckStateRole: {
             Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
             document()->changer()->doSetPathLayerVisible(layer, c == Qt::Checked);
 //            emit dataChanged(index, index);
             return true;
         }
-        case Qt::EditRole:  {
+        case Qt::EditRole: {
+            QString name = value.toString();
+            if (name != layer->name()) {
+                document()->changer()->beginUndoCommand(document()->undoStack());
+                document()->changer()->doRenamePathLayer(layer, name);
+                document()->changer()->endUndoCommand();
+            }
             return false;
         }
         }
@@ -152,6 +158,8 @@ Qt::ItemFlags PathLayersModel::flags(const QModelIndex &index) const
 {
     Qt::ItemFlags rc = QAbstractItemModel::flags(index);
     rc |= Qt::ItemIsUserCheckable;
+    if (WorldPathLayer *layer = toPathLayer(index))
+        rc |= Qt::ItemIsEditable;
     return rc;
 }
 
@@ -241,6 +249,8 @@ void PathLayersModel::setDocument(PathDocument *doc)
                 SLOT(afterReorderPathLayer(WorldLevel*,WorldPathLayer*,int)));
         connect(mDocument->changer(), SIGNAL(afterSetPathLayerVisibleSignal(WorldPathLayer*,bool)),
                 SLOT(afterSetPathLayerVisible(WorldPathLayer*,bool)));
+        connect(mDocument->changer(), SIGNAL(afterRenamePathLayerSignal(WorldPathLayer*,QString)),
+                SLOT(afterRenamePathLayer(WorldPathLayer*,QString)));
     }
 
     setModelData();
@@ -300,6 +310,13 @@ void PathLayersModel::setModelData()
 void PathLayersModel::afterSetPathLayerVisible(WorldPathLayer *layer, bool visible)
 {
     Q_UNUSED(visible)
+    QModelIndex index = this->index(layer);
+    emit dataChanged(index, index);
+}
+
+void PathLayersModel::afterRenamePathLayer(WorldPathLayer *layer, const QString &oldName)
+{
+    Q_UNUSED(oldName)
     QModelIndex index = this->index(layer);
     emit dataChanged(index, index);
 }

@@ -332,6 +332,60 @@ WorldNode *SelectMoveNodeTool::topmostNodeAt(const QPointF &scenePos)
 
 /////
 
+AddRemoveNodeTool *AddRemoveNodeTool::mInstance = 0;
+
+AddRemoveNodeTool *AddRemoveNodeTool::instance()
+{
+    if (!mInstance)
+        mInstance = new AddRemoveNodeTool();
+    return mInstance;
+}
+
+void AddRemoveNodeTool::deleteInstance()
+{
+    delete mInstance;
+}
+
+AddRemoveNodeTool::AddRemoveNodeTool()
+    : BasePathTool(tr("Add and Remove Nodes"),
+                   QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                   QKeySequence())
+{
+}
+
+AddRemoveNodeTool::~AddRemoveNodeTool()
+{
+}
+
+void AddRemoveNodeTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    int nodeIndex;
+    if (WorldNode *node = mScene->nodeItem()->topmostNodeAt(event->scenePos())) {
+        document()->changer()->beginUndoCommand(document()->undoStack());
+        document()->changer()->doRemoveNode(node->layer, node->index(), node);
+        document()->changer()->endUndoCommand();
+    } else if (WorldPath *path = mScene->topmostPathAt(event->scenePos(), &nodeIndex)) {
+        QPointF worldPos = mScene->renderer()->toWorld(event->scenePos());
+        WorldNode *node = document()->world()->allocNode(worldPos);
+        document()->changer()->beginUndoMacro(document()->undoStack(), tr("Add Node"));
+        document()->changer()->doAddNode(path->layer(), path->nodeAt(nodeIndex)->index() + 1, node);
+        document()->changer()->doAddNodeToPath(path, nodeIndex + 1, node);
+        document()->changer()->endUndoMacro();
+    }
+}
+
+void AddRemoveNodeTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    mScene->nodeItem()->trackMouse(event);
+
+    int nodeIndex;
+    if (WorldPath *path = mScene->topmostPathAt(event->scenePos(), &nodeIndex)) {
+        mScene->setHighlightSegment(path, nodeIndex);
+    }
+}
+
+/////
+
 SelectMovePathTool *SelectMovePathTool::mInstance = 0;
 
 SelectMovePathTool *SelectMovePathTool::instance()
@@ -629,6 +683,7 @@ CreatePathTool::CreatePathTool() :
 #endif
 {
 #if 1
+    mSegmentItem->setZValue(10000);
 #else
     mPolyItem->setPen(QPen(QColor(0,255,0), 2));
     mFirstNodeItem->setPen(QPen(QColor(0,255,0), 2));
@@ -681,7 +736,16 @@ void CreatePathTool::keyPressEvent(QKeyEvent *event)
 void CreatePathTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        WorldNode *node = mScene->nodeItem()->topmostNodeAt(event->scenePos());
+
+        bool snapToGrid = Preferences::instance()->snapToGrid();
+        if (event->modifiers() & Qt::ControlModifier)
+            snapToGrid = !snapToGrid;
+
+        QPointF pos = event->scenePos();
+        if (snapToGrid)
+            pos = mScene->renderer()->toScene(mScene->renderer()->toWorld(pos).toPoint());
+
+        WorldNode *node = mScene->nodeItem()->topmostNodeAt(pos);
 #if 0
         if (mPoly.size() > 1 && QLineF(mPoly.first(), event->scenePos()).length() < mScene->nodeItem()->nodeRadius()) {
             finishNewPath(true);
@@ -718,12 +782,22 @@ void CreatePathTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             mSegmentItem->setLine(QLineF());
             mScene->addItem(mSegmentItem);
         }
+
+        bool snapToNode = true;
+        if (node && snapToNode)
+            pos = mScene->renderer()->toScene(node->pos());
+
+        bool useExistingNodes = false;
+        if (node && !useExistingNodes && !mNewPath->nodes.contains(node))
+            node = false;
+        if (node && mNewPath->nodes.contains(node) && node != mNewPath->first())
+            node = 0;
         if (node) {
             mScene->changer()->doAddNodeToPath(mNewPath, mNewPath->nodeCount(), node);
             if (mNewPath->nodeCount() > 1 && node == mNewPath->first())
                 finishNewPath(true);
         } else {
-            WorldNode *node = mScene->world()->allocNode(mScene->renderer()->toWorld(event->scenePos()));
+            WorldNode *node = mScene->world()->allocNode(mScene->renderer()->toWorld(pos));
             mScene->changer()->doAddNode(mScene->currentPathLayer(),
                                          mScene->currentPathLayer()->nodeCount(),
                                          node);
@@ -742,7 +816,14 @@ void CreatePathTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 #if 1
     if (mNewPath) {
-        mSegmentItem->setLine(QLineF(mScene->renderer()->toScene(mNewPath->last()->pos()), event->scenePos()));
+        bool snapToGrid = Preferences::instance()->snapToGrid();
+        if (event->modifiers() & Qt::ControlModifier)
+            snapToGrid = !snapToGrid;
+        QPointF pos = event->scenePos();
+        if (snapToGrid)
+            pos = mScene->renderer()->toScene(mScene->renderer()->toWorld(pos).toPoint());
+
+        mSegmentItem->setLine(QLineF(mScene->renderer()->toScene(mNewPath->last()->pos()), pos));
     }
 #else
     if (mPoly.size()) {
@@ -794,6 +875,7 @@ void CreatePathTool::finishNewPath(bool close)
             document()->undoStack()->push(new WorldChangeUndoCommand(c));
         }
         endUndoMacro();
+        mScene->setSelectedPaths(PathSet() << mNewPath);
         clearNewPath();
     }
 #endif

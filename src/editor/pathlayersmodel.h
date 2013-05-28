@@ -60,6 +60,7 @@ private slots:
     void beforeRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void afterReorderPathLayer(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
     void afterSetPathLayerVisible(WorldPathLayer *layer, bool visible);
+    void afterRenamePathLayer(WorldPathLayer *layer, const QString &oldName);
 
 private:
     void setModelData();

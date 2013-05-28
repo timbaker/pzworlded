@@ -112,6 +112,32 @@ private:
     QGraphicsRectItem *mSelectionRectItem;
 };
 
+class AddRemoveNodeTool : public BasePathTool
+{
+    Q_OBJECT
+
+public:
+    static AddRemoveNodeTool *instance();
+    static void deleteInstance();
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+
+    void languageChanged()
+    {
+        setName(tr("Add and Remove Nodes"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private:
+    Q_DISABLE_COPY(AddRemoveNodeTool)
+    static AddRemoveNodeTool *mInstance;
+    explicit AddRemoveNodeTool();
+    ~AddRemoveNodeTool();
+
+    WorldNode *topmostNodeAt(const QPointF &scenePos);
+};
+
 class SelectMovePathTool : public BasePathTool
 {
     Q_OBJECT

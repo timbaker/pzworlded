@@ -237,6 +237,7 @@ public:
 
     void pathAdded(WorldPath *path);
     void pathRemoved(WorldPath *path);
+    void pathReordered(WorldPath *path, int oldIndex);
     void pathChanged(WorldPath *path);
 
     void scriptAdded(WorldScript *script);

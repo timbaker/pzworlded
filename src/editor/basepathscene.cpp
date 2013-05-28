@@ -52,7 +52,7 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     mDocument(doc),
     mNodeItem(new NodesItem(this)),
     mActiveTool(0),
-    mChanger(new WorldChanger(doc->world()))
+    mChanger(doc->changer()/*new WorldChanger(doc->world())*/)
 {
     mTextureId = 0;
 
@@ -96,6 +96,8 @@ void BasePathScene::setDocument(PathDocument *doc)
     connect(mDocument->changer(), SIGNAL(afterMoveNodeSignal(WorldNode*,QPointF)),
             SLOT(nodeMoved(WorldNode*)));
     connect(mDocument->changer(), SIGNAL(afterAddNodeSignal(WorldNode*)),
+            SLOT(update()));
+    connect(mDocument->changer(), SIGNAL(afterReorderPathSignal(WorldPath*,int)),
             SLOT(update()));
     connect(mDocument->changer(), SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
             SLOT(update()));
@@ -272,7 +274,7 @@ float minimum_distance(QVector2D v, QVector2D w, QVector2D p) {
     return (p - projection).length();
 }
 
-WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
+WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos, int *indexPtr)
 {
     qreal radius = 4 / document()->view()->zoomable()->scale();
     QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
@@ -290,11 +292,27 @@ WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos)
             if (dist <= radius && dist <= min) {
                 min = dist;
                 closest = path; // get the topmost path
+                if (indexPtr) *indexPtr = i;
             }
         }
     }
 
     return closest;
+}
+
+void BasePathScene::setSelectedSegments(const SegmentList &segments)
+{
+    mSelectedSegments = segments;
+    update();
+}
+
+void BasePathScene::setHighlightSegment(WorldPath *path, int nodeIndex)
+{
+    PathSegment seg(path, nodeIndex);
+    if (seg != mHighlightSegment) {
+        mHighlightSegment = seg;
+        update();
+    }
 }
 
 void BasePathScene::afterAddNode(WorldNode *node)
@@ -326,6 +344,12 @@ void BasePathScene::afterAddPath(WorldPathLayer *layer, int index, WorldPath *pa
 void BasePathScene::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
 {
     Q_UNUSED(index)
+    if (mHighlightSegment.path() == path)
+        mHighlightSegment = PathSegment();
+    foreach (PathSegment segment, mSelectedSegments) {
+        if (segment.path() == path)
+            mSelectedSegments.removeOne(segment);
+    }
     lookup()->pathRemoved(path);
     nodeItem()->update();
 }
@@ -342,6 +366,13 @@ void BasePathScene::afterRemoveNodeFromPath(WorldPath *path, int index, WorldNod
 {
     Q_UNUSED(index)
     Q_UNUSED(node)
+    if (mHighlightSegment.path() == path && mHighlightSegment.nodeIndex() == index)
+        mHighlightSegment = PathSegment();
+    foreach (PathSegment segment, mSelectedSegments) {
+        if (segment.path() == path && segment.nodeIndex() == index)
+            mSelectedSegments.removeOne(segment);
+    }
+
     lookup()->pathChanged(path);
     update();
 }
@@ -460,7 +491,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
         QPolygonF scenePoly = mScene->renderer()->toScene(worldPoly, mLayer->level());
         painter->drawPolyline(scenePoly);
 
-        if (numcdt < 50 && path->isClosed() && (path->mTexture.mTexture != 0)) {
+        if (numcdt < 50 && worldPoly.isClosed() && (path->mTexture.mTexture != 0)) {
             std::vector<p2t::Point*> polyline;
             qreal factor = 1;
             foreach (QPointF p, worldPoly.mid(0,worldPoly.size()-1)) {
@@ -471,7 +502,6 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             cdt.Triangulate();
             std::vector<p2t::Triangle*> triangles = cdt.GetTriangles();
             foreach (p2t::Triangle *tri, triangles) {
-#if 1
                 QPointF p0 = QPointF(tri->GetPoint(0)->x, tri->GetPoint(0)->y);
                 QPointF p1 = QPointF(tri->GetPoint(1)->x, tri->GetPoint(1)->y);
                 QPointF p2 = QPointF(tri->GetPoint(2)->x, tri->GetPoint(2)->y);
@@ -487,56 +517,23 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 // 1 tile == 64/64 pixels
                 qreal texw = path->mTexture.mTexture->mSize.width()/*/64.0f*/;
                 qreal texh = path->mTexture.mTexture->mSize.height()/*/64.0f*/;
-#if 1
+
+                QTransform xform;
+                xform.scale(64/texw, -64/texh); // inverting the Y-axis as well
+                xform.translate(-path->mTexture.mTranslation.x()*(1.0f/64), -path->mTexture.mTranslation.y()*(1.0f/64));
+                xform.scale(1/path->mTexture.mScale.width(), 1/path->mTexture.mScale.height());
+                xform.rotate(path->mTexture.mRotation);
+
                 if (path->mTexture.mAlignWorld) {
-                    texcoords << QVector2D(p0.x()/texw, (mScene->world()->height() - p0.y())/texh);
-                    texcoords << QVector2D(p1.x()/texw, (mScene->world()->height() - p1.y())/texh);
-                    texcoords << QVector2D(p2.x()/texw, (mScene->world()->height() - p2.y())/texh);
+                    texcoords << QVector2D(xform.map(p0));
+                    texcoords << QVector2D(xform.map(p1));
+                    texcoords << QVector2D(xform.map(p2));
                 } else {
                     QRectF bounds = path->bounds();
-#if 1
-                    QTransform xform;
-//                    xform.translate(bounds.x(), bounds.y());
-//                    xform.scale(1.0, texh/texw);
-                    xform.scale(64/texw, -64/texh); // inverting the Y-axis as well
-                    xform.translate(path->mTexture.mTranslation.x()*(1.0f/64), path->mTexture.mTranslation.y()*(1.0f/64));
-                    xform.scale(1/path->mTexture.mScale.width(), 1/path->mTexture.mScale.height());
-                    xform.rotate(path->mTexture.mRotation);
-//                    texcoords << QVector2D(xform.map(QPointF((p0.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p0.y() - bounds.y())/texh)));
-//                    texcoords << QVector2D(xform.map(QPointF((p1.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p1.y() - bounds.y())/texh)));
-//                    texcoords << QVector2D(xform.map(QPointF((p2.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p2.y() - bounds.y())/texh)));
-                    texcoords << QVector2D(xform.map(p0-bounds.topLeft()/*+path->mTexture.mTranslation*(1.0f/64)*/));
-                    texcoords << QVector2D(xform.map(p1-bounds.topLeft()/*+path->mTexture.mTranslation*(1.0f/64)*/));
-                    texcoords << QVector2D(xform.map(p2-bounds.topLeft()/*+path->mTexture.mTranslation*(1.0f/64)*/));
-#else
-                    texcoords << QVector2D((p0.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p0.y() - bounds.y())/texh);
-                    texcoords << QVector2D((p1.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p1.y() - bounds.y())/texh);
-                    texcoords << QVector2D((p2.x()-bounds.x())/texw, qCeil(bounds.height()/texh) - (p2.y() - bounds.y())/texh);
-#endif
+                    texcoords << QVector2D(xform.map(p0-bounds.topLeft()));
+                    texcoords << QVector2D(xform.map(p1-bounds.topLeft()));
+                    texcoords << QVector2D(xform.map(p2-bounds.topLeft()));
                 }
-#else
-                texcoords << QVector2D(fmod(p0.x(), texw)/texw, fmod(p0.y(), texh)/texh);
-                texcoords << QVector2D(fmod(p1.x(), texw)/texw, fmod(p1.y(), texh)/texh);
-                texcoords << QVector2D(fmod(p2.x(), texw)/texw, fmod(p2.y(), texh)/texh);
-#endif
-#else
-                indices << indices.size() << indices.size() + 1 << indices.size() + 2;
-                vertices << QVector3D(tri->GetPoint(0)->x, tri->GetPoint(0)->y, 0)
-                         << QVector3D(tri->GetPoint(1)->x, tri->GetPoint(1)->y, 0)
-                         << QVector3D(tri->GetPoint(2)->x, tri->GetPoint(2)->y, 0);
-                texcoords << QVector2D((tri->GetPoint(0)->x - int(tri->GetPoint(0)->x / 1024)*1024)/1024.0f,
-                                       (tri->GetPoint(0)->y - int(tri->GetPoint(0)->y / 1024)*1024)/1024.0f);
-                texcoords << QVector2D((tri->GetPoint(1)->x - int(tri->GetPoint(1)->x / 1024)*1024)/1024.0f,
-                                       (tri->GetPoint(1)->y - int(tri->GetPoint(1)->y / 1024)*1024)/1024.0f);
-                texcoords << QVector2D((tri->GetPoint(2)->x - int(tri->GetPoint(2)->x / 1024)*1024)/1024.0f,
-                                       (tri->GetPoint(2)->y - int(tri->GetPoint(2)->y / 1024)*1024)/1024.0f);
-                painter->drawLine(tri->GetPoint(0)->x / factor, tri->GetPoint(0)->y / factor,
-                                  tri->GetPoint(1)->x / factor, tri->GetPoint(1)->y / factor);
-                painter->drawLine(tri->GetPoint(1)->x / factor, tri->GetPoint(1)->y / factor,
-                                  tri->GetPoint(2)->x / factor, tri->GetPoint(2)->y / factor);
-                painter->drawLine(tri->GetPoint(2)->x / factor, tri->GetPoint(2)->y / factor,
-                                  tri->GetPoint(0)->x / factor, tri->GetPoint(0)->y / factor);
-#endif
             }
             qDeleteAll(polyline);
             //                qDeleteAll(triangles);
@@ -647,6 +644,21 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 painter->drawEllipse(p, radius, radius);
         }
     }
+
+    foreach (PathSegment segment, mScene->selectedSegments()) {
+        QPolygonF worldPoly = segment.path()->polygon();
+        QPolygonF scenePoly = mScene->renderer()->toScene(worldPoly, mLayer->level());
+        painter->setPen(QPen(Qt::blue, 4 / painter->worldMatrix().m22()));
+        painter->drawLine(scenePoly[segment.nodeIndex()], scenePoly[segment.nodeIndex() + 1]);
+    }
+
+    const PathSegment &seg = mScene->highlightSegment();
+    if (seg.path() != 0 && seg.path()->layer() == mLayer) {
+        painter->setPen(QPen(Qt::green, 4 / painter->worldMatrix().m22()));
+        painter->drawLine(mScene->renderer()->toScene(seg.path()->nodeAt(seg.nodeIndex())->pos()),
+                          mScene->renderer()->toScene(seg.path()->nodeAt(seg.nodeIndex() + 1)->pos()));
+    }
+
 #if 0
     if (indices.size()) {
         painter->beginNativePainting();

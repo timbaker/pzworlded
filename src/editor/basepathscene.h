@@ -104,6 +104,38 @@ private:
     id_t mHoverNode;
 };
 
+struct PathSegment
+{
+    PathSegment() :
+        mPath(0),
+        mNodeIndex(-1)
+    {
+    }
+
+    PathSegment(WorldPath *path, int nodeIndex) :
+        mPath(path),
+        mNodeIndex(nodeIndex)
+    {
+    }
+
+    WorldPath *path() const
+    { return mPath; }
+
+    int nodeIndex() const
+    { return mNodeIndex; }
+
+    bool operator==(const PathSegment &other)
+    { return mPath == other.mPath && mNodeIndex == other.mNodeIndex; }
+
+    bool operator!=(const PathSegment &other)
+    { return !(*this == other); }
+
+    WorldPath *mPath;
+    int mNodeIndex;
+};
+
+typedef QList<PathSegment> SegmentList;
+
 class BasePathScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -145,7 +177,15 @@ public:
     const PathSet &selectedPaths() const
     { return mSelectedPaths; }
     QList<WorldPath *> lookupPaths(const QRectF &sceneRect);
-    WorldPath *topmostPathAt(const QPointF &scenePos);
+    WorldPath *topmostPathAt(const QPointF &scenePos, int *indexPtr = 0);
+
+    void setSelectedSegments(const SegmentList &segments);
+    const SegmentList &selectedSegments() const
+    { return mSelectedSegments; }
+
+    void setHighlightSegment(WorldPath *path, int nodeIndex);
+    const PathSegment &highlightSegment() const
+    { return mHighlightSegment; }
 
     WorldChanger *changer() const
     { return mChanger; }
@@ -182,6 +222,8 @@ private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;
     PathSet mSelectedPaths;
+    SegmentList mSelectedSegments;
+    PathSegment mHighlightSegment;
     NodesItem *mNodeItem;
     BasePathTool *mActiveTool;
     WorldChanger *mChanger;

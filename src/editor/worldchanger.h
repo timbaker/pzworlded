@@ -66,6 +66,7 @@ public:
     void doAddNode(WorldPathLayer *layer, int index, WorldNode *node);
     void doRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterAddNode(WorldNode *node);
+    void beforeRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
     void afterRemoveNode(WorldPathLayer *layer, int index, WorldNode *node);
 
     void doMoveNode(WorldNode *node, const QPointF &pos);
@@ -100,8 +101,14 @@ public:
     void doSetPathVisible(WorldPath *path, bool visible);
     void afterSetPathVisible(WorldPath *path, bool visible);
 
+    void doReorderPath(WorldPath *path, int newIndex);
+    void afterReorderPath(WorldPath *path, int oldIndex);
+
     void doSetPathLayerVisible(WorldPathLayer *layer, bool visible);
     void afterSetPathLayerVisible(WorldPathLayer *layer, bool visible);
+
+    void doRenamePathLayer(WorldPathLayer *layer, const QString &name);
+    void afterRenamePathLayer(WorldPathLayer *layer, const QString &oldName);
 
     void doSetPathLayersVisible(WorldLevel *wlevel, bool visible);
     void afterSetPathLayersVisible(WorldLevel *wlevel, bool visible);
@@ -125,6 +132,7 @@ public:
 
 signals:
     void afterAddNodeSignal(WorldNode *node);
+    void beforeRemoveNodeSignal(WorldPathLayer *layer, int index, WorldNode *node);
     void afterRemoveNodeSignal(WorldPathLayer *layer, int index, WorldNode *node);
     void afterMoveNodeSignal(WorldNode *node, const QPointF &prev);
 
@@ -133,6 +141,8 @@ signals:
     void afterAddNodeToPathSignal(WorldPath *path, int index, WorldNode *node);
     void afterRemoveNodeFromPathSignal(WorldPath *path, int index, WorldNode *node);
 
+    void afterReorderPathSignal(WorldPath *path, int oldIndex);
+
     void afterAddScriptToPathSignal(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPathSignal(WorldPath *path, int index, WorldScript *script);
 
@@ -140,7 +150,10 @@ signals:
     void beforeRemovePathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void afterRemovePathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
 
+
     void afterReorderPathLayerSignal(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
+
+    void afterRenamePathLayerSignal(WorldPathLayer *layer, const QString &oldName);
 
     void afterChangeScriptParametersSignal(WorldScript *script);
 

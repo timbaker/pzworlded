@@ -30,6 +30,10 @@ private slots:
 
     void rotationChanged(double rotation);
 
+    void textureComboActivated(int index);
+
+    void alignChanged();
+
 signals:
     void ffsItChangedYo(WorldPath *path);
 
@@ -42,6 +46,7 @@ private:
     Ui::TextureEditDialog *ui;
 
     WorldPath *mPath;
+    bool mSynching;
 };
 
 #endif // TEXTUREEDITDIALOG_H

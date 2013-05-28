@@ -1,7 +1,7 @@
 console show
 
-set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
-set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
+set BIN C:/Programming/PZWorldEd/build-msvc-release
+set SRC C:/Programming/PZWorldEd/PZWorldEd
 set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
 set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
@@ -66,7 +66,7 @@ copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qkrcodecs4.dll
 copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qtwcodecs4.dll
 
 proc removeFD {dir name} {
-    foreach f [glob -nocomplain -types d -dir $dir $name] {
+    foreach f [glob -nocomplain -types {d f} -dir $dir $name] {
         puts "removing $f"
         file delete -force $f
     }
@@ -80,4 +80,5 @@ if 1 {
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} .pzeditor
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} lots
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} *.bak
+removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} EnableDeveloperFeatures.txt
 }

@@ -29,6 +29,8 @@
 template class __declspec(dllimport) QMap<QString, QString>;
 #endif
 
+extern QPolygonF strokePolygon(const QPolygonF &poly, qreal thickness);
+
 /////
 
 WorldNode::WorldNode() :
@@ -72,19 +74,26 @@ void WorldNode::removedFromPath(WorldPath *path)
         mPaths.remove(path);
 }
 
+int WorldNode::index()
+{
+    return layer ? layer->indexOf(this) : -1;
+}
+
 /////
 
 WorldPath::WorldPath() :
     id(InvalidId),
     mLayer(0),
-    mVisible(true)
+    mVisible(true),
+    mStrokeWidth(0)
 {
 }
 
 WorldPath::WorldPath(id_t id) :
     id(id),
     mLayer(0),
-    mVisible(true)
+    mVisible(true),
+    mStrokeWidth(0)
 {
 }
 
@@ -150,18 +159,28 @@ QRectF WorldPath::bounds()
 
 QPolygonF WorldPath::polygon()
 {
+#if 1 // FIXME: should be caching this, can't remember why I stopped doing that
     mPolygon.resize(0);
-    foreach (WorldNode *node, nodes)
-        mPolygon += node->p;
+    if (strokeWidth() != 0.0) {
+        QPolygonF polygon;
+        foreach (WorldNode *node, nodes)
+            polygon += node->p;
+        mPolygon = ::strokePolygon(polygon, strokeWidth());
+        if (mPolygon.size() > 1 && !isClosed())
+            mPolygon += mPolygon.first();
+    } else {
+        foreach (WorldNode *node, nodes)
+            mPolygon += node->p;
+    }
     mBounds = QRectF();
     return mPolygon;
-
-
+#else
     if (mPolygon.isEmpty()) {
         foreach (WorldNode *node, nodes)
             mPolygon += node->p;
     }
     return mPolygon;
+#endif
 }
 
 QRegion WorldPath::region()
@@ -387,15 +406,20 @@ public:
 
     void build(WorldPath *path, qreal stroke_width, QVector<v2_t> &outlineFwd, QVector<v2_t> &outlineBkwd)
     {
+        build(path->polygon(), stroke_width, outlineFwd, outlineBkwd);
+    }
+
+    void build(const QPolygonF &poly, qreal stroke_width, QVector<v2_t> &outlineFwd, QVector<v2_t> &outlineBkwd)
+    {
         _strokeVertices.clear();
 
         QVector<v2_t> _fcoords;
-        foreach (QPointF p, path->polygon()) {
+        foreach (QPointF p, poly) {
             _fcoords += v2_t(p);
         }
 //        if (path->isClosed())
 //            _fcoords += _fcoords.first();
-        if (path->isClosed()) _fcoords.remove(_fcoords.size() - 1);
+        if (poly.isClosed()) _fcoords.remove(_fcoords.size() - 1);
 
         int coordsIter = 0;
         v2_t coords(0, 0);
@@ -409,7 +433,7 @@ public:
         _segments += VG_MOVE_TO;
         for (int i = 1; i < _fcoords.size(); i++)
             _segments += VG_LINE_TO;
-        if (path->isClosed())
+        if (poly.isClosed())
             _segments += VG_CLOSE_PATH;
 
         foreach (quint8 segment, _segments) {
@@ -711,6 +735,21 @@ public:
     QVector<v2_t> _strokeVertices;
 };
 #endif
+
+QPolygonF strokePolygon(const QPolygonF &poly, qreal thickness)
+{
+    PathStroke stroke;
+    QVector<PathStroke::v2_t> fwd, bwd;
+    stroke.build(poly, thickness, fwd, bwd);
+    QPolygonF ret;
+    foreach (PathStroke::v2_t v, fwd)
+        ret += QPointF(v.x, v.y);
+    if (poly.isClosed())
+        return ret; // FIXME: which outline is wanted?
+    foreach (PathStroke::v2_t v, bwd)
+        ret += QPointF(v.x, v.y);
+    return ret;
+}
 
 QPolygonF strokePath(WorldPath *path, qreal thickness)
 {

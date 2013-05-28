@@ -124,6 +124,19 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
         mWorld->textureMap()[wtex->mName] = wtex;
     }
 
+    fo.setPath(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/grass"));
+//    QStringList filters(QString::fromLatin1("*.png"));
+    foreach (QFileInfo info, fo.entryInfoList(filters)) {
+        wtex = new WorldTexture;
+        wtex->mGLid = 0;
+        wtex->mFileName = info.filePath();
+        wtex->mName = info.baseName();
+        ir.setFileName(wtex->mFileName);
+        wtex->mSize = ir.size();
+        mWorld->textureList() += wtex;
+        mWorld->textureMap()[wtex->mName] = wtex;
+    }
+
 #if 0
     // Now that the script regions are up-to-date...
     foreach (WorldLevel *wlevel, mWorld->levels())
@@ -143,6 +156,8 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
             SLOT(afterAddPath(WorldPathLayer*,int,WorldPath*)));
     connect(mChanger, SIGNAL(afterRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
             SLOT(afterRemovePath(WorldPathLayer*,int,WorldPath*)));
+    connect(mChanger, SIGNAL(afterReorderPathSignal(WorldPath*,int)),
+            SLOT(afterReorderPath(WorldPath*,int)));
     connect(mChanger, SIGNAL(afterAddNodeToPathSignal(WorldPath*,int,WorldNode*)),
             SLOT(afterAddNodeToPath(WorldPath*,int,WorldNode*)));
     connect(mChanger, SIGNAL(afterRemoveNodeFromPathSignal(WorldPath*,int,WorldNode*)),
@@ -239,6 +254,12 @@ void PathDocument::afterRemovePath(WorldPathLayer *layer, int index, WorldPath *
     layer->lookup()->pathRemoved(path);
     if (!path->isVisible())
         mHiddenPaths.remove(path);
+}
+
+void PathDocument::afterReorderPath(WorldPath *path, int oldIndex)
+{
+    Q_UNUSED(oldIndex);
+    path->layer()->lookup()->pathReordered(path, oldIndex);
 }
 
 void PathDocument::afterAddNodeToPath(WorldPath *path, int index, WorldNode *node)

@@ -181,7 +181,7 @@ QList<WorldNode *> WorldLookup::nodes(const QPolygonF &poly)
 
 void WorldLookup::nodeAdded(WorldNode *node)
 {
-    int index = node->layer->indexOf(node);
+    int index = node->index();
     mFirstInvalidNodeIndex = qMin(mFirstInvalidNodeIndex, index);
     mNodeTree->Add(index, node);
 }
@@ -223,6 +223,15 @@ void WorldLookup::pathRemoved(WorldPath *path)
     mPathTree->Remove(path);
     foreach (WorldScript *script, path->scripts())
         scriptRemoved(script);
+}
+
+void WorldLookup::pathReordered(WorldPath *path, int oldIndex)
+{
+    if (mPathTree->mMap.contains(path)) {
+        int index = path->layer()->indexOf(path);
+        mFirstInvalidPathIndex = qMin(mFirstInvalidPathIndex, qMin(index, oldIndex));
+    }
+    mPathTree->Move(path);
 }
 
 void WorldLookup::pathChanged(WorldPath *path)

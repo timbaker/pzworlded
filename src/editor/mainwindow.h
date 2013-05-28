@@ -155,6 +155,8 @@ public slots:
     void removeSelectedPaths();
     void hidePaths();
     void showPaths();
+    void raisePath();
+    void lowerPath();
 
 private:
     void FromToAux(bool selectedOnly);
