@@ -102,7 +102,9 @@ QPointF BasePathTool::nextNodePos(QGraphicsSceneMouseEvent *event)
     if (snapToGrid)
         pos = mScene->renderer()->toScene(mScene->renderer()->toWorld(pos, level()).toPoint(), level());
 
-    bool snapToSegment = true;
+    bool snapToSegment = false;
+    if (event->modifiers() & Qt::AltModifier)
+        snapToSegment = !snapToSegment;
     if (snapToSegment)
         pointOnSegment(event->scenePos(), pos);
 
