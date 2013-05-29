@@ -192,6 +192,7 @@ void SelectMoveNodeTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         mStartScreenPos = event->screenPos();
         mDropWorldPos = mScene->renderer()->toWorld(mStartScenePos, level());
         mClickedNode = topmostNodeAt(mStartScenePos);
+        mClickedNodeOrigPos = mClickedNode ? mClickedNode->pos() : QPointF();
         break;
     case Qt::RightButton:
         // Right-clicks exits moving, same as the Escape key.
@@ -344,9 +345,11 @@ void SelectMoveNodeTool::updateMovingItems(QGraphicsSceneMouseEvent *event)
     foreach (WorldNode *node, mMovingNodes) node->path()->setVisible(true);
     mDropWorldPos = mScene->renderer()->toWorld(pos, level());
 
+    QPointF diff = mDropWorldPos - mClickedNodeOrigPos;
+
     mScene->changer()->undoAndForget();
     foreach (WorldNode *node, mMovingNodes) {
-        mScene->changer()->doMoveNode(node, /*snapToGrid ? (node->pos() + mDropWorldPos - startPos).toPoint() :*/ node->pos() + mDropWorldPos - startPos);
+        mScene->changer()->doMoveNode(node, /*snapToGrid ? (node->pos() + mDropWorldPos - startPos).toPoint() :*/ node->pos() + diff /*mDropWorldPos - startPos*/);
     }
 }
 

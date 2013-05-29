@@ -111,6 +111,7 @@ private:
     bool mMousePressed;
     QPointF mStartScenePos;
     QPointF mStartScreenPos;
+    QPointF mClickedNodeOrigPos;
     QPointF mDropWorldPos;
     WorldNode *mClickedNode;
     NodeSet mMovingNodes;
