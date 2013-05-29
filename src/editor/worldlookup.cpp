@@ -29,8 +29,8 @@ class LookupCoordinate
 public:
     LookupCoordinate(const QPointF &wc)
     {
-        x = wc.x() * FUDGE;
-        y = wc.y() * FUDGE;
+        x = qMax(0.0, wc.x()) * FUDGE;
+        y = qMax(0.0, wc.y()) * FUDGE;
     }
 
     QPointF toPointF() const { return QPointF(x, y); }
@@ -40,7 +40,7 @@ public:
 
 static LookupCoordType LOOKUP_LENGTH(qreal w)
 {
-    return w * FUDGE;
+    return qMax(0.0, w) * FUDGE;
 }
 
 WorldLookup::WorldLookup(WorldPathLayer *layer) :
@@ -191,7 +191,7 @@ void WorldLookup::nodeRemoved(WorldNode *node)
 void WorldLookup::nodeMoved(WorldNode *node)
 {
     mNodeTree->Move(node);
-    mPathTree->Move(node->path());
+    pathChanged(node->path());
 }
 
 void WorldLookup::pathAdded(WorldPath *path)
