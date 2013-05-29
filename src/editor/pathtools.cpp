@@ -140,7 +140,7 @@ void SelectMoveNodeTool::deleteInstance()
 
 SelectMoveNodeTool::SelectMoveNodeTool()
     : BasePathTool(tr("Select and Move Nodes"),
-                   QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                   QIcon(QLatin1String(":/images/22x22/node-select-move.png")),
                    QKeySequence())
     , mMode(NoMode)
     , mMousePressed(false)
@@ -396,7 +396,7 @@ void AddRemoveNodeTool::deleteInstance()
 
 AddRemoveNodeTool::AddRemoveNodeTool()
     : BasePathTool(tr("Add and Remove Nodes"),
-                   QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                   QIcon(QLatin1String(":/images/22x22/node-add-remove.png")),
                    QKeySequence())
 {
 }
@@ -470,7 +470,7 @@ void SelectMovePathTool::deleteInstance()
 
 SelectMovePathTool::SelectMovePathTool()
     : BasePathTool(tr("Select and Move Paths"),
-                   QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                   QIcon(QLatin1String(":/images/22x22/path-select-move.png")),
                    QKeySequence())
     , mMode(NoMode)
     , mMousePressed(false)
@@ -738,7 +738,7 @@ void CreatePathTool::deleteInstance()
 
 CreatePathTool::CreatePathTool() :
     BasePathTool(tr("Create Path"),
-                 QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+                 QIcon(QLatin1String(":/images/22x22/path-create.png")),
                  QKeySequence()),
 #if 1
     mNewPath(0),
@@ -959,8 +959,8 @@ void AddPathSegmentsTool::deleteInstance()
 }
 
 AddPathSegmentsTool::AddPathSegmentsTool() :
-    BasePathTool(tr("Add Sements To Path"),
-                 QIcon(QLatin1String(":/images/22x22/road-tool-select.png")),
+    BasePathTool(tr("Add Segments To Path"),
+                 QIcon(QLatin1String(":/images/22x22/path-add-segment.png")),
                  QKeySequence()),
     mPath(0),
     mSegmentItem(new QGraphicsLineItem)

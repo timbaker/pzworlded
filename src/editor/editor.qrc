@@ -74,5 +74,10 @@
         <file>images/22x22/road-tool-select.png</file>
         <file>images/22x22/bmp-tool-select.png</file>
         <file>images/missing-tile.png</file>
+        <file>images/22x22/node-add-remove.png</file>
+        <file>images/22x22/node-select-move.png</file>
+        <file>images/22x22/path-add-segment.png</file>
+        <file>images/22x22/path-create.png</file>
+        <file>images/22x22/path-select-move.png</file>
     </qresource>
 </RCC>
