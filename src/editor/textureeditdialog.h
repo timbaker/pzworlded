@@ -25,6 +25,9 @@ private slots:
     void xScaleChanged(double scale);
     void yScaleChanged(double scale);
 
+    void xFit();
+    void yFit();
+
     void xShiftChanged(int shift);
     void yShiftChanged(int shift);
 
@@ -33,6 +36,8 @@ private slots:
     void textureComboActivated(int index);
 
     void alignChanged();
+
+    void strokeChanged(double thickness);
 
 signals:
     void ffsItChangedYo(WorldPath *path);

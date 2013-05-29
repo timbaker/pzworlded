@@ -32,6 +32,9 @@ TextureEditDialog::TextureEditDialog(QWidget *parent) :
     connect(ui->xScale, SIGNAL(valueChanged(double)), SLOT(xScaleChanged(double)));
     connect(ui->yScale, SIGNAL(valueChanged(double)), SLOT(yScaleChanged(double)));
 
+    connect(ui->xFit, SIGNAL(clicked()), SLOT(xFit()));
+    connect(ui->yFit, SIGNAL(clicked()), SLOT(yFit()));
+
     connect(ui->xShift, SIGNAL(valueChanged(int)), SLOT(xShiftChanged(int)));
     connect(ui->yShift, SIGNAL(valueChanged(int)), SLOT(yShiftChanged(int)));
 
@@ -40,6 +43,8 @@ TextureEditDialog::TextureEditDialog(QWidget *parent) :
     connect(ui->textureCombo, SIGNAL(activated(int)), SLOT(textureComboActivated(int)));
 
     connect(ui->alignPath, SIGNAL(toggled(bool)), SLOT(alignChanged()));
+
+    connect(ui->stroke, SIGNAL(valueChanged(double)), SLOT(strokeChanged(double)));
 }
 
 TextureEditDialog::~TextureEditDialog()
@@ -105,6 +110,8 @@ void TextureEditDialog::setPath(WorldPath *path)
         ui->alignWorld->setChecked(mPath->texture().mAlignWorld);
         ui->alignPath->setChecked(!mPath->texture().mAlignWorld);
 
+        ui->stroke->setValue(mPath->strokeWidth());
+
         mSynching = false;
     }
 }
@@ -123,6 +130,34 @@ void TextureEditDialog::yScaleChanged(double scale)
     scale = qBound(0.01, scale, 100.0);
     mPath->texture().mScale.setHeight(scale);
     emit ffsItChangedYo(mPath);
+}
+
+void TextureEditDialog::xFit()
+{
+    if (!mPath || !mPath->texture().mTexture) return;
+    QRectF pathRect = mPath->bounds();
+    if (pathRect.width() <= 0) return;
+    qreal scale = (pathRect.width() * 64.0) / mPath->texture().mTexture->mSize.width();
+#if 1
+    ui->xScale->setValue(scale);
+#else
+    mPath->texture().mScale.setWidth(scale);
+    emit ffsItChangedYo(mPath);
+#endif
+}
+
+void TextureEditDialog::yFit()
+{
+    if (!mPath || !mPath->texture().mTexture) return;
+    QRectF pathRect = mPath->bounds();
+    if (pathRect.height() <= 0) return;
+    qreal scale = (pathRect.height() * 64.0) / mPath->texture().mTexture->mSize.height();
+#if 1
+    ui->yScale->setValue(scale);
+#else
+    mPath->texture().mScale.setHeight(scale);
+    emit ffsItChangedYo(mPath);
+#endif
 }
 
 void TextureEditDialog::xShiftChanged(int shift)
@@ -164,6 +199,14 @@ void TextureEditDialog::alignChanged()
 {
     if (!mPath || mSynching) return;
     mPath->texture().mAlignWorld = ui->alignWorld->isChecked();
+    emit ffsItChangedYo(mPath);
+}
+
+void TextureEditDialog::strokeChanged(double thickness)
+{
+    if (!mPath || mSynching) return;
+    thickness = qMax(0.0, thickness);
+    mPath->setStrokeWidth(thickness);
     emit ffsItChangedYo(mPath);
 }
 
