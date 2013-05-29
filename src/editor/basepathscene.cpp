@@ -240,9 +240,10 @@ QList<WorldPath*> BasePathScene::lookupPaths(const QRectF &sceneRect)
     QPolygonF worldPoly = renderer()->toWorld(sceneRect, currentPathLayer()->level());
     QList<WorldPath*> paths = lookup()->paths(worldPoly);
     foreach (WorldPath *path, paths) {
-        if (PolygonContainsPolyline(worldPoly, path->polygon()))
+        QPolygonF pathPoly = path->polygon(false);
+        if (PolygonContainsPolyline(worldPoly, pathPoly))
             continue;
-        if (!PolylineIntersectsPolygon(path->polygon(), worldPoly))
+        if (!PolylineIntersectsPolygon(pathPoly, worldPoly))
             paths.removeOne(path);
     }
     return paths;
@@ -707,9 +708,9 @@ PathList PathLayerItem::lookupPaths(const QRectF &sceneRect)
     QPolygonF worldPoly = mScene->renderer()->toWorld(sceneRect, mLayer->level());
     PathList paths = mLayer->lookup()->paths(worldPoly);
     foreach (WorldPath *path, paths) {
-        if (PolygonContainsPolyline(worldPoly, path->polygon()))
+        if (PolygonContainsPolyline(worldPoly, path->polygon(false)))
             continue;
-        if (!PolylineIntersectsPolygon(path->polygon(), worldPoly))
+        if (!PolylineIntersectsPolygon(path->polygon(false), worldPoly))
             paths.removeOne(path);
     }
     return paths;
