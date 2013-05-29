@@ -105,6 +105,11 @@ private:
             } else if (xml.name() == "tile-rule") {
                 if (WorldTileRule *rule = readTileRule())
                     mWorld->addTileRule(rule);
+            } else if (xml.name() == "texture") {
+                if (WorldTexture *tex = readTexture()) {
+                    mWorld->textureList() += tex;
+                    mWorld->textureMap()[tex->mName] = tex;
+                }
             } else
                 readUnknownElement();
         }
@@ -131,6 +136,18 @@ private:
 
         WorldTileset *tileset = new WorldTileset(name, columns, rows);
         return tileset;
+    }
+
+    WorldTexture *readTexture()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == "texture");
+
+        const QXmlStreamAttributes atts = xml.attributes();
+        WorldTexture *tex = new WorldTexture;
+        tex->mName = atts.value(QLatin1String("name")).toString();
+        tex->mFileName = resolveReference(atts.value(QLatin1String("file")).toString(), mPath);
+        xml.skipCurrentElement();
+        return tex;
     }
 
     WorldLevel *readLevel()
@@ -178,8 +195,14 @@ private:
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == "path");
         const QXmlStreamAttributes atts = xml.attributes();
+        bool visible = getBoolean(atts, QLatin1String("visible"), true);
+        bool closed = getBoolean(atts, QLatin1String("closed"), true);
+        double strokeWidth = atts.value(QLatin1String("stroke-width")).toString().toDouble();
 
         WorldPath *path = new WorldPath();
+        path->setVisible(visible);
+        path->setClosed(closed);
+        path->setStrokeWidth(strokeWidth);
         layer->insertPath(layer->pathCount(), path);
 
         while (xml.readNextStartElement()) {
@@ -192,6 +215,36 @@ private:
                     script->mPaths += path;
                     path->insertScript(path->scriptCount(), script);
                 }
+            } else if (xml.name() == "texture") {
+                const QXmlStreamAttributes atts = xml.attributes();
+                QString name = atts.value(QLatin1String("name")).toString();
+                if (!mWorld->textureMap().contains(name)) {
+                    xml.raiseError(tr("Unknown texture \"%1\"").arg(name));
+                    delete path;
+                    return 0;
+                }
+                path->texture().mTexture = mWorld->textureMap()[name];
+
+                double w, h;
+                if (!readDoublePair(atts, QLatin1String("scale"), w, h))
+                    return false;
+                path->texture().mScale.setWidth(w);
+                path->texture().mScale.setHeight(h);
+                double x, y;
+
+                if (!readDoublePair(atts, QLatin1String("scale"), x, y))
+                    return false;
+                path->texture().mTranslation.setX(x);
+                path->texture().mTranslation.setY(y);
+
+                if (atts.hasAttribute(QLatin1String("rotate")))
+                    path->texture().mRotation = atts.value(QLatin1String("rotate")).toString().toDouble();
+
+                QString s = atts.value(QLatin1String("align")).toString();
+                path->texture().mAlignWorld = s == QLatin1String("world");
+
+
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }
@@ -315,6 +368,37 @@ private:
             return path;
         }
         return fileName;
+    }
+
+    bool getBoolean(const QXmlStreamAttributes &atts, const QString &name, bool defaultValue)
+    {
+        if (atts.hasAttribute(name)) {
+            QString s = atts.value(name).toString();
+            if (s == QLatin1String("true")) return true;
+            if (s == QLatin1String("false")) return false;
+            xml.raiseError(tr("Expected boolean but got \"%1\"").arg(s));
+         }
+        return defaultValue;
+    }
+
+    bool readDoublePair(const QXmlStreamAttributes &atts, const QString &name,
+                        double &v1, double &v2)
+    {
+        if (atts.hasAttribute(name)) {
+            QStringList vs = atts.value(name).toString().split(QLatin1Char(','), QString::SkipEmptyParts);
+            if (vs.size() == 2) {
+                bool ok;
+                v1 = vs[0].toDouble(&ok);
+                if (!ok) goto bogus;
+                v2 = vs[1].toDouble(&ok);
+                if (!ok) goto bogus;
+                return true;
+            }
+        }
+bogus:
+        xml.raiseError(tr("Expected %1=double,double but got \"%2\"")
+                       .arg(name).arg(atts.value(name).toString()));
+        return false;
     }
 
 private:

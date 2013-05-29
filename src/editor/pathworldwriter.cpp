@@ -80,10 +80,21 @@ public:
         foreach (WorldTileRule *tr, world->tileRules())
             writeTileRule(tr);
 
+        foreach (WorldTexture *tex, world->textureList())
+            writeTexture(tex);
+
         foreach (WorldLevel *wlevel, world->levels())
             writeLevel(wlevel);
 
         xml.writeEndElement(); // world
+    }
+
+    void writeTexture(WorldTexture *tex)
+    {
+        xml.writeStartElement(QLatin1String("texture"));
+        xml.writeAttribute(QLatin1String("name"), tex->mName);
+        xml.writeAttribute(QLatin1String("file"), relativeFileName(tex->mFileName));
+        xml.writeEndElement();
     }
 
     void writeLevel(WorldLevel *wlevel)
@@ -111,10 +122,26 @@ public:
     void writePath(WorldPath *path)
     {
         xml.writeStartElement(QLatin1String("path"));
+        writeBoolean(QLatin1String("visible"), path->isVisible());
+        writeBoolean(QLatin1String("closed"), path->isClosed());
+        xml.writeAttribute(QLatin1String("stroke-width"), QString::number(path->strokeWidth(), 'g', 3));
         foreach (WorldNode *node, path->nodes())
             writeNode(node);
         foreach (WorldScript *script, path->scripts())
             writeScript(script);
+        if (WorldTexture *wtex = path->texture().mTexture) {
+            xml.writeStartElement(QLatin1String("texture"));
+            xml.writeAttribute(QLatin1String("name"), wtex->mName);
+            writeDoublePair(QLatin1String("scale"),
+                            path->texture().mScale.width(),
+                            path->texture().mScale.height());
+            writeDoublePair(QLatin1String("translate"),
+                            path->texture().mTranslation.x(),
+                            path->texture().mTranslation.y());
+            xml.writeAttribute(QLatin1String("rotate"), QString::number(path->texture().mRotation));
+            xml.writeAttribute(QLatin1String("align"), QLatin1String(path->texture().mAlignWorld ? "world" : "path"));
+            xml.writeEndElement(); // texture
+        }
         xml.writeEndElement(); // path
     }
 
@@ -170,6 +197,19 @@ public:
         xml.writeStartElement(QLatin1String("tilelayer"));
         xml.writeAttribute(QLatin1String("name"), layer->name());
         xml.writeEndElement(); // tilelayer
+    }
+
+    void writeBoolean(const QString &name, bool value)
+    {
+        xml.writeAttribute(name, QLatin1String(value ? "true" : "false"));
+    }
+
+    void writeDoublePair(const QString &name, double v1, double v2)
+    {
+        xml.writeAttribute(name,
+                           QString::number(v1, 'g', 3) +
+                           QLatin1String(",") +
+                           QString::number(v2, 'g', 3));
     }
 
     QString relativeFileName(const QString &path)

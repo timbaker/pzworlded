@@ -80,6 +80,8 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
         }
     }
 
+    if (mWorld->textureList().isEmpty()) {
+
     WorldTexture *wtex = new WorldTexture;
     wtex->mGLid = 0;
     wtex->mFileName = QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/francegrassfull.jpg");
@@ -135,6 +137,13 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
         wtex->mSize = ir.size();
         mWorld->textureList() += wtex;
         mWorld->textureMap()[wtex->mName] = wtex;
+    }
+
+    } else {
+        foreach (WorldTexture *tex, mWorld->textureList()) {
+            QImageReader ir(tex->mFileName);
+            tex->mSize = ir.size(); // FIXME: do this IFF texture is needed
+        }
     }
 
 #if 0

@@ -69,6 +69,8 @@ private:
 class WorldTexture
 {
 public:
+    WorldTexture() : mGLid(0) {}
+
     QString mName;
     QString mFileName;
     QSize mSize;
