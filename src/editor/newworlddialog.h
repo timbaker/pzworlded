@@ -33,6 +33,12 @@ public:
     ~NewWorldDialog();
 
     QSize worldSize() const;
+
+    bool pathWorld() const;
+    QString osmFile() const;
+
+private slots:
+    void osmBrowse();
     
 private:
     Ui::NewWorldDialog *ui;

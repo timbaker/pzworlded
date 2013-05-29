@@ -120,11 +120,69 @@ static QString script(const char *name)
 #endif
 }
 
-static void testPathDocument()
+static void testPathDocument(const QSize &size, const QString &osmFile)
 {
-    PathWorld *newWorld = new PathWorld(30 * 300, 30 * 300);
+    PathWorld *newWorld = new PathWorld(size.width() * 300, size.height() * 300);
 
 #if 1
+    for (int z = 0; z < newWorld->maxLevel(); z++)
+        newWorld->insertLevel(z, new WorldLevel(z));
+
+    if (!osmFile.isEmpty() && QFileInfo(osmFile).exists()) {
+        PROGRESS progress(QLatin1String("Reading OSM data"));
+        OSM::File osm;
+        if (osm.read(osmFile)) {
+            WorldPathLayer *pathLayer = new WorldPathLayer();
+            pathLayer->setName(QLatin1String("OSM Import"));
+
+            int zoom = 15;
+            int TILE_SIZE = 512 + 64;
+            int worldGridX1 = qFloor(osm.minProjected().x * (1U << zoom)) * TILE_SIZE;
+            int worldGridY1 = qFloor(osm.minProjected().y * (1U << zoom)) * TILE_SIZE;
+            double worldInPixels = (1u << zoom) * TILE_SIZE; // size of world in pixels
+
+            progress.update(QLatin1String("Creating nodes and paths"));
+
+            QMap<unsigned long,QPointF> nodeMap;
+            foreach (OSM::Node *n, osm.nodes()) {
+                nodeMap[n->id] = QPointF(n->pc.x * worldInPixels - worldGridX1,
+                                         n->pc.y * worldInPixels - worldGridY1);
+            }
+
+            int i = 0;
+            foreach (OSM::Way *w, osm.ways()) {
+                WorldPath *path = new WorldPath();
+                pathLayer->insertPath(i++, path);
+                path->tags() = w->tags;
+                foreach (OSM::Node *nd, w->isClosed() ? w->nodes.mid(0, w->nodes.size() - 1) : w->nodes) {
+                    path->insertNode(path->nodeCount(), new WorldNode(nodeMap[nd->id]));
+                }
+                path->setClosed(w->isClosed());
+            }
+
+            newWorld->levelAt(0)->insertPathLayer(0, pathLayer);
+        }
+    }
+
+    if (newWorld->levelAt(0)->pathLayerCount() == 0) {
+        WorldPathLayer *pathLayer = new WorldPathLayer();
+        pathLayer->setName(QLatin1String("PathLayer1"));
+        newWorld->levelAt(0)->insertPathLayer(0, pathLayer);
+    }
+
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Floor")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Frames")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Doors")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Walls")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Windows")));
+    newWorld->levelAt(0)->insertTileLayer(newWorld->levelAt(0)->tileLayerCount(),
+                                          new WorldTileLayer(QLatin1String("0_Vegetation")));
+#elif 0
     PROGRESS progress(QLatin1String("Reading OSM data"));
     OSM::File osm;
     QString f = QLatin1String("C:\\Programming\\OpenStreetMap\\Vancouver2.osm");
@@ -650,12 +708,16 @@ void MainWindow::retranslateUi()
 
 void MainWindow::newWorld()
 {
-    testPathDocument(); return;
 
     NewWorldDialog dialog(this);
     if (dialog.exec() != QDialog::Accepted)
         return;
     QSize size = dialog.worldSize();
+
+    if (dialog.pathWorld()) {
+        testPathDocument(size, dialog.osmFile());
+        return;
+    }
 
     World *newWorld = new World(size.width(), size.height());
     WorldDocument *newDoc = new WorldDocument(newWorld);

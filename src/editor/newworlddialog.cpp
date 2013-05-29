@@ -18,11 +18,17 @@
 #include "newworlddialog.h"
 #include "ui_newworlddialog.h"
 
+#include <QFileDialog>
+
 NewWorldDialog::NewWorldDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::NewWorldDialog)
 {
     ui->setupUi(this);
+
+    ui->pathWorldGB->setChecked(true);
+
+    connect(ui->osmBrowse, SIGNAL(clicked()), SLOT(osmBrowse()));
 }
 
 NewWorldDialog::~NewWorldDialog()
@@ -33,4 +39,22 @@ NewWorldDialog::~NewWorldDialog()
 QSize NewWorldDialog::worldSize() const
 {
     return QSize(ui->widthSpinBox->value(), ui->heightSpinBox->value());
+}
+
+bool NewWorldDialog::pathWorld() const
+{
+    return ui->pathWorldGB->isChecked();
+}
+
+QString NewWorldDialog::osmFile() const
+{
+    return ui->osmEdit->text();
+}
+
+void NewWorldDialog::osmBrowse()
+{
+    QString f = QFileDialog::getOpenFileName(this, tr("Import OpenStreetMap"),
+                                             ui->osmEdit->text());
+    if (!f.isEmpty())
+        ui->osmEdit->setText(QDir::toNativeSeparators(f));
 }
