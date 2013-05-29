@@ -24,6 +24,7 @@
 #include "pathtools.h"
 #include "pathview.h"
 #include "pathworld.h"
+#include "preferences.h"
 #include "textureeditdialog.h"
 #include "worldchanger.h"
 #include "worldlookup.h"
@@ -52,10 +53,13 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     mDocument(doc),
     mNodeItem(new NodesItem(this)),
     mActiveTool(0),
-    mChanger(doc->changer()/*new WorldChanger(doc->world())*/)
+    mChanger(doc->changer()/*new WorldChanger(doc->world())*/),
+    mGridItem(new PathGridItem(this))
 {
     connect(TextureEditDialog::instance(), SIGNAL(ffsItChangedYo(WorldPath*)),
             SLOT(pathTextureChanged(WorldPath*)));
+
+    mGridItem->setZValue(9999);
 }
 
 BasePathScene::~BasePathScene()
@@ -87,6 +91,9 @@ void BasePathScene::setDocument(PathDocument *doc)
 
     mNodeItem->setZValue(z++);
     addItem(mNodeItem);
+
+    mGridItem->updateBoundingRect();
+    addItem(mGridItem);
 
     setSceneRect(mRenderer->toScene(world()->bounds(), 16).boundingRect()
                  | mRenderer->toScene(world()->bounds(), 0).boundingRect());
@@ -266,7 +273,7 @@ float minimum_distance(QVector2D v, QVector2D w, QVector2D p) {
 
 WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos, int *indexPtr)
 {
-    qreal radius = 8 / document()->view()->zoomable()->scale();
+    qreal radius = 8 / document()->view()->scale();
     QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
     QList<WorldPath*> paths = lookup()->paths(renderer()->toWorld(sceneRect, currentPathLayer()->level()));
 
@@ -735,8 +742,10 @@ QRectF NodesItem::boundingRect() const
 
 void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
-    if (!mScene->isTile() && painter->worldMatrix().m22() < 0.75) return;
-    if (mScene->isTile() && painter->worldMatrix().m22() < 0.10) return;
+    qreal scale = painter->worldMatrix().m22();
+    qreal nonTileScaleFactor = mScene->isTile() ? 1 : 32;
+    if (mScene->isTile() && scale < 0.125) return;
+    if (!mScene->isTile() && (scale*nonTileScaleFactor < 2.0)) return;
 
     QRectF exposed = option->exposedRect.adjusted(-nodeRadius(), -nodeRadius(),
                                                   nodeRadius(), nodeRadius());
@@ -772,7 +781,7 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         QPointF scenePos = mScene->renderer()->toScene(mHoverNode->pos(),
                                                        mScene->currentPathLayer()->level());
         if (exposed.contains(scenePos)) {
-            painter->setPen(QPen(QColor(0,128,0,200), 3.0 / mScene->document()->view()->zoomable()->scale()));
+            painter->setPen(QPen(Qt::green, 3.0 / mScene->document()->view()->scale()));
             painter->setBrush(Qt::NoBrush);
             drawNodeSquare(painter, scenePos, nodeRadius() * 1.25);
         }
@@ -847,7 +856,7 @@ void NodesItem::redrawNode(WorldNode *node)
 
 qreal NodesItem::nodeRadius() const
 {
-    return 4 / mScene->document()->view()->zoomable()->scale();
+    return 4 / mScene->document()->view()->scale();
 }
 
 void NodesItem::currentPathLayerChanged()
@@ -880,8 +889,10 @@ WorldLevelItem::WorldLevelItem(WorldLevel *wlevel, BasePathScene *scene, QGraphi
     foreach (WorldPathLayer *layer, mLevel->pathLayers()) {
         PathLayerItem *item = new PathLayerItem(layer, scene, this);
         item->setZValue(z++);
+#if 0
         if (mScene->isTile())
             item->setOpacity(0.5);
+#endif
         mPathLayerItems += item;
     }
 }
@@ -912,4 +923,43 @@ void WorldLevelItem::afterReorderPathLayer(WorldPathLayer *layer, int oldIndex)
 void WorldLevelItem::afterSetPathLayerVisible(WorldPathLayer *layer, bool visible)
 {
     mPathLayerItems[mLevel->indexOf(layer)]->setVisible(visible);
+}
+
+/////
+
+PathGridItem::PathGridItem(BasePathScene *scene, QGraphicsItem *parent)
+    : QGraphicsItem(parent)
+    , mScene(scene)
+{
+    setAcceptedMouseButtons(0);
+    setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
+
+    connect(Preferences::instance(), SIGNAL(showCellGridChanged(bool)),
+            SLOT(showGridChanged(bool)));
+}
+
+QRectF PathGridItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+void PathGridItem::paint(QPainter *painter,
+                       const QStyleOptionGraphicsItem *option,
+                       QWidget *)
+{
+    QColor gridColor = Preferences::instance()->gridColor();
+    mScene->renderer()->drawGrid(painter, option->exposedRect, gridColor,
+                                 mScene->document()->currentLevel()->level());
+}
+
+void PathGridItem::updateBoundingRect()
+{
+    QRectF boundsF;
+    if (mScene->renderer())
+        boundsF = mScene->renderer()->sceneBounds(mScene->world()->bounds(),
+                                                  mScene->document()->currentLevel()->level());
+    if (boundsF != mBoundingRect) {
+        prepareGeometryChange();
+        mBoundingRect = boundsF;
+    }
 }

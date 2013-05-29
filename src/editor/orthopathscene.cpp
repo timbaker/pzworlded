@@ -35,7 +35,7 @@ OrthoPathRenderer::OrthoPathRenderer(PathWorld *world) :
 QPointF OrthoPathRenderer::toScene(qreal x, qreal y, int level)
 {
     Q_UNUSED(level);
-    return QPointF(x, y);
+    return QPointF(x, y) * (64);
 }
 
 QPolygonF OrthoPathRenderer::toScene(const QRectF &worldRect, int level)
@@ -60,7 +60,7 @@ QPolygonF OrthoPathRenderer::toScene(const QPolygonF &worldPoly, int level)
 QPointF OrthoPathRenderer::toWorld(qreal x, qreal y, int level)
 {
     Q_UNUSED(level);
-    return QPointF(x, y);
+    return QPointF(x, y) / (64);
 }
 
 QRectF OrthoPathRenderer::sceneBounds(const QRectF &worldRect, int level)

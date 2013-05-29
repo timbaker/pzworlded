@@ -45,7 +45,10 @@ public:
     void switchToOrtho();
     void switchToTile();
 
+    qreal scale() const;
+
 private slots:
+    void adjustScale(qreal scale);
     void recenter();
 
 private:

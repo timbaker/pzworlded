@@ -18,6 +18,9 @@
 #ifndef BASEPATHRENDERER_H
 #define BASEPATHRENDERER_H
 
+class QPainter;
+
+#include <QColor>
 #include <QPointF>
 #include <QPolygonF>
 #include <QRectF>
@@ -42,6 +45,8 @@ public:
     virtual QPolygonF toWorld(const QRectF &sceneRect, int level);
 
     virtual QRectF sceneBounds(const QRectF &worldRect, int level) = 0;
+
+    void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level);
 
 protected:
     PathWorld *mWorld;

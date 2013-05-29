@@ -112,6 +112,29 @@ private:
     QPointF mFakeNodePos;
 };
 
+/////
+
+class PathGridItem : public QObject, public QGraphicsItem
+{
+    Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
+public:
+    PathGridItem(BasePathScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *);
+
+    void updateBoundingRect();
+
+private slots:
+    void showGridChanged(bool show) { setVisible(show); }
+
+private:
+    BasePathScene *mScene;
+    QRectF mBoundingRect;
+};
+
 struct PathSegment
 {
     PathSegment() :
@@ -231,6 +254,7 @@ private:
     BasePathTool *mActiveTool;
     WorldChanger *mChanger;
     QList<WorldLevelItem*> mLevelItems;
+    PathGridItem *mGridItem;
 };
 
 #endif // BASEWORLDSCENE_H

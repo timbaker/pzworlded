@@ -94,7 +94,7 @@ signals:
     void statusBarCoordinatesChanged(int x, int y);
 
 public slots:
-    void adjustScale(qreal scale);
+    virtual void adjustScale(qreal scale);
 
 private slots:
     void setUseOpenGL(bool useOpenGL);

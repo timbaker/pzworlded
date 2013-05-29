@@ -23,7 +23,6 @@
 #include "path.h"
 #include "pathdocument.h"
 #include "pathworld.h"
-#include "preferences.h"
 #include "progress.h"
 #include "worldchanger.h"
 #include "worldchunkmap.h"
@@ -35,51 +34,6 @@
 #include <QStyleOptionGraphicsItem>
 
 using namespace Tiled;
-
-/////
-
-class TSGridItem : public QGraphicsItem
-{
-public:
-    TSGridItem(TilePathScene *scene, QGraphicsItem *parent = 0)
-        : QGraphicsItem(parent)
-        , mScene(scene)
-    {
-        setAcceptedMouseButtons(0);
-        setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
-    }
-
-    QRectF boundingRect() const
-    {
-        return mBoundingRect;
-    }
-
-    void paint(QPainter *painter,
-               const QStyleOptionGraphicsItem *option,
-               QWidget *)
-    {
-        if (painter->worldMatrix().m22() < 0.25) return;
-        QColor gridColor = Preferences::instance()->gridColor();
-        mScene->renderer()->drawGrid(painter, option->exposedRect, gridColor,
-                                     mScene->currentLevel());
-    }
-
-    void updateBoundingRect()
-    {
-        QRectF boundsF;
-        if (mScene->renderer())
-            boundsF = mScene->renderer()->sceneBounds(mScene->world()->bounds(),
-                                                      mScene->currentLevel());
-        if (boundsF != mBoundingRect) {
-            prepareGeometryChange();
-            mBoundingRect = boundsF;
-        }
-    }
-
-private:
-    TilePathScene *mScene;
-    QRectF mBoundingRect;
-};
 
 /////
 
@@ -121,8 +75,7 @@ void TSLevelItem::paint(QPainter *painter,
 /////
 
 TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
-    BasePathScene(doc, parent),
-    mGridItem(new TSGridItem(this))
+    BasePathScene(doc, parent)
 {
 //    setBackgroundBrush(Qt::darkGray);
 
@@ -145,9 +98,6 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
         addItem(item);
     }
 
-    mGridItem->updateBoundingRect();
-    addItem(mGridItem);
-
 //    setSceneRect(mGridItem->boundingRect());
 }
 
@@ -164,11 +114,6 @@ void TilePathScene::scrollContentsBy(const QPointF &worldPos)
 void TilePathScene::centerOn(const QPointF &worldPos)
 {
     Q_UNUSED(worldPos)
-}
-
-int TilePathScene::currentLevel()
-{
-    return 0; // FIXME
 }
 
 void TilePathScene::afterAddScriptToPath(WorldPath *path, int index, WorldScript *script)
@@ -344,40 +289,4 @@ void TilePathRenderer::drawLevel(QPainter *painter, WorldLevel *wlevel, const QR
     }
 }
 
-void TilePathRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level)
-{
-    const int tileWidth = mScene->world()->tileWidth();
-    const int tileHeight = mScene->world()->tileHeight();
 
-    const int mapHeight = mScene->world()->height();
-    const int mapWidth = mScene->world()->width();
-
-    QRect r = rect.toAlignedRect();
-    r.adjust(-tileWidth / 2, -tileHeight / 2,
-             tileWidth / 2, tileHeight / 2);
-
-    const int startX = qMax(qreal(0), toWorld(r.topLeft(), level).x());
-    const int startY = qMax(qreal(0), toWorld(r.topRight(), level).y());
-    const int endX = qMin(qreal(mapWidth), toWorld(r.bottomRight(), level).x());
-    const int endY = qMin(qreal(mapHeight), toWorld(r.bottomLeft(), level).y());
-
-    gridColor.setAlpha(128);
-
-    QPen pen;
-    QBrush brush(gridColor, Qt::Dense4Pattern);
-    brush.setTransform(QTransform::fromScale(1/painter->transform().m11(),
-                                             1/painter->transform().m22()));
-    pen.setBrush(brush);
-    painter->setPen(pen);
-
-    for (int y = startY; y <= endY; ++y) {
-        const QPointF start = toScene(startX, (qreal)y, level);
-        const QPointF end = toScene(endX, (qreal)y, level);
-        painter->drawLine(start, end);
-    }
-    for (int x = startX; x <= endX; ++x) {
-        const QPointF start = toScene(x, (qreal)startY, level);
-        const QPointF end = toScene(x, (qreal)endY, level);
-        painter->drawLine(start, end);
-    }
-}

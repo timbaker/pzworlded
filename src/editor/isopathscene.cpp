@@ -35,8 +35,8 @@ IsoPathRenderer::IsoPathRenderer(PathWorld *world) :
 
 QPointF IsoPathRenderer::toScene(qreal x, qreal y, int level)
 {
-    const qreal tileWidth = 1;
-    const qreal tileHeight = 0.5;
+    const qreal tileWidth = 64;
+    const qreal tileHeight = 32;
     const int worldHeight = mWorld->height();
     const int levelHeight = 3;
     const int maxLevel = mWorld->maxLevel();
@@ -68,8 +68,8 @@ QPolygonF IsoPathRenderer::toScene(const QPolygonF &worldPoly, int level)
 
 QPointF IsoPathRenderer::toWorld(qreal x, qreal y, int level)
 {
-    const qreal tileWidth = 1;
-    const qreal tileHeight = 0.5;
+    const qreal tileWidth = 64;
+    const qreal tileHeight = 32;
     const qreal ratio = tileWidth / tileHeight;
 
     const int worldHeight = mWorld->height();

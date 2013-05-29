@@ -26,7 +26,7 @@ class WorldChunkMap;
 
 class TilePathScene;
 class TilePathSceneSink;
-class TSGridItem;
+class PathGridItem;
 
 class TilePathRenderer : public BasePathRenderer
 {
@@ -45,7 +45,6 @@ public:
     QRectF sceneBounds(const QRectF &worldRect, int level);
 
     void drawLevel(QPainter *painter, WorldLevel *wlevel, const QRectF &exposed);
-    void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level);
 
     TilePathScene *mScene;
 };
@@ -94,7 +93,6 @@ private slots:
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
 
 private:
-    TSGridItem *mGridItem;
     QList<TSLevelItem*> mLayerGroupItems;
     WorldChunkMap *mChunkMap;
 };

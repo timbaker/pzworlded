@@ -36,7 +36,7 @@ PathView::PathView(PathDocument *doc, QWidget *parent) :
     setScene(mOrthoScene);
 
     QVector<qreal> zf = zoomable()->zoomFactors();
-    zf += 8.0;
+    zf << 8.0 << 16.0 << 48.0 << 128.0;
     zoomable()->setZoomFactors(zf);
 
     mOrthoIsoScale = mTileScale = zoomable()->scale();
@@ -105,6 +105,21 @@ void PathView::switchToTile()
     mLastMouseScenePos = mapToScene(viewport()->mapFromGlobal(mLastMouseGlobalPos));
 
     ToolManager::instance()->setScene(scene());
+}
+
+qreal PathView::scale() const
+{
+    qreal nonTileScaleFactor = scene()->isTile() ? 1 : 32;
+    return zoomable()->scale() / nonTileScaleFactor;
+}
+
+void PathView::adjustScale(qreal scale)
+{
+    qreal nonTileScaleFactor = scene()->isTile() ? 1 : 32;
+    scale /= nonTileScaleFactor;
+    BaseGraphicsView::adjustScale(scale);
+    setRenderHint(QPainter::SmoothPixmapTransform,
+                  mZoomable->smoothTransform() && scene()->isTile());
 }
 
 void PathView::recenter()
