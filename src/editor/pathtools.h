@@ -50,6 +50,11 @@ public:
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }
 
+    int level();
+
+    WorldPath *pointOnSegment(const QPointF &scenePos, QPointF &ptOnLine);
+    QPointF nextNodePos(QGraphicsSceneMouseEvent *event);
+
 public slots:
     void updateEnabledState();
 
@@ -90,7 +95,7 @@ private:
     void startSelecting();
     void updateSelection(QGraphicsSceneMouseEvent *event);
     void startMoving();
-    void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
+    void updateMovingItems(QGraphicsSceneMouseEvent *event);
     void finishMoving(const QPointF &pos);
 
     enum Mode {
@@ -135,7 +140,7 @@ private:
     explicit AddRemoveNodeTool();
     ~AddRemoveNodeTool();
 
-    WorldNode *topmostNodeAt(const QPointF &scenePos);
+    void updateFakeNode(const QPointF &scenePos);
 };
 
 class SelectMovePathTool : public BasePathTool
@@ -219,6 +224,7 @@ public:
         //setShortcut(QKeySequence(tr("S")));
     }
 
+private:
     void finishNewPath(bool close);
     void clearNewPath();
 

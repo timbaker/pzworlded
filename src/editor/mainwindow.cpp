@@ -114,7 +114,7 @@ MainWindow *MainWindow::instance()
 static QString script(const char *name)
 {
 #if 1
-    return QString::fromLatin1("C:/Programming/Tiled/PZWorldEd/PZWorldEd/lua/%1").arg(QLatin1String(name));
+    return QString::fromLatin1(WORLDED_SRC_DIR "/lua/%1").arg(QLatin1String(name));
 #else
     return qApp->applicationDirPath() + QString::fromLatin1("/lua/%1").arg(name);
 #endif

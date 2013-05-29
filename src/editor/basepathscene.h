@@ -97,11 +97,19 @@ public:
 
     void currentPathLayerChanged();
 
+    void setFakeNodePos(const QPointF &pos)
+    { mFakeNodePos = pos; update(); }
+
+private:
+    void drawNodeElipse(QPainter *painter, const QPointF &scenePos, qreal radius);
+    void drawNodeSquare(QPainter *painter, const QPointF &scenePos, qreal radius);
+
 private:
     BasePathScene *mScene;
     NodeSet mSelectedNodes;
     QMap<WorldNode*,QPointF> mNodeOffset;
     WorldNode *mHoverNode;
+    QPointF mFakeNodePos;
 };
 
 struct PathSegment
@@ -213,8 +221,6 @@ public slots:
 
     void pathTextureChanged(WorldPath *path);
 
-public:
-    unsigned int mTextureId;
 private:
     PathDocument *mDocument;
     BasePathRenderer *mRenderer;

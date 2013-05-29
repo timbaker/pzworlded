@@ -124,7 +124,7 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
     BasePathScene(doc, parent),
     mGridItem(new TSGridItem(this))
 {
-    setBackgroundBrush(Qt::darkGray);
+//    setBackgroundBrush(Qt::darkGray);
 
     TilePathRenderer *renderer = new TilePathRenderer(this, world());
     setRenderer(renderer);

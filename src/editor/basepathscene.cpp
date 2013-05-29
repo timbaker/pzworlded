@@ -54,8 +54,6 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     mActiveTool(0),
     mChanger(doc->changer()/*new WorldChanger(doc->world())*/)
 {
-    mTextureId = 0;
-
     connect(TextureEditDialog::instance(), SIGNAL(ffsItChangedYo(WorldPath*)),
             SLOT(pathTextureChanged(WorldPath*)));
 }
@@ -267,7 +265,7 @@ float minimum_distance(QVector2D v, QVector2D w, QVector2D p) {
 
 WorldPath *BasePathScene::topmostPathAt(const QPointF &scenePos, int *indexPtr)
 {
-    qreal radius = 4 / document()->view()->zoomable()->scale();
+    qreal radius = 8 / document()->view()->zoomable()->scale();
     QRectF sceneRect(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2);
     QList<WorldPath*> paths = lookup()->paths(renderer()->toWorld(sceneRect, currentPathLayer()->level()));
 
@@ -468,12 +466,6 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
         painter->setPen(QPen());
         QPolygonF worldPoly = path->polygon();
         QPolygonF scenePoly = mScene->renderer()->toScene(worldPoly, mLayer->level());
-        painter->setPen(path->strokeWidth() ? Qt::gray : Qt::black);
-        painter->drawPolyline(scenePoly);
-        if (path->strokeWidth()) {
-            painter->setPen(Qt::black);
-            painter->drawPolyline(mScene->renderer()->toScene(path->polygon(false), mLayer->level()));
-        }
 
         if (numcdt < 50 && worldPoly.isClosed() && (path->texture().mTexture != 0)) {
             std::vector<p2t::Point*> polyline;
@@ -551,6 +543,14 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 vertices.resize(0);
             }
         }
+
+        painter->setPen(path->strokeWidth() ? Qt::gray : Qt::black);
+        painter->drawPolyline(scenePoly);
+        if (path->strokeWidth()) {
+            painter->setPen(Qt::black);
+            painter->drawPolyline(mScene->renderer()->toScene(path->polygon(false), mLayer->level()));
+        }
+
 #else
         painter->setBrush(Qt::NoBrush);
         QPolygonF pf = path->polygon();
@@ -612,7 +612,9 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
         if (mScene->mHighlightPath == path) {
             painter->setPen(QPen(Qt::green, 4 / painter->worldMatrix().m22()));
-
+#if 1
+            painter->drawPolyline(mScene->renderer()->toScene(worldPoly, mLayer->level()));
+#else
             QPolygonF fwd, bwd;
             offsetPath(path, 0.5, fwd, bwd);
 
@@ -626,6 +628,7 @@ void PathLayerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             painter->drawPolyline(bwd);
             foreach (QPointF p, bwd)
                 painter->drawEllipse(p, radius, radius);
+#endif
         }
     }
 
@@ -736,12 +739,24 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 
     QRectF exposed = option->exposedRect.adjusted(-nodeRadius(), -nodeRadius(),
                                                   nodeRadius(), nodeRadius());
-    painter->setPen(QColor(0x33,0x99,0xff));
-    painter->setBrush(QColor(0x33,0x99,0xff,255/8));
+    if (mScene->isTile()) {
+        painter->setPen(Qt::black);
+        painter->setBrush(Qt::white);
+    } else {
+        painter->setPen(QColor(0x33,0x99,0xff));
+        painter->setBrush(QColor(0x33,0x99,0xff,255/8));
+    }
     foreach (WorldNode *node, lookupNodes(exposed)) {
         QPointF scenePos = mScene->renderer()->toScene(node->pos(),
                                                        mScene->currentPathLayer()->level());
-        painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+        drawNodeSquare(painter, scenePos, nodeRadius());
+    }
+
+    // Fake node used by AddRemoveNodeTool
+    if (!mFakeNodePos.isNull()) {
+        QPointF scenePos = mScene->renderer()->toScene(mFakeNodePos,
+                                                       mScene->currentPathLayer()->level());
+        drawNodeSquare(painter, scenePos, nodeRadius());
     }
 
     painter->setBrush(QColor(0x33,0x99,0xff,128));
@@ -749,16 +764,16 @@ void NodesItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         QPointF scenePos = mScene->renderer()->toScene(node->pos(),
                                                        mScene->currentPathLayer()->level());
         if (exposed.contains(scenePos))
-            painter->drawEllipse(scenePos, nodeRadius(), nodeRadius());
+            drawNodeSquare(painter, scenePos, nodeRadius());
     }
 
     if (mHoverNode) {
         QPointF scenePos = mScene->renderer()->toScene(mHoverNode->pos(),
                                                        mScene->currentPathLayer()->level());
         if (exposed.contains(scenePos)) {
-            painter->setPen(QPen(QColor(0,128,0,200), 3 / mScene->document()->view()->zoomable()->scale()));
+            painter->setPen(QPen(QColor(0,128,0,200), 3.0 / mScene->document()->view()->zoomable()->scale()));
             painter->setBrush(Qt::NoBrush);
-            painter->drawEllipse(scenePos, nodeRadius() * 1.25, nodeRadius() * 1.25);
+            drawNodeSquare(painter, scenePos, nodeRadius() * 1.25);
         }
     }
 }
@@ -831,7 +846,7 @@ void NodesItem::redrawNode(WorldNode *node)
 
 qreal NodesItem::nodeRadius() const
 {
-    return 6 / mScene->document()->view()->zoomable()->scale();
+    return 4 / mScene->document()->view()->zoomable()->scale();
 }
 
 void NodesItem::currentPathLayerChanged()
@@ -839,6 +854,16 @@ void NodesItem::currentPathLayerChanged()
     mSelectedNodes.clear();
     mHoverNode = InvalidId;
     update();
+}
+
+void NodesItem::drawNodeElipse(QPainter *painter, const QPointF &scenePos, qreal radius)
+{
+    painter->drawEllipse(scenePos, radius, radius);
+}
+
+void NodesItem::drawNodeSquare(QPainter *painter, const QPointF &scenePos, qreal radius)
+{
+    painter->drawRect(QRectF(scenePos.x() - radius, scenePos.y() - radius, radius * 2, radius * 2));
 }
 
 /////

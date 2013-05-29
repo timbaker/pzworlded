@@ -22,6 +22,8 @@ win32 {
 DEFINES += QT_NO_CAST_FROM_ASCII \
     QT_NO_CAST_TO_ASCII
 
+DEFINES += WORLDED_SRC_DIR=\\\"$$top_srcdir\\\"
+
 macx {
     QMAKE_LIBDIR_FLAGS += -L$$OUT_PWD/../../bin/PZWorldEd.app/Contents/Frameworks
     LIBS += -framework Foundation

@@ -152,6 +152,7 @@ QList<WorldNode *> WorldLookup::nodes(const QRectF &bounds)
     QMap<int,WorldNode *> ret;
     foreach (WorldQuadTreeObject<WorldNode> *o, objects) {
         Q_ASSERT(o->data);
+        if (o->data->path() && !o->data->path()->isVisible()) continue;
         checkInvalidNodeIndex(o->index);
         ret[o->index * 100 + o->data->index()] = o->data;
     }
@@ -169,6 +170,7 @@ QList<WorldNode *> WorldLookup::nodes(const QPolygonF &poly)
     QMap<int,WorldNode *> ret;
     foreach (WorldQuadTreeObject<WorldNode> *o, objects) {
         Q_ASSERT(o->data);
+        if (o->data->path() && !o->data->path()->isVisible()) continue;
         checkInvalidNodeIndex(o->index);
         ret[o->index * 100 + o->data->index()] = o->data;
     }
