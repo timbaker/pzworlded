@@ -1,9 +1,32 @@
+/*
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef TEXTUREEDITDIALOG_H
 #define TEXTUREEDITDIALOG_H
 
 #include <QDialog>
 
+#include <QMap>
+
+class Document;
+class PathDocument;
 class WorldPath;
+class WorldPathLayer;
+class WorldTexture;
 
 namespace Ui {
 class TextureEditDialog;
@@ -20,8 +43,13 @@ public:
     void setVisible(bool visible);
 
     void setPath(WorldPath *path);
-    
+
+signals:
+    void ffsItChangedYo(WorldPath *path);
+
 private slots:
+    void documentChanged(Document *doc);
+
     void xScaleChanged(double scale);
     void yScaleChanged(double scale);
 
@@ -33,14 +61,13 @@ private slots:
 
     void rotationChanged(double rotation);
 
-    void textureComboActivated(int index);
+    void browseTexture();
 
     void alignChanged();
 
     void strokeChanged(double thickness);
 
-signals:
-    void ffsItChangedYo(WorldPath *path);
+    void beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
 
 private:
     Q_DISABLE_COPY(TextureEditDialog)
@@ -52,6 +79,9 @@ private:
 
     WorldPath *mPath;
     bool mSynching;
+    QMap<QString,QPixmap> mPixmaps;
+
+    PathDocument *mDocument;
 };
 
 #endif // TEXTUREEDITDIALOG_H

@@ -1,9 +1,30 @@
+/*
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "textureeditdialog.h"
 #include "ui_textureeditdialog.h"
 
+#include "documentmanager.h"
 #include "mainwindow.h"
 #include "path.h"
+#include "pathdocument.h"
 #include "pathworld.h"
+#include "texturebrowsedialog.h"
+#include "worldchanger.h"
 
 TextureEditDialog *TextureEditDialog::mInstance = 0;
 
@@ -23,28 +44,30 @@ TextureEditDialog::TextureEditDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::TextureEditDialog),
     mPath(0),
-    mSynching(false)
+    mSynching(false),
+    mDocument(0)
 {
     ui->setupUi(this);
 
     setWindowFlags(windowFlags() | Qt::Tool);
 
+#if 1
+    ui->textureLabel->setStyleSheet(QLatin1String("QLabel { background-color : black }"));
+#endif
+
     connect(ui->xScale, SIGNAL(valueChanged(double)), SLOT(xScaleChanged(double)));
     connect(ui->yScale, SIGNAL(valueChanged(double)), SLOT(yScaleChanged(double)));
-
     connect(ui->xFit, SIGNAL(clicked()), SLOT(xFit()));
     connect(ui->yFit, SIGNAL(clicked()), SLOT(yFit()));
-
     connect(ui->xShift, SIGNAL(valueChanged(int)), SLOT(xShiftChanged(int)));
     connect(ui->yShift, SIGNAL(valueChanged(int)), SLOT(yShiftChanged(int)));
-
     connect(ui->rotation, SIGNAL(valueChanged(double)), SLOT(rotationChanged(double)));
-
-    connect(ui->textureCombo, SIGNAL(activated(int)), SLOT(textureComboActivated(int)));
-
+    connect(ui->browseTexture, SIGNAL(clicked()), SLOT(browseTexture()));
     connect(ui->alignPath, SIGNAL(toggled(bool)), SLOT(alignChanged()));
-
     connect(ui->stroke, SIGNAL(valueChanged(double)), SLOT(strokeChanged(double)));
+
+    connect(DocumentManager::instance(), SIGNAL(currentDocumentChanged(Document*)),
+            SLOT(documentChanged(Document*)));
 }
 
 TextureEditDialog::~TextureEditDialog()
@@ -95,17 +118,12 @@ void TextureEditDialog::setPath(WorldPath *path)
 
         ui->rotation->setValue(mPath->texture().mRotation);
 
-        if (ui->textureCombo->count() == 0) {
-            ui->textureCombo->addItem(QLatin1String("<none>"));
-            foreach (WorldTexture *wtex, path->layer()->wlevel()->world()->textureList()) {
-                ui->textureCombo->addItem(wtex->mName);
-            }
-        }
-
-        int index = 0;
-        if (mPath->texture().mTexture)
-            index = path->layer()->wlevel()->world()->textureList().indexOf(mPath->texture().mTexture) + 1;
-        ui->textureCombo->setCurrentIndex(index);
+        if (WorldTexture *wtex = mPath->texture().mTexture) {
+            if (!mPixmaps.contains(wtex->mFileName))
+                mPixmaps[wtex->mFileName] = QPixmap::fromImage(QImage(wtex->mFileName).scaled(128, 128, Qt::KeepAspectRatio));
+            ui->textureLabel->setPixmap(mPixmaps[wtex->mFileName]);
+        } else
+            ui->textureLabel->clear();
 
         ui->alignWorld->setChecked(mPath->texture().mAlignWorld);
         ui->alignPath->setChecked(!mPath->texture().mAlignWorld);
@@ -113,6 +131,31 @@ void TextureEditDialog::setPath(WorldPath *path)
         ui->stroke->setValue(mPath->strokeWidth());
 
         mSynching = false;
+    } else {
+        ui->xScale->setValue(1.0);
+        ui->yScale->setValue(1.0);
+        ui->xShift->setValue(0);
+        ui->yShift->setValue(0);
+        ui->rotation->setValue(0.0);
+        ui->textureLabel->clear();
+        ui->stroke->setValue(0.0);
+    }
+
+    setEnabled(mPath != 0);
+}
+
+void TextureEditDialog::documentChanged(Document *doc)
+{
+    setPath(0);
+
+    if (mDocument)
+        mDocument->disconnect(this);
+
+    mDocument = doc ? doc->asPathDocument() : 0;
+
+    if (mDocument) {
+        connect(mDocument->changer(), SIGNAL(beforeRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
+                SLOT(beforeRemovePath(WorldPathLayer*,int,WorldPath*)));
     }
 }
 
@@ -185,13 +228,20 @@ void TextureEditDialog::rotationChanged(double rotation)
     emit ffsItChangedYo(mPath);
 }
 
-void TextureEditDialog::textureComboActivated(int index)
+void TextureEditDialog::browseTexture()
 {
-    if (!mPath || mSynching) return;
-    if (index == 0)
-        mPath->texture().mTexture = 0;
-    else
-        mPath->texture().mTexture = mPath->layer()->wlevel()->world()->textureList().at(index - 1);
+    if (!mPath) return;
+    TextureBrowseDialog::instance()->setTextures(mPath->layer()->wlevel()->world()->textureList());
+    TextureBrowseDialog::instance()->setCurrentTexture(mPath->texture().mTexture);
+    if (TextureBrowseDialog::instance()->exec() != QDialog::Accepted)
+        return;
+    WorldTexture *tex = TextureBrowseDialog::instance()->chosen();
+    mPath->texture().mTexture = tex;
+
+    if (!mPixmaps.contains(tex->mFileName))
+        mPixmaps[tex->mFileName] = QPixmap::fromImage(QImage(tex->mFileName).scaled(128, 128, Qt::KeepAspectRatio));
+    ui->textureLabel->setPixmap(mPixmaps[tex->mFileName]);
+
     emit ffsItChangedYo(mPath);
 }
 
@@ -208,5 +258,13 @@ void TextureEditDialog::strokeChanged(double thickness)
     thickness = qMax(0.0, thickness);
     mPath->setStrokeWidth(thickness);
     emit ffsItChangedYo(mPath);
+}
+
+void TextureEditDialog::beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
+{
+    Q_UNUSED(layer)
+    Q_UNUSED(index)
+    if (path == mPath)
+        setPath(0);
 }
 

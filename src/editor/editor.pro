@@ -146,7 +146,9 @@ SOURCES += main.cpp\
     pathlayersmodel.cpp \
     pathlayersdock.cpp \
     glwindow.cpp \
-    textureeditdialog.cpp
+    textureeditdialog.cpp \
+    worldtextureview.cpp \
+    texturebrowsedialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -245,7 +247,9 @@ HEADERS  += mainwindow.h \
     pathlayersmodel.h \
     pathlayersdock.h \
     glwindow.h \
-    textureeditdialog.h
+    textureeditdialog.h \
+    worldtextureview.h \
+    texturebrowsedialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -267,7 +271,8 @@ FORMS    += mainwindow.ui \
     scriptparamdialog.ui \
     pathlayersdock.ui \
     glwindow.ui \
-    textureeditdialog.ui
+    textureeditdialog.ui \
+    texturebrowsedialog.ui
 
 OTHER_FILES += luatiled.pkg
 
