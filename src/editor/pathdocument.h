@@ -91,6 +91,9 @@ private slots:
     void afterSetPathVisible(WorldPath *path, bool visible);
 
 private:
+    void addTexturesInDirectory(const QString &path);
+
+private:
     PathWorld *mWorld;
     QString mFileName;
     WorldLookup *mLookup;

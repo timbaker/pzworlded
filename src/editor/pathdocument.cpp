@@ -53,7 +53,7 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
         }
     }
     Tiled::TileMetaInfoMgr::instance()->loadTilesets(tilesets);
-
+#if 0
     PROGRESS progress(QLatin1String("Running scripts (region)"));
 
     foreach (WorldLevel *wlevel, mWorld->levels()) {
@@ -79,7 +79,11 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
                 ws->mRegion = rgn;
         }
     }
+#endif
 
+#if 1
+    addTexturesInDirectory(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/Textures"));
+#else
     if (mWorld->textureList().isEmpty()) {
 
     WorldTexture *wtex = new WorldTexture;
@@ -145,6 +149,7 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
             tex->mSize = ir.size(); // FIXME: do this IFF texture is needed
         }
     }
+#endif
 
 #if 0
     // Now that the script regions are up-to-date...
@@ -293,4 +298,35 @@ void PathDocument::afterSetPathVisible(WorldPath *path, bool visible)
         mHiddenPaths.remove(path);
     else
         mHiddenPaths += path;
+}
+
+void PathDocument::addTexturesInDirectory(const QString &path)
+{
+    QDir dir(path);
+    dir.setFilter(QDir::Files | QDir::AllDirs | QDir::NoDotAndDotDot);
+    QStringList nameFilters;
+    foreach (QByteArray format, QImageReader::supportedImageFormats())
+        nameFilters += QLatin1String("*.") + QString::fromAscii(format);
+
+    QFileInfoList fileInfoList = dir.entryInfoList(nameFilters);
+    foreach (QFileInfo fileInfo, fileInfoList) {
+        if (fileInfo.isDir()) {
+            addTexturesInDirectory(fileInfo.absoluteFilePath());
+            continue;
+        }
+        QImageReader ir(fileInfo.absoluteFilePath());
+        QSize size = ir.size();
+        if (size.isValid()) {
+            if (mWorld->textureMap().contains(fileInfo.baseName())) {
+                mWorld->textureMap()[fileInfo.baseName()]->mSize = size;
+                continue;
+            }
+            WorldTexture *wtex = new WorldTexture;
+            wtex->mFileName = fileInfo.filePath();
+            wtex->mName = fileInfo.baseName();
+            wtex->mSize = size;
+            mWorld->textureList() += wtex;
+            mWorld->textureMap()[wtex->mName] = wtex;
+        }
+    }
 }
