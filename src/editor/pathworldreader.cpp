@@ -220,7 +220,7 @@ private:
                 QString name = atts.value(QLatin1String("name")).toString();
                 if (!mWorld->textureMap().contains(name)) {
                     xml.raiseError(tr("Unknown texture \"%1\"").arg(name));
-                    delete path;
+//                    delete path;
                     return 0;
                 }
                 path->texture().mTexture = mWorld->textureMap()[name];
