@@ -68,6 +68,8 @@ TextureEditDialog::TextureEditDialog(QWidget *parent) :
 
     connect(DocumentManager::instance(), SIGNAL(currentDocumentChanged(Document*)),
             SLOT(documentChanged(Document*)));
+
+    documentChanged(DocumentManager::instance()->currentDocument());
 }
 
 TextureEditDialog::~TextureEditDialog()
@@ -149,13 +151,17 @@ void TextureEditDialog::documentChanged(Document *doc)
     setPath(0);
 
     if (mDocument)
-        mDocument->disconnect(this);
+        mDocument->changer()->disconnect(this);
 
     mDocument = doc ? doc->asPathDocument() : 0;
 
     if (mDocument) {
         connect(mDocument->changer(), SIGNAL(beforeRemovePathSignal(WorldPathLayer*,int,WorldPath*)),
                 SLOT(beforeRemovePath(WorldPathLayer*,int,WorldPath*)));
+        connect(mDocument->changer(), SIGNAL(afterSetPathTextureParamsSignal(WorldPath*,PathTexture)),
+                SLOT(afterSetPathTextureParameters(WorldPath*,PathTexture)));
+        connect(mDocument->changer(), SIGNAL(afterSetPathStrokeSignal(WorldPath*,qreal)),
+                SLOT(afterSetPathStroke(WorldPath*,qreal)));
     }
 }
 
@@ -163,16 +169,22 @@ void TextureEditDialog::xScaleChanged(double scale)
 {
     if (!mPath || mSynching) return;
     scale = qBound(0.01, scale, 100.0);
-    mPath->texture().mScale.setWidth(scale);
-    emit ffsItChangedYo(mPath);
+    PathTexture pt = mPath->texture();
+    pt.mScale.setWidth(scale);
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::yScaleChanged(double scale)
 {
     if (!mPath || mSynching) return;
     scale = qBound(0.01, scale, 100.0);
-    mPath->texture().mScale.setHeight(scale);
-    emit ffsItChangedYo(mPath);
+    PathTexture pt = mPath->texture();
+    pt.mScale.setHeight(scale);
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::xFit()
@@ -208,8 +220,11 @@ void TextureEditDialog::xShiftChanged(int shift)
     if (!mPath || mSynching) return;
     if (shift == ui->xShift->minimum() || shift == ui->xShift->maximum())
         shift = 0;
-    mPath->texture().mTranslation.setX(shift);
-    emit ffsItChangedYo(mPath);
+    PathTexture pt = mPath->texture();
+    pt.mTranslation.setX(shift);
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::yShiftChanged(int shift)
@@ -217,15 +232,21 @@ void TextureEditDialog::yShiftChanged(int shift)
     if (!mPath || mSynching) return;
     if (shift == ui->yShift->minimum() || shift == ui->yShift->maximum())
         shift = 0;
-    mPath->texture().mTranslation.setY(shift);
-    emit ffsItChangedYo(mPath);
+    PathTexture pt = mPath->texture();
+    pt.mTranslation.setY(shift);
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::rotationChanged(double rotation)
 {
     if (!mPath || mSynching) return;
-    mPath->texture().mRotation = rotation;
-    emit ffsItChangedYo(mPath);
+    PathTexture pt = mPath->texture();
+    pt.mRotation = rotation;
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::browseTexture()
@@ -236,28 +257,35 @@ void TextureEditDialog::browseTexture()
     if (TextureBrowseDialog::instance()->exec() != QDialog::Accepted)
         return;
     WorldTexture *tex = TextureBrowseDialog::instance()->chosen();
-    mPath->texture().mTexture = tex;
+
+    PathTexture pt = mPath->texture();
+    pt.mTexture = tex;
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 
     if (!mPixmaps.contains(tex->mFileName))
         mPixmaps[tex->mFileName] = QPixmap::fromImage(QImage(tex->mFileName).scaled(128, 128, Qt::KeepAspectRatio));
     ui->textureLabel->setPixmap(mPixmaps[tex->mFileName]);
-
-    emit ffsItChangedYo(mPath);
 }
 
 void TextureEditDialog::alignChanged()
 {
     if (!mPath || mSynching) return;
-    mPath->texture().mAlignWorld = ui->alignWorld->isChecked();
-    emit ffsItChangedYo(mPath);
+    PathTexture pt = mPath->texture();
+    pt.mAlignWorld = ui->alignWorld->isChecked();
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathTextureParams(mPath, pt);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::strokeChanged(double thickness)
 {
     if (!mPath || mSynching) return;
     thickness = qMax(0.0, thickness);
-    mPath->setStrokeWidth(thickness);
-    emit ffsItChangedYo(mPath);
+    mDocument->changer()->beginUndoCommand(mDocument->undoStack());
+    mDocument->changer()->doSetPathStroke(mPath, thickness);
+    mDocument->changer()->endUndoCommand();
 }
 
 void TextureEditDialog::beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path)
@@ -266,5 +294,18 @@ void TextureEditDialog::beforeRemovePath(WorldPathLayer *layer, int index, World
     Q_UNUSED(index)
     if (path == mPath)
         setPath(0);
+}
+
+void TextureEditDialog::afterSetPathTextureParameters(WorldPath *path, const PathTexture &params)
+{
+    if (path == mPath)
+        setPath(mPath);
+}
+
+void TextureEditDialog::afterSetPathStroke(WorldPath *path, qreal oldStroke)
+{
+    Q_UNUSED(oldStroke)
+    if (path == mPath)
+        setPath(mPath);
 }
 

@@ -13,7 +13,9 @@ public:
 
     void undo();
     void redo();
-    // bool mergeWith(const QUndoCommand *other);
+    bool mergeWith(const QUndoCommand *other);
+
+    int id() const;
 
 private:
     WorldChange *mChange;

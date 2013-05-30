@@ -34,6 +34,27 @@ template class __declspec(dllimport) QVector<QVector<int> >;
 
 namespace WorldChanges
 {
+enum ChangeId
+{
+    ID_MoveNode = 1,
+    ID_AddPath,
+    ID_RemovePath,
+    ID_ReorderPath,
+    ID_AddNodeToPath,
+    ID_RemoveNodeFromPath,
+    ID_AddScriptToPath,
+    ID_AddPathLayer,
+    ID_RemovePathLayer,
+    ID_ReorderPathLayer,
+    ID_RenamePathLayer,
+    ID_ChangeScriptParameters,
+    ID_SetPathVisible,
+    ID_SetPathClosed,
+    ID_SetPathTextureParams,
+    ID_SetPathStroke,
+    ID_SetPathLayerVisible,
+    ID_SetPathLayersVisible
+};
 
 class MoveNode : public WorldChange
 {
@@ -452,6 +473,121 @@ public:
     bool mWasClosed;
 };
 
+class SetPathTextureParams : public WorldChange
+{
+public:
+    enum Diff
+    {
+        DiffTexture = 0x01,
+        DiffScaleX = 0x02,
+        DiffScaleY = 0x04,
+        DiffTranslateX = 0x08,
+        DiffTranslateY = 0x10,
+        DiffRotate = 0x20,
+        DiffAlign = 0x40
+    };
+
+    SetPathTextureParams(WorldChanger *changer, WorldPath *path, const PathTexture &params) :
+        WorldChange(changer),
+        mPath(path),
+        mNewParams(params),
+        mOldParams(path->texture()),
+        mDiff(0)
+    {
+        if (mNewParams.mTexture != mOldParams.mTexture) mDiff |= DiffTexture;
+        if (mNewParams.mScale.width() != mOldParams.mScale.width()) mDiff |= DiffScaleX;
+        if (mNewParams.mScale.height() != mOldParams.mScale.height()) mDiff |= DiffScaleY;
+        if (mNewParams.mTranslation.x() != mOldParams.mTranslation.x()) mDiff |= DiffTranslateX;
+        if (mNewParams.mTranslation.y() != mOldParams.mTranslation.y()) mDiff |= DiffTranslateY;
+        if (mNewParams.mRotation != mOldParams.mRotation) mDiff |= DiffRotate;
+        if (mNewParams.mAlignWorld != mOldParams.mAlignWorld) mDiff |= DiffAlign;
+    }
+
+    void redo()
+    {
+        mPath->texture() = mNewParams;
+        mChanger->afterSetPathTextureParams(mPath, mOldParams);
+    }
+
+    void undo()
+    {
+        mPath->texture() = mOldParams;
+        mChanger->afterSetPathTextureParams(mPath, mNewParams);
+    }
+
+    bool merge(WorldChange *other)
+    {
+        SetPathTextureParams *o = (SetPathTextureParams*) other;
+        if (!(o->mPath == mPath && o->mDiff == mDiff))
+            return false;
+        mNewParams = o->mNewParams;
+        return true;
+    }
+
+    int id() const { return ID_SetPathTextureParams; }
+
+    QString text() const
+    {
+        if (mDiff & DiffTexture) return mChanger->tr("Change Path Texture");
+        if (mDiff & DiffScaleX) return mChanger->tr("Change Path Texture X Scale");
+        if (mDiff & DiffScaleY) return mChanger->tr("Change Path Texture Y Scale");
+        if (mDiff & DiffTranslateX) return mChanger->tr("Change Path Texture X Shift");
+        if (mDiff & DiffTranslateY) return mChanger->tr("Change Path Texture Y Shift");
+        if (mDiff & DiffRotate) return mChanger->tr("Change Path Texture Rotation");
+        if (mDiff & DiffAlign) return mChanger->tr("Change Path Texture Alignment");
+        return mChanger->tr("Change Texture Parameters");
+    }
+
+    WorldPath *mPath;
+    PathTexture mNewParams;
+    PathTexture mOldParams;
+    int mDiff;
+};
+
+class SetPathStroke : public WorldChange
+{
+public:
+    SetPathStroke(WorldChanger *changer, WorldPath *path, qreal stroke) :
+        WorldChange(changer),
+        mPath(path),
+        mNewStroke(stroke),
+        mOldStroke(path->strokeWidth())
+    {
+    }
+
+    void redo()
+    {
+        mPath->setStrokeWidth(mNewStroke);
+        mChanger->afterSetPathStroke(mPath, mOldStroke);
+    }
+
+    void undo()
+    {
+        mPath->setStrokeWidth(mOldStroke);
+        mChanger->afterSetPathStroke(mPath, mNewStroke);
+    }
+
+    int id() const { return ID_SetPathStroke; }
+
+    bool merge(WorldChange *other)
+    {
+        SetPathStroke *o = (SetPathStroke*) other;
+        if (!(o->mPath == mPath))
+            return false;
+        mNewStroke = o->mNewStroke;
+        return true;
+    }
+
+    QString text() const
+    {
+        return mChanger->tr("Set Path Stroke Width");
+    }
+
+    WorldPath *mPath;
+    qreal mNewStroke;
+    qreal mOldStroke;
+};
+
 class SetPathLayerVisible : public WorldChange
 {
 public:
@@ -634,6 +770,26 @@ void WorldChanger::afterAddScriptToPath(WorldPath *path, int index, WorldScript 
 void WorldChanger::afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script)
 {
     emit afterRemoveScriptFromPathSignal(path, index, script);
+}
+
+void WorldChanger::doSetPathTextureParams(WorldPath *path, const PathTexture &params)
+{
+    addChange(new SetPathTextureParams(this, path, params));
+}
+
+void WorldChanger::afterSetPathTextureParams(WorldPath *path, const PathTexture &params)
+{
+    emit afterSetPathTextureParamsSignal(path, params);
+}
+
+void WorldChanger::doSetPathStroke(WorldPath *path, qreal stroke)
+{
+    addChange(new SetPathStroke(this, path, stroke));
+}
+
+void WorldChanger::afterSetPathStroke(WorldPath *path, qreal oldStroke)
+{
+    emit afterSetPathStrokeSignal(path, oldStroke);
 }
 
 void WorldChanger::doAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer)

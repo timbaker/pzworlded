@@ -24,6 +24,7 @@
 
 class Document;
 class PathDocument;
+class PathTexture;
 class WorldPath;
 class WorldPathLayer;
 class WorldTexture;
@@ -43,9 +44,6 @@ public:
     void setVisible(bool visible);
 
     void setPath(WorldPath *path);
-
-signals:
-    void ffsItChangedYo(WorldPath *path);
 
 private slots:
     void documentChanged(Document *doc);
@@ -68,6 +66,8 @@ private slots:
     void strokeChanged(double thickness);
 
     void beforeRemovePath(WorldPathLayer *layer, int index, WorldPath *path);
+    void afterSetPathTextureParameters(WorldPath *path, const PathTexture &params);
+    void afterSetPathStroke(WorldPath *path, qreal oldStroke);
 
 private:
     Q_DISABLE_COPY(TextureEditDialog)

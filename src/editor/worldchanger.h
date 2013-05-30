@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QPointF>
 
+class PathTexture;
 class PathWorld;
 class WorldNode;
 class WorldPath;
@@ -44,6 +45,10 @@ public:
 
     virtual void redo() = 0;
     virtual void undo() = 0;
+    virtual bool merge(WorldChange *other) { Q_UNUSED(other); return false; }
+
+    // UndoCommand::id()
+    virtual int id() const { return -1; }
 
     virtual QString text() const = 0;
 
@@ -84,6 +89,12 @@ public:
     void doAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterAddScriptToPath(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPath(WorldPath *path, int index, WorldScript *script);
+
+    void doSetPathTextureParams(WorldPath *path, const PathTexture &params);
+    void afterSetPathTextureParams(WorldPath *path, const PathTexture &params);
+
+    void doSetPathStroke(WorldPath *path, qreal stroke);
+    void afterSetPathStroke(WorldPath *path, qreal oldStroke);
 
     void doAddPathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void doRemovePathLayer(WorldLevel *wlevel, int index, WorldPathLayer *layer);
@@ -147,10 +158,12 @@ signals:
     void afterAddScriptToPathSignal(WorldPath *path, int index, WorldScript *script);
     void afterRemoveScriptFromPathSignal(WorldPath *path, int index, WorldScript *script);
 
+    void afterSetPathTextureParamsSignal(WorldPath *path, const PathTexture &params);
+    void afterSetPathStrokeSignal(WorldPath *path, qreal oldStroke);
+
     void afterAddPathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void beforeRemovePathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
     void afterRemovePathLayerSignal(WorldLevel *wlevel, int index, WorldPathLayer *layer);
-
 
     void afterReorderPathLayerSignal(WorldLevel *wlevel, WorldPathLayer *layer, int oldIndex);
 

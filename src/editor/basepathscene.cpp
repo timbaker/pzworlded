@@ -56,9 +56,6 @@ BasePathScene::BasePathScene(PathDocument *doc, QObject *parent) :
     mChanger(doc->changer()/*new WorldChanger(doc->world())*/),
     mGridItem(new PathGridItem(this))
 {
-    connect(TextureEditDialog::instance(), SIGNAL(ffsItChangedYo(WorldPath*)),
-            SLOT(pathTextureChanged(WorldPath*)));
-
     mGridItem->setZValue(9999);
 }
 
@@ -126,6 +123,10 @@ void BasePathScene::setDocument(PathDocument *doc)
             SLOT(afterRemoveNodeFromPath(WorldPath*,int,WorldNode*)));
     connect(mChanger, SIGNAL(afterSetPathClosedSignal(WorldPath*,bool)),
             SLOT(afterSetPathClosed(WorldPath*,bool)));
+    connect(mChanger, SIGNAL(afterSetPathTextureParamsSignal(WorldPath*,PathTexture)),
+            SLOT(update()));
+    connect(mChanger, SIGNAL(afterSetPathStrokeSignal(WorldPath*,qreal)),
+            SLOT(update()));
 }
 
 PathWorld *BasePathScene::world() const
