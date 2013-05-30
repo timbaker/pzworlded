@@ -73,9 +73,8 @@ WorldLookup::WorldLookup(WorldPathLayer *layer) :
 //                qCritical("script has empty region - IGNORING");
                 continue;
             }
-            mScriptTree->Add(scriptIndex++, ws);
+            mScriptTree->Add(pathIndex, ws);
         }
-        scriptIndex += 10 - scriptIndex % 10; // FIXME: see scriptAdded()
     }
 
     mFirstInvalidPathIndex = pathIndex + 1;
@@ -99,7 +98,8 @@ QList<WorldScript *> WorldLookup::scripts(const QRectF &bounds)
                             objects);
     foreach (WorldQuadTreeObject<WorldScript> *o, objects) {
         Q_ASSERT(o->data);
-        ret[o->index] = o->data;
+        checkInvalidPathIndex(o->index);
+        ret[o->index * 100 + o->data->mPaths.first()->scripts().indexOf(o->data)] = o->data;
     }
     return ret.values();
 }
@@ -239,7 +239,7 @@ void WorldLookup::pathChanged(WorldPath *path)
 
 void WorldLookup::scriptAdded(WorldScript *script)
 {
-    int index = 123;
+    int index = mPathTree->mMap[script->mPaths.first()]->index;
     mScriptTree->Add(index, script);
 }
 
