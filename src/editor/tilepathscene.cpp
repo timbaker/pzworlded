@@ -92,8 +92,10 @@ TilePathScene::TilePathScene(PathDocument *doc, QObject *parent) :
 
 //    qDeleteAll(items());
 
+    int z = world()->levelCount() + 1; // on top of path layers
     foreach (WorldLevel *wlevel, world()->levels()) {
         TSLevelItem *item = new TSLevelItem(wlevel, this);
+        item->setZValue(z++);
         mLayerGroupItems += item;
         addItem(item);
     }
