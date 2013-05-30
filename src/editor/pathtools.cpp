@@ -217,8 +217,8 @@ void SelectMoveNodeTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         const int dragDistance = (mStartScreenPos - event->screenPos()).manhattanLength();
         if (dragDistance >= QApplication::startDragDistance()) {
             if (mClickedNode /*&&
-                    mScene->nodeItem()->selectedNodes().contains(mClickedNode)*/ &&
-                    !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
+                    mScene->nodeItem()->selectedNodes().contains(mClickedNode) &&
+                    !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier))*/)
                 startMoving();
             else
                 startSelecting();
@@ -445,7 +445,9 @@ void AddRemoveNodeTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     mScene->nodeItem()->trackMouse(event);
 
     int nodeIndex;
-    if (WorldPath *path = mScene->topmostPathAt(event->scenePos(), &nodeIndex)) {
+    if (mScene->nodeItem()->topmostNodeAt(event->scenePos())) {
+        mScene->setHighlightSegment(0, -1);
+    } else if (WorldPath *path = mScene->topmostPathAt(event->scenePos(), &nodeIndex)) {
         mScene->setHighlightSegment(path, nodeIndex);
     } else
         mScene->setHighlightSegment(0, -1);
@@ -539,9 +541,9 @@ void SelectMovePathTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     if (mMode == NoMode && mMousePressed) {
         const int dragDistance = (mStartScreenPos - event->screenPos()).manhattanLength();
         if (dragDistance >= QApplication::startDragDistance()) {
-            if (mClickedPath &&
+            if (mClickedPath /*&&
                     mScene->selectedPaths().contains(mClickedPath) &&
-                    !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
+                    !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier))*/)
                 startMoving();
             else
                 startSelecting();
@@ -662,7 +664,7 @@ void SelectMovePathTool::startMoving()
     if (!mMovingPaths.contains(mClickedPath)) {
         mMovingPaths.clear();
         mMovingPaths += mClickedPath;
-        mScene->nodeItem()->setSelectedNodes(movingNodes());
+        mScene->setSelectedPaths(mMovingPaths);
     }
 
     mMode = Moving;
