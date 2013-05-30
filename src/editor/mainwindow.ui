@@ -305,21 +305,8 @@
      </property>
      <addaction name="actionPlaceholder"/>
     </widget>
-    <widget class="QMenu" name="menuApply_Texture">
-     <property name="title">
-      <string>Apply Texture</string>
-     </property>
-     <addaction name="actionFirstTexture"/>
-    </widget>
-    <widget class="QMenu" name="menuTexture_Transform">
-     <property name="title">
-      <string>Texture Transform</string>
-     </property>
-    </widget>
     <addaction name="actionPathAlign"/>
     <addaction name="menuAdd_Script"/>
-    <addaction name="menuApply_Texture"/>
-    <addaction name="menuTexture_Transform"/>
     <addaction name="actionJoinPaths"/>
     <addaction name="actionPathFromNodes"/>
     <addaction name="actionRemoveNodes"/>

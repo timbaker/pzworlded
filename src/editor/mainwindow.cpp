@@ -2170,12 +2170,6 @@ void MainWindow::updateActions()
         ui->objectGroupButton->setText(tr("Obj Grp: <none> "));
         ui->objectGroupButton->setEnabled(false);
     }
-
-    ui->menuApply_Texture->clear();
-    if (mCurrentDocument && mCurrentDocument->isPathDocument()) {
-        foreach (WorldTexture *wtex, mCurrentDocument->asPathDocument()->world()->textureList())
-            ui->menuApply_Texture->addAction(wtex->mName, this, SLOT(applyTexture()));
-    }
 }
 
 void MainWindow::updateZoom()
@@ -2263,19 +2257,6 @@ void MainWindow::addScriptToPath()
             doc->changer()->doAddScriptToPath(path, path->scriptCount(), ws);
         }
         doc->changer()->endUndoMacro();
-    }
-}
-
-void MainWindow::applyTexture()
-{
-    QAction *sender = (QAction*)QObject::sender();
-
-    if (PathDocument *doc = mCurrentDocument->asPathDocument()) {
-        if (WorldTexture *wtex = doc->world()->textureMap()[QLatin1String(sender->text().toLatin1().constData())]) {
-            foreach (WorldPath *path, doc->view()->scene()->selectedPaths()) {
-                path->texture().mTexture = wtex;
-            }
-        }
     }
 }
 
