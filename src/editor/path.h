@@ -82,7 +82,6 @@ class PathTexture
 public:
     PathTexture() : mTexture(0), mScale(1, 1), mRotation(0), mAlignWorld(false) {}
     WorldTexture *mTexture;
-    QTransform mTransform;
     QSizeF mScale;
     qreal mRotation;
     QPointF mTranslation;

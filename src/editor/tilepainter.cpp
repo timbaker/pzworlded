@@ -131,8 +131,20 @@ void TilePainter::fill(const QRect &r)
 
 void TilePainter::fill(const QRegion &rgn)
 {
-    foreach (QRect r, rgn.rects())
+    // Don't call QRegion:contains() for every tile location, it's too slow!
+    QRegion region = rgn;
+    ClipType clipType = mClipType;
+    if (mClipType == ClipRegion) {
+        region &= mClipRegion;
+        mClipType = ClipNone;
+    }
+
+    foreach (QRect r, region.rects())
         fill(r);
+
+    // Re-enable clipping region
+    if (clipType == ClipRegion)
+        mClipType = ClipRegion;
 }
 
 #include <QBitmap>

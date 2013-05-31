@@ -93,8 +93,9 @@ LuaPath *LuaPath::stroke(double thickness)
         newPath->insertNode(i, new WorldNode(poly[i]));
     }
     if (newPath->nodes().size() && !mPath->isClosed()) {
-        newPath->insertNode(newPath->nodeCount(), newPath->first());
+        newPath->insertNode(newPath->nodeCount(), newPath->first()->clone());
     }
+    newPath->setClosed(true);
 
     return new LuaPath(mWorld, newPath, true); // FIXME: never freed
 }

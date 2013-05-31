@@ -40,6 +40,7 @@ PathView::PathView(PathDocument *doc, QWidget *parent) :
     zoomable()->setZoomFactors(zf);
 
     mOrthoIsoScale = mTileScale = zoomable()->scale();
+    adjustScale(mOrthoIsoScale);
 }
 
 void PathView::switchToIso()
@@ -49,6 +50,7 @@ void PathView::switchToIso()
     QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
 
     if (scene()->isTile()) mTileScale = zoomable()->scale();
+    else mOrthoIsoScale = zoomable()->scale();
 
     setScene(mIsoScene);
     zoomable()->setScale(mOrthoIsoScale);
@@ -70,6 +72,7 @@ void PathView::switchToOrtho()
     QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
 
     if (scene()->isTile()) mTileScale = zoomable()->scale();
+    else mOrthoIsoScale = zoomable()->scale();
 
     setScene(mOrthoScene);
     zoomable()->setScale(mOrthoIsoScale);
@@ -87,6 +90,8 @@ void PathView::switchToOrtho()
 
 void PathView::switchToTile()
 {
+    switchToIso(); return; //////////////////////////
+
     QPointF viewPos = viewport()->rect().center();
     QPointF scenePos = mapToScene(viewPos.toPoint());
     QPointF worldPos = scene()->renderer()->toWorld(scenePos, 0);
