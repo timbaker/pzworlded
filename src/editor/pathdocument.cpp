@@ -307,6 +307,7 @@ void PathDocument::addTexturesInDirectory(const QString &path)
     QStringList nameFilters;
     foreach (QByteArray format, QImageReader::supportedImageFormats())
         nameFilters += QLatin1String("*.") + QString::fromAscii(format);
+    dir.setSorting(QDir::Name | QDir::DirsFirst);
 
     QFileInfoList fileInfoList = dir.entryInfoList(nameFilters);
     foreach (QFileInfo fileInfo, fileInfoList) {
