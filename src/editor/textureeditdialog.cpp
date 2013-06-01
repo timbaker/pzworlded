@@ -69,6 +69,8 @@ TextureEditDialog::TextureEditDialog(QWidget *parent) :
     connect(DocumentManager::instance(), SIGNAL(currentDocumentChanged(Document*)),
             SLOT(documentChanged(Document*)));
 
+    connect(qApp, SIGNAL(focusChanged(QWidget*,QWidget*)), SLOT(focusChanged(QWidget*,QWidget*)));
+
     documentChanged(DocumentManager::instance()->currentDocument());
 }
 
@@ -105,8 +107,8 @@ void TextureEditDialog::setPath(WorldPath *path)
     if (mPath) {
         mSynching = true;
 
-        ui->xScale->setValue(mPath->texture().mScale.width());
-        ui->yScale->setValue(mPath->texture().mScale.height());
+        setValue(ui->xScale, mPath->texture().mScale.width());
+        setValue(ui->yScale, mPath->texture().mScale.height());
 
         if (mPath->texture().mTexture) {
             ui->xShift->setRange(-mPath->texture().mTexture->mSize.width(),
@@ -115,22 +117,25 @@ void TextureEditDialog::setPath(WorldPath *path)
                                  mPath->texture().mTexture->mSize.height());
         }
 
-        ui->xShift->setValue(mPath->texture().mTranslation.x());
-        ui->yShift->setValue(mPath->texture().mTranslation.y());
+        setValue(ui->xShift, mPath->texture().mTranslation.x());
+        setValue(ui->yShift, mPath->texture().mTranslation.y());
 
-        ui->rotation->setValue(mPath->texture().mRotation);
+        setValue(ui->rotation, mPath->texture().mRotation);
 
         if (WorldTexture *wtex = mPath->texture().mTexture) {
             if (!mPixmaps.contains(wtex->mFileName))
                 mPixmaps[wtex->mFileName] = QPixmap::fromImage(QImage(wtex->mFileName).scaled(128, 128, Qt::KeepAspectRatio));
             ui->textureLabel->setPixmap(mPixmaps[wtex->mFileName]);
-        } else
+            ui->textureName->setText(wtex->mName);
+        } else {
             ui->textureLabel->clear();
+            ui->textureName->clear();
+        }
 
         ui->alignWorld->setChecked(mPath->texture().mAlignWorld);
         ui->alignPath->setChecked(!mPath->texture().mAlignWorld);
 
-        ui->stroke->setValue(mPath->strokeWidth());
+        setValue(ui->stroke, mPath->strokeWidth());
 
         mSynching = false;
     } else {
@@ -140,6 +145,7 @@ void TextureEditDialog::setPath(WorldPath *path)
         ui->yShift->setValue(0);
         ui->rotation->setValue(0.0);
         ui->textureLabel->clear();
+        ui->textureName->clear();
         ui->stroke->setValue(0.0);
     }
 
@@ -267,6 +273,7 @@ void TextureEditDialog::browseTexture()
     if (!mPixmaps.contains(tex->mFileName))
         mPixmaps[tex->mFileName] = QPixmap::fromImage(QImage(tex->mFileName).scaled(128, 128, Qt::KeepAspectRatio));
     ui->textureLabel->setPixmap(mPixmaps[tex->mFileName]);
+    ui->textureName->setText(tex->mName);
 }
 
 void TextureEditDialog::alignChanged()
@@ -307,5 +314,37 @@ void TextureEditDialog::afterSetPathStroke(WorldPath *path, qreal oldStroke)
     Q_UNUSED(oldStroke)
     if (path == mPath)
         setPath(mPath);
+}
+
+void TextureEditDialog::focusChanged(QWidget *prev, QWidget *curr)
+{
+    if (mFocusDoubleSpinBox && prev == mFocusDoubleSpinBox) {
+        mFocusDoubleSpinBox->setValue(mDelayedDoubleValue);
+        mFocusDoubleSpinBox = 0;
+    }
+    if (mFocusSpinBox && prev == mFocusSpinBox) {
+        mFocusSpinBox->setValue(mDelayedIntValue);
+        mFocusSpinBox = 0;
+    }
+}
+
+void TextureEditDialog::setValue(QDoubleSpinBox *w, double value)
+{
+    if (w->hasFocus()) {
+        mDelayedDoubleValue = value;
+        mFocusDoubleSpinBox = w;
+        return;
+    }
+    w->setValue(value);
+}
+
+void TextureEditDialog::setValue(QSpinBox *w, int value)
+{
+    if (w->hasFocus()) {
+        mDelayedIntValue = value;
+        mFocusSpinBox = w;
+        return;
+    }
+    w->setValue(value);
 }
 

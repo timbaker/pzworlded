@@ -29,6 +29,9 @@ class WorldPath;
 class WorldPathLayer;
 class WorldTexture;
 
+class QDoubleSpinBox;
+class QSpinBox;
+
 namespace Ui {
 class TextureEditDialog;
 }
@@ -69,6 +72,12 @@ private slots:
     void afterSetPathTextureParameters(WorldPath *path, const PathTexture &params);
     void afterSetPathStroke(WorldPath *path, qreal oldStroke);
 
+    void focusChanged(QWidget *prev, QWidget *curr);
+
+private:
+    void setValue(QDoubleSpinBox *w, double value);
+    void setValue(QSpinBox *w, int value);
+
 private:
     Q_DISABLE_COPY(TextureEditDialog)
     static TextureEditDialog *mInstance;
@@ -80,6 +89,11 @@ private:
     WorldPath *mPath;
     bool mSynching;
     QMap<QString,QPixmap> mPixmaps;
+
+    QDoubleSpinBox *mFocusDoubleSpinBox;
+    QSpinBox *mFocusSpinBox;
+    double mDelayedDoubleValue;
+    int mDelayedIntValue;
 
     PathDocument *mDocument;
 };
