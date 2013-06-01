@@ -193,6 +193,8 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
             layerGroup->prepareDrawing(renderer, rect);
         }
     }
+    if (level() == 0 && mOwner->bmpBlender())
+        mOwner->bmpBlender()->flush(renderer, rect, mOwner->originRecursive());
 }
 
 bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
@@ -295,6 +297,8 @@ void CompositeLayerGroup::prepareDrawing2()
             layerGroup->prepareDrawing2();
         }
     }
+    if (level() == 0 && mOwner->bmpBlender())
+        mOwner->bmpBlender()->flush(bounds());
 }
 
 // This is for the benefit of LotFilesManager.  It ignores the visibility of
@@ -884,7 +888,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     }
 
     connect(mBmpBlender, SIGNAL(layersRecreated()), SLOT(bmpBlenderLayersRecreated()));
-    mBmpBlender->update(0, 0, mMap->width(), mMap->height());
+    mBmpBlender->markDirty(0, 0, mMap->width(), mMap->height());
     mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
 

@@ -34,6 +34,7 @@ class BmpAlias;
 class BmpBlend;
 class BmpRule;
 class Map;
+class MapRenderer;
 class Tile;
 class TileLayer;
 class Tileset;
@@ -113,7 +114,9 @@ public:
 
     void fromMap();
     void recreate();
-    void update(int x1, int y1, int x2, int y2);
+    void markDirty(int x1, int y1, int x2, int y2);
+    void flush(const MapRenderer *renderer, const QRect &rect, const QPoint &mapPos);
+    void flush(const QRect &rect);
 
     QList<TileLayer*> tileLayers()
     { return mTileLayers.values(); }
@@ -192,6 +195,8 @@ private:
     bool mHack;
     typedef QHash<int,BmpBlend*> BlendGrid;
     QMap<QString,BlendGrid> mBlendGrids; // blend at each x,y
+
+    QRegion mDirtyRegion;
 
     QSet<QString> mWarnings;
 
