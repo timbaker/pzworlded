@@ -57,4 +57,6 @@ typedef QMap<QString,WorldTexture*> TextureMap;
 template class __declspec(dllimport) QMap<QString, QString>;
 #endif
 
+extern QString appDir();
+
 #endif // GLOBAL_H

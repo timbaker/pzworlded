@@ -82,7 +82,7 @@ PathDocument::PathDocument(PathWorld *world, const QString &fileName) :
 #endif
 
 #if 1
-    addTexturesInDirectory(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/Textures"));
+    addTexturesInDirectory(appDir() + QLatin1String("/../Textures"));
 #else
     if (mWorld->textureList().isEmpty()) {
 

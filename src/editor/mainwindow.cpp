@@ -113,11 +113,7 @@ MainWindow *MainWindow::instance()
 #include "scriptparamdialog.h"
 static QString script(const char *name)
 {
-#if 1
-    return QString::fromLatin1(WORLDED_SRC_DIR "/lua/%1").arg(QLatin1String(name));
-#else
-    return qApp->applicationDirPath() + QString::fromLatin1("/lua/%1").arg(name);
-#endif
+    return appDir() + QString::fromLatin1("/lua/%1").arg(QLatin1String(name));
 }
 
 static void testPathDocument(const QSize &size, const QString &osmFile)

@@ -31,6 +31,18 @@ using namespace Tiled;
 using namespace Tiled::Internal;
 #endif
 
+#include "global.h"
+QString appDir()
+{
+    QString d = QApplication::applicationDirPath();
+
+    // Out-of-source builds need to find files in the source directory.
+    if (QFileInfo(d).fileName().startsWith(QLatin1String("build")))
+        return QLatin1String(WORLDED_SRC_DIR);
+
+    return d;
+}
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
