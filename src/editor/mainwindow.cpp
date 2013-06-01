@@ -785,6 +785,7 @@ void MainWindow::documentAdded(Document *doc)
             view->centerOn(scene->cellToPixelCoords(0, 0));
     }
     if (PathDocument *pathDoc = doc->asPathDocument()) {
+        Preferences::instance()->setUseOpenGL(true); ///////////////////////////
         PathView *view = new PathView(pathDoc, this);
         view->switchToOrtho();
         doc->setView(view);
