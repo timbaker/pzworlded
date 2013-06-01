@@ -207,6 +207,14 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
             noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
             Q_ASSERT(mWaitingForMapInfo == 0);
             mWaitingForMapInfo = mapInfo;
+            for (int i = 0; i < mDeferredMaps.size(); i++) {
+                MapDeferral md = mDeferredMaps[i];
+                if (md.mapInfo == mapInfo) {
+                    mDeferredMaps.removeAt(i);
+                    mapLoadedByThread(md.map, md.mapInfo);
+                    break;
+                }
+            }
             while (mapInfo->mLoading) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
@@ -237,6 +245,15 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
         QMetaObject::invokeMethod(w, "possiblyRaisePriority",
                                   Qt::QueuedConnection, Q_ARG(MapInfo*,mapInfo),
                                   Q_ARG(int,priority));
+    noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
+    for (int i = 0; i < mDeferredMaps.size(); i++) {
+        MapDeferral md = mDeferredMaps[i];
+        if (md.mapInfo == mapInfo) {
+            mDeferredMaps.removeAt(i);
+            mapLoadedByThread(md.map, md.mapInfo);
+            break;
+        }
+    }
     while (mapInfo->mLoading) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
