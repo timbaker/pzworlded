@@ -267,8 +267,8 @@ public:
     }
 
     void add(GLuint textureid,
-             QVector2D &uv1, QVector2D &uv2, QVector2D &uv3, QVector2D &uv4,
-             QVector3D &v1, QVector3D &v2, QVector3D &v3, QVector3D &v4)
+             const QVector2D &uv1, const QVector2D &uv2, const QVector2D &uv3, const QVector2D &uv4,
+             const QVector3D &v1, const QVector3D &v2, const QVector3D &v3, const QVector3D &v4)
     {
         indices << indices.size() << indices.size() + 1 << indices.size() + 2 << indices.size() + 3;
         textureids += textureid;
@@ -376,7 +376,7 @@ void GLWidget::drawLayerGroup(CompositeLayerGroup *layerGroup, const QRectF &exp
                             int texW = tileset->imageWidth(), texH = tileset->imageHeight();
                             tileY = texH - tileY; // invert Y-axis for OpenGL
 
-                            GLfloat gx = x; // left of tile image pos
+//                            GLfloat gx = x; // left of tile image pos
                             GLfloat gy = sceneRect.bottom() - y; // bottom of tile image pos
 
 #if 1

@@ -72,10 +72,10 @@ void MapManager::deleteInstance()
 
 MapManager::MapManager() :
     mFileSystemWatcher(new FileSystemWatcher(this)),
-    mNextThreadForJob(0),
     mDeferralDepth(0),
     mDeferralQueued(false),
-    mWaitingForMapInfo(0)
+    mWaitingForMapInfo(0),
+    mNextThreadForJob(0)
 #ifdef WORLDED
     , mReferenceEpoch(0)
 #endif

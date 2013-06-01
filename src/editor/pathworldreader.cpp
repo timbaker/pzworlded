@@ -227,13 +227,13 @@ private:
 
                 double w, h;
                 if (!readDoublePair(atts, QLatin1String("scale"), w, h))
-                    return false;
+                    return 0;
                 path->texture().mScale.setWidth(w);
                 path->texture().mScale.setHeight(h);
                 double x, y;
 
                 if (!readDoublePair(atts, QLatin1String("scale"), x, y))
-                    return false;
+                    return 0;
                 path->texture().mTranslation.setX(x);
                 path->texture().mTranslation.setY(y);
 

@@ -313,7 +313,9 @@ int IsoChunkMap::getWorldYMinTiles()
 
 IsoRoom *LotHeader::getRoom(int roomID)
 {
+#if 0
     RoomDef *r = Rooms[roomID];
+#endif
     return 0;
 }
 
@@ -573,7 +575,7 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, bool bClearExisting)
 
 void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX, int WY, bool bForLater)
 {
-    int NewMaxHeight = IsoChunkMap::MaxLevels - 1;
+//    int NewMaxHeight = IsoChunkMap::MaxLevels - 1;
     WX *= IsoChunkMap::ChunksPerWidth;
     WY *= IsoChunkMap::ChunksPerWidth;
 
@@ -581,9 +583,9 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
     {
         for (int x = WX + sx; x < WX + sx + IsoChunkMap::ChunksPerWidth; ++x) {
             for (int y = WY + sy; y < WY + sy + IsoChunkMap::ChunksPerWidth; ++y) {
-                bool bDoIt = true;
+//                bool bDoIt = true;
                 for (int z = sz; z < sz + lot->info->levels; ++z) {
-                    bDoIt = false;
+//                    bDoIt = false;
 
                     if ((x >= WX + IsoChunkMap::ChunksPerWidth) || (y >= WY + IsoChunkMap::ChunksPerWidth) || (x < WX) || (y < WY)) continue;
                     if (z < 0)

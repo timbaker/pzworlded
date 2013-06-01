@@ -158,7 +158,7 @@ Qt::ItemFlags PathLayersModel::flags(const QModelIndex &index) const
 {
     Qt::ItemFlags rc = QAbstractItemModel::flags(index);
     rc |= Qt::ItemIsUserCheckable;
-    if (WorldPathLayer *layer = toPathLayer(index))
+    if (/*WorldPathLayer *layer = */toPathLayer(index))
         rc |= Qt::ItemIsEditable;
     return rc;
 }
@@ -191,7 +191,7 @@ WorldLevel *PathLayersModel::toLevel(const QModelIndex &index) const
 {
     if (index.isValid())
         return toItem(index)->wlevel;
-    return false;
+    return 0;
 }
 
 PathLayersModel::Item *PathLayersModel::toItem(const QModelIndex &index) const

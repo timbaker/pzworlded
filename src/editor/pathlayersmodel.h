@@ -70,8 +70,8 @@ private:
     public:
         Item()
             : parent(0)
-            , layer(0)
             , wlevel(0)
+            , layer(0)
         {
         }
 
@@ -98,8 +98,8 @@ private:
 
         Item *parent;
         QList<Item*> children;
-        WorldPathLayer *layer;
         WorldLevel *wlevel;
+        WorldPathLayer *layer;
     };
 
     Item *toItem(const QModelIndex &index) const;

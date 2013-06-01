@@ -32,8 +32,8 @@ using namespace WorldGen;
 /////
 LSystem::LSystem() :
     m_fAngle(90),
-    m_fInitAngle(0),
     m_fStepSize(0.65f),
+    m_fInitAngle(0),
     m_fSegment(6),
     m_iMaxDepth(4),
     m_pszName(QString()),
@@ -368,8 +368,8 @@ public:
 
 WorldGenScene::WorldGenScene(WorldGenView *view) :
     QGraphicsScene(view),
-    mView(view),
-    mPartition(0,0,1000,1000,0,4)
+    mPartition(0,0,1000,1000,0,4),
+    mView(view)
 {
 //    setBackgroundBrush(Qt::black);
 
