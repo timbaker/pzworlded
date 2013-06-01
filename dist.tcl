@@ -5,6 +5,10 @@ set SRC C:/Programming/PZWorldEd/PZWorldEd
 set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
 set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
+set TEXTURE 1
+if $TEXTURE {
+set DEST {C:\Users\Tim\Desktop\ProjectZomboid\TextureEd\WorldEd}
+}
 
 proc copyFile {SOURCE DEST name {name2 ""}} {
     if {$name2 == ""} { set name2 $name }
@@ -40,6 +44,23 @@ proc copyFile {SOURCE DEST name {name2 ""}} {
     return
 }
 
+proc copyDir {SOURCE DEST name {name2 ""}} {
+    if {$name2 == ""} { set name2 $name }
+    set src [file join $SOURCE $name]
+    set dst [file join $DEST $name2]
+    if {![file exists $src]} {
+        error "no such directory \"$src\""
+    }
+    foreach f [glob -nocomplain -tails -dir $src *] {
+        if {$f == "." || $f == ".."} continue
+        if {[file isdirectory $src/$f]} {
+            copyDir $src $dst $f
+        } else {
+            copyFile $src $dst $f
+        }
+    }
+}
+
 #copyFile {C:\Programming\Tiled} $DEST vcredist_x86.exe
 
 copyFile $BIN $DEST PZWorldEd.exe
@@ -64,6 +85,14 @@ copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qcncodecs4.dll
 copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qjpcodecs4.dll
 copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qkrcodecs4.dll
 copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qtwcodecs4.dll
+
+if $TEXTURE {
+copyDir $SRC $DEST lua
+copyFile $SRC/.. $DEST/.. PathWorld.pzp
+copyFile $SRC/.. $DEST/.. PathWorld2.pzp
+copyFile $SRC/../../OpenStreetMap $DEST/.. Vancouver2.osm
+copyDir $SRC/.. $DEST/.. Textures
+}
 
 proc removeFD {dir name} {
     foreach f [glob -nocomplain -types {d f} -dir $dir $name] {
