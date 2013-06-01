@@ -31,6 +31,30 @@ using namespace Tiled;
 using namespace Tiled::Internal;
 #endif
 
+#if !defined(QT_NO_DEBUG) && defined(__MINGW32__)
+static void MINGW_CrtDebugReport(QtMsgType type, const char *msg)
+{
+    switch (type) {
+    case QtDebugMsg:
+        fprintf(stderr, "Debug: %s\n", msg);
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "Warning: %s\n", msg);
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "Critical: %s\n", msg);
+        break;
+    case QtFatalMsg: {
+        fprintf(stderr, "Fatal: %s\n", msg);
+        QString s = QString::fromLatin1(msg);
+        int rc = MessageBoxW(0, reinterpret_cast<const wchar_t*>(s.utf16()), L"Oh, snap!", MB_ABORTRETRYIGNORE);
+        if (rc == IDABORT) abort();
+        if (rc == IDRETRY) __asm("int3");
+    }
+    }
+}
+#endif
+
 #include "global.h"
 QString appDir()
 {
@@ -45,6 +69,10 @@ QString appDir()
 
 int main(int argc, char *argv[])
 {
+#if !defined(QT_NO_DEBUG) && defined(__MINGW32__)
+    qInstallMsgHandler(MINGW_CrtDebugReport);
+#endif
+
     QApplication a(argc, argv);
 
     a.setOrganizationDomain(QLatin1String("mapeditor.org"));
