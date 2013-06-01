@@ -83,11 +83,47 @@ void BmpBlender::recreate()
     qDeleteAll(mTileLayers);
     mTileLayers.clear();
 
-    update(0, 0, mMap->width(), mMap->height());
+    markDirty(0, 0, mMap->width(), mMap->height());
 }
 
-void BmpBlender::update(int x1, int y1, int x2, int y2)
+void BmpBlender::markDirty(int x1, int y1, int x2, int y2)
 {
+    mDirtyRegion += QRect(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+}
+
+#include "maprenderer.h"
+void BmpBlender::flush(const MapRenderer *renderer, const QRect &rect, const QPoint &mapPos)
+{
+    if (mDirtyRegion.isEmpty())
+        return;
+
+    QPolygonF polygon;
+    int level = 0;
+    polygon << QPointF(renderer->pixelToTileCoords(rect.topLeft(), level) - mapPos);
+    polygon << QPointF(renderer->pixelToTileCoords(rect.topRight(), level) - mapPos);
+    polygon << QPointF(renderer->pixelToTileCoords(rect.bottomRight(), level) - mapPos);
+    polygon << QPointF(renderer->pixelToTileCoords(rect.bottomLeft(), level) - mapPos);
+
+    QRegion dirty = mDirtyRegion & polygon.boundingRect().toAlignedRect();
+    if (dirty.isEmpty())
+        return;
+    mDirtyRegion -= dirty;
+
+    foreach (QRect r, dirty.rects()) {
+        int x1 = r.left(), x2 = r.right(), y1 = r.top(), y2 = r.bottom();
+        x1 -= 2, x2 += 2, y1 -= 2, y2 += 2;
+
+        imagesToTileNames(x1, y1, x2, y2);
+        blend(x1, y1, x2, y2);
+        tileNamesToLayers(x1, y1, x2, y2);
+    }
+}
+
+void BmpBlender::flush(const QRect &rect)
+{
+    mDirtyRegion -= QRegion(rect);
+
+    int x1 = rect.left(), x2 = rect.right(), y1 = rect.top(), y2 = rect.bottom();
     x1 -= 2, x2 += 2, y1 -= 2, y2 += 2;
 
     imagesToTileNames(x1, y1, x2, y2);
@@ -257,6 +293,8 @@ void BmpBlender::fromMap()
     mTileNames = normalizeTileNames(tileNames.values());
 
     initTiles();
+
+    mDirtyRegion = QRegion(QRect(QPoint(), mMap->size()));
 }
 
 QList<Tile*> BmpBlender::tileNamesToTiles(const QStringList &names)

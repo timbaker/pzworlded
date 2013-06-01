@@ -222,6 +222,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+        lg->synch();
         lg->prepareDrawing2();
         int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
         d *= lg->level();
