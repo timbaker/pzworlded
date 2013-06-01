@@ -95,7 +95,7 @@ struct ObjectList
 };
 
 
-// http://gamedev.stackexchange.com/questions/20607/quad-tree-with-a-lot-of-moving-objects
+// https://bitbucket.org/C3/quadtree/wiki/Home
 template<class T>
 class WorldQuadSubTree {
 public:
@@ -132,6 +132,8 @@ public:
     void Clear();
 
     int ObjectCount();
+
+    bool isEmptyLeaf();
 
 private:
     QuadRect bounds;

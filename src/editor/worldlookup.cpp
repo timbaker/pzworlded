@@ -443,10 +443,10 @@ template<class T>
 void WorldQuadSubTree<T>::CleanUpwards()
 {
     if (NW) {
-        if (NW->objects.isEmpty() &&
-                NE->objects.isEmpty() &&
-                SW->objects.isEmpty() &&
-                SE->objects.isEmpty()) {
+        if (NW->isEmptyLeaf() &&
+                NE->isEmptyLeaf() &&
+                SW->isEmptyLeaf() &&
+                SE->isEmptyLeaf()) {
             delete NW;
             delete NE;
             delete SW;
@@ -608,6 +608,12 @@ int WorldQuadSubTree<T>::ObjectCount()
         count += NW->ObjectCount() + NE->ObjectCount() + SW->ObjectCount() + SE->ObjectCount();
     }
     return count;
+}
+
+template<class T>
+bool WorldQuadSubTree<T>::isEmptyLeaf()
+{
+    return objects.isEmpty() && !NW;
 }
 
 template<class T>
