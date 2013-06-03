@@ -1019,11 +1019,11 @@ CellScene::CellScene(QObject *parent)
     , mDnDItem(0)
     , mDarkRectangle(new QGraphicsRectItem)
     , mGridItem(new CellGridItem(this))
+    , mMapBordersItem(new QGraphicsPolygonItem)
+    , mHandleDelayedMapLoadingScheduled(false)
     , mPendingFlags(None)
     , mPendingActive(false)
     , mActiveTool(0)
-    , mMapBordersItem(new QGraphicsPolygonItem)
-    , mHandleDelayedMapLoadingScheduled(false)
 {
     setBackgroundBrush(Qt::darkGray);
 

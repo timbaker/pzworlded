@@ -1128,7 +1128,6 @@ bool BmpRulesFile::readOldFormat(const QString &fileName)
         QString layer = lineSplit[5].trimmed();
 
         QRgb con = qRgb(0, 0, 0);
-        bool hasCon = false;
         if (lineSplit.length() > 6) {
             con = rgbFromStringList(lineSplit.mid(6, 3), ok);
             if (!ok) {
@@ -1139,7 +1138,6 @@ bool BmpRulesFile::readOldFormat(const QString &fileName)
                         .arg(lineSplit[8].trimmed());
                 return false;
             }
-            hasCon = true;
         }
 
         AddRule(QString(), bmpIndex, col, choices, layer, con);

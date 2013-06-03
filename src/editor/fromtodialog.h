@@ -46,9 +46,9 @@ private slots:
     void accept();
 
 private:
-    Ui::FromToDialog *ui;
     WorldDocument *mDocument;
     QString mFileName;
+    Ui::FromToDialog *ui;
 };
 
 #endif // ALIASFIXUPDIALOG_H

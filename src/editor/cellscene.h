@@ -485,7 +485,6 @@ private:
     QList<AdjacentMap> mAdjacentMapsLoading;
     void initAdjacentMaps();
 
-    bool mHandleDelayedMapLoadingScheduled;
 
     Tiled::Map *mMap;
     MapInfo *mMapInfo;
@@ -506,6 +505,7 @@ private:
     bool mHighlightCurrentLevel;
     bool mWasHighlightCurrentLevel;
     QGraphicsPolygonItem *mMapBordersItem;
+    bool mHandleDelayedMapLoadingScheduled;
 
     void doLater(PendingFlags flags);
     PendingFlags mPendingFlags;
