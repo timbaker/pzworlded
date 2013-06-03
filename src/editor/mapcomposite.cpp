@@ -1277,6 +1277,10 @@ bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
 {
     bool affected = false;
     if (mapInfo == mMapInfo) {
+        foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
+            while (layerGroup->layerCount())
+                layerGroup->removeTileLayer(layerGroup->layers().first());
+        }
         affected = true;
     }
     foreach (MapComposite *subMap, mSubMaps) {
@@ -1286,10 +1290,9 @@ bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
     }
 
     if (affected) {
-        // See CompositeLayerGroupItem::paint() for why this stops drawing.
-        // FIXME: Not safe enough!
-        foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
+        foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
             layerGroup->setNeedsSynch(true);
+        }
     }
 
     return affected;
