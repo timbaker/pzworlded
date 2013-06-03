@@ -101,9 +101,10 @@ public:
     virtual void languageChanged() = 0;
 
     virtual void setScene(BaseGraphicsScene *scene) = 0;
+    virtual BaseGraphicsScene *scene() const = 0;
 
-    virtual void beginClearScene() { Q_ASSERT(mScene); deactivate(); }
-    virtual void endClearScene() { Q_ASSERT(mScene); activate(); }
+    virtual void beginClearScene() { Q_ASSERT(scene()); deactivate(); }
+    virtual void endClearScene() { Q_ASSERT(scene()); activate(); }
 
 signals:
     void statusInfoChanged(const QString &statusInfo);
@@ -119,7 +120,6 @@ private:
     QString mStatusInfo;
     bool mEnabled;
     ToolType mType;
-    BaseGraphicsScene *mScene;
 };
 
 // Needed for QVariant handling
@@ -139,6 +139,7 @@ public:
     ~BaseCellSceneTool();
 
     void setScene(BaseGraphicsScene *scene);
+    BaseGraphicsScene *scene() const;
 
     virtual void keyPressEvent(QKeyEvent *event) { Q_UNUSED(event) }
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) { Q_UNUSED(event) }
@@ -514,6 +515,7 @@ public:
     ~BaseWorldSceneTool();
 
     void setScene(BaseGraphicsScene *scene);
+    BaseGraphicsScene *scene() const;
 
     virtual void activate();
     virtual void deactivate();

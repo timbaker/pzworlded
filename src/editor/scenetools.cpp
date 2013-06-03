@@ -58,7 +58,6 @@ AbstractTool::AbstractTool(const QString &name, const QIcon &icon, const QKeySeq
     , mShortcut(shortcut)
     , mEnabled(false)
     , mType(type)
-    , mScene(0)
 {
 }
 
@@ -103,6 +102,11 @@ BaseCellSceneTool::~BaseCellSceneTool()
 void BaseCellSceneTool::setScene(BaseGraphicsScene *scene)
 {
     mScene = scene ? scene->asCellScene() : 0;
+}
+
+BaseGraphicsScene *BaseCellSceneTool::scene() const
+{
+    return mScene;
 }
 
 void BaseCellSceneTool::updateEnabledState()
@@ -1476,6 +1480,11 @@ BaseWorldSceneTool::~BaseWorldSceneTool()
 void BaseWorldSceneTool::setScene(BaseGraphicsScene *scene)
 {
     mScene = scene ? scene->asWorldScene() : 0;
+}
+
+BaseGraphicsScene *BaseWorldSceneTool::scene() const
+{
+    return mScene;
 }
 
 void BaseWorldSceneTool::activate()
