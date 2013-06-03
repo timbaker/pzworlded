@@ -277,7 +277,8 @@ void BmpBlender::fromMap()
                 tileNames += tileName;
             }
         }
-        foreach (QString tileName, blend->exclude2) {
+        for (int i = 0; i < blend->exclude2.size(); i += 2) {
+            QString tileName = blend->exclude2[i];
             if (BuildingEditor::BuildingTilesMgr::legalTileName(tileName)) {
                 tileNames += tileName;
             }
