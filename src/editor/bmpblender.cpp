@@ -76,14 +76,19 @@ void BmpBlender::setMap(Map *map)
 
 void BmpBlender::recreate()
 {
-    qDeleteAll(mTileNameGrids);
-    mTileNameGrids.clear();
-    delete mFakeTileGrid;
+    if (mFakeTileGrid) {
+        qDeleteAll(mTileNameGrids);
+        mTileNameGrids.clear();
+        delete mFakeTileGrid;
+        mFakeTileGrid = 0;
 
-    qDeleteAll(mTileLayers);
-    mTileLayers.clear();
+        qDeleteAll(mTileLayers);
+        mTileLayers.clear();
 
-    markDirty(0, 0, mMap->width(), mMap->height());
+        markDirty(0, 0, mMap->width(), mMap->height());
+
+        emit layersRecreated();
+    }
 }
 
 void BmpBlender::markDirty(int x1, int y1, int x2, int y2)
