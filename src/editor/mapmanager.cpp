@@ -850,11 +850,10 @@ void MapReaderWorker::possiblyRaisePriority(MapInfo *mapInfo, int priority)
 
     for (int i = 0; i < mJobs.size(); i++) {
         if (mJobs[i].mapInfo == mapInfo && mJobs[i].priority < priority) {
-            Job job = mJobs.takeAt(i);
-            while (i > 0 && mJobs[i].priority < priority)
-                i--;
-            job.priority = priority;
-            mJobs.insert(i, job);
+            int j;
+            for (j = i - 1; j >= 0 && mJobs[j].priority < priority; j--) {}
+            mJobs[i].priority = priority;
+            mJobs.move(i, j + 1);
             debugJobs("raise priority");
             break;
         }
