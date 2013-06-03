@@ -547,6 +547,12 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
         }
     }
 
+    if (!layer) {
+        // The building has user-drawn tiles in a layer that is not in TMXConfig.txt.
+//        Q_ASSERT(false);
+        return;
+    }
+
     QMap<QString,Tileset*> tilesetByName;
     foreach (Tileset *ts, mMap->tilesets())
         tilesetByName[ts->name()] = ts;
