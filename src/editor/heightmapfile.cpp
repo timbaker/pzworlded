@@ -33,7 +33,7 @@ void HeightMapChunk::setHeightAt(int x, int y, int height)
 {
     if (contains(x, y)) {
         x -= mX, y -= mY;
-        d[x + y * mWidth] = height;
+        d[x + y * mWidth] = qBound(0, height, 255);
         mModified = true;
     }
 }

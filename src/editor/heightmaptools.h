@@ -61,11 +61,15 @@ public:
     virtual void languageChanged() {}
 
 private:
+    void paint(QGraphicsSceneMouseEvent *event);
+
+private:
     Q_DISABLE_COPY(HeightMapTool)
     static HeightMapTool *mInstance;
     HeightMapTool();
 
     QGraphicsEllipseItem *mCursorItem;
+    QPoint mLastWorldPos;
 };
 
 #endif // HEIGHTMAPTOOLS_H

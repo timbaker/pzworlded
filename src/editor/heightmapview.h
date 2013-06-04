@@ -22,6 +22,7 @@
 #include "basegraphicsview.h"
 
 #include <QGraphicsItem>
+#include <QGLShaderProgram>
 
 class BaseHeightMapTool;
 class HeightMap;
@@ -38,7 +39,15 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 
 private:
+    void draw_triangle(const QVector3D &v0, const QVector3D &v1, const QVector3D &v2);
+
+private:
     HeightMapScene *mScene;
+    bool mShaderInit;
+    bool mShaderOK;
+    GLint p1_attrib;
+    GLint p2_attrib;
+    QGLShaderProgram mShaderProgram;
 };
 
 /////
@@ -51,7 +60,7 @@ public:
 
     void setTool(AbstractTool *tool);
 
-    QPointF toScene(const QPointF &p) const;
+    QPointF toScene(const QPointF &worldPos) const;
     QPointF toScene(qreal x, qreal y) const;
     QPolygonF toScene(const QRect &rect) const;
     QRect boundingRect(const QRect &rect) const;
@@ -71,6 +80,9 @@ public:
     { return mHeightMap; }
 
     void setCenter(int x, int y);
+
+    QPoint worldOrigin() const;
+    QRect worldBounds() const;
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
@@ -93,11 +105,17 @@ public:
     
     void scrollContentsBy(int dx, int dy);
 
+    void mouseMoveEvent(QMouseEvent *event);
+
+    QRectF sceneRectForMiniMap() const;
+
+    HeightMapScene *scene() const
+    { return (HeightMapScene*) BaseGraphicsView::scene(); }
+
 private slots:
     void recenter();
 
 private:
-    HeightMapScene *mScene;
     bool mRecenterScheduled;
 };
 

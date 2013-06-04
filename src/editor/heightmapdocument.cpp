@@ -23,9 +23,10 @@
 
 #include <QUndoStack>
 
-HeightMapDocument::HeightMapDocument(WorldDocument *worldDoc) :
+HeightMapDocument::HeightMapDocument(WorldDocument *worldDoc, WorldCell *cell) :
     Document(HeightMapDocType),
     mWorldDoc(worldDoc),
+    mCell(cell),
     mFile(new HeightMapFile)
 {
     mUndoStack = new QUndoStack(this);

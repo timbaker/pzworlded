@@ -21,11 +21,12 @@
 #include "document.h"
 
 class HeightMapFile;
+class WorldCell;
 
 class HeightMapDocument : public Document
 {
 public:
-    HeightMapDocument(WorldDocument *worldDoc);
+    HeightMapDocument(WorldDocument *worldDoc, WorldCell *cell);
     ~HeightMapDocument();
 
     void setFileName(const QString &fileName);
@@ -35,11 +36,15 @@ public:
     WorldDocument *worldDocument() const
     { return mWorldDoc; }
 
+    WorldCell *cell() const
+    { return mCell; }
+
     HeightMapFile *hmFile() const
     { return mFile; }
 
 private:
     WorldDocument *mWorldDoc;
+    WorldCell *mCell;
     HeightMapFile *mFile;
 };
 

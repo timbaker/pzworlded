@@ -59,10 +59,10 @@ public:
     int getWorldXMinTiles();
     int getWorldYMinTiles();
 
-    static const int ChunkDiv = 10;
+//    static const int ChunkDiv = 10;
     static const int TilesPerChunk = 50; // Must match HeightMapFile::chunkDim()
-    static const int ChunkGridWidth = 300 / TilesPerChunk; // Columns/Rows of chunks displayed.
-    static const int CellSize = TilesPerChunk * ChunkGridWidth; // Columns/Rows of tiles displayed.
+    static const int CellSize = 300 * 3; // Columns/Rows of tiles displayed.
+    static const int ChunkGridWidth = CellSize / TilesPerChunk; // Columns/Rows of chunks displayed.
 
     HeightMapFile *mFile;
 
@@ -83,8 +83,8 @@ public:
 
 HeightMapGrid::HeightMapGrid(HeightMapFile *hmFile) :
     mFile(hmFile),
-    WorldX(0),
-    WorldY(0),
+    WorldX(-1),
+    WorldY(-1),
     XMinTiles(-1),
     XMaxTiles(-1),
     YMinTiles(-1),
@@ -226,15 +226,16 @@ int HeightMapGrid::getWorldYMinTiles()
 
 void HeightMapGrid::setCenter(int x, int y)
 {
-    qDebug() << "HeightMapGrid::setCenter" << x << y;
     int wx = x / TilesPerChunk;
     int wy = y / TilesPerChunk;
     wx = qBound(ChunkGridWidth / 2, wx, (mFile->width()) / TilesPerChunk - ChunkGridWidth / 2);
     wy = qBound(ChunkGridWidth / 2, wy, (mFile->height()) / TilesPerChunk - ChunkGridWidth / 2);
 
     if (wx != WorldX || wy != WorldY) {
+        qDebug() << "HeightMapGrid::setCenter" << wx << wy;
         QRegion current = QRect(getWorldXMin(), getWorldYMin(),
                                 ChunkGridWidth, ChunkGridWidth);
+        if (WorldX == -1) current = QRegion(); // initial state
         QRegion updated = QRect(wx - ChunkGridWidth / 2, wy - ChunkGridWidth / 2,
                                 ChunkGridWidth, ChunkGridWidth);
 

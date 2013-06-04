@@ -314,7 +314,7 @@ void WorldDocument::editCell(int x, int y)
     docman->addDocument(cellDoc);
 }
 
-void WorldDocument::editHeightMap()
+void WorldDocument::editHeightMap(WorldCell *cell)
 {
     DocumentManager *docman = DocumentManager::instance();
     if (HeightMapDocument *hmDoc = docman->findHMDocument(this)) {
@@ -345,7 +345,7 @@ void WorldDocument::editHeightMap()
         }
     }
 
-    HeightMapDocument *hmDoc = new HeightMapDocument(this);
+    HeightMapDocument *hmDoc = new HeightMapDocument(this, cell);
     docman->addDocument(hmDoc);
 }
 

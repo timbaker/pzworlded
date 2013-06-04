@@ -73,12 +73,38 @@ void HeightMapTool::deactivate()
 
 void HeightMapTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    QPoint worldPos = mScene->toWorldInt(event->scenePos());
-    if (mScene->hm()->bounds().contains(worldPos))
-        mScene->hm()->setHeightAt(worldPos, mScene->hm()->heightAt(worldPos) + 10);
+    if (event->buttons() & Qt::LeftButton) {
+        paint(event);
+    }
 }
 
 void HeightMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    QPoint worldPos = mScene->toWorldInt(event->scenePos());
+    if (worldPos == mLastWorldPos)
+        return;
+    mLastWorldPos = worldPos;
+
+    QRect r(worldPos - QPoint(1,1), QSize(3, 3));
+    mCursorItem->setRect(mScene->toScene(r).boundingRect());
+
+    if (event->buttons() & Qt::LeftButton) {
+        paint(event);
+    }
+}
+
+void HeightMapTool::paint(QGraphicsSceneMouseEvent *event)
+{
+    QPoint worldPos = mScene->toWorldInt(event->scenePos());
+    int d = (event->modifiers() & Qt::ControlModifier) ? -10 : +10;
+    for (int x = -1; x <= +1; ++x) {
+        for (int y = -1; y <= +1; y++) {
+            QPoint p = worldPos + QPoint(x, y);
+            if (mScene->hm()->bounds().contains(p))
+                mScene->hm()->setHeightAt(p, mScene->hm()->heightAt(p) + d);
+
+        }
+    }
+    mScene->update(mCursorItem->rect());
 }
 

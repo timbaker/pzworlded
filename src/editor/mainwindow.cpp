@@ -91,8 +91,6 @@ MainWindow *MainWindow::instance()
     return mInstance;
 }
 
-#include "heightmapwindow.h"
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -448,7 +446,8 @@ void MainWindow::documentAdded(Document *doc)
         doc->setView(view);
 
         int pos = docman()->documents().indexOf(doc);
-        ui->documentTabWidget->insertTab(pos, view, tr("HeightMap"));
+        ui->documentTabWidget->insertTab(pos, view,
+            tr("HeightMap %1,%2").arg(hmDoc->cell()->x()).arg(hmDoc->cell()->y()));
         ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
     }
 }
@@ -509,6 +508,11 @@ void MainWindow::currentDocumentChanged(Document *doc)
                     SLOT(updateActions()));
             connect(worldDoc, SIGNAL(selectedBMPsChanged()),
                     SLOT(updateActions()));
+        }
+
+        if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
+            connect(hmDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
+                    SLOT(setStatusBarCoords(int,int)));
         }
 
         mLotsDock->setDocument(doc);
@@ -905,8 +909,12 @@ void MainWindow::FromToSelected()
 
 void MainWindow::heightMapEditor()
 {
-    if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument())
-        worldDoc->editHeightMap();
+    if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument()) {
+        foreach (WorldCell *cell, worldDoc->selectedCells()) {
+            worldDoc->editHeightMap(cell);
+            break;
+        }
+    }
 }
 
 #include "mapwriter.h"

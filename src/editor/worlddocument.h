@@ -236,7 +236,7 @@ public:
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
 
-    void editHeightMap();
+    void editHeightMap(WorldCell *cell);
 
     void resizeWorld(const QSize &newSize);
 
