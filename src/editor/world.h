@@ -225,6 +225,11 @@ public:
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
+    void setHeightMapFileName(const QString &fileName)
+    { mHeightMapFileName = fileName; }
+    const QString &hmFileName() const
+    { return mHeightMapFileName; }
+
 private:
     int mWidth;
     int mHeight;
@@ -239,6 +244,7 @@ private:
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
+    QString mHeightMapFileName;
 };
 
 #endif // WORLD_H

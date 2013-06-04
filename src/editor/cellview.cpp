@@ -26,7 +26,7 @@
 #include <QMouseEvent>
 
 CellView::CellView(QWidget *parent) :
-    BaseGraphicsView(true, parent)
+    BaseGraphicsView(PreferenceGL, parent)
 {
     zoomable()->setScale(0.25);
 }

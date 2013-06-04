@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -15,38 +15,41 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "document.h"
-
-#include "celldocument.h"
 #include "heightmapdocument.h"
+
+#include "heightmapfile.h"
+#include "world.h"
 #include "worlddocument.h"
 
 #include <QUndoStack>
 
-Document::Document(DocumentType type)
-    : QObject()
-    , mUndoStack(0)
-    , mType(type)
-    , mView(0)
+HeightMapDocument::HeightMapDocument(WorldDocument *worldDoc) :
+    Document(HeightMapDocType),
+    mWorldDoc(worldDoc),
+    mFile(new HeightMapFile)
 {
+    mUndoStack = new QUndoStack(this);
+
+    mFile->open(fileName());
 }
 
-CellDocument *Document::asCellDocument()
+HeightMapDocument::~HeightMapDocument()
 {
-    return isCellDocument() ? static_cast<CellDocument*>(this) : NULL;
+    delete mFile;
 }
 
-WorldDocument *Document::asWorldDocument()
+void HeightMapDocument::setFileName(const QString &fileName)
 {
-    return isWorldDocument() ? static_cast<WorldDocument*>(this) : NULL;
+    worldDocument()->world()->setHeightMapFileName(fileName);
 }
 
-HeightMapDocument *Document::asHeightMapDocument()
+const QString &HeightMapDocument::fileName() const
 {
-    return isHeightMapDocument() ? static_cast<HeightMapDocument*>(this) : NULL;
+    return worldDocument()->world()->hmFileName();
 }
 
-bool Document::isModified() const
+bool HeightMapDocument::save(const QString &filePath, QString &error)
 {
-    return mUndoStack->isClean() == false;
+    return false;
 }
+

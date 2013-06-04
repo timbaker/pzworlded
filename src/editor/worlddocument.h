@@ -28,6 +28,7 @@
 
 class BMPToTMXSettings;
 class GenerateLotsSettings;
+class HeightMap;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -234,6 +235,8 @@ public:
 
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
+
+    void editHeightMap();
 
     void resizeWorld(const QSize &newSize);
 

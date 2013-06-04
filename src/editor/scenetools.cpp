@@ -22,6 +22,7 @@
 #include "celldocument.h"
 #include "cellscene.h"
 #include "clipboard.h"
+#include "heightmaptools.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "preferences.h"
@@ -51,7 +52,9 @@ using namespace Tiled;
 
 /////
 
-AbstractTool::AbstractTool(const QString &name, const QIcon &icon, const QKeySequence &shortcut, ToolType type, QObject *parent)
+AbstractTool::AbstractTool(const QString &name, const QIcon &icon,
+                           const QKeySequence &shortcut, ToolType type,
+                           QObject *parent)
     : QObject(parent)
     , mName(name)
     , mIcon(icon)
@@ -83,6 +86,11 @@ BaseWorldSceneTool *AbstractTool::asWorldTool()
 BaseCellSceneTool *AbstractTool::asCellTool()
 {
     return isCellTool() ? static_cast<BaseCellSceneTool*>(this) : 0;
+}
+
+BaseHeightMapTool *AbstractTool::asHeightMapTool()
+{
+    return isHeightMapTool() ? static_cast<BaseHeightMapTool*>(this) : 0;
 }
 
 /////

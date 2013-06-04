@@ -66,7 +66,14 @@ class BaseGraphicsView : public QGraphicsView
     Q_OBJECT
 
 public:
-    explicit BaseGraphicsView(bool allowOpenGL = false, QWidget *parent = 0);
+    enum AllowOpenGL
+    {
+        NeverGL,
+        PreferenceGL,
+        AlwaysGL
+    };
+
+    explicit BaseGraphicsView(AllowOpenGL openGL, QWidget *parent = 0);
     
     void setHandScrolling(bool handScrolling);
 

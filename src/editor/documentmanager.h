@@ -22,7 +22,10 @@
 
 class Document;
 class CellDocument;
+class HeightMap;
+class HeightMapDocument;
 class WorldCell;
+class WorldDocument;
 
 namespace Tiled {
 class Map;
@@ -49,6 +52,7 @@ public:
 
     int findDocument(const QString &fileName);
     CellDocument *findDocument(WorldCell *cell);
+    HeightMapDocument *findHMDocument(WorldDocument *worldDoc);
 
     void setCurrentDocument(int index);
     void setCurrentDocument(Document *doc);

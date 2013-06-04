@@ -20,7 +20,11 @@
 #include "bmptotmx.h"
 #include "celldocument.h"
 #include "documentmanager.h"
+#include "heightmap.h"
+#include "heightmapdocument.h"
+#include "heightmapfile.h"
 #include "luawriter.h"
+#include "mainwindow.h"
 #include "undoredo.h"
 #include "world.h"
 #include "worldscene.h"
@@ -28,7 +32,9 @@
 #include "worldwriter.h"
 
 #include <QDebug>
+#include <QFileDialog>
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QUndoStack>
 
 WorldDocument::WorldDocument(World *world, const QString &fileName)
@@ -306,6 +312,41 @@ void WorldDocument::editCell(int x, int y)
     }
     CellDocument *cellDoc = new CellDocument(this, cell);
     docman->addDocument(cellDoc);
+}
+
+void WorldDocument::editHeightMap()
+{
+    DocumentManager *docman = DocumentManager::instance();
+    if (HeightMapDocument *hmDoc = docman->findHMDocument(this)) {
+        docman->setCurrentDocument(hmDoc);
+        return;
+    }
+
+    if (world()->hmFileName().isEmpty()) {
+        QString defaultName = tr("untitled.whm");
+        if (!fileName().isEmpty())
+            defaultName = QFileInfo(fileName()).baseName() + QLatin1String(".whm");
+        QString f = QFileDialog::getSaveFileName(MainWindow::instance(),
+                                                 tr("Save HeightMap As"),
+                                                 defaultName, tr("WorldEd HeightMap (*.whm)"));
+        if (f.isEmpty())
+            return;
+
+        world()->setHeightMapFileName(f);
+    }
+
+    QFileInfo info(world()->hmFileName());
+    if (!info.exists()) {
+        HeightMapFile hmFile;
+        if (!hmFile.create(world()->hmFileName(), world()->width() * 300, world()->height() * 300)) {
+            QMessageBox::warning(MainWindow::instance(), tr("Failed to create heightmap file"),
+                                 hmFile.errorString());
+            return;
+        }
+    }
+
+    HeightMapDocument *hmDoc = new HeightMapDocument(this);
+    docman->addDocument(hmDoc);
 }
 
 void WorldDocument::resizeWorld(const QSize &newSize)

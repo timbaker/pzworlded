@@ -28,6 +28,9 @@
 #include "copypastedialog.h"
 #include "documentmanager.h"
 #include "generatelotsdialog.h"
+#include "heightmapdocument.h"
+#include "heightmaptools.h"
+#include "heightmapview.h"
 #include "layersdock.h"
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
@@ -87,6 +90,8 @@ MainWindow *MainWindow::instance()
 {
     return mInstance;
 }
+
+#include "heightmapwindow.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -253,6 +258,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
+    connect(ui->actionEditHeightMap, SIGNAL(triggered()), SLOT(heightMapEditor()));
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -274,6 +280,8 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
+    toolManager->addSeparator();
+    toolManager->registerTool(HeightMapTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -432,6 +440,16 @@ void MainWindow::documentAdded(Document *doc)
             view->centerOn(mViewHint.scrollX, mViewHint.scrollY);
         } else
             view->centerOn(scene->cellToPixelCoords(0, 0));
+    }
+    if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
+        HeightMapView *view = new HeightMapView(this);
+        HeightMapScene *scene = new HeightMapScene(hmDoc, view);
+        view->setScene(scene);
+        doc->setView(view);
+
+        int pos = docman()->documents().indexOf(doc);
+        ui->documentTabWidget->insertTab(pos, view, tr("HeightMap"));
+        ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
     }
 }
 
@@ -883,6 +901,12 @@ void MainWindow::FromToAll()
 void MainWindow::FromToSelected()
 {
     FromToAux(true);
+}
+
+void MainWindow::heightMapEditor()
+{
+    if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument())
+        worldDoc->editHeightMap();
 }
 
 #include "mapwriter.h"
@@ -1605,6 +1629,7 @@ void MainWindow::writeSettings()
 
     int i = 0;
     foreach (Document *doc, docman()->documents()) {
+        if (doc->isHeightMapDocument()) continue;
         mSettings.beginGroup(QString::number(i)); // openFiles/N/...
 
         mSettings.setValue(QLatin1String("file"), doc->fileName());

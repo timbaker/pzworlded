@@ -27,7 +27,7 @@
 #include <QMouseEvent>
 #include <QScrollBar>
 
-BaseGraphicsView::BaseGraphicsView(bool allowOpenGL, QWidget *parent)
+BaseGraphicsView::BaseGraphicsView(AllowOpenGL openGL, QWidget *parent)
     : QGraphicsView(parent)
     , mHandScrolling(false)
     , mZoomable(new Zoomable(this))
@@ -59,10 +59,12 @@ BaseGraphicsView::BaseGraphicsView(bool allowOpenGL, QWidget *parent)
     mMiniMap = new MiniMap(this);
 
 #ifndef QT_NO_OPENGL
-    if (allowOpenGL) {
+    if (openGL == PreferenceGL) {
         Preferences *prefs = Preferences::instance();
         setUseOpenGL(prefs->useOpenGL());
         connect(prefs, SIGNAL(useOpenGLChanged(bool)), SLOT(setUseOpenGL(bool)));
+    } else if (openGL == AlwaysGL) {
+        setUseOpenGL(true);
     }
 #endif
 }

@@ -840,10 +840,14 @@ void IsoMetaGrid::Create(const QString &directory)
                 def->CalculateBounds();
                 int nObjects = IsoLot::readInt(in);
                 for (int m = 0; m < nObjects; ++m) {
+#if 1
+                    IsoLot::readInt(in);
+                    IsoLot::readInt(in);
+                    IsoLot::readInt(in);
+#else
                     int e = IsoLot::readInt(in);
                     int x = IsoLot::readInt(in);
                     int y = IsoLot::readInt(in);
-#if 0
                     def->objects += new MetaObject(e,
                                                    x + wX * 300 - def->x,
                                                    y + wY * 300 - def->y,

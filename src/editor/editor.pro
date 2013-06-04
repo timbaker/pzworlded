@@ -113,7 +113,12 @@ SOURCES += main.cpp\
     lotpackwindow.cpp \
     chunkmap.cpp \
     fromtodialog.cpp \
-    unknowncolorsdialog.cpp
+    unknowncolorsdialog.cpp \
+    heightmapview.cpp \
+    heightmaptools.cpp \
+    heightmapdocument.cpp \
+    heightmap.cpp \
+    heightmapfile.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -185,7 +190,12 @@ HEADERS  += mainwindow.h \
     lotpackwindow.h \
     chunkmap.h \
     fromtodialog.h \
-    unknowncolorsdialog.h
+    unknowncolorsdialog.h \
+    heightmapview.h \
+    heightmaptools.h \
+    heightmapdocument.h \
+    heightmap.h \
+    heightmapfile.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

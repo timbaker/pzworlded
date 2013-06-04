@@ -20,6 +20,7 @@
 #include "celldocument.h"
 #include "cellscene.h"
 #include "document.h"
+#include "heightmapdocument.h"
 #include "mapmanager.h"
 #include "worlddocument.h"
 
@@ -152,6 +153,17 @@ CellDocument *DocumentManager::findDocument(WorldCell *cell)
         if (CellDocument *cellDoc = doc->asCellDocument()) {
             if (cellDoc->cell() == cell)
                 return cellDoc;
+        }
+    }
+    return 0;
+}
+
+HeightMapDocument *DocumentManager::findHMDocument(WorldDocument *worldDoc)
+{
+    foreach (Document *doc, mDocuments) {
+        if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
+            if (hmDoc->worldDocument() == worldDoc)
+                return hmDoc;
         }
     }
     return 0;

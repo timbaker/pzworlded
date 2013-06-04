@@ -254,6 +254,7 @@
      <string>World</string>
     </property>
     <addaction name="actionEditCell"/>
+    <addaction name="actionEditHeightMap"/>
     <addaction name="actionResizeWorld"/>
     <addaction name="separator"/>
     <addaction name="actionObjectGroups"/>
@@ -683,6 +684,16 @@
   <action name="actionFromToSelected">
    <property name="text">
     <string>Selected Cells Only...</string>
+   </property>
+  </action>
+  <action name="actionHeightMap">
+   <property name="text">
+    <string>HeightMap Editor</string>
+   </property>
+  </action>
+  <action name="actionEditHeightMap">
+   <property name="text">
+    <string>Edit HeightMap</string>
    </property>
   </action>
  </widget>

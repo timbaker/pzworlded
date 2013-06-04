@@ -29,6 +29,7 @@
 #include <QTimer>
 
 class BaseCellSceneTool;
+class BaseHeightMapTool;
 class BaseWorldSceneTool;
 class BaseGraphicsScene;
 class BaseGraphicsView;
@@ -58,7 +59,8 @@ class AbstractTool : public QObject
 public:
     enum ToolType {
         CellToolType,
-        WorldToolType
+        WorldToolType,
+        HeightMapToolType
     };
 
     AbstractTool(const QString &name,
@@ -91,9 +93,11 @@ public:
 
     bool isWorldTool() const { return mType == WorldToolType; }
     bool isCellTool() const { return mType == CellToolType; }
+    bool isHeightMapTool() const { return mType == HeightMapToolType; }
 
     BaseWorldSceneTool *asWorldTool();
     BaseCellSceneTool *asCellTool();
+    BaseHeightMapTool *asHeightMapTool();
 
     /**
      * Called when the application language changed.

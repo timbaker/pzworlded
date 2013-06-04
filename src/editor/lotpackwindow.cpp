@@ -408,7 +408,7 @@ void LotPackScene::levelBelow()
 /////
 
 LotPackView::LotPackView(QWidget *parent) :
-    BaseGraphicsView(true, parent),
+    BaseGraphicsView(PreferenceGL, parent),
     mScene(new LotPackScene(this)),
     mWorld(0),
     mMiniMapItem(0),

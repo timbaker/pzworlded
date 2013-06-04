@@ -21,6 +21,7 @@
 #include <QObject>
 
 class CellDocument;
+class HeightMapDocument;
 class WorldDocument;
 class BaseGraphicsView;
 
@@ -36,7 +37,8 @@ class Document : public QObject
 public:
     enum DocumentType {
         CellDocType,
-        WorldDocType
+        WorldDocType,
+        HeightMapDocType
     };
 
 public:
@@ -45,9 +47,11 @@ public:
     DocumentType type() const { return mType; }
     bool isCellDocument() const { return mType == CellDocType; }
     bool isWorldDocument() const { return mType == WorldDocType; }
+    bool isHeightMapDocument() const { return mType == HeightMapDocType; }
 
     CellDocument *asCellDocument();
     WorldDocument *asWorldDocument();
+    HeightMapDocument *asHeightMapDocument();
 
     void setView(BaseGraphicsView *view) { mView = view; }
     BaseGraphicsView *view() const { return mView; }

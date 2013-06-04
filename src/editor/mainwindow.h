@@ -137,6 +137,8 @@ public slots:
     void FromToAll();
     void FromToSelected();
 
+    void heightMapEditor();
+
 private:
     void FromToAux(bool selectedOnly);
 
