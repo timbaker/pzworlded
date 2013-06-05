@@ -37,17 +37,17 @@ HeightMapDocument::~HeightMapDocument()
 
 void HeightMapDocument::setFileName(const QString &fileName)
 {
-    worldDocument()->world()->setHeightMapFileName(fileName);
+    worldDocument()->setFileName(fileName);
 }
 
 const QString &HeightMapDocument::fileName() const
 {
-    return worldDocument()->world()->hmFileName();
+    return worldDocument()->fileName();
 }
 
 bool HeightMapDocument::save(const QString &filePath, QString &error)
 {
-    return false;
+    return worldDocument()->save(filePath, error);
 }
 
 HeightMapFile *HeightMapDocument::hmFile() const

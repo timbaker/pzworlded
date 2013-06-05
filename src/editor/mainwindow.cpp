@@ -1109,7 +1109,7 @@ bool MainWindow::saveFile()
 
     const QString currentFileName = mCurrentDocument->fileName();
 
-    if (currentFileName.endsWith(QLatin1String(".pzw"), Qt::CaseInsensitive))
+    if (!currentFileName.isEmpty())
         return saveFile(currentFileName);
     else
         return saveFileAs();
@@ -1715,13 +1715,17 @@ bool MainWindow::saveFile(const QString &fileName)
 
     // Update tab tooltips
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    if (!worldDoc)
+    if (!worldDoc && mCurrentDocument->isCellDocument())
         worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
+    if (!worldDoc && mCurrentDocument->isHeightMapDocument())
+        worldDoc = mCurrentDocument->asHeightMapDocument()->worldDocument();
     int pos = 0;
     foreach (Document *doc, docman()->documents()) {
         CellDocument *cellDoc = doc->asCellDocument();
+        HeightMapDocument *hmDoc = doc->asHeightMapDocument();
         if ((doc == worldDoc) ||
-                (cellDoc && cellDoc->worldDocument() == worldDoc)) {
+                (cellDoc && cellDoc->worldDocument() == worldDoc) ||
+                (hmDoc && hmDoc->worldDocument() == worldDoc)) {
             ui->documentTabWidget->setTabToolTip(pos, fileName);
         }
         ++pos;
