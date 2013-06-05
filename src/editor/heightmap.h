@@ -25,10 +25,15 @@ class HeightMapFile;
 
 class HeightMapPrivate;
 
+/**
+ * This class represents a sub-area of a world's heightmap.
+ * It could represent a world's entire heightmap since it uses streaming.
+ * The setCenter() method controls the sub-area loaded at any given time.
+ */
 class HeightMap
 {
 public:
-    HeightMap(HeightMapFile *hmFile);
+    HeightMap(HeightMapFile *hmFile, int gridSize = 3 * 300 / 50);
     ~HeightMap();
 
     HeightMapFile *hmFile() const

@@ -912,7 +912,6 @@ void MainWindow::heightMapEditor()
     if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument()) {
         foreach (WorldCell *cell, worldDoc->selectedCells()) {
             worldDoc->editHeightMap(cell);
-            break;
         }
     }
 }

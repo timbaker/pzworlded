@@ -61,7 +61,7 @@ public:
     virtual void languageChanged() {}
 
 private:
-    void paint(QGraphicsSceneMouseEvent *event);
+    void paint(const QPointF &scenePos, bool heightUp, bool mergeable);
 
 private:
     Q_DISABLE_COPY(HeightMapTool)

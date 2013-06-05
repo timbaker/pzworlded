@@ -118,7 +118,8 @@ SOURCES += main.cpp\
     heightmaptools.cpp \
     heightmapdocument.cpp \
     heightmap.cpp \
-    heightmapfile.cpp
+    heightmapfile.cpp \
+    heightmapundoredo.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -195,7 +196,8 @@ HEADERS  += mainwindow.h \
     heightmaptools.h \
     heightmapdocument.h \
     heightmap.h \
-    heightmapfile.h
+    heightmapfile.h \
+    heightmapundoredo.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

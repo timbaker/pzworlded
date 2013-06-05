@@ -51,6 +51,9 @@ public:
     bool modified() const
     { return mModified; }
 
+    void ref() { ++mRef; }
+    bool deref() { Q_ASSERT(mRef > 0); return --mRef == 0; }
+
 private:
     int mX;
     int mY;
@@ -58,6 +61,7 @@ private:
     int mHeight;
     QVector<quint8> d;
     bool mModified;
+    int mRef;
 };
 
 class HeightMapFile
@@ -66,12 +70,13 @@ class HeightMapFile
 
 public:
     HeightMapFile();
+    ~HeightMapFile();
 
     bool create(const QString &fileName, int width, int height);
     bool open(const QString &fileName);
 
-    HeightMapChunk *readChunk(int x, int y);
-    bool writeChunk(HeightMapChunk *chunk);
+    HeightMapChunk *requestChunk(int x, int y);
+    void releaseChunk(HeightMapChunk *chunk);
 
     const QString &errorString() const
     { return mError; }
@@ -81,10 +86,15 @@ public:
     int chunkDim() const { return 50; }
 
 private:
+    HeightMapChunk *readChunk(int x, int y);
+    bool writeChunk(HeightMapChunk *chunk);
+
+private:
     QString mError;
     QFile mFile;
     int mWidth;
     int mHeight;
+    QList<HeightMapChunk*> mLoadedChunks;
 };
 
 #endif // HEIGHTMAPFILE_H

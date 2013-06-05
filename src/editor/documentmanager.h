@@ -52,7 +52,7 @@ public:
 
     int findDocument(const QString &fileName);
     CellDocument *findDocument(WorldCell *cell);
-    HeightMapDocument *findHMDocument(WorldDocument *worldDoc);
+    HeightMapDocument *findHMDocument(WorldCell *cell);
 
     void setCurrentDocument(int index);
     void setCurrentDocument(Document *doc);

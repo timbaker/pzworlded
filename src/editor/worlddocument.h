@@ -24,11 +24,13 @@
 #include <QObject>
 #include <QList>
 #include <QPoint>
+#include <QRegion>
 #include <QSize>
 
 class BMPToTMXSettings;
 class GenerateLotsSettings;
-class HeightMap;
+class HeightMapFile;
+class HeightMapRegion;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -123,6 +125,8 @@ public:
     void insertBMP(int index, WorldBMP *bmp);
     WorldBMP *removeBMP(int index);
 
+    void paintHeightMap(const HeightMapRegion &region);
+
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
     void propertyDefinitionAboutToBeRemoved(int index);
@@ -191,6 +195,8 @@ signals:
     void bmpAdded(int index);
     void bmpAboutToBeRemoved(int index);
 
+    void heightMapPainted(const QRegion &region);
+
 private:
     WorldDocument *mWorldDoc;
     World *mWorld;
@@ -237,6 +243,8 @@ public:
     void editCell(int x, int y);
 
     void editHeightMap(WorldCell *cell);
+    HeightMapFile *hmFile() const
+    { return mHMFile; }
 
     void resizeWorld(const QSize &newSize);
 
@@ -351,6 +359,8 @@ public:
     void insertBMP(int index, WorldBMP *bmp);
     void removeBMP(WorldBMP *bmp);
 
+    void paintHeightMap(const HeightMapRegion &region, bool mergeable);
+
     void emitCellMapFileAboutToChange(WorldCell *cell);
     void emitCellMapFileChanged(WorldCell *cell);
 
@@ -437,6 +447,8 @@ signals:
     void bmpAboutToBeRemoved(int index);
     void bmpCoordsChanged(int index);
 
+    void heightMapPainted(const QRegion &region);
+
 private:
     World *mWorld;
     QList<WorldCell*> mSelectedCells;
@@ -445,6 +457,8 @@ private:
     QList<Road*> mSelectedRoads;
     QList<WorldBMP*> mSelectedBMPs;
     QString mFileName;
+
+    HeightMapFile *mHMFile;
 
     friend class WorldDocumentUndoRedo;
     WorldDocumentUndoRedo mUndoRedo;

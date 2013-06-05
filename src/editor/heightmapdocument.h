@@ -33,19 +33,19 @@ public:
     const QString &fileName() const;
     bool save(const QString &filePath, QString &error);
 
+    bool isModified() const { return false; }
+
     WorldDocument *worldDocument() const
     { return mWorldDoc; }
 
     WorldCell *cell() const
     { return mCell; }
 
-    HeightMapFile *hmFile() const
-    { return mFile; }
+    HeightMapFile *hmFile() const;
 
 private:
     WorldDocument *mWorldDoc;
     WorldCell *mCell;
-    HeightMapFile *mFile;
 };
 
 #endif // HEIGHTMAPDOCUMENT_H

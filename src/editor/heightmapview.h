@@ -54,6 +54,7 @@ private:
 
 class HeightMapScene : public BaseGraphicsScene
 {
+    Q_OBJECT
 public:
     HeightMapScene(HeightMapDocument *hmDoc, QObject *parent = 0);
     ~HeightMapScene();
@@ -87,6 +88,9 @@ public:
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+
+private slots:
+    void heightMapPainted(const QRegion &region);
 
 private:
     HeightMapDocument *mDocument;

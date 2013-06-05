@@ -23,6 +23,7 @@
 #include "heightmap.h"
 #include "heightmapdocument.h"
 #include "heightmapfile.h"
+#include "heightmapundoredo.h"
 #include "luawriter.h"
 #include "mainwindow.h"
 #include "undoredo.h"
@@ -41,6 +42,7 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     : Document(WorldDocType)
     , mWorld(world)
     , mFileName(fileName)
+    , mHMFile(0)
     , mUndoRedo(this)
 {
     mUndoStack = new QUndoStack(this);
@@ -164,10 +166,14 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(bmpAboutToBeRemoved(int)));
     connect(&mUndoRedo, SIGNAL(bmpCoordsChanged(int)),
             SIGNAL(bmpCoordsChanged(int)));
+
+    connect(&mUndoRedo, SIGNAL(heightMapPainted(QRegion)),
+            SIGNAL(heightMapPainted(QRegion)));
 }
 
 WorldDocument::~WorldDocument()
 {
+    delete mHMFile;
     delete mUndoStack; // before mWorld is deleted
     delete mWorld;
 }
@@ -317,7 +323,7 @@ void WorldDocument::editCell(int x, int y)
 void WorldDocument::editHeightMap(WorldCell *cell)
 {
     DocumentManager *docman = DocumentManager::instance();
-    if (HeightMapDocument *hmDoc = docman->findHMDocument(this)) {
+    if (HeightMapDocument *hmDoc = docman->findHMDocument(cell)) {
         docman->setCurrentDocument(hmDoc);
         return;
     }
@@ -341,6 +347,17 @@ void WorldDocument::editHeightMap(WorldCell *cell)
         if (!hmFile.create(world()->hmFileName(), world()->width() * 300, world()->height() * 300)) {
             QMessageBox::warning(MainWindow::instance(), tr("Failed to create heightmap file"),
                                  hmFile.errorString());
+            return;
+        }
+    }
+
+    if (!mHMFile) {
+        mHMFile = new HeightMapFile;
+        if (!mHMFile->open(world()->hmFileName())) {
+            QMessageBox::warning(MainWindow::instance(), tr("Failed to open heightmap file"),
+                                 mHMFile->errorString());
+            delete mHMFile;
+            mHMFile = 0;
             return;
         }
     }
@@ -769,6 +786,11 @@ void WorldDocument::removeBMP(WorldBMP *bmp)
     int index = mWorld->bmps().indexOf(bmp);
     Q_ASSERT(index >= 0);
     undoStack()->push(new RemoveBMP(this, index));
+}
+
+void WorldDocument::paintHeightMap(const HeightMapRegion &region, bool mergeable)
+{
+    undoStack()->push(new PaintHeightMap(this, region, mergeable));
 }
 
 void WorldDocument::emitCellMapFileAboutToChange(WorldCell *cell)
@@ -1224,4 +1246,19 @@ WorldBMP *WorldDocumentUndoRedo::removeBMP(int index)
     bmp = mWorld->removeBmp(index);
     // emit bmpRemoved(bmp)
     return bmp;
+}
+
+void WorldDocumentUndoRedo::paintHeightMap(const HeightMapRegion &region)
+{
+    HeightMap hm(mWorldDoc->hmFile(), 2);
+    foreach (QRect r, region.mRegion.rects()) {
+        for (int y = r.top(); y <= r.bottom(); y++) {
+            for (int x = r.left(); x <= r.right(); x++) {
+                hm.setCenter(x, y); /////
+                hm.setHeightAt(x, y, region.heightAt(x, y));
+            }
+        }
+    }
+
+    emit heightMapPainted(region.mRegion);
 }

@@ -18,6 +18,7 @@
 #include "heightmapfile.h"
 
 #include <QDataStream>
+#include <QDebug>
 
 HeightMapChunk::HeightMapChunk(int x, int y, int width, int height) :
     mX(x),
@@ -25,7 +26,8 @@ HeightMapChunk::HeightMapChunk(int x, int y, int width, int height) :
     mWidth(width),
     mHeight(height),
     d(width * height),
-    mModified(false)
+    mModified(false),
+    mRef(0)
 {
 }
 
@@ -100,6 +102,11 @@ HeightMapFile::HeightMapFile()
 {
 }
 
+HeightMapFile::~HeightMapFile()
+{
+    qDeleteAll(mLoadedChunks);
+}
+
 bool HeightMapFile::create(const QString &fileName, int width, int height)
 {
     Q_ASSERT(!mFile.isOpen());
@@ -167,10 +174,40 @@ bool HeightMapFile::open(const QString &fileName)
     return true;
 }
 
+HeightMapChunk *HeightMapFile::requestChunk(int x, int y)
+{
+    foreach (HeightMapChunk *c, mLoadedChunks) {
+        if (c->contains(x, y)) {
+            qDebug() << "re-used chunk " << x << "," << y;
+            c->ref();
+            return c;
+        }
+    }
+    if (HeightMapChunk *c = readChunk(x, y)) {
+        c->ref();
+        mLoadedChunks += c;
+        qDebug() << "loaded chunk " << x << "," << y;
+        return c;
+    }
+    return 0;
+}
+
+void HeightMapFile::releaseChunk(HeightMapChunk *chunk)
+{
+    if (chunk->deref()) {
+        // Modified chunks can be saved later.
+        if (chunk->modified())
+            return;
+        mLoadedChunks.removeOne(chunk);
+        delete chunk;
+    }
+}
+
 HeightMapChunk *HeightMapFile::readChunk(int x, int y)
 {
-    HeightMapChunk *c = new HeightMapChunk(x * chunkDim(), y * chunkDim(),
-                                           chunkDim(), chunkDim());
+    x /= chunkDim();
+    y /= chunkDim();
+    HeightMapChunk *c = new HeightMapChunk(x * chunkDim(), y * chunkDim(), chunkDim(), chunkDim());
 
     QDataStream in(&mFile);
     in.setByteOrder(QDataStream::LittleEndian);

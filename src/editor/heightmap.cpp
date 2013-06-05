@@ -26,7 +26,7 @@
 class HeightMapGrid
 {
 public:
-    HeightMapGrid(HeightMapFile *hmFile);
+    HeightMapGrid(HeightMapFile *hmFile, int gridSize);
     ~HeightMapGrid();
 
     void update();
@@ -61,34 +61,30 @@ public:
 
 //    static const int ChunkDiv = 10;
     static const int TilesPerChunk = 50; // Must match HeightMapFile::chunkDim()
-    static const int CellSize = 300 * 3; // Columns/Rows of tiles displayed.
-    static const int ChunkGridWidth = CellSize / TilesPerChunk; // Columns/Rows of chunks displayed.
+    int CellSize; // Columns/Rows of tiles displayed.
+    int ChunkGridWidth; // Columns/Rows of chunks displayed.
 
     HeightMapFile *mFile;
 
-    int WorldCellX;
-    int WorldCellY;
     int WorldX;
     int WorldY;
 
     QVector<QVector<HeightMapChunk*> > Chunks;
 
     int XMinTiles;
-    int XMaxTiles;
     int YMinTiles;
-    int YMaxTiles;
 };
 
 /////
 
-HeightMapGrid::HeightMapGrid(HeightMapFile *hmFile) :
+HeightMapGrid::HeightMapGrid(HeightMapFile *hmFile, int gridSize) :
     mFile(hmFile),
+    CellSize(gridSize * 50),
+    ChunkGridWidth(gridSize),
     WorldX(-1),
     WorldY(-1),
     XMinTiles(-1),
-    XMaxTiles(-1),
-    YMinTiles(-1),
-    YMaxTiles(-1)
+    YMinTiles(-1)
 {
     Chunks.resize(ChunkGridWidth);
     for (int x = 0; x < ChunkGridWidth; x++)
@@ -97,8 +93,12 @@ HeightMapGrid::HeightMapGrid(HeightMapFile *hmFile) :
 
 HeightMapGrid::~HeightMapGrid()
 {
-    for (int x = 0; x < Chunks.size(); x++)
-        qDeleteAll(Chunks[x]);
+    for (int x = 0; x < Chunks.size(); x++) {
+        foreach (HeightMapChunk *chunk, Chunks[x]) {
+            if (chunk)
+                mFile->releaseChunk(chunk);
+        }
+    }
 }
 
 void HeightMapGrid::update()
@@ -107,7 +107,7 @@ void HeightMapGrid::update()
 
 void HeightMapGrid::LoadChunk(int wx, int wy, int x, int y)
 {
-    HeightMapChunk *chunk = mFile->readChunk(wx, wy);
+    HeightMapChunk *chunk = mFile->requestChunk(wx * TilesPerChunk, wy * TilesPerChunk);
     setChunk(x, y, chunk);
 }
 
@@ -244,9 +244,8 @@ void HeightMapGrid::setCenter(int x, int y)
             for (int x = r.left(); x <= r.right(); x++) {
                 for (int y = r.top(); y <= r.bottom(); y++) {
                     if (HeightMapChunk *c = getChunk(x - getWorldXMin(), y - getWorldYMin())) {
-                        mFile->writeChunk(c);
                         setChunk(x - getWorldXMin(), y - getWorldYMin(), 0);
-                        delete c;
+                        mFile->releaseChunk(c);
                     }
                 }
             }
@@ -292,20 +291,18 @@ void HeightMapGrid::setCenter(int x, int y)
 class HeightMapPrivate
 {
 public:
-    HeightMapPrivate(HeightMapFile *hmFile) :
-        g(hmFile)
+    HeightMapPrivate(HeightMapFile *hmFile, int gridSize) :
+        g(hmFile, gridSize)
     {}
-
-
 
     HeightMapGrid g;
 };
 
 /////
 
-HeightMap::HeightMap(HeightMapFile *hmFile) :
+HeightMap::HeightMap(HeightMapFile *hmFile, int gridSize) :
     mFile(hmFile),
-    d(new HeightMapPrivate(mFile))
+    d(new HeightMapPrivate(mFile, gridSize))
 {
 }
 

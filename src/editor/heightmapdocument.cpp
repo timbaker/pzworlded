@@ -26,17 +26,13 @@
 HeightMapDocument::HeightMapDocument(WorldDocument *worldDoc, WorldCell *cell) :
     Document(HeightMapDocType),
     mWorldDoc(worldDoc),
-    mCell(cell),
-    mFile(new HeightMapFile)
+    mCell(cell)
 {
-    mUndoStack = new QUndoStack(this);
-
-    mFile->open(fileName());
+    mUndoStack = worldDoc->undoStack();
 }
 
 HeightMapDocument::~HeightMapDocument()
 {
-    delete mFile;
 }
 
 void HeightMapDocument::setFileName(const QString &fileName)
@@ -52,5 +48,10 @@ const QString &HeightMapDocument::fileName() const
 bool HeightMapDocument::save(const QString &filePath, QString &error)
 {
     return false;
+}
+
+HeightMapFile *HeightMapDocument::hmFile() const
+{
+    return worldDocument()->hmFile();
 }
 

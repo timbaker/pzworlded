@@ -138,10 +138,10 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     int minX = tl.x(), minY = tr.y(), maxX = qCeil(br.x()), maxY = qCeil(bl.y());
 //    minX -= mScene->worldOrigin().x(), maxX -= mScene->worldOrigin().x();
 //    minY -= mScene->worldOrigin().y(), maxY -= mScene->worldOrigin().y();
-    minX = qBound(mScene->worldOrigin().x(), minX, hm->width());
-    minY = qBound(mScene->worldOrigin().y(), minY, hm->height());
-    maxX = qBound(mScene->worldOrigin().x(), maxX, hm->width());
-    maxY = qBound(mScene->worldOrigin().y(), maxY, hm->height());
+    minX = qBound(mScene->worldOrigin().x(), minX, mScene->worldBounds().right());
+    minY = qBound(mScene->worldOrigin().y(), minY, mScene->worldBounds().bottom());
+    maxX = qBound(mScene->worldOrigin().x(), maxX, mScene->worldBounds().right());
+    maxY = qBound(mScene->worldOrigin().y(), maxY, mScene->worldBounds().bottom());
 
 
     int columns = maxX - minX + 1;
@@ -158,7 +158,7 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             mShaderProgram.bind();
             p1_attrib = mShaderProgram.attributeLocation("p1_3d");
             p2_attrib = mShaderProgram.attributeLocation("p2_3d");
-            mShaderProgram.setUniformValue("WIN_SCALE", 800.0, 800.0); // affects line thickness
+            mShaderProgram.setUniformValue("WIN_SCALE", 400.0, 400.0); // affects line thickness
             mShaderProgram.setUniformValue("WIRE_COL", 0.8f, 0.3f, 0.1f);
             mShaderProgram.setUniformValue("FILL_COL", 0.7f, 0.8f, 0.9f);
             mShaderProgram.release();
@@ -419,8 +419,11 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
 
     setBackgroundBrush(Qt::darkGray);
 
-    setCenter(worldOrigin().x() + 300 / 2,
-              worldOrigin().y() + 300 / 2);
+    setCenter(mDocument->cell()->x() * 300 + 300 / 2,
+              mDocument->cell()->y() * 300 + 300 / 2);
+
+    connect(mDocument->worldDocument(), SIGNAL(heightMapPainted(QRegion)),
+            SLOT(heightMapPainted(QRegion)));
 }
 
 HeightMapScene::~HeightMapScene()
@@ -548,6 +551,14 @@ void HeightMapScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
     if (mActiveTool)
         mActiveTool->mouseMoveEvent(event);
+}
+
+void HeightMapScene::heightMapPainted(const QRegion &region)
+{
+    foreach (QRect r, region.rects()) {
+        QRectF sceneRect = boundingRect(r);
+        update(sceneRect);
+    }
 }
 
 /////

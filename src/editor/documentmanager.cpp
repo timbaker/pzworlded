@@ -158,11 +158,11 @@ CellDocument *DocumentManager::findDocument(WorldCell *cell)
     return 0;
 }
 
-HeightMapDocument *DocumentManager::findHMDocument(WorldDocument *worldDoc)
+HeightMapDocument *DocumentManager::findHMDocument(WorldCell *cell)
 {
     foreach (Document *doc, mDocuments) {
         if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
-            if (hmDoc->worldDocument() == worldDoc)
+            if (hmDoc->cell() == cell)
                 return hmDoc;
         }
     }

@@ -18,7 +18,10 @@
 #include "heightmaptools.h"
 
 #include "heightmap.h"
+#include "heightmapdocument.h"
 #include "heightmapview.h"
+#include "heightmapundoredo.h"
+#include "worlddocument.h"
 
 #include <QGraphicsSceneMouseEvent>
 
@@ -74,7 +77,10 @@ void HeightMapTool::deactivate()
 void HeightMapTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->buttons() & Qt::LeftButton) {
-        paint(event);
+        paint(event->scenePos(), true, false);
+    }
+    if (event->buttons() & Qt::RightButton) {
+        paint(event->scenePos(), false, false);
     }
 }
 
@@ -89,22 +95,27 @@ void HeightMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     mCursorItem->setRect(mScene->toScene(r).boundingRect());
 
     if (event->buttons() & Qt::LeftButton) {
-        paint(event);
+        paint(event->scenePos(), true, true);
+    }
+    if (event->buttons() & Qt::RightButton) {
+        paint(event->scenePos(), false, true);
     }
 }
 
-void HeightMapTool::paint(QGraphicsSceneMouseEvent *event)
+void HeightMapTool::paint(const QPointF &scenePos, bool heightUp, bool mergeable)
 {
-    QPoint worldPos = mScene->toWorldInt(event->scenePos());
-    int d = (event->modifiers() & Qt::ControlModifier) ? -10 : +10;
+    QPoint worldPos = mScene->toWorldInt(scenePos);
+    int d = heightUp ? +5 : -5;
+    HeightMapRegion hmr;
     for (int x = -1; x <= +1; ++x) {
         for (int y = -1; y <= +1; y++) {
             QPoint p = worldPos + QPoint(x, y);
-            if (mScene->hm()->bounds().contains(p))
-                mScene->hm()->setHeightAt(p, mScene->hm()->heightAt(p) + d);
-
+            if (mScene->worldBounds().contains(p)) {
+                hmr.resize(hmr.mRegion | QRegion(p.x(), p.y(), 1, 1));
+                hmr.setHeightAt(p.x(), p.y(), mScene->hm()->heightAt(p) + d);
+            }
         }
     }
-    mScene->update(mCursorItem->rect());
+    mScene->document()->worldDocument()->paintHeightMap(hmr, mergeable);
 }
 
