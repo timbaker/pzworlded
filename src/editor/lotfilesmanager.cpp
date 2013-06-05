@@ -18,6 +18,7 @@
 #include "lotfilesmanager.h"
 
 #include "bmpblender.h"
+#include "heightmap.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
@@ -114,6 +115,11 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
     progress.update(QLatin1String("Generating .lot files"));
 
     World *world = worldDoc->world();
+
+    mHeightMap = 0;
+    if (worldDoc->hmFile())
+        mHeightMap = new HeightMap(worldDoc->hmFile(), 2);
+    QScopedPointer<HeightMap> hm(mHeightMap);
 
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
@@ -508,6 +514,11 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
     Q_UNUSED(cell)
     Q_UNUSED(mapComposite)
 
+    int wx = cell->x() * 300 + cx * CHUNK_WIDTH;
+    int wy = cell->y() * 300 + cy * CHUNK_HEIGHT;
+    if (mHeightMap)
+        mHeightMap->setCenter(wx, wy);
+
     int notdonecount = 0;
     for (int z = 0; z < MaxLevel; z++)  {
         for (int x = 0; x < CHUNK_WIDTH; x++) {
@@ -525,6 +536,7 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
                     notdonecount = 0;
                     out << qint32(entries.count() + 1);
                     out << qint32(getRoomID(gx, gy, z));
+                    out << quint8(mHeightMap ? mHeightMap->heightAt(wx, wy) : 0);
                 }
                 foreach (LotFile::Entry *entry, entries) {
                     Q_ASSERT(TileMap[entry->gid]);

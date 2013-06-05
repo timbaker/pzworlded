@@ -23,6 +23,7 @@
 #include <QObject>
 
 class BMPToTMXImages;
+class HeightMap;
 class MapComposite;
 class Road;
 class World;
@@ -322,6 +323,7 @@ private:
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
     QImage ZombieSpawnMap;
+    HeightMap *mHeightMap;
     LotFile::Stats mStats;
 
     QString mError;

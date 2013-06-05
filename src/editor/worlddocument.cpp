@@ -47,6 +47,9 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 {
     mUndoStack = new QUndoStack(this);
 
+    if (!mWorld->hmFileName().isEmpty())
+        openHeightMap();
+
     // Forward all the signals from mUndoRedo to this object's signals
 
     connect(&mUndoRedo, SIGNAL(propertyAdded(PropertyHolder*,int)),
@@ -310,6 +313,26 @@ void WorldDocument::removeBMPFromSelection(WorldBMP *bmp)
     }
 }
 
+bool WorldDocument::openHeightMap()
+{
+    QFileInfo info(world()->hmFileName());
+    if (!info.exists())
+        return false;
+
+    if (!mHMFile) {
+        mHMFile = new HeightMapFile;
+        if (!mHMFile->open(world()->hmFileName())) {
+            QMessageBox::warning(MainWindow::instance(), tr("Failed to open heightmap file"),
+                                 mHMFile->errorString());
+            delete mHMFile;
+            mHMFile = 0;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void WorldDocument::editCell(WorldCell *cell)
 {
     editCell(cell->x(), cell->y());
@@ -358,16 +381,8 @@ void WorldDocument::editHeightMap(WorldCell *cell)
         }
     }
 
-    if (!mHMFile) {
-        mHMFile = new HeightMapFile;
-        if (!mHMFile->open(world()->hmFileName())) {
-            QMessageBox::warning(MainWindow::instance(), tr("Failed to open heightmap file"),
-                                 mHMFile->errorString());
-            delete mHMFile;
-            mHMFile = 0;
-            return;
-        }
-    }
+    if (!openHeightMap())
+        return;
 
     HeightMapDocument *hmDoc = new HeightMapDocument(this, cell);
     docman->addDocument(hmDoc);

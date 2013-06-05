@@ -376,6 +376,8 @@ private:
     void removeRoadFromSelection(Road *road);
     void removeBMPFromSelection(WorldBMP *bmp);
 
+    bool openHeightMap();
+
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
     void propertyDefinitionAboutToBeRemoved(int index);
