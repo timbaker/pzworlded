@@ -132,6 +132,41 @@ const char * tri_frag_string =
 " 	gl_FragColor.xyz = I*WIRE_COL + (1.0 - I)*FILL_COL;                        \n"
 "}                                                                             \n";
 
+const char *tri_vert_string2 =
+        "varying vec3 N;\n"
+        "varying vec3 v;\n"
+        "\n"
+        "void main(void)\n"
+        "{\n"
+        "  v = vec3(gl_ModelViewMatrix * gl_Vertex);\n"
+        "   N = normalize(gl_NormalMatrix * gl_Normal);\n"
+        "   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+        "}\n";
+
+const char *tri_frag_string2 =
+        "varying vec3 N;\n"
+        "varying vec3 v;\n"
+        "\n"
+        "void main (void)\n"
+        "{\n"
+        "vec3 L = normalize(gl_LightSource[0].position.xyz - v);\n"
+        "vec3 E = normalize(-v); // we are in Eye Coordinates, so EyePos is (0,0,0)\n"
+        "vec3 R = normalize(-reflect(L,N));\n"
+        "\n"
+        "//calculate Ambient Term:\n"
+        "vec4 Iamb = gl_FrontLightProduct[0].ambient;\n"
+        "\n"
+        "//calculate Diffuse Term:\n"
+        "vec4 Idiff = gl_FrontLightProduct[0].diffuse * max(dot(N,L), 0.0);\n"
+        "\n"
+        "// calculate Specular Term:\n"
+        "vec4 Ispec = gl_FrontLightProduct[0].specular\n"
+        "* pow(max(dot(R,E),0.0),0.3*gl_FrontMaterial.shininess);\n"
+        "\n"
+        "// write Total Color:\n"
+        "gl_FragColor = gl_FrontLightModelProduct.sceneColor + Iamb + Idiff + Ispec;\n"
+        "}\n";
+
 void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
     if (mDisplayStyle == FlatStyle) {
@@ -169,15 +204,16 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             mShaderProgram.bind();
             p1_attrib = mShaderProgram.attributeLocation("p1_3d");
             p2_attrib = mShaderProgram.attributeLocation("p2_3d");
-            mShaderProgram.setUniformValue("WIN_SCALE", 400.0, 400.0); // affects line thickness
-            mShaderProgram.setUniformValue("WIRE_COL", 0.8f, 0.3f, 0.1f);
-            mShaderProgram.setUniformValue("FILL_COL", 0.7f, 0.8f, 0.9f);
+            mShaderProgram.setUniformValue("WIN_SCALE", 600.0, 600.0); // affects line thickness
+            mShaderProgram.setUniformValue("WIRE_COL", 0.0f, 0.0f, 0.0f);
+            QColor gray(Qt::gray);
+            mShaderProgram.setUniformValue("FILL_COL", gray.redF(), gray.greenF(), gray.blueF());
             mShaderProgram.release();
         }
         mShaderInit = true;
     }
 
-    if (mShaderInit && mShaderOK) {
+    if (mShaderInit && mShaderOK && (columns * rows < 100000)) {
         QVector<QVector3D> vertices;
         vertices.resize(columns * rows);
         for (int r = 0; r < rows; r++) {
@@ -192,7 +228,7 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             }
         }
 
-        QVector<GLushort> indices;
+        QVector<int> indices;
         indices.reserve(columns * rows * 2);
         for (int r = 0;  r < rows - 1; r++) {
             indices += r * columns;
@@ -202,6 +238,69 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             }
             indices += (r + 1) * columns + (columns - 1);
         }
+
+#if 0
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_NORMALIZE);
+
+        // Light model parameters:
+        // -------------------------------------------
+
+        GLfloat lmKa[] = {0.0, 0.0, 0.0, 0.0 };
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmKa);
+
+        glLightModelf(GL_LIGHT_MODEL_LOCAL_VIEWER, 1.0);
+        glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0);
+
+        // -------------------------------------------
+        // Spotlight Attenuation
+
+        GLfloat spot_direction[] = {1.0, -1.0, -1.0 };
+        GLint spot_exponent = 30;
+        GLint spot_cutoff = 180;
+
+        glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
+        glLighti(GL_LIGHT0, GL_SPOT_EXPONENT, spot_exponent);
+        glLighti(GL_LIGHT0, GL_SPOT_CUTOFF, spot_cutoff);
+
+        GLfloat Kc = 1.0;
+        GLfloat Kl = 0.0;
+        GLfloat Kq = 0.0;
+
+        glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION,Kc);
+        glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, Kl);
+        glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, Kq);
+
+
+        // -------------------------------------------
+        // Lighting parameters:
+
+        GLfloat light_pos[] = {0.0f, 5.0f, 5.0f, 1.0f};
+        GLfloat light_Ka[]  = {1.0f, 0.5f, 0.5f, 1.0f};
+        GLfloat light_Kd[]  = {1.0f, 0.1f, 0.1f, 1.0f};
+        GLfloat light_Ks[]  = {1.0f, 1.0f, 1.0f, 1.0f};
+
+        glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+        glLightfv(GL_LIGHT0, GL_AMBIENT, light_Ka);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_Kd);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, light_Ks);
+
+        // -------------------------------------------
+        // Material parameters:
+
+        GLfloat material_Ka[] = {0.5f, 0.0f, 0.0f, 1.0f};
+        GLfloat material_Kd[] = {0.4f, 0.4f, 0.5f, 1.0f};
+        GLfloat material_Ks[] = {0.8f, 0.8f, 0.0f, 1.0f};
+        GLfloat material_Ke[] = {0.1f, 0.0f, 0.0f, 0.0f};
+        GLfloat material_Se = 20.0f;
+
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material_Ka);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material_Kd);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material_Ks);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, material_Ke);
+        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material_Se);
+#endif
 
         mShaderProgram.bind();
 
