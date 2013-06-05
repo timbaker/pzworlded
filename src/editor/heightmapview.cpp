@@ -20,6 +20,7 @@
 #include "heightmap.h"
 #include "heightmapdocument.h"
 #include "heightmaptools.h"
+#include "mapimagemanager.h"
 #include "preferences.h"
 #include "world.h"
 #include "worldcell.h"
@@ -424,6 +425,179 @@ void HeightMapItem::draw_triangle(const QVector3D &v0, const QVector3D &v1, cons
 
 /////
 
+HMMiniMapItem::HMMiniMapItem(HeightMapScene *scene, QGraphicsItem *parent)
+    : QGraphicsItem(parent)
+    , mScene(scene)
+    , mCell(scene->document()->cell())
+    , mMapImage(0)
+{
+    setAcceptedMouseButtons(0);
+
+    updateCellImage();
+
+    mLotImages.resize(mCell->lots().size());
+    for (int i = 0; i < mCell->lots().size(); i++)
+        updateLotImage(i);
+
+    updateBoundingRect();
+
+    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+            SLOT(mapImageChanged(MapImage*)));
+    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
+
+    WorldDocument *worldDoc = mScene->document()->worldDocument();
+    connect(worldDoc, SIGNAL(cellContentsAboutToChange(WorldCell*)), SLOT(cellContentsAboutToChange(WorldCell*)));
+    connect(worldDoc, SIGNAL(cellContentsChanged(WorldCell*)), SLOT(cellContentsChanged(WorldCell*)));
+
+    connect(worldDoc, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(lotAdded(WorldCell*,int)));
+    connect(worldDoc, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(lotRemoved(WorldCell*,int)));
+    connect(worldDoc, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(lotMoved(WorldCellLot*)));
+}
+
+QRectF HMMiniMapItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+void HMMiniMapItem::paint(QPainter *painter,
+                         const QStyleOptionGraphicsItem *option,
+                         QWidget *)
+{
+    Q_UNUSED(option)
+
+    if (mMapImage) {
+        QRectF target = mMapImageBounds;
+        QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
+        painter->drawImage(target, mMapImage->image(), source);
+    }
+
+    foreach (const LotImage &lotImage, mLotImages) {
+        if (!lotImage.mMapImage) continue;
+        QRectF target = lotImage.mBounds;
+        QRectF source = QRect(QPoint(0, 0), lotImage.mMapImage->image().size());
+        painter->drawImage(target, lotImage.mMapImage->image(), source);
+    }
+}
+
+void HMMiniMapItem::updateCellImage()
+{
+    mMapImage = 0;
+    mMapImageBounds = QRect();
+
+    if (!mCell->mapFilePath().isEmpty()) {
+        mMapImage = MapImageManager::instance()->getMapImage(mCell->mapFilePath());
+        if (mMapImage) {
+            QPointF offset = mMapImage->tileToImageCoords(0, 0) / mMapImage->scale();
+            mMapImageBounds = QRectF(mScene->toScene(mCell->x() * 300, mCell->y() * 300) - offset,
+                                     mMapImage->image().size() / mMapImage->scale());
+        }
+    }
+}
+
+void HMMiniMapItem::updateLotImage(int index)
+{
+    WorldCellLot *lot = mCell->lots().at(index);
+    MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
+    if (mapImage) {
+        QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale();
+        QRectF bounds = QRectF(mScene->toScene(mCell->x() * 300 + lot->x(),
+                                               mCell->y() * 300 + lot->y()/*, lot->level()*/) - offset,
+                               mapImage->image().size() / mapImage->scale());
+        mLotImages[index].mBounds = bounds;
+        mLotImages[index].mMapImage = mapImage;
+    } else {
+        mLotImages[index].mBounds = QRectF();
+        mLotImages[index].mMapImage = 0;
+    }
+}
+
+void HMMiniMapItem::updateBoundingRect()
+{
+    QRectF bounds = mScene->boundingRect(QRect(mCell->pos() * 300, QSize(300,300)));
+
+    if (!mMapImageBounds.isEmpty())
+        bounds |= mMapImageBounds;
+
+    foreach (LotImage lotImage, mLotImages) {
+        if (!lotImage.mBounds.isEmpty())
+            bounds |= lotImage.mBounds;
+    }
+
+    if (mBoundingRect != bounds) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
+}
+
+void HMMiniMapItem::lotAdded(WorldCell *cell, int index)
+{
+    if (cell != mCell) return;
+    mLotImages.insert(index, LotImage());
+    updateLotImage(index);
+    updateBoundingRect();
+    update();
+}
+
+void HMMiniMapItem::lotRemoved(WorldCell *cell, int index)
+{
+    if (cell != mCell) return;
+    mLotImages.remove(index);
+    updateBoundingRect();
+    update();
+}
+
+void HMMiniMapItem::lotMoved(WorldCellLot *lot)
+{
+    if (lot->cell() != mCell) return;
+    updateLotImage(mCell->indexOf(lot));
+    updateBoundingRect();
+    update();
+}
+
+void HMMiniMapItem::cellContentsAboutToChange(WorldCell *cell)
+{
+    if (cell != mCell) return;
+    mLotImages.clear();
+}
+
+void HMMiniMapItem::cellContentsChanged(WorldCell *cell)
+{
+    if (cell != mCell) return;
+
+    updateCellImage();
+
+    mLotImages.resize(mCell->lots().size());
+    for (int i = 0; i < mCell->lots().size(); i++)
+        updateLotImage(i);
+
+    updateBoundingRect();
+    update();
+}
+
+void HMMiniMapItem::sceneRectChanged(const QRectF &sceneRect)
+{
+    Q_UNUSED(sceneRect)
+    updateCellImage();
+    for (int i = 0; i < mLotImages.size(); i++)
+        updateLotImage(i);
+}
+
+void HMMiniMapItem::mapImageChanged(MapImage *mapImage)
+{
+    if (mapImage == mMapImage) {
+        update();
+        return;
+    }
+    foreach (const LotImage &lotImage, mLotImages) {
+        if (mapImage == lotImage.mMapImage) {
+            update();
+            return;
+        }
+    }
+}
+
+/////
+
 HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
     BaseGraphicsScene(HeightMapSceneType, parent),
     mDocument(hmDoc),
@@ -609,6 +783,14 @@ QRectF HeightMapView::sceneRectForMiniMap() const
         return QRectF();
     return scene()->boundingRect(
                 QRect(scene()->document()->cell()->pos() * 300, QSize(300,300)));
+}
+
+void HeightMapView::setScene(HeightMapScene *scene)
+{
+    BaseGraphicsView::setScene(scene);
+
+    HMMiniMapItem *mMiniMapItem = new HMMiniMapItem(scene);
+    addMiniMapItem(mMiniMapItem);
 }
 
 void HeightMapView::scrollContentsBy(int dx, int dy)

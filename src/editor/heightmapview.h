@@ -26,8 +26,12 @@
 
 class BaseHeightMapTool;
 class HeightMap;
-
 class HeightMapDocument;
+class MapImage;
+class WorldCell;
+class WorldCellLot;
+
+class HMMiniMapItem;
 class HeightMapScene;
 
 class HeightMapItem : public QGraphicsItem
@@ -61,6 +65,62 @@ private:
     GLint p2_attrib;
     QGLShaderProgram mShaderProgram;
     DisplayStyle mDisplayStyle;
+};
+
+/////
+
+// FIXME: nearly identical to CellMiniMapItem
+class HMMiniMapItem : public QObject, public QGraphicsItem
+{
+    Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
+public:
+    HMMiniMapItem(HeightMapScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0);
+
+    void updateCellImage();
+    void updateLotImage(int index);
+    void updateBoundingRect();
+
+private slots:
+    void lotAdded(WorldCell *cell, int index);
+    void lotRemoved(WorldCell *cell, int index);
+    void lotMoved(WorldCellLot *lot);
+
+    void cellContentsAboutToChange(WorldCell *cell);
+    void cellContentsChanged(WorldCell *cell);
+
+    void sceneRectChanged(const QRectF &sceneRect);
+    void mapImageChanged(MapImage *mapImage);
+
+private:
+    struct LotImage {
+        LotImage()
+            : mMapImage(0)
+        {
+        }
+
+        LotImage(const QRectF &bounds, MapImage *mapImage)
+            : mBounds(bounds)
+            , mMapImage(mapImage)
+        {
+        }
+
+        QRectF mBounds;
+        MapImage *mMapImage;
+    };
+
+    HeightMapScene *mScene;
+    WorldCell *mCell;
+    QRectF mBoundingRect;
+    MapImage *mMapImage;
+    QRectF mMapImageBounds;
+    QVector<LotImage> mLotImages;
 };
 
 /////
@@ -125,6 +185,8 @@ public:
     void mouseMoveEvent(QMouseEvent *event);
 
     QRectF sceneRectForMiniMap() const;
+
+    void setScene(HeightMapScene *scene);
 
     HeightMapScene *scene() const
     { return (HeightMapScene*) BaseGraphicsView::scene(); }
