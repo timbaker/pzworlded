@@ -38,6 +38,18 @@ public:
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 
+    void paint2(QPainter *painter, const QStyleOptionGraphicsItem *option);
+
+    enum DisplayStyle {
+        MeshStyle,
+        FlatStyle
+    };
+    void setDisplayStyle(DisplayStyle style)
+    {
+        mDisplayStyle = style;
+        update();
+    }
+
 private:
     void draw_triangle(const QVector3D &v0, const QVector3D &v1, const QVector3D &v2);
 
@@ -48,6 +60,7 @@ private:
     GLint p1_attrib;
     GLint p2_attrib;
     QGLShaderProgram mShaderProgram;
+    DisplayStyle mDisplayStyle;
 };
 
 /////

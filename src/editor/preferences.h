@@ -65,6 +65,9 @@ public:
     bool showAdjacentMaps() const { return mShowAdjacentMaps; }
     void setShowAdjacentMaps(bool show);
 
+    int heightMapDisplayStyle() const
+    { return mHeightMapDisplayStyle; }
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
@@ -87,6 +90,7 @@ signals:
     void mapsDirectoryChanged();
     void tilesDirectoryChanged();
     void showAdjacentMapsChanged(bool show);
+    void heightMapDisplayStyleChanged(int style);
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -99,6 +103,7 @@ public slots:
     void setShowObjectNames(bool show);
     void setShowBMPs(bool show);
     void setHighlightCurrentLevel(bool highlight);
+    void setHeightMapDisplayStyle(int style);
 
 private:
     Preferences();
@@ -123,6 +128,7 @@ private:
     QString mTilesDirectory;
     QString mOpenFileDirectory;
     bool mShowAdjacentMaps;
+    int mHeightMapDisplayStyle;
 
     static Preferences *mInstance;
 };

@@ -138,6 +138,8 @@ public slots:
     void FromToSelected();
 
     void heightMapEditor();
+    void setHeightMapAsMesh(bool mesh);
+    void setHeightMapAsFlat(bool flat);
 
 private:
     void FromToAux(bool selectedOnly);

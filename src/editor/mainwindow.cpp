@@ -200,6 +200,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
+    ui->actionHMMesh->setChecked(prefs->heightMapDisplayStyle() == 0);
+    ui->actionHMFlat->setChecked(prefs->heightMapDisplayStyle() == 1);
+
     connect(ui->actionNew, SIGNAL(triggered()), SLOT(newWorld()));
     connect(ui->actionOpen, SIGNAL(triggered()), SLOT(openFile()));
     connect(ui->actionEditCell, SIGNAL(triggered()), SLOT(editCell()));
@@ -257,6 +260,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionEditHeightMap, SIGNAL(triggered()), SLOT(heightMapEditor()));
+    connect(ui->actionHMMesh, SIGNAL(toggled(bool)), SLOT(setHeightMapAsMesh(bool)));
+    connect(ui->actionHMFlat, SIGNAL(toggled(bool)), SLOT(setHeightMapAsFlat(bool)));
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -914,6 +919,22 @@ void MainWindow::heightMapEditor()
             worldDoc->editHeightMap(cell);
         }
     }
+}
+
+void MainWindow::setHeightMapAsMesh(bool mesh)
+{
+    Preferences *prefs = Preferences::instance();
+    prefs->setHeightMapDisplayStyle(mesh ? 0 : 1);
+    ui->actionHMMesh->setChecked(prefs->heightMapDisplayStyle() == 0);
+    ui->actionHMFlat->setChecked(prefs->heightMapDisplayStyle() == 1);
+}
+
+void MainWindow::setHeightMapAsFlat(bool flat)
+{
+    Preferences *prefs = Preferences::instance();
+    prefs->setHeightMapDisplayStyle(flat ? 1 : 0);
+    ui->actionHMMesh->setChecked(prefs->heightMapDisplayStyle() == 0);
+    ui->actionHMFlat->setChecked(prefs->heightMapDisplayStyle() == 1);
 }
 
 #include "mapwriter.h"
@@ -1740,6 +1761,7 @@ void MainWindow::updateActions()
     ui->actionRemoveBMP->setEnabled(worldDoc && worldDoc->selectedBMPCount());
 
     ui->actionEditCell->setEnabled(false);
+    ui->actionEditHeightMap->setEnabled(false);
     ui->actionResizeWorld->setEnabled(worldDoc);
     ui->actionObjectTypes->setEnabled(hasDoc);
     ui->actionProperties->setEnabled(hasDoc);
@@ -1776,6 +1798,7 @@ void MainWindow::updateActions()
         WorldCell *cell = worldDoc->selectedCellCount() ? worldDoc->selectedCells().first() : 0;
         if (cell) {
             ui->actionEditCell->setEnabled(true);
+            ui->actionEditHeightMap->setEnabled(true);
             ui->actionClearCell->setEnabled(true);
             ui->actionClearMapOnly->setEnabled(true);
             ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));

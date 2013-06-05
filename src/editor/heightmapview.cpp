@@ -20,6 +20,7 @@
 #include "heightmap.h"
 #include "heightmapdocument.h"
 #include "heightmaptools.h"
+#include "preferences.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
@@ -35,8 +36,12 @@
 HeightMapItem::HeightMapItem(HeightMapScene *scene, QGraphicsItem *parent) :
     QGraphicsItem(parent),
     mScene(scene),
-    mShaderInit(false)
+    mShaderInit(false),
+    mDisplayStyle(MeshStyle)
 {
+    mDisplayStyle = Preferences::instance()->heightMapDisplayStyle()
+            ? FlatStyle : MeshStyle;
+
     setFlag(ItemUsesExtendedStyleOption);
 }
 
@@ -128,6 +133,11 @@ const char * tri_frag_string =
 
 void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
+    if (mDisplayStyle == FlatStyle) {
+        paint2(painter, option);
+        return;
+    }
+
     QPointF tl = mScene->toWorld(option->exposedRect.topLeft());
     QPointF tr = mScene->toWorld(option->exposedRect.topRight());
     QPointF br = mScene->toWorld(option->exposedRect.bottomRight());
@@ -299,10 +309,14 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     painter->endNativePainting();
 #endif
-#if 0
+
+}
+
+void HeightMapItem::paint2(QPainter *painter, const QStyleOptionGraphicsItem *option)
+{
     HeightMap *hm = mScene->hm();
 
-    painter->setBrush(Qt::lightGray);
+    painter->setBrush(Qt::gray);
 
     const int tileWidth = mScene->tileWidth();
     const int tileHeight = mScene->tileHeight();
@@ -360,14 +374,17 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 int h = hm->heightAt(columnItr.x(), columnItr.y());
                 QPolygonF poly = mScene->toScene(QRect(columnItr.x(), columnItr.y(), 1, 1));
                 poly.translate(0, -h);
+                painter->setBrush(Qt::gray);
                 painter->drawPolygon(poly);
                 if (h > 0) {
                     QPolygonF side1;
                     side1 << poly[3] << poly[2] << poly[2] + QPointF(0, h) << poly[3] + QPointF(0, h) << poly[3];
+                    painter->setBrush(Qt::lightGray);
                     painter->drawPolygon(side1);
 
                     QPolygonF side2;
                     side2 << poly[2] + QPointF(0, h) << poly[2] << poly[1] << poly[1] + QPointF(0, h) << poly[2] + QPointF(0, h);
+                    painter->setBrush(Qt::darkGray);
                     painter->drawPolygon(side2);
                 }
             }
@@ -388,7 +405,6 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
             shifted = false;
         }
     }
-#endif
 }
 
 void HeightMapItem::draw_triangle(const QVector3D &v0, const QVector3D &v1, const QVector3D &v2)
@@ -424,6 +440,9 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
 
     connect(mDocument->worldDocument(), SIGNAL(heightMapPainted(QRegion)),
             SLOT(heightMapPainted(QRegion)));
+
+    connect(Preferences::instance(), SIGNAL(heightMapDisplayStyleChanged(int)),
+            SLOT(heightMapDisplayStyleChanged(int)));
 }
 
 HeightMapScene::~HeightMapScene()
@@ -559,6 +578,13 @@ void HeightMapScene::heightMapPainted(const QRegion &region)
         QRectF sceneRect = boundingRect(r);
         update(sceneRect);
     }
+}
+
+void HeightMapScene::heightMapDisplayStyleChanged(int style)
+{
+    mHeightMapItem->setDisplayStyle(style
+                                    ? HeightMapItem::FlatStyle
+                                    : HeightMapItem::MeshStyle);
 }
 
 /////

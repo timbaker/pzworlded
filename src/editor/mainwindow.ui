@@ -293,11 +293,25 @@
     <addaction name="actionLotPackViewer"/>
     <addaction name="menuAlias_Fixup"/>
    </widget>
+   <widget class="QMenu" name="menuHeightMap">
+    <property name="title">
+     <string>HeightMap</string>
+    </property>
+    <widget class="QMenu" name="menuDisplay_Style">
+     <property name="title">
+      <string>Display Style</string>
+     </property>
+     <addaction name="actionHMMesh"/>
+     <addaction name="actionHMFlat"/>
+    </widget>
+    <addaction name="menuDisplay_Style"/>
+   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
+   <addaction name="menuHeightMap"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
@@ -694,6 +708,22 @@
   <action name="actionEditHeightMap">
    <property name="text">
     <string>Edit HeightMap</string>
+   </property>
+  </action>
+  <action name="actionHMMesh">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Mesh</string>
+   </property>
+  </action>
+  <action name="actionHMFlat">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Flat</string>
    </property>
   </action>
  </widget>
