@@ -59,7 +59,9 @@ HeightMapTool *HeightMapTool::instance()
 }
 
 HeightMapTool::HeightMapTool() :
-    BaseHeightMapTool(tr("HeightMap Height Adjuster"), QIcon(), QKeySequence()),
+    BaseHeightMapTool(tr("HeightMap Height Adjuster"),
+                      QIcon(QLatin1String(":images/22x22/heightmap-paint")),
+                      QKeySequence()),
     mCursorItem(new QGraphicsEllipseItem)
 {
 }
