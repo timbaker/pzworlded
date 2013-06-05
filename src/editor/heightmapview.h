@@ -164,6 +164,7 @@ protected:
 
 private slots:
     void heightMapPainted(const QRegion &region);
+    void heightMapDisplayStyleChanged(int style);
 
 private:
     HeightMapDocument *mDocument;
