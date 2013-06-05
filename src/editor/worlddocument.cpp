@@ -196,6 +196,11 @@ bool WorldDocument::save(const QString &filePath, QString &error)
         return false;
     }
 
+    if (hmFile() && !hmFile()->save()) {
+        error = hmFile()->errorString();
+        return false;
+    }
+
 #if 0
     {
         QFileInfo fi(filePath);

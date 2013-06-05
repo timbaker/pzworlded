@@ -19,6 +19,10 @@
 
 #include <QDataStream>
 #include <QDebug>
+#include <QTemporaryFile>
+
+#define VERSION1 1
+#define VERSION_LATEST VERSION1
 
 HeightMapChunk::HeightMapChunk(int x, int y, int width, int height) :
     mX(x),
@@ -50,20 +54,33 @@ int HeightMapChunk::heightAt(int x, int y)
 
 bool HeightMapChunk::read(QDataStream &in)
 {
-    int skip = 0;
+    quint8 sig[4];
+    in >> sig[0]; in >> sig[1]; in >> sig[2]; in >> sig[3];
+    if (memcmp(sig, "chnk", 4))
+        return false;
+
+    qint32 skip = 0;
+    qint32 nonzero = 0;
     for (int x = 0; x < mWidth; ++x) {
         for (int y = 0; y < mHeight; ++y) {
             if (skip > 0) {
                 --skip;
+            } else if (nonzero > 0) {
+                in >> d[x + y * mWidth];
+                --nonzero;
             } else {
-                int count; in >> count;
+                qint32 count; in >> count;
                 if (count == -1) {
                     in >> skip;
                     if (skip > 0) {
                         --skip;
                     }
                 }  else {
-                    in >> d[x + y * mWidth];
+                    nonzero = count;
+                    if (nonzero > 0) {
+                        in >> d[x + y * mWidth];
+                        --nonzero;
+                    }
                 }
             }
         }
@@ -73,22 +90,39 @@ bool HeightMapChunk::read(QDataStream &in)
 
 bool HeightMapChunk::write(QDataStream &out)
 {
+    out << quint8('c') << quint8('h') << quint8('n') << quint8('k');
     int zeroheightcount = 0;
+    QVector<quint8> nonzero;
     for (int x = 0; x < width(); x++) {
         for (int y = 0; y < height(); y++) {
-            if (d[x + y * mWidth] == 0)
+            if (d[x + y * mWidth] == 0) {
+                if (nonzero.size()) {
+                    Q_ASSERT(zeroheightcount == 0);
+                    out << qint32(nonzero.size());
+                    foreach (quint8 h, nonzero)
+                        out << h;
+                    nonzero.clear();
+                }
                 zeroheightcount++;
-            else {
+            } else {
                 if (zeroheightcount > 0) {
+                    Q_ASSERT(nonzero.size() == 0);
                     out << qint32(-1);
                     out << qint32(zeroheightcount);
+                    zeroheightcount = 0;
                 }
-                zeroheightcount = 0;
-                out << quint8(d[x + y * mWidth]);
+                nonzero << d[x + y * mWidth];
             }
         }
     }
+    if (nonzero.size()) {
+        Q_ASSERT(zeroheightcount == 0);
+        out << qint32(nonzero.size());
+        foreach (quint8 h, nonzero)
+            out << h;
+    }
     if (zeroheightcount > 0) {
+        Q_ASSERT(nonzero.size() == 0);
         out << qint32(-1);
         out << qint32(zeroheightcount);
     }
@@ -118,6 +152,8 @@ bool HeightMapFile::create(const QString &fileName, int width, int height)
 
     QDataStream d(&mFile);
     d.setByteOrder(QDataStream::LittleEndian);
+    d << quint8('w') << quint8('h') << quint8('m') << quint8('p');
+    d << qint32(VERSION_LATEST);
     d << qint32(width); // #tiles
     d << qint32(height); // #tiles
 
@@ -153,6 +189,11 @@ bool HeightMapFile::create(const QString &fileName, int width, int height)
 
 bool HeightMapFile::open(const QString &fileName)
 {
+#ifndef QT_NO_DEBUG
+    if (!validate(fileName))
+        return false;
+#endif
+
     Q_ASSERT(!mFile.isOpen());
     mFile.setFileName(fileName);
     if (!mFile.open(QIODevice::ReadWrite)) {
@@ -162,11 +203,26 @@ bool HeightMapFile::open(const QString &fileName)
 
     QDataStream in(&mFile);
     in.setByteOrder(QDataStream::LittleEndian);
+    quint8 sig[4];
+    in >> sig[0]; in >> sig[1]; in >> sig[2]; in >> sig[3];
+    if (memcmp(sig, "whmp", 4)) {
+        mError = tr("Unrecognized file format");
+        return false;
+    }
+    qint32 version; in >> version;
+    if (version != VERSION1) {
+        mError = tr("Unknown version number '%1'").arg(version);
+        return false;
+    }
 
     qint32 width; in >> width;
     qint32 height; in >> height;
-    if (width < 0 || height < 0 || width > 300 * 100 || height > 300 * 100)
+    if (width < 0 || height < 0 || width > 300 * 100 || height > 300 * 100) {
+        mError = tr("World is greater than 100 cells wide/tall.  Assuming corrupted file.");
         return false;
+    }
+
+    Q_ASSERT(mFile.pos() == sizeof(header));
 
     mWidth = width;
     mHeight = height;
@@ -195,12 +251,85 @@ HeightMapChunk *HeightMapFile::requestChunk(int x, int y)
 void HeightMapFile::releaseChunk(HeightMapChunk *chunk)
 {
     if (chunk->deref()) {
-        // Modified chunks can be saved later.
+        // Modified chunks are kept in memory so they can be saved later.
         if (chunk->modified())
             return;
         mLoadedChunks.removeOne(chunk);
         delete chunk;
     }
+}
+
+bool HeightMapFile::save()
+{
+    foreach (HeightMapChunk *chunk, mLoadedChunks) {
+        if (chunk->modified()) {
+            if (!writeChunk(chunk)) {
+                return false;
+            }
+        }
+        if (chunk->refCount() == 0) {
+            mLoadedChunks.removeOne(chunk);
+            delete chunk;
+        }
+    }
+    return true;
+}
+
+bool HeightMapFile::validate(const QString &fileName)
+{
+    QFile file;
+    file.setFileName(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        mError = file.errorString();
+        return false;
+    }
+
+    QDataStream in(&file);
+    in.setByteOrder(QDataStream::LittleEndian);
+    quint8 sig[4];
+    in >> sig[0]; in >> sig[1]; in >> sig[2]; in >> sig[3];
+    if (memcmp(sig, "whmp", 4)) {
+        mError = tr("Unrecognized file format");
+        return false;
+    }
+    qint32 version; in >> version;
+    if (version != VERSION1) {
+        mError = tr("Unknown version number '%1'").arg(version);
+        return false;
+    }
+
+    qint32 width; in >> width;
+    qint32 height; in >> height;
+    if (width < 0 || height < 0 || width > 300 * 100 || height > 300 * 100) {
+        mError = tr("World is greater than 100 cells wide/tall.  Assuming corrupted file.");
+        return false;
+    }
+
+    Q_ASSERT(file.pos() == sizeof(header));
+
+    int chunksX = width / chunkDim();
+    int chunksY = height / chunkDim();
+    QVector<qint64> positionMap;
+    for (int i = 0; i < chunksX * chunksY; i++) {
+        qint64 pos; in >> pos;
+        if (pos < sizeof(header) || pos >= file.size()) {
+            mError = tr("Invalid chunk offset");
+            return false;
+        }
+        positionMap += pos;
+    }
+
+    foreach (qint64 pos, positionMap) {
+        file.seek(pos);
+        quint8 sig[4];
+        in >> sig[0]; in >> sig[1]; in >> sig[2]; in >> sig[3];
+        if (memcmp(sig, "chnk", 4)) {
+            mError = tr("Expected 'chnk' at start of chunk");
+            return false;
+        }
+    }
+
+    return true;
 }
 
 HeightMapChunk *HeightMapFile::readChunk(int x, int y)
@@ -209,13 +338,9 @@ HeightMapChunk *HeightMapFile::readChunk(int x, int y)
     y /= chunkDim();
     HeightMapChunk *c = new HeightMapChunk(x * chunkDim(), y * chunkDim(), chunkDim(), chunkDim());
 
+    mFile.seek(startOfChunk(x, y));
     QDataStream in(&mFile);
     in.setByteOrder(QDataStream::LittleEndian);
-
-    int chunksX = mWidth / chunkDim();
-    mFile.seek(8 + (x + y * chunksX) * sizeof(qint64));
-    qint64 chunkStart; in >> chunkStart;
-    mFile.seek(chunkStart);
     if (c->read(in))
         return c;
     Q_ASSERT(false);
@@ -224,16 +349,101 @@ HeightMapChunk *HeightMapFile::readChunk(int x, int y)
 
 bool HeightMapFile::writeChunk(HeightMapChunk *chunk)
 {
-    // create a new temp chunk file
+    // create a new temporary heightmap file
     // copy all data from before this chunk to the new file
     // write this chunk
     // copy all data from after this chunk to the new file
     // update the position-map at the start of the file
-    return true;
+    // replace this file with the temporary file
+    QTemporaryFile temp;
+    if (!temp.open()) {
+        mError = temp.errorString();
+        return false;
+    }
 
+    QDataStream out(&temp);
+    out.setByteOrder(QDataStream::LittleEndian);
+
+    int chunksX = width() / chunkDim();
+    int chunksY = height() / chunkDim();
+    int cx = chunk->x() / chunkDim(), cy = chunk->y() / chunkDim();
+    int chunkIndex = cx + cy * chunksX;
+    qint64 startOfThisChunk = startOfChunk(chunkIndex);
+    mFile.seek(0);
+    QByteArray ba = mFile.read(startOfThisChunk);
+    temp.write(ba);
+    chunk->write(out);
+    qint64 endOfChunk = temp.pos();
+    qint64 endOfFile = temp.pos();
+
+    if (chunkIndex < chunksX * chunksY - 1) { // this isn't the last chunk
+        qint64 startOfNextChunk = startOfChunk(chunkIndex + 1);
+        mFile.seek(startOfNextChunk);
+        ba = mFile.readAll();
+        temp.write(ba);
+        endOfFile = temp.pos();
+
+        mFile.seek(sizeof(header) + (chunkIndex + 1) * sizeof(qint64));
+        QDataStream in(&mFile);
+        in.setByteOrder(QDataStream::LittleEndian);
+        QVector<qint64> positionMap(chunksX * chunksY - (chunkIndex + 1));
+        Q_ASSERT(positionMap.size() + (chunkIndex + 1) == chunksX * chunksY);
+        for (int i = chunkIndex + 1; i < chunksX * chunksY; i++) {
+            in >> positionMap[i - (chunkIndex + 1)];
+            positionMap[i - (chunkIndex + 1)] += endOfChunk - startOfNextChunk;
+        }
+
+        temp.seek(sizeof(header) + (chunkIndex + 1) * sizeof(qint64));
+        foreach (qint64 pos, positionMap)
+            out << pos;
+    }
+
+#ifndef QT_NO_DEBUG
+    if (!validate(mFile.fileName())) {
+        return false;
+    }
+#endif
+
+    temp.seek(endOfFile);
+
+    mFile.close();
+    if (!mFile.remove()) {
+        mError = tr("Error removing existing heightmap file.\n") + mFile.errorString();
+        return false;
+    }
+    temp.setAutoRemove(false);
+    if (!temp.rename(mFile.fileName())) {
+        mError = tr("Error renaming temporary heightmap file to its new location.\n") + temp.errorString();
+        return false;
+    }
+    temp.close();
+    if (!mFile.open(QIODevice::ReadWrite)) {
+        mError = tr("Error reopening the heightmap file after saving.\n") + mFile.errorString();
+        return false;
+    }
+
+    return true;
+#if 0
     if (!chunk->modified()) return true;
     QDataStream d(&mFile);
     d.setByteOrder(QDataStream::LittleEndian);
     return chunk->write(d);
+#endif
+}
+
+qint64 HeightMapFile::startOfChunk(int x, int y)
+{
+    int chunksX = mWidth / chunkDim();
+    return startOfChunk(x + y * chunksX);
+}
+
+qint64 HeightMapFile::startOfChunk(int index)
+{
+    mFile.seek(sizeof(header) + index * sizeof(qint64));
+
+    QDataStream in(&mFile);
+    in.setByteOrder(QDataStream::LittleEndian);
+    qint64 chunkStart; in >> chunkStart;
+    return chunkStart;
 }
 

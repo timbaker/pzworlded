@@ -53,6 +53,7 @@ public:
 
     void ref() { ++mRef; }
     bool deref() { Q_ASSERT(mRef > 0); return --mRef == 0; }
+    int refCount() const { return mRef; }
 
 private:
     int mX;
@@ -78,6 +79,8 @@ public:
     HeightMapChunk *requestChunk(int x, int y);
     void releaseChunk(HeightMapChunk *chunk);
 
+    bool save();
+
     const QString &errorString() const
     { return mError; }
 
@@ -85,9 +88,22 @@ public:
     int height() const { return mHeight; }
     int chunkDim() const { return 50; }
 
+    bool validate(const QString &fileName);
+
 private:
+    struct header
+    {
+        quint8 sig[4]; // 'whmp'
+        qint32 version;
+        qint32 width;
+        qint32 height;
+    };
+
     HeightMapChunk *readChunk(int x, int y);
     bool writeChunk(HeightMapChunk *chunk);
+
+    qint64 startOfChunk(int x, int y);
+    qint64 startOfChunk(int index);
 
 private:
     QString mError;
