@@ -68,3 +68,16 @@ bool PaintHeightMap::mergeWith(const QUndoCommand *other)
     return true;
 }
 
+/////
+
+SetHeightMapFileName::SetHeightMapFileName(WorldDocument *worldDoc, const QString &fileName) :
+    QUndoCommand(QCoreApplication::translate("UndoCommands", "Set HeightMap File")),
+    mWorldDocument(worldDoc),
+    mFileName(fileName)
+{
+}
+
+void SetHeightMapFileName::swap()
+{
+    mFileName = mWorldDocument->undoRedo().setHeightMapFileName(mFileName);
+}

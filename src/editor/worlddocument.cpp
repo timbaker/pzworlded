@@ -169,6 +169,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 
     connect(&mUndoRedo, SIGNAL(heightMapPainted(QRegion)),
             SIGNAL(heightMapPainted(QRegion)));
+    connect(&mUndoRedo, SIGNAL(heightMapFileNameChanged()),
+            SIGNAL(heightMapFileNameChanged()));
 }
 
 WorldDocument::~WorldDocument()
@@ -343,7 +345,7 @@ void WorldDocument::editHeightMap(WorldCell *cell)
         if (f.isEmpty())
             return;
 
-        world()->setHeightMapFileName(f);
+        setHeightMapFileName(f); // undo/redo
     }
 
     QFileInfo info(world()->hmFileName());
@@ -791,6 +793,11 @@ void WorldDocument::removeBMP(WorldBMP *bmp)
     int index = mWorld->bmps().indexOf(bmp);
     Q_ASSERT(index >= 0);
     undoStack()->push(new RemoveBMP(this, index));
+}
+
+void WorldDocument::setHeightMapFileName(const QString &fileName)
+{
+    undoStack()->push(new SetHeightMapFileName(this, fileName));
 }
 
 void WorldDocument::paintHeightMap(const HeightMapRegion &region, bool mergeable)
@@ -1251,6 +1258,14 @@ WorldBMP *WorldDocumentUndoRedo::removeBMP(int index)
     bmp = mWorld->removeBmp(index);
     // emit bmpRemoved(bmp)
     return bmp;
+}
+
+QString WorldDocumentUndoRedo::setHeightMapFileName(const QString &fileName)
+{
+    QString old = mWorld->hmFileName();
+    mWorld->setHeightMapFileName(fileName);
+    emit heightMapFileNameChanged();
+    return old;
 }
 
 void WorldDocumentUndoRedo::paintHeightMap(const HeightMapRegion &region)

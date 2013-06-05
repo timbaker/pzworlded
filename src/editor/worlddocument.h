@@ -125,6 +125,7 @@ public:
     void insertBMP(int index, WorldBMP *bmp);
     WorldBMP *removeBMP(int index);
 
+    QString setHeightMapFileName(const QString &fileName);
     void paintHeightMap(const HeightMapRegion &region);
 
 signals:
@@ -195,6 +196,7 @@ signals:
     void bmpAdded(int index);
     void bmpAboutToBeRemoved(int index);
 
+    void heightMapFileNameChanged();
     void heightMapPainted(const QRegion &region);
 
 private:
@@ -359,6 +361,7 @@ public:
     void insertBMP(int index, WorldBMP *bmp);
     void removeBMP(WorldBMP *bmp);
 
+    void setHeightMapFileName(const QString &fileName);
     void paintHeightMap(const HeightMapRegion &region, bool mergeable);
 
     void emitCellMapFileAboutToChange(WorldCell *cell);
@@ -447,6 +450,7 @@ signals:
     void bmpAboutToBeRemoved(int index);
     void bmpCoordsChanged(int index);
 
+    void heightMapFileNameChanged();
     void heightMapPainted(const QRegion &region);
 
 private:

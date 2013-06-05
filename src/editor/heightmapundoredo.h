@@ -111,4 +111,20 @@ private:
     bool mMergeable;
 };
 
+
+class SetHeightMapFileName : public QUndoCommand
+{
+public:
+    SetHeightMapFileName(WorldDocument *worldDoc, const QString &fileName);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+    void swap();
+
+private:
+    WorldDocument *mWorldDocument;
+    QString mFileName;
+};
+
 #endif // HEIGHTMAPUNDOREDO_H
