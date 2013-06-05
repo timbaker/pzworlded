@@ -454,6 +454,8 @@ void MainWindow::documentAdded(Document *doc)
         ui->documentTabWidget->insertTab(pos, view,
             tr("HeightMap %1,%2").arg(hmDoc->cell()->x()).arg(hmDoc->cell()->y()));
         ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
+
+        view->centerOn(scene->toScene(hmDoc->cell()->pos() * 300 + QPoint(300/2, 300/2)));
     }
 }
 
