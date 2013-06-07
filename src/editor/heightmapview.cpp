@@ -17,14 +17,22 @@
 
 #include "heightmapview.h"
 
+#include "bmpblender.h"
 #include "heightmap.h"
 #include "heightmapdocument.h"
 #include "heightmaptools.h"
+#include "mapcomposite.h"
 #include "mapimagemanager.h"
+#include "mapmanager.h"
 #include "preferences.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
+#include "zoomable.h"
+
+#include "tile.h"
+#include "tilelayer.h"
+#include "tileset.h"
 
 #include <qmath.h>
 #include <QGraphicsSceneMouseEvent>
@@ -37,13 +45,23 @@
 HeightMapItem::HeightMapItem(HeightMapScene *scene, QGraphicsItem *parent) :
     QGraphicsItem(parent),
     mScene(scene),
-    mShaderInit(false),
-    mDisplayStyle(MeshStyle)
+    mDisplayStyle(MeshStyle),
+    mTextureID(0),
+    mTileset(0)
 {
     mDisplayStyle = Preferences::instance()->heightMapDisplayStyle()
             ? FlatStyle : MeshStyle;
 
     setFlag(ItemUsesExtendedStyleOption);
+
+    if (mScene->mapComposite()) {
+        foreach (Tiled::Tileset *ts, mScene->mapComposite()->map()->tilesets()) {
+            if (ts->name() == QLatin1String("blends_natural_01")) {
+                mTileset = ts;
+                break;
+            }
+        }
+    }
 }
 
 QRectF HeightMapItem::boundingRect() const
@@ -51,121 +69,87 @@ QRectF HeightMapItem::boundingRect() const
     return mScene->boundingRect(mScene->worldBounds());
 }
 
-const char * tri_vert_string =
-"/*                                                                            \n"
-"	Input: The vertex position and vertex attributes p1_3d and p2_3d which       \n"
-"	are the positions of neighbouring vertices.                                  \n"
-"                                                                              \n"
-"	Output:   dist a vector of distances from the vertex to the three edges of   \n"
-"	the triangle. Clearly only one of these distance is non-zero. For vertex 0   \n"
-"	in a triangle dist = (distance to opposite edge, 0, 0) on exit. The distance \n"
-"	is multiplied by w. This is to negate perspective correction.                \n"
-"*/                                                                            \n"
-"uniform vec2 WIN_SCALE;                                                       \n"
-"attribute vec4 p1_3d;                                                         \n"
-"attribute vec4 p2_3d;                                                         \n"
-"                                                                              \n"
-"varying vec3 dist;                                                            \n"
-"void main(void)                                                               \n"
-"{                                                                             \n"
-"	 // We store the vertex id (0,1, or 2) in the w coord of the vertex          \n"
-"	 // which then has to be restored to w=1.                                    \n"
-"	 float swizz = gl_Vertex.w;                                                  \n"
-"	 vec4 pos = gl_Vertex;                                                       \n"
-"	 pos.w = 1.0;                                                                \n"
-"                                                                              \n"
-"	 // Compute the vertex position in the usual fashion.                        \n"
-"   gl_Position = gl_ModelViewProjectionMatrix * pos;                          \n"
-"	                                                                             \n"
-"	 // p0 is the 2D position of the current vertex.                             \n"
-"	 vec2 p0 = gl_Position.xy/gl_Position.w;                                     \n"
-"                                                                              \n"
-"	 // Project p1 and p2 and compute the vectors v1 = p1-p0                     \n"
-"	 // and v2 = p2-p0                                                           \n"
-"	 vec4 p1_3d_ = gl_ModelViewProjectionMatrix * p1_3d;                         \n"
-"	 vec2 v1 = WIN_SCALE*(p1_3d_.xy / p1_3d_.w - p0);                            \n"
-"                                                                              \n"
-"	 vec4 p2_3d_ = gl_ModelViewProjectionMatrix * p2_3d;                         \n"
-"	 vec2 v2 = WIN_SCALE*(p2_3d_.xy / p2_3d_.w - p0);                            \n"
-"                                                                              \n"
-"	 // Compute 2D area of triangle.                                             \n"
-"	 float area2 = abs(v1.x*v2.y - v1.y * v2.x);                                 \n"
-"                                                                              \n"
-"   // Compute distance from vertex to line in 2D coords                       \n"
-"   float h = area2/length(v1-v2);                                             \n"
-"                                                                              \n"
-"   // ---                                                                     \n"
-"   // The swizz variable tells us which of the three vertices                 \n"
-"   // we are dealing with. The ugly comparisons would not be needed if 	     \n"
-"   // swizz was an int.                                                     	 \n"
-"                                                                              \n"
-"   if(swizz<0.1)                                                              \n"
-"      dist = vec3(h,0,0);                                                     \n"
-"   else if(swizz<1.1)                                                         \n"
-"      dist = vec3(0,h,0);                                                     \n"
-"   else                                                                       \n"
-"      dist = vec3(0,0,h);                                                     \n"
-"                                                                              \n"
-"   // ----                                                                    \n"
-"   // Quick fix to defy perspective correction                                \n"
-"                                                                              \n"
-"   dist *= gl_Position.w;                                                     \n"
-"}                                                                             \n";
+void HeightMapItem::loadGLTextures()
+{
+    QImage t;
+    QImage b;
 
-const char * tri_frag_string =
-"                                                                              \n"
-"uniform vec3 WIRE_COL;                                                        \n"
-"uniform vec3 FILL_COL;                                                        \n"
-"                                                                              \n"
-"varying vec3 dist;                                                            \n"
-"                                                                              \n"
-"void main(void)                                                               \n"
-"{                                                                             \n"
-"   // Undo perspective correction.                                            \n"
-"	  vec3 dist_vec = dist * gl_FragCoord.w;                                     \n"
-"                                                                              \n"
-"   // Compute the shortest distance to the edge                               \n"
-"	  float d =min(dist_vec[0],min(dist_vec[1],dist_vec[2]));                    \n"
-"                                                                              \n"
-"	  // Compute line intensity and then fragment color                          \n"
-" 	float I = exp2(-2.0*d*d);                                                  \n"
-" 	gl_FragColor.xyz = I*WIRE_COL + (1.0 - I)*FILL_COL;                        \n"
-"}                                                                             \n";
+    if (b.load(QLatin1String("C:/Programming/heightmap/tex_blends_natural_01.png"))) {
+        QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
+        QPainter painter(&fixedImage);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(fixedImage.rect(), Qt::transparent);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        painter.drawImage( 0, 0, b);
+        painter.end();
+        b = fixedImage;
 
-const char *tri_vert_string2 =
-        "varying vec3 N;\n"
-        "varying vec3 v;\n"
-        "\n"
-        "void main(void)\n"
-        "{\n"
-        "  v = vec3(gl_ModelViewMatrix * gl_Vertex);\n"
-        "   N = normalize(gl_NormalMatrix * gl_Normal);\n"
-        "   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
-        "}\n";
+        t = QGLWidget::convertToGLFormat( b );
+        GLuint texture;
+        glGenTextures( 1, &texture );
+        glBindTexture( GL_TEXTURE_2D, texture );
+        glTexImage2D( GL_TEXTURE_2D, 0, 4, t.width(), t.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, t.bits() );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
-const char *tri_frag_string2 =
-        "varying vec3 N;\n"
-        "varying vec3 v;\n"
-        "\n"
-        "void main (void)\n"
-        "{\n"
-        "vec3 L = normalize(gl_LightSource[0].position.xyz - v);\n"
-        "vec3 E = normalize(-v); // we are in Eye Coordinates, so EyePos is (0,0,0)\n"
-        "vec3 R = normalize(-reflect(L,N));\n"
-        "\n"
-        "//calculate Ambient Term:\n"
-        "vec4 Iamb = gl_FrontLightProduct[0].ambient;\n"
-        "\n"
-        "//calculate Diffuse Term:\n"
-        "vec4 Idiff = gl_FrontLightProduct[0].diffuse * max(dot(N,L), 0.0);\n"
-        "\n"
-        "// calculate Specular Term:\n"
-        "vec4 Ispec = gl_FrontLightProduct[0].specular\n"
-        "* pow(max(dot(R,E),0.0),0.3*gl_FrontMaterial.shininess);\n"
-        "\n"
-        "// write Total Color:\n"
-        "gl_FragColor = gl_FrontLightModelProduct.sceneColor + Iamb + Idiff + Ispec;\n"
-        "}\n";
+        mTextureID = texture;
+    }
+}
+
+QVector3D HeightMapItem::vertexAt(int x, int y)
+{
+    QPointF p = mScene->toScene(x, y);
+    HeightMap *hm = mScene->hm();
+    if (hm->contains(x, y))
+        p.ry() -= hm->heightAt(x, y);
+    return QVector3D(p);
+}
+
+class DrawElements
+{
+public:
+    void clear()
+    {
+        indices.resize(0);
+        vertices.resize(0);
+        texcoords.resize(0);
+        textureids.resize(0);
+    }
+
+    void add(GLuint textureid,
+             const QVector2D &uv1, const QVector2D &uv2, const QVector2D &uv3, const QVector2D &uv4,
+             const QVector3D &v1, const QVector3D &v2, const QVector3D &v3, const QVector3D &v4)
+    {
+        indices << indices.size() << indices.size() + 1 << indices.size() + 2 << indices.size() + 3;
+        textureids += textureid;
+        texcoords << uv1 << uv2 << uv3 << uv4;
+        vertices << v1 << v2 << v3 << v4;
+
+        if (indices.size() > 1024 * 2)
+            flush();
+    }
+
+    void flush()
+    {
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glVertexPointer(3, GL_FLOAT, 0, vertices.constData());
+        glTexCoordPointer(2, GL_FLOAT, 0, texcoords.constData());
+        for (int i = 0; i < textureids.size(); i++) {
+            glBindTexture(GL_TEXTURE_2D, textureids[i]);
+            glDrawElements(GL_QUADS, 4, GL_UNSIGNED_SHORT, indices.constData() + i * 4);
+        }
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        clear();
+    }
+
+    QVector<GLushort> indices;
+    QVector<QVector3D> vertices;
+    QVector<QVector2D> texcoords;
+    QVector<GLuint> textureids;
+
+};
 
 void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
@@ -179,237 +163,71 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     QPointF br = mScene->toWorld(option->exposedRect.bottomRight());
     QPointF bl = mScene->toWorld(option->exposedRect.bottomLeft());
 
-    HeightMap *hm = mScene->hm();
-
     int minX = tl.x(), minY = tr.y(), maxX = qCeil(br.x()), maxY = qCeil(bl.y());
-//    minX -= mScene->worldOrigin().x(), maxX -= mScene->worldOrigin().x();
-//    minY -= mScene->worldOrigin().y(), maxY -= mScene->worldOrigin().y();
     minX = qBound(mScene->worldOrigin().x(), minX, mScene->worldBounds().right());
     minY = qBound(mScene->worldOrigin().y(), minY, mScene->worldBounds().bottom());
     maxX = qBound(mScene->worldOrigin().x(), maxX, mScene->worldBounds().right());
     maxY = qBound(mScene->worldOrigin().y(), maxY, mScene->worldBounds().bottom());
 
-
     int columns = maxX - minX + 1;
     int rows = maxY - minY + 1;
 
-#if 1
     painter->beginNativePainting();
 
-    if (!mShaderInit) {
-        mShaderProgram.addShaderFromSourceCode(QGLShader::Vertex, tri_vert_string);
-        mShaderProgram.addShaderFromSourceCode(QGLShader::Fragment, tri_frag_string);
-        mShaderOK = mShaderProgram.link();
-        if (mShaderOK) {
-            mShaderProgram.bind();
-            p1_attrib = mShaderProgram.attributeLocation("p1_3d");
-            p2_attrib = mShaderProgram.attributeLocation("p2_3d");
-            mShaderProgram.setUniformValue("WIN_SCALE", 600.0, 600.0); // affects line thickness
-            mShaderProgram.setUniformValue("WIRE_COL", 0.0f, 0.0f, 0.0f);
-            QColor gray(Qt::gray);
-            mShaderProgram.setUniformValue("FILL_COL", gray.redF(), gray.greenF(), gray.blueF());
-            mShaderProgram.release();
-        }
-        mShaderInit = true;
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glShadeModel(GL_FLAT);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glClearDepth(1.0f);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    if (!mTextureID) {
+        loadGLTextures();
     }
 
-    if (mShaderInit && mShaderOK && (columns * rows < 100000)) {
-        QVector<QVector3D> vertices;
-        vertices.resize(columns * rows);
+    MapComposite *mc = mScene->mapComposite();
+    CompositeLayerGroup *lg = mc ? mc->layerGroupForLevel(0) : 0;
+
+    if (mTextureID && mTileset && lg && columns * rows < 100000) {
+
+        DrawElements de;
+        float tw = 256.0f, th = 320.0f;
+        int cellX = mScene->document()->cell()->pos().x() * 300;
+        int cellY = mScene->document()->cell()->pos().y() * 300;
+        static QVector<const Tiled::Cell*> cells(40);
+        mc->bmpBlender()->flush(QRect(minX-cellX, minY-cellY, columns, rows));
+//        lg->prepareDrawing();
+        /*if (lg->needsSynch()) */lg->synch();
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < columns; c++) {
-                int index = r * columns + c;
-                int h = 0;
-                if (hm->contains(minX + c, minY + r))
-                    h = hm->heightAt(minX + c, minY + r);
-                QPointF p = mScene->toScene(minX + c, minY + r);
-                p.ry() -= h;
-                vertices[index] = QVector3D(p.x(), p.y(), 0.0);
+                if (!QRect(0,0,300,300).contains(minX+c-cellX,minY+r-cellY)) continue;
+                cells.resize(0);
+                lg->orderedCellsAt2(QPoint(minX+c-cellX,minY+r-cellY), cells);
+                foreach (const Tiled::Cell *cell, cells) {
+                    if (!cell->tile || cell->tile->tileset() != mTileset) continue;
+                    int tx = cell->tile->id() % mTileset->columnCount();
+                    int ty = cell->tile->id() / mTileset->columnCount();
+                    de.add(mTextureID,
+                           QVector2D((tx*32)/tw, 1-(ty*32.0)/th),
+                           QVector2D(((tx+1)*32)/tw, 1-(ty*32)/th),
+                           QVector2D(((tx+1)*32)/tw, 1-((ty+1)*32.0)/th),
+                           QVector2D((tx*32)/tw, 1-((ty+1)*32.0)/th),
+                           vertexAt(minX+c,minY+r), vertexAt(minX+c+1,minY+r),
+                           vertexAt(minX+c+1,minY+r+1), vertexAt(minX+c,minY+r+1));
+                }
             }
         }
-
-        QVector<int> indices;
-        indices.reserve(columns * rows * 2);
-        for (int r = 0;  r < rows - 1; r++) {
-            indices += r * columns;
-            for (int c = 0; c < columns; c++) {
-                indices += r * columns + c;
-                indices += (r + 1) * columns + c;
-            }
-            indices += (r + 1) * columns + (columns - 1);
-        }
-
-#if 0
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
-        glEnable(GL_NORMALIZE);
-
-        // Light model parameters:
-        // -------------------------------------------
-
-        GLfloat lmKa[] = {0.0, 0.0, 0.0, 0.0 };
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmKa);
-
-        glLightModelf(GL_LIGHT_MODEL_LOCAL_VIEWER, 1.0);
-        glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0);
-
-        // -------------------------------------------
-        // Spotlight Attenuation
-
-        GLfloat spot_direction[] = {1.0, -1.0, -1.0 };
-        GLint spot_exponent = 30;
-        GLint spot_cutoff = 180;
-
-        glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
-        glLighti(GL_LIGHT0, GL_SPOT_EXPONENT, spot_exponent);
-        glLighti(GL_LIGHT0, GL_SPOT_CUTOFF, spot_cutoff);
-
-        GLfloat Kc = 1.0;
-        GLfloat Kl = 0.0;
-        GLfloat Kq = 0.0;
-
-        glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION,Kc);
-        glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, Kl);
-        glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, Kq);
-
-
-        // -------------------------------------------
-        // Lighting parameters:
-
-        GLfloat light_pos[] = {0.0f, 5.0f, 5.0f, 1.0f};
-        GLfloat light_Ka[]  = {1.0f, 0.5f, 0.5f, 1.0f};
-        GLfloat light_Kd[]  = {1.0f, 0.1f, 0.1f, 1.0f};
-        GLfloat light_Ks[]  = {1.0f, 1.0f, 1.0f, 1.0f};
-
-        glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
-        glLightfv(GL_LIGHT0, GL_AMBIENT, light_Ka);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_Kd);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, light_Ks);
-
-        // -------------------------------------------
-        // Material parameters:
-
-        GLfloat material_Ka[] = {0.5f, 0.0f, 0.0f, 1.0f};
-        GLfloat material_Kd[] = {0.4f, 0.4f, 0.5f, 1.0f};
-        GLfloat material_Ks[] = {0.8f, 0.8f, 0.0f, 1.0f};
-        GLfloat material_Ke[] = {0.1f, 0.0f, 0.0f, 0.0f};
-        GLfloat material_Se = 20.0f;
-
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material_Ka);
-        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material_Kd);
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material_Ks);
-        glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, material_Ke);
-        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material_Se);
-#endif
-
-        mShaderProgram.bind();
-
-        GLuint mesh_list = glGenLists(1);
-        glNewList(mesh_list, GL_COMPILE);
-        glBegin(GL_TRIANGLES);
-
-        for (int i = 0; i < indices.size() - 2; i += 1) {
-            draw_triangle(vertices[indices[i]],
-                    vertices[indices[i+1]],
-                    vertices[indices[i+2]]);
-        }
-
-        glEnd();
-        glEndList();
-
-        glEnable(GL_DEPTH_TEST);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        glCallList(mesh_list);
-
-        mShaderProgram.release();
-        glDeleteLists(mesh_list, 1);
-        glDisable(GL_DEPTH_TEST);
+        de.flush();
     }
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 
     painter->endNativePainting();
-#elif 0
-    int verticesCount = columns * rows;
-    int indicesCount = columns * rows + (columns - 1) * (rows - 2);
-
-    QVector<QVector3D> vertices(verticesCount);
-    int i = 0;
-    for ( int row=0; row<rows; row++ ) {
-        for ( int col=0; col<columns; col++ ) {
-            int h = 0;
-            if (hm->contains(minX + col, minY + row))
-                h = hm->heightAt(minX + col, minY + row);
-            QPointF p = mScene->toScene(minX + col, minY + row);
-            p.ry() -= h;
-            vertices[i++] = QVector3D(p.x(), p.y(), 0.0);
-        }
-    }
-
-    QVector<GLushort> indices;
-    indices.reserve(indicesCount);
-    for ( int row=0; row<rows-1; row++ ) {
-        if ( (row&1)==0 ) { // even rows
-            for ( int col=0; col<columns; col++ ) {
-                indices += col + row * columns;
-                indices += col + (row+1) * columns;
-            }
-        } else { // odd rows
-            for ( int col=columns-1; col>0; col-- ) {
-                indices += col + (row+1) * columns;
-                indices += col - 1 + row * columns;
-            }
-        }
-    }
-    if ( (rows&1) && rows>2 ) {
-        indices += (rows-1) * columns;
-    }
-#else
-    QVector<QVector3D> vertices;
-    vertices.resize(columns * rows);
-    for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < columns; c++) {
-            int index = r * columns + c;
-            int h = 0;
-            if (hm->contains(minX + c, minY + r))
-                h = hm->heightAt(minX + c, minY + r);
-            QPointF p = mScene->toScene(minX + c, minY + r);
-            p.ry() -= h;
-            vertices[index] = QVector3D(p.x(), p.y(), 0.0);
-        }
-    }
-
-    QVector<GLushort> indices;
-    indices.reserve(columns * rows * 2);
-    for (int r = 0;  r < rows - 1; r++) {
-        indices += r * columns;
-        for (int c = 0; c < columns; c++) {
-            indices += r * columns + c;
-            indices += (r + 1) * columns + c;
-        }
-        indices += (r + 1) * columns + (columns - 1);
-    }
-
-    painter->beginNativePainting();
-
-    glEnableClientState( GL_VERTEX_ARRAY );
-//    glEnableClientState( GL_INDEX_ARRAY );
-//    glDisable(GL_TEXTURE_2D);
-    glVertexPointer( 3, GL_FLOAT, 0, vertices.constData() );
-
-    glColor3f(0.5,0.5,0.5);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDrawElements( GL_TRIANGLE_STRIP, indices.size(), GL_UNSIGNED_SHORT, indices.constData() );
-
-//    glDisable(GL_DEPTH_TEST);
-    glColor3f(0,0,0);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDrawElements( GL_TRIANGLE_STRIP, indices.size(), GL_UNSIGNED_SHORT, indices.constData() );
-
-    glDisableClientState( GL_VERTEX_ARRAY );
-//    glDisableClientState( GL_INDEX_ARRAY );
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    painter->endNativePainting();
-#endif
-
 }
 
 void HeightMapItem::paint2(QPainter *painter, const QStyleOptionGraphicsItem *option)
@@ -505,21 +323,6 @@ void HeightMapItem::paint2(QPainter *painter, const QStyleOptionGraphicsItem *op
             shifted = false;
         }
     }
-}
-
-void HeightMapItem::draw_triangle(const QVector3D &v0, const QVector3D &v1, const QVector3D &v2)
-{
-    mShaderProgram.setAttributeValue(p1_attrib, v1.x(), v1.y(), v1.z(), 1);
-    mShaderProgram.setAttributeValue(p2_attrib, v2.x(), v2.y(), v2.z(), 1);
-    glVertex4f(v0.x(), v0.y(), v0.z(), 0);
-
-    mShaderProgram.setAttributeValue(p1_attrib, v2.x(), v2.y(), v2.z(), 1);
-    mShaderProgram.setAttributeValue(p2_attrib, v0.x(), v0.y(), v0.z(), 1);
-    glVertex4f(v1.x(), v1.y(), v1.z(), 1);
-
-    mShaderProgram.setAttributeValue(p1_attrib, v0.x(), v0.y(), v0.z(), 1);
-    mShaderProgram.setAttributeValue(p2_attrib, v1.x(), v1.y(), v1.z(), 1);
-    glVertex4f(v2.x(), v2.y(), v2.z(), 2);
 }
 
 /////
@@ -701,10 +504,9 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
     BaseGraphicsScene(HeightMapSceneType, parent),
     mDocument(hmDoc),
     mHeightMap(new HeightMap(hmDoc->hmFile())),
-    mHeightMapItem(new HeightMapItem(this)),
-    mActiveTool(0)
+    mActiveTool(0),
+    mMapComposite(0)
 {
-    addItem(mHeightMapItem);
 
     setBackgroundBrush(Qt::darkGray);
 
@@ -716,6 +518,24 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
 
     connect(Preferences::instance(), SIGNAL(heightMapDisplayStyleChanged(int)),
             SLOT(heightMapDisplayStyleChanged(int)));
+
+
+    MapInfo *mMapInfo = 0;
+    if (document()->cell()->mapFilePath().isEmpty())
+        mMapInfo = MapManager::instance()->getEmptyMap();
+    else {
+        mMapInfo = MapManager::instance()->loadMap(document()->cell()->mapFilePath());
+        if (!mMapInfo) {
+            mMapInfo = MapManager::instance()->getPlaceholderMap(document()->cell()->mapFilePath(), 300, 300);
+        }
+    }
+    if (!mMapInfo) {
+        return;
+    }
+    mMapComposite = new MapComposite(mMapInfo, Tiled::Map::LevelIsometric);
+
+    mHeightMapItem = new HeightMapItem(this);
+    addItem(mHeightMapItem);
 }
 
 HeightMapScene::~HeightMapScene()
@@ -866,6 +686,9 @@ HeightMapView::HeightMapView(QWidget *parent) :
     BaseGraphicsView(AlwaysGL, parent),
     mRecenterScheduled(false)
 {
+    QVector<qreal> zf = zoomable()->zoomFactors();
+    zf += 8.0;
+    zoomable()->setZoomFactors(zf);
 }
 
 void HeightMapView::mouseMoveEvent(QMouseEvent *event)

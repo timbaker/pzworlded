@@ -22,14 +22,18 @@
 #include "basegraphicsview.h"
 
 #include <QGraphicsItem>
-#include <QGLShaderProgram>
 
 class BaseHeightMapTool;
 class HeightMap;
 class HeightMapDocument;
+class MapComposite;
 class MapImage;
 class WorldCell;
 class WorldCellLot;
+
+namespace Tiled {
+class Tileset;
+}
 
 class HMMiniMapItem;
 class HeightMapScene;
@@ -55,15 +59,14 @@ public:
     }
 
 private:
+    void loadGLTextures();
+    QVector3D vertexAt(int x, int y);
     void draw_triangle(const QVector3D &v0, const QVector3D &v1, const QVector3D &v2);
 
 private:
     HeightMapScene *mScene;
-    bool mShaderInit;
-    bool mShaderOK;
-    GLint p1_attrib;
-    GLint p2_attrib;
-    QGLShaderProgram mShaderProgram;
+    unsigned int mTextureID;
+    Tiled::Tileset *mTileset;
     DisplayStyle mDisplayStyle;
 };
 
@@ -158,6 +161,9 @@ public:
     QPoint worldOrigin() const;
     QRect worldBounds() const;
 
+    MapComposite *mapComposite() const
+    { return mMapComposite; }
+
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
@@ -171,6 +177,7 @@ private:
     HeightMapItem *mHeightMapItem;
     HeightMap *mHeightMap;
     BaseHeightMapTool *mActiveTool;
+    MapComposite *mMapComposite;
 };
 
 /////

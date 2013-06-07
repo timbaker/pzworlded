@@ -126,7 +126,10 @@ void BmpBlender::flush(const MapRenderer *renderer, const QRect &rect, const QPo
 
 void BmpBlender::flush(const QRect &rect)
 {
-    mDirtyRegion -= QRegion(rect);
+    QRegion dirty = mDirtyRegion & rect;
+    if (dirty.isEmpty())
+        return;
+    mDirtyRegion -= dirty;
 
     int x1 = rect.left(), x2 = rect.right(), y1 = rect.top(), y2 = rect.bottom();
     x1 -= 2, x2 += 2, y1 -= 2, y2 += 2;
