@@ -176,6 +176,57 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
 #endif
 
+#if 1
+    PROGRESS progress(tr("Loading maps (%1,%2)")
+                      .arg(cell->x()).arg(cell->y()));
+
+    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
+                                                       QString(), true);
+    if (!mapInfo) {
+        mError = MapManager::instance()->errorString();
+        return false;
+    }
+
+    DelayedMapLoader mapLoader;
+    mapLoader.addMap(mapInfo);
+
+    foreach (WorldCellLot *lot, cell->lots()) {
+        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
+                                                            QString(), true,
+                                                            MapManager::PriorityMedium)) {
+            mapLoader.addMap(info);
+        } else {
+            mError = MapManager::instance()->errorString();
+            return false;
+        }
+    }
+
+    // The cell map must be loaded before creating the MapComposite, which will
+    // possibly load embedded lots.
+    while (mapInfo->isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    MapComposite staticMapComposite(mapInfo);
+    MapComposite *mapComposite = &staticMapComposite;
+    while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    if (!mapLoader.errorString().isEmpty()) {
+        mError = mapLoader.errorString();
+        return false;
+    }
+
+    foreach (WorldCellLot *lot, cell->lots()) {
+        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        Q_ASSERT(info && info->map());
+        mapComposite->addMap(info, lot->pos(), lot->level());
+    }
+
+    mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
+                                     cell->world()->roads());
+
+    progress.update(tr("Generating .lot files (%1,%2)")
+                      .arg(cell->x()).arg(cell->y()));
+#else
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
     if (!mapInfo) {
         mError = MapManager::instance()->errorString();
@@ -200,6 +251,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             return false;
         }
     }
+#endif
 
     // Check for missing tilesets.
     foreach (MapComposite *mc, mapComposite->maps()) {
@@ -776,4 +828,70 @@ bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
         }
     }
     return true;
+}
+
+/////
+
+DelayedMapLoader::DelayedMapLoader()
+{
+    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+            SLOT(mapLoaded(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+            SLOT(mapFailedToLoad(MapInfo*)));
+}
+
+void DelayedMapLoader::addMap(MapInfo *info)
+{
+    mLoading += new SubMapLoading(info);
+}
+
+bool DelayedMapLoader::isLoading()
+{
+    for (int i = 0; i < mLoading.size(); i++) {
+        if (mLoading[i]->mapInfo->isLoading())
+            return true;
+    }
+    return false;
+}
+
+void DelayedMapLoader::mapLoaded(MapInfo *mapInfo)
+{
+    for (int i = 0; i < mLoading.size(); i++) {
+        SubMapLoading *sml = mLoading[i];
+        if (sml->mapInfo == mapInfo) {
+            mLoaded += new SubMapLoading(mapInfo); // add reference
+            delete mLoading.takeAt(i);
+            --i;
+            // Keep going, could be duplicate submaps to load
+        }
+    }
+}
+
+void DelayedMapLoader::mapFailedToLoad(MapInfo *mapInfo)
+{
+    for (int i = 0; i < mLoading.size(); i++) {
+        if (mLoading[i]->mapInfo == mapInfo) {
+            mError = MapManager::instance()->errorString();
+            delete mLoading.takeAt(i);
+            --i;
+            // Keep going, could be duplicate submaps to load
+        }
+    }
+}
+
+/////
+
+DelayedMapLoader::SubMapLoading::SubMapLoading(MapInfo *info) :
+    mapInfo(info), holdsReference(false)
+{
+    if (mapInfo->map()) {
+        MapManager::instance()->addReferenceToMap(mapInfo);
+        holdsReference = true;
+    }
+}
+
+DelayedMapLoader::SubMapLoading::~SubMapLoading()
+{
+    if (holdsReference)
+        MapManager::instance()->removeReferenceToMap(mapInfo);
 }

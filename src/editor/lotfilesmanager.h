@@ -25,6 +25,7 @@
 class BMPToTMXImages;
 class HeightMap;
 class MapComposite;
+class MapInfo;
 class Road;
 class World;
 class WorldDocument;
@@ -265,6 +266,43 @@ public:
 
 } // namespace LotFile
 
+class DelayedMapLoader : public QObject
+{
+    Q_OBJECT
+public:
+    DelayedMapLoader();
+    ~DelayedMapLoader()
+    {
+        qDeleteAll(mLoading);
+        qDeleteAll(mLoaded);
+    }
+
+    void addMap(MapInfo *info);
+    bool isLoading();
+    const QString &errorString() const
+    { return mError; }
+
+private slots:
+    void mapLoaded(MapInfo *info);
+    void mapFailedToLoad(MapInfo *info);
+
+private:
+    class SubMapLoading
+    {
+    public:
+        SubMapLoading(MapInfo *info);
+        ~SubMapLoading();
+        MapInfo *mapInfo;
+        bool holdsReference;
+    private:
+        Q_DISABLE_COPY(SubMapLoading)
+    };
+
+    QList<SubMapLoading*> mLoading;
+    QList<SubMapLoading*> mLoaded;
+    QString mError;
+};
+
 class LotFilesManager : public QObject
 {
     Q_OBJECT
@@ -294,9 +332,7 @@ public:
     QString errorString() const { return mError; }
 
 signals:
-    
-public slots:
-    
+        
 private:
     uint cellToGid(const Tiled::Cell *cell);
     bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
