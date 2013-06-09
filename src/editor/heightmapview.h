@@ -65,7 +65,7 @@ private:
 
 private:
     HeightMapScene *mScene;
-    unsigned int mTextureID;
+    QMap<Tiled::Tileset*,unsigned int> mTextureID;
     Tiled::Tileset *mTileset;
     DisplayStyle mDisplayStyle;
 };

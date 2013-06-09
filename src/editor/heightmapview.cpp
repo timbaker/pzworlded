@@ -45,23 +45,12 @@
 HeightMapItem::HeightMapItem(HeightMapScene *scene, QGraphicsItem *parent) :
     QGraphicsItem(parent),
     mScene(scene),
-    mDisplayStyle(MeshStyle),
-    mTextureID(0),
-    mTileset(0)
+    mDisplayStyle(MeshStyle)
 {
     mDisplayStyle = Preferences::instance()->heightMapDisplayStyle()
             ? FlatStyle : MeshStyle;
 
     setFlag(ItemUsesExtendedStyleOption);
-
-    if (mScene->mapComposite()) {
-        foreach (Tiled::Tileset *ts, mScene->mapComposite()->map()->tilesets()) {
-            if (ts->name() == QLatin1String("blends_natural_01")) {
-                mTileset = ts;
-                break;
-            }
-        }
-    }
 }
 
 QRectF HeightMapItem::boundingRect() const
@@ -71,28 +60,48 @@ QRectF HeightMapItem::boundingRect() const
 
 void HeightMapItem::loadGLTextures()
 {
+    if (!mScene->mapComposite()) return;
+
     QImage t;
     QImage b;
 
-    if (b.load(QLatin1String("C:/Programming/heightmap/tex_blends_natural_01.png"))) {
-        QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
-        QPainter painter(&fixedImage);
-        painter.setCompositionMode(QPainter::CompositionMode_Source);
-        painter.fillRect(fixedImage.rect(), Qt::transparent);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        painter.drawImage( 0, 0, b);
-        painter.end();
-        b = fixedImage;
+    foreach (Tiled::Tileset *ts, mScene->mapComposite()->map()->tilesets()) {
+        // For a tileset called C:/Tiles/tileset.png, look for a texture called
+        // C:/Tiles/Textures/tex_tileset.png.
+        QFileInfo info(ts->imageSource());
+        QString name = info.absolutePath() + QLatin1String("/Textures/tex_") + info.fileName();
+        if (!QFileInfo(name).exists())
+            continue;
+        QImageReader reader(name);
+        if (!reader.size().isValid()) {
+            qDebug() << "Error getting size of texture image" << name;
+            continue;
+        }
+        if ((reader.size().width() / 32 < ts->columnCount()) ||
+                (reader.size().height() / 32 < ts->tileCount() / ts->columnCount())) {
+            qDebug() << "Texture image is too small for tileset" << name;
+            continue;
+        }
+        if (b.load(name)) {
+            QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
+            QPainter painter(&fixedImage);
+            painter.setCompositionMode(QPainter::CompositionMode_Source);
+            painter.fillRect(fixedImage.rect(), Qt::transparent);
+            painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+            painter.drawImage( 0, 0, b);
+            painter.end();
+            b = fixedImage;
 
-        t = QGLWidget::convertToGLFormat( b );
-        GLuint texture;
-        glGenTextures( 1, &texture );
-        glBindTexture( GL_TEXTURE_2D, texture );
-        glTexImage2D( GL_TEXTURE_2D, 0, 4, t.width(), t.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, t.bits() );
-        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+            t = QGLWidget::convertToGLFormat( b );
+            GLuint texture;
+            glGenTextures( 1, &texture );
+            glBindTexture( GL_TEXTURE_2D, texture );
+            glTexImage2D( GL_TEXTURE_2D, 0, 4, t.width(), t.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, t.bits() );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
-        mTextureID = texture;
+            mTextureID[ts] = texture;
+        }
     }
 }
 
@@ -184,14 +193,14 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     glClearDepth(1.0f);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    if (!mTextureID) {
+    if (mTextureID.isEmpty()) {
         loadGLTextures();
     }
 
     MapComposite *mc = mScene->mapComposite();
     CompositeLayerGroup *lg = mc ? mc->layerGroupForLevel(0) : 0;
 
-    if (mTextureID && mTileset && lg && columns * rows < 100000) {
+    if (lg && columns * rows < 100000) {
 
         DrawElements de;
         float tw = 256.0f, th = 320.0f;
@@ -200,17 +209,17 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
         static QVector<const Tiled::Cell*> cells(40);
         mc->bmpBlender()->flush(QRect(minX-cellX, minY-cellY, columns, rows));
 //        lg->prepareDrawing();
-        /*if (lg->needsSynch()) */lg->synch();
+        /*if (lg->needsSynch()) lg->synch();*/
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < columns; c++) {
                 if (!QRect(0,0,300,300).contains(minX+c-cellX,minY+r-cellY)) continue;
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(minX+c-cellX,minY+r-cellY), cells);
                 foreach (const Tiled::Cell *cell, cells) {
-                    if (!cell->tile || cell->tile->tileset() != mTileset) continue;
-                    int tx = cell->tile->id() % mTileset->columnCount();
-                    int ty = cell->tile->id() / mTileset->columnCount();
-                    de.add(mTextureID,
+                    if (!cell->tile || !mTextureID.contains(cell->tile->tileset())) continue;
+                    int tx = cell->tile->id() % cell->tile->tileset()->columnCount();
+                    int ty = cell->tile->id() / cell->tile->tileset()->columnCount();
+                    de.add(mTextureID[cell->tile->tileset()],
                            QVector2D((tx*32)/tw, 1-(ty*32.0)/th),
                            QVector2D(((tx+1)*32)/tw, 1-(ty*32)/th),
                            QVector2D(((tx+1)*32)/tw, 1-((ty+1)*32.0)/th),
