@@ -140,6 +140,7 @@ public:
     QPointF toScene(const QPointF &worldPos) const;
     QPointF toScene(qreal x, qreal y) const;
     QPolygonF toScene(const QRect &rect) const;
+    QPolygonF toSceneF(const QRectF &rect) const;
     QRect boundingRect(const QRect &rect) const;
 
     QPointF toWorld(const QPointF &scenePos) const;

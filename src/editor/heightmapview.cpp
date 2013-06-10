@@ -595,6 +595,17 @@ QPolygonF HeightMapScene::toScene(const QRect &rect) const
     return polygon;
 }
 
+QPolygonF HeightMapScene::toSceneF(const QRectF &rect) const
+{
+    QPolygonF polygon;
+    polygon += toScene(rect.topLeft());
+    polygon += toScene(rect.topRight());
+    polygon += toScene(rect.bottomRight());
+    polygon += toScene(rect.bottomLeft());
+    polygon += polygon.first();
+    return polygon;
+}
+
 QRect HeightMapScene::boundingRect(const QRect &_rect) const
 {
     QRect rect = _rect.translated(-worldOrigin());

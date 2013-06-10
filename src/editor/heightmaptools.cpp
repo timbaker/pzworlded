@@ -23,6 +23,7 @@
 #include "heightmapundoredo.h"
 #include "worlddocument.h"
 
+#include <QDebug>
 #include <QGraphicsSceneMouseEvent>
 
 BaseHeightMapTool::BaseHeightMapTool(const QString &name, const QIcon &icon,
@@ -62,8 +63,14 @@ HeightMapTool::HeightMapTool() :
     BaseHeightMapTool(tr("HeightMap Height Adjuster"),
                       QIcon(QLatin1String(":images/22x22/heightmap-paint")),
                       QKeySequence()),
-    mCursorItem(new QGraphicsEllipseItem)
+    mCursorItem(new QGraphicsPolygonItem)
 {
+    mCursorItem->setPen(QPen(Qt::black, 4));
+
+    mStrength = 1.0;
+    mOuterRadius = 4;
+    mInnerRadius = 1;
+    mRampPower = 1; // unused
 }
 
 void HeightMapTool::activate()
@@ -93,8 +100,23 @@ void HeightMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         return;
     mLastWorldPos = worldPos;
 
-    QRect r(worldPos - QPoint(1,1), QSize(3, 3));
-    mCursorItem->setRect(mScene->toScene(r).boundingRect());
+#if 1
+    QRectF r(worldPos - QPointF(mOuterRadius, mOuterRadius),
+             QSize(mOuterRadius * 2, mOuterRadius * 2));
+    mCursorItem->setPolygon(mScene->toSceneF(r));
+#elif 0
+    QTransform t;
+    t.translate(mScene->toScene(worldPos).x(), mScene->toScene(worldPos).y());
+    t.scale(1,0.5);
+    t.rotate(-45);
+    mCursorItem->setTransform(t);
+    mCursorItem->setRect(QRectF(-QPointF(mOuterRadius, mOuterRadius) * 64,
+                                QSize(mOuterRadius * 2, mOuterRadius * 2) * 64));
+#else
+    QRectF r(worldPos - QPointF(mOuterRadius, mOuterRadius),
+             QSize(mOuterRadius * 2, mOuterRadius * 2));
+    mCursorItem->setRect(mScene->boundingRect(r.toAlignedRect()));
+#endif
 
     if (event->buttons() & Qt::LeftButton) {
         paint(event->scenePos(), true, true);
@@ -108,13 +130,25 @@ void HeightMapTool::paint(const QPointF &scenePos, bool heightUp, bool mergeable
 {
     QPoint worldPos = mScene->toWorldInt(scenePos);
     int d = heightUp ? +5 : -5;
+
+    QRect updateRect(worldPos.x() - mOuterRadius - 2,
+                     worldPos.y() - mOuterRadius - 2,
+                     mOuterRadius * 2 + 4, mOuterRadius * 2 + 4);
+
+    qreal scale = 1.0 / ((mInnerRadius * mInnerRadius) - (mOuterRadius*mOuterRadius));
+    qreal bias = -(mOuterRadius*mOuterRadius) * scale;
+
     HeightMapRegion hmr;
-    for (int x = -1; x <= +1; ++x) {
-        for (int y = -1; y <= +1; y++) {
-            QPoint p = worldPos + QPoint(x, y);
+    for (int x = updateRect.left(); x <= updateRect.right(); ++x) {
+        for (int y = updateRect.top(); y <= updateRect.bottom(); y++) {
+            QPoint p(x, y);
             if (mScene->worldBounds().contains(p)) {
+                qreal dx = x - worldPos.x();
+                qreal dy = y - worldPos.y();
+                qreal s = dx * dx + dy * dy;
+                qreal delta = mStrength * qBound(s * scale + bias, 0.0, 1.0);
                 hmr.resize(hmr.mRegion | QRegion(p.x(), p.y(), 1, 1));
-                hmr.setHeightAt(p.x(), p.y(), mScene->hm()->heightAt(p) + d);
+                hmr.setHeightAt(p.x(), p.y(), mScene->hm()->heightAt(p) + delta * d);
             }
         }
     }

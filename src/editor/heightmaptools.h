@@ -60,6 +60,9 @@ public:
 
     virtual void languageChanged() {}
 
+    qreal outerRadius() const { return mOuterRadius; }
+    qreal innerRadius() const { return mInnerRadius; }
+
 private:
     void paint(const QPointF &scenePos, bool heightUp, bool mergeable);
 
@@ -68,7 +71,12 @@ private:
     static HeightMapTool *mInstance;
     HeightMapTool();
 
-    QGraphicsEllipseItem *mCursorItem;
+    qreal mStrength;
+    qreal mOuterRadius;
+    qreal mInnerRadius;
+    qreal mRampPower;
+
+    QGraphicsPolygonItem *mCursorItem;
     QPoint mLastWorldPos;
 };
 
