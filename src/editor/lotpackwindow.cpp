@@ -30,6 +30,7 @@
 #include "tilelayer.h"
 #include "zlevelrenderer.h"
 
+#include <qmath.h>
 #include <QDebug>
 #include <QFileDialog>
 #include <QSettings>
@@ -50,7 +51,7 @@ LotPackLayerGroup::LotPackLayerGroup(IsoWorld *world, Map *map, int level) :
 
 QRect LotPackLayerGroup::bounds() const
 {
-    return QRect(0, 0, mWorld->getWidthInTiles(), mWorld->getHeightInTiles());
+    return mWorld->tileBounds();
 }
 
 QMargins LotPackLayerGroup::drawMargins() const
@@ -254,9 +255,7 @@ void IsoWorldGridItem::setWorld(IsoWorld *world)
     Q_UNUSED(world)
 
     prepareGeometryChange();
-    mBoundingRect = mScene->renderer()->boundingRect(QRect(0, 0,
-                                                  mScene->world()->getWidthInTiles(),
-                                                  mScene->world()->getHeightInTiles()));
+    mBoundingRect = mScene->renderer()->boundingRect(mScene->world()->tileBounds());
 }
 
 /////
@@ -345,8 +344,7 @@ void LotPackScene::setWorld(IsoWorld *world)
     foreach (QGraphicsItem *item, mRoomDefGroups)
         addItem(item);
 
-    setSceneRect(mRenderer->boundingRect(QRect(0, 0, mWorld->getWidthInTiles(),
-                                               mWorld->getHeightInTiles())));
+    setSceneRect(mRenderer->boundingRect(mWorld->tileBounds()));
 
     mDarkRectangle->setRect(sceneRect());
     addItem(mDarkRectangle);
@@ -478,11 +476,13 @@ void LotPackView::recenter()
 
     QPointF p = mapToScene(viewport()->rect().center());
     QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(p);
-    int wx = tilePos.x() / IsoChunkMap::ChunksPerWidth;
-    int wy = tilePos.y() / IsoChunkMap::ChunksPerWidth;
+    int wx = qFloor(qreal(tilePos.x()) / IsoChunkMap::ChunksPerWidth);
+    int wy = qFloor(qreal(tilePos.y()) / IsoChunkMap::ChunksPerWidth);
     IsoChunkMap *cm = mWorld->CurrentCell->ChunkMap;
-    wx = qBound(cm->ChunkGridWidth / 2, wx, mWorld->getWidthInTiles() / cm->ChunksPerWidth - cm->ChunkGridWidth / 2);
-    wy = qBound(cm->ChunkGridWidth / 2, wy, mWorld->getHeightInTiles() / cm->ChunksPerWidth - cm->ChunkGridWidth / 2);
+    wx = qBound(mWorld->MetaGrid->chunkBounds().left() + cm->ChunkGridWidth / 2, wx,
+                mWorld->MetaGrid->chunkBounds().right() + 1 - cm->ChunkGridWidth / 2);
+    wy = qBound(mWorld->MetaGrid->chunkBounds().top() + cm->ChunkGridWidth / 2, wy,
+                mWorld->MetaGrid->chunkBounds().bottom() + 1 - cm->ChunkGridWidth / 2);
 //    qDebug() << "LotPackView::scrollContentsBy" << wx << wy;
     if (wx != cm->WorldX || wy != cm->WorldY) {
         QRegion current = QRect(cm->getWorldXMin(), cm->getWorldYMin(),

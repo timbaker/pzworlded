@@ -1,5 +1,6 @@
 #include "chunkmap.h"
 
+#include <qmath.h>
 #include <QBuffer>
 #include <QDataStream>
 #include <QDebug>
@@ -335,19 +336,15 @@ QMap<QString,LotHeader*> IsoLot::InfoHeaders;
 
 IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
 {
-    float fwx = wX;
-    float fwy = wY;
     this->wx = wX;
     this->wy = wY;
-    fwx /= 300.0F / IsoChunkMap::ChunksPerWidth;
-    fwy /= 300.0F / IsoChunkMap::ChunksPerWidth;
-    if (fwx < 0.0F)
-        fwx = (int)fwx - 1;
-    if (fwy < 0.0F) {
-        fwy = (int)fwy - 1;
-    }
-    wX = (int)fwx;
-    wY = (int)fwy;
+
+    float fwx = wX;
+    float fwy = wY;
+    fwx /= IsoChunkMap::ChunkGridWidth;
+    fwy /= IsoChunkMap::ChunkGridWidth;
+    wX = qFloor(fwx);
+    wY = qFloor(fwy);
 
     QString filenameheader = QString::fromLatin1("%1/%2_%3.lotheader").arg(directory).arg(wX).arg(wY);
     Q_ASSERT(InfoHeaders.contains(filenameheader));
@@ -370,7 +367,7 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
     }
 
     {
-        QString filenamepack = QString::fromLatin1("%1/world_%2_%3.lotpack").arg(directory).arg(cX).arg(cY);
+        QString filenamepack = QString::fromLatin1("%1/world_%2_%3.lotpack").arg(directory).arg(wX).arg(wY);
         QBuffer *fo = CellLoader::instance()->openLotPackFile(filenamepack);
         if (!fo)
             return; // exception!
@@ -382,9 +379,9 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
 
         int skip = 0;
 
-        int lwx = this->wx - (cX * 30);
-        int lwy = this->wy - (cY * 30);
-        int index = lwx * 30 + lwy;
+        int lwx = this->wx - (wX * IsoChunkMap::ChunkGridWidth);
+        int lwy = this->wy - (wY * IsoChunkMap::ChunkGridWidth);
+        int index = lwx * IsoChunkMap::ChunkGridWidth + lwy;
         fo->seek(4 + index * 8);
         qint64 pos;
         in >> pos;
@@ -496,7 +493,7 @@ void CellLoader::LoadCellBinaryChunkForLater(IsoCell *cell, int wx, int wy, IsoC
     delete lot;
 }
 
-IsoCell *CellLoader::LoadCellBinaryChunk(IsoWorld *world, /*IsoSpriteManager &spr*/int wx, int wy)
+IsoCell *CellLoader::LoadCellBinaryChunk(IsoWorld *world, int wx, int wy)
 {
     IsoCell *cell = new IsoCell(world/*spr*/, 300, 300);
 
@@ -508,8 +505,8 @@ IsoCell *CellLoader::LoadCellBinaryChunk(IsoWorld *world, /*IsoSpriteManager &sp
     for (int x = minwx; x < maxwx; ++x) {
         for (int y = minwy; y < maxwy; ++y) {
 #if 1
-            if (x < world->MetaGrid->minx || x > world->MetaGrid->maxx) continue;
-            if (y < world->MetaGrid->miny || y > world->MetaGrid->maxy) continue;
+            if (!cell->World->MetaGrid->chunkBounds().contains(x, y))
+                continue;
 #endif
             if ((x == wx) && (y == wy))
                 cell->ChunkMap->LoadChunk(x, y, x - minwx, y - minwy);
@@ -765,10 +762,10 @@ IsoGridSquare *IsoCell::getGridSquare(int x, int y, int z)
 /////
 
 IsoMetaGrid::IsoMetaGrid() :
-    minx(0),
-    miny(0),
-    maxx(0),
-    maxy(0)
+    minx(100000),
+    miny(100000),
+    maxx(-100000),
+    maxy(-100000)
 {
 }
 
@@ -847,14 +844,11 @@ void IsoMetaGrid::Create(const QString &directory)
                 def->CalculateBounds();
                 int nObjects = IsoLot::readInt(in);
                 for (int m = 0; m < nObjects; ++m) {
-#if 1
-                    IsoLot::readInt(in);
-                    IsoLot::readInt(in);
-                    IsoLot::readInt(in);
-#else
                     int e = IsoLot::readInt(in);
                     int x = IsoLot::readInt(in);
                     int y = IsoLot::readInt(in);
+                    Q_UNUSED(e) Q_UNUSED(x) Q_UNUSED(y)
+#if 0
                     def->objects += new MetaObject(e,
                                                    x + wX * 300 - def->x,
                                                    y + wY * 300 - def->y,
@@ -883,6 +877,7 @@ void IsoMetaGrid::Create(const QString &directory)
             for (int x = 0; x < 30; ++x) {
                 for (int y = 0; y < 30; ++y) {
                     int zombieDensity = IsoLot::readByte(in);
+                    Q_UNUSED(zombieDensity)
 //                    ch.getChunk(x, y).setZombieIntensity(zombieDensity);
                 }
             }
@@ -910,8 +905,9 @@ IsoWorld::~IsoWorld()
 
 void IsoWorld::init()
 {
-    int WorldX = 5, WorldY = 5;
     MetaGrid->Create(Directory);
-    CurrentCell = CellLoader::LoadCellBinaryChunk(this, /*this.spriteManager, */WorldX, WorldY);
+    CurrentCell = CellLoader::LoadCellBinaryChunk(this,
+                                                  MetaGrid->cellBounds().center().x() * IsoChunkMap::ChunkGridWidth,
+                                                  MetaGrid->cellBounds().center().y() * IsoChunkMap::ChunkGridWidth);
 }
 

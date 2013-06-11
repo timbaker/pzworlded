@@ -86,11 +86,13 @@ class GenerateLotsSettings
 public:
     QString exportDir;
     QString zombieSpawnMap;
+    QPoint worldOrigin;
 
     bool operator == (const GenerateLotsSettings &other)
     {
         return exportDir == other.exportDir &&
-                zombieSpawnMap == other.zombieSpawnMap;
+                zombieSpawnMap == other.zombieSpawnMap &&
+                worldOrigin == other.worldOrigin;
     }
 
     bool operator != (const GenerateLotsSettings &other)

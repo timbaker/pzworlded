@@ -335,6 +335,9 @@ public:
         w.writeAttribute(QLatin1String("path"),
                          relativeFileName(settings.zombieSpawnMap));
         w.writeEndElement();
+        w.writeStartElement(QLatin1String("worldOrigin"));
+        writePoint(w, QLatin1String("origin"), settings.worldOrigin);
+        w.writeEndElement();
         w.writeEndElement(); // </GenerateLots>
     }
 
@@ -358,6 +361,17 @@ public:
         w.writeStartElement(QLatin1String("heightmap"));
         w.writeAttribute(QLatin1String("file"), relativeFileName(mWorld->hmFileName()));
         w.writeEndElement();
+    }
+
+    void writePoint(QXmlStreamWriter &w, const QString &name, const QPoint &p)
+    {
+        write2Int(w, name, p.x(), p.y());
+    }
+
+    void write2Int(QXmlStreamWriter &w, const QString &name, int v1, int v2)
+    {
+        QString value = QString::number(v1) + QLatin1Char(',') + QString::number(v2);
+        w.writeAttribute(name, value);
     }
 
     QString relativeFileName(const QString &path)

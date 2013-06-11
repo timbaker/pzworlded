@@ -309,11 +309,13 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     /////
 
-    QString fileName = tr("world_%1_%2.lotpack")
-            .arg(cell->x())
-            .arg(cell->y());
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
 
-    QString lotsDirectory = mWorldDoc->world()->getGenerateLotsSettings().exportDir;
+    QString fileName = tr("world_%1_%2.lotpack")
+            .arg(lotSettings.worldOrigin.x() + cell->x())
+            .arg(lotSettings.worldOrigin.y() + cell->y());
+
+    QString lotsDirectory = lotSettings.exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);
     if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
         mError = tr("Could not open file for writing.");
@@ -468,9 +470,11 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
 {
     Q_UNUSED(mapComposite)
 
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
     QString fileName = tr("%1_%2.lotheader")
-            .arg(cell->x())
-            .arg(cell->y());
+            .arg(lotSettings.worldOrigin.x() + cell->x())
+            .arg(lotSettings.worldOrigin.y() + cell->y());
 
     QString lotsDirectory = mWorldDoc->world()->getGenerateLotsSettings().exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);

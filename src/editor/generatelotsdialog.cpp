@@ -31,6 +31,10 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
     connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
 
+    // World origin
+    ui->xOrigin->setValue(settings.worldOrigin.x());
+    ui->yOrigin->setValue(settings.worldOrigin.y());
+
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
             SLOT(apply()));
 }
@@ -79,6 +83,7 @@ void GenerateLotsDialog::accept()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
+    settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
@@ -93,6 +98,7 @@ void GenerateLotsDialog::apply()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
+    settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 

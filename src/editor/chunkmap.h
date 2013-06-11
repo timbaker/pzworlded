@@ -315,6 +315,14 @@ public:
 
     void Create(const QString &directory);
 
+    QRect cellBounds() const
+    { return QRect(minx, miny, maxx - minx + 1, maxy - miny + 1); }
+
+    QRect chunkBounds() const
+    { return QRect(minx * IsoChunkMap::ChunkGridWidth, miny * IsoChunkMap::ChunkGridWidth,
+                   (maxx - minx + 1) * IsoChunkMap::ChunkGridWidth,
+                   (maxy - miny + 1) * IsoChunkMap::ChunkGridWidth); }
+
     int minx;
     int miny;
     int maxx;
@@ -329,8 +337,15 @@ public:
 
     void init();
 
-    int getWidthInTiles() { return (MetaGrid->maxx - MetaGrid->minx + 1) * CurrentCell->width; }
-    int getHeightInTiles() { return (MetaGrid->maxy - MetaGrid->miny + 1) * CurrentCell->height; }
+    int getWidthInTiles() const { return (MetaGrid->maxx - MetaGrid->minx + 1) * CurrentCell->width; }
+    int getHeightInTiles() const { return (MetaGrid->maxy - MetaGrid->miny + 1) * CurrentCell->height; }
+
+    QRect tileBounds() const
+    {
+        return QRect(MetaGrid->minx * IsoChunkMap::ChunksPerWidth * IsoChunkMap::ChunkGridWidth,
+                     MetaGrid->miny * IsoChunkMap::ChunksPerWidth * IsoChunkMap::ChunkGridWidth,
+                     getWidthInTiles(), getHeightInTiles());
+    }
 
     IsoMetaGrid *MetaGrid;
     IsoCell *CurrentCell;
