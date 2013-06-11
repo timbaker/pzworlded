@@ -888,7 +888,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     }
 
     connect(mBmpBlender, SIGNAL(layersRecreated()), SLOT(bmpBlenderLayersRecreated()));
-    mBmpBlender->markDirty(0, 0, mMap->width(), mMap->height());
+    mBmpBlender->markDirty(0, 0, mMap->width() - 1, mMap->height() - 1);
     mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
 

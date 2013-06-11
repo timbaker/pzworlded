@@ -85,7 +85,7 @@ void BmpBlender::recreate()
         qDeleteAll(mTileLayers);
         mTileLayers.clear();
 
-        markDirty(0, 0, mMap->width(), mMap->height());
+        markDirty(0, 0, mMap->width() - 1, mMap->height() - 1);
 
         emit layersRecreated();
     }
