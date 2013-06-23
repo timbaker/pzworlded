@@ -289,8 +289,13 @@ QRectF CompositeLayerGroupItem::boundingRect() const
 
 void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *)
 {
+#if 1
+    if (mLayerGroup->needsSynch())
+        mLayerGroup->synch();
+#else
     if (mLayerGroup->needsSynch())
         return; // needed, see MapComposite::mapAboutToChange
+#endif
     mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
 #ifdef _DEBUG
     p->drawRect(mBoundingRect);
