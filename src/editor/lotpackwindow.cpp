@@ -69,7 +69,8 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
     int y = point.y() - mWorld->CurrentCell->ChunkMap->getWorldYMinTiles();
     if (IsoGridSquare *sq = mWorld->CurrentCell->getGridSquare(point.x(), point.y(), level())) {
         foreach (QString tileName, sq->tiles) {
-            if (Tile *tile = mScene->mTileByName[tileName]/*BuildingEditor::BuildingTilesMgr::instance()->tileFor(tileName)*/) { // FIXME: way too slow
+            if (!mScene->mTileByName.contains(tileName)) continue;
+            if (Tile *tile = mScene->mTileByName[tileName]) {
                 mGrids[cells.size()]->replace(x, y, Cell(tile));
                 const Cell *cell = &mGrids[cells.size()]->at(x, y);
                 cells += cell;
