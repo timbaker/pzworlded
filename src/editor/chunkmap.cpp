@@ -160,8 +160,8 @@ void IsoChunk::Save(bool bSaveQuit)
 
 IsoChunkMap::IsoChunkMap(IsoCell *cell) :
     cell(cell),
-    WorldX(5),
-    WorldY(5),
+    WorldX(-1000),
+    WorldY(-1000),
     XMinTiles(-1),
     XMaxTiles(-1),
     YMinTiles(-1),
@@ -501,6 +501,9 @@ IsoCell *CellLoader::LoadCellBinaryChunk(IsoWorld *world, int wx, int wy)
     int minwy = wy - (IsoChunkMap::ChunkGridWidth / 2);
     int maxwx = wx + IsoChunkMap::ChunkGridWidth / 2;
     int maxwy = wy + IsoChunkMap::ChunkGridWidth / 2;
+
+    cell->ChunkMap->WorldX = wx;
+    cell->ChunkMap->WorldY = wy;
 
     for (int x = minwx; x < maxwx; ++x) {
         for (int y = minwy; y < maxwy; ++y) {
