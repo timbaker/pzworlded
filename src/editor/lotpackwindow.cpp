@@ -739,11 +739,10 @@ void LotPackWindow::updateZoom()
 
 void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
 {
-    int x = tilePos.x() / 300;
-    int y = tilePos.y() / 300;
-    if (x >= 0 && x < mWorld->getWidthInTiles() &&
-            y >= 0 && y <= mWorld->getHeightInTiles())
+    if (mWorld->tileBounds().contains(tilePos)) {
+        int x = qFloor(tilePos.x() / 300.0);
+        int y = qFloor(tilePos.y() / 300.0);
         ui->coords->setText(tr("Cell %1,%2").arg(x).arg(y));
-    else
+    } else
         ui->coords->setText(QString());
 }
