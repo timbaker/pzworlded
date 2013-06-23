@@ -510,6 +510,7 @@ private:
     void doLater(PendingFlags flags);
     PendingFlags mPendingFlags;
     bool mPendingActive;
+    bool mPendingDefer;
     QList<CompositeLayerGroupItem*> mPendingGroupItems;
 
     BaseCellSceneTool *mActiveTool;

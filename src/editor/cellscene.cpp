@@ -1028,6 +1028,7 @@ CellScene::CellScene(QObject *parent)
     , mHandleDelayedMapLoadingScheduled(false)
     , mPendingFlags(None)
     , mPendingActive(false)
+    , mPendingDefer(true)
     , mActiveTool(0)
 {
     setBackgroundBrush(Qt::darkGray);
@@ -1320,6 +1321,8 @@ void CellScene::keyPressEvent(QKeyEvent *event)
 
 void CellScene::loadMap()
 {
+    mPendingDefer = true;
+
     if (mMap) {
         removeItem(mDarkRectangle);
         removeItem(mGridItem);
@@ -1333,6 +1336,7 @@ void CellScene::loadMap()
 
         mLayerItems.clear();
         mTileLayerGroupItems.clear();
+        mPendingGroupItems.clear();
         mObjectItems.clear();
         mSelectedObjectItems.clear();
         mSubMapItems.clear();
@@ -1420,6 +1424,7 @@ void CellScene::loadMap()
     mMapBordersItem->setPolygon(polygon);
 
     mPendingFlags |= AllGroups | Bounds | Synch | ZOrder;
+    mPendingDefer = false;
     handlePendingUpdates();
 
     addItem(mDarkRectangle);
@@ -1773,7 +1778,7 @@ void CellScene::setHighlightCurrentLevel(bool highlight)
 void CellScene::doLater(PendingFlags flags)
 {
     mPendingFlags |= flags;
-#if 1
+#if 0
     // Got a crash when undoing stuff and the progress dialog popped up
     // which called handlePendingUpdates during loadMap but before
     // the mMapComposite was loaded.
@@ -1795,6 +1800,11 @@ void CellScene::synchLayerGroupsLater()
 void CellScene::handlePendingUpdates()
 {
 //    qDebug() << "CellScene::handlePendingUpdates";
+    if (mPendingDefer) {
+        QMetaObject::invokeMethod(this, "handlePendingUpdates",
+                                  Qt::QueuedConnection);
+        return;
+    }
 
     // Adding a submap may create new TileLayerGroups to ensure
     // all the submap layers can be viewed.
