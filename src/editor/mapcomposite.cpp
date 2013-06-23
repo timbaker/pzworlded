@@ -225,9 +225,10 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                         : &mOwner->roadLayer1()->cellAt(subPos);
                 if (!cell->isEmpty()) {
                     if (!cleared) {
-                        bool isFloor = !mLevel && !index && (tl->name() == QLatin1String("0_Floor"));
-                        cells.resize(!isFloor ? root->mKeepFloorLayerCount : 0);
-                        opacities.resize(!isFloor ? root->mKeepFloorLayerCount : 0);
+                        bool isFloor = !mLevel && !index && (tl->name() == sFloor);
+                        if (isFloor) root->mKeepFloorLayerCount = 0;
+                        cells.resize(root->mKeepFloorLayerCount);
+                        opacities.resize(root->mKeepFloorLayerCount);
                         cleared = true;
                     }
                     cells.append(cell);
@@ -255,8 +256,9 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             if (!cell->isEmpty()) {
                 if (!cleared) {
                     bool isFloor = !mLevel && !index && (tl->name() == sFloor);
-                    cells.resize(!isFloor ? root->mKeepFloorLayerCount : 0);
-                    opacities.resize(!isFloor ? root->mKeepFloorLayerCount : 0);
+                    if (isFloor) root->mKeepFloorLayerCount = 0;
+                    cells.resize(root->mKeepFloorLayerCount);
+                    opacities.resize(root->mKeepFloorLayerCount);
                     cleared = true;
                 }
                 cells.append(cell);
@@ -326,7 +328,8 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                 if (!cell->isEmpty()) {
                     if (!cleared) {
                         bool isFloor = !mLevel && !index && (tl->name() == sFloor);
-                        cells.resize(!isFloor ? root->mKeepFloorLayerCount : 0);
+                        if (isFloor) root->mKeepFloorLayerCount = 0;
+                        cells.resize(root->mKeepFloorLayerCount);
                         cleared = true;
                     }
                     cells.append(cell);
@@ -342,7 +345,8 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
             if (!cell->isEmpty()) {
                 if (!cleared) {
                     bool isFloor = !mLevel && !index && (tl->name() == sFloor);
-                    cells.resize(!isFloor ? root->mKeepFloorLayerCount : 0);
+                    if (isFloor) root->mKeepFloorLayerCount = 0;
+                    cells.resize(root->mKeepFloorLayerCount);
                     cleared = true;
                 }
                 cells.append(cell);
