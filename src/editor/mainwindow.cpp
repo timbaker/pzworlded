@@ -161,7 +161,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->mainToolBar->addAction(undoAction);
     ui->mainToolBar->addAction(redoAction);
-    ui->mainToolBar->addSeparator();
 
     QIcon newIcon = ui->actionNew->icon();
     QIcon openIcon = ui->actionOpen->icon();
