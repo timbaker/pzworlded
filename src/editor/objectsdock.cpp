@@ -328,7 +328,11 @@ ObjectsView::ObjectsView(QWidget *parent)
     setModel(mModel);
 
     header()->resizeSection(0, 180);
+#if QT_VERSION >= 0x050000
+    header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#else
     header()->setResizeMode(1, QHeaderView::ResizeToContents);
+#endif
 
     connect(mModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
             SLOT(rowsInserted(QModelIndex,int,int)));
@@ -869,6 +873,8 @@ void ObjectsModel::removeItemFromModel(ObjectsModel::Item *item)
 
 void ObjectsModel::setModelData()
 {
+    beginResetModel();
+
     qDeleteAll(mLevels);
     mLevels.clear();
 
@@ -876,7 +882,7 @@ void ObjectsModel::setModelData()
     mRootItem = 0;
 
     if (!mCell) {
-        reset();
+        endResetModel();
         return;
     }
 
@@ -905,7 +911,7 @@ void ObjectsModel::setModelData()
         new Item(parent, 0, obj);
     }
 
-    reset();
+    endResetModel();
 }
 
 void ObjectsModel::setDocument(Document *doc)
@@ -1057,13 +1063,15 @@ void ObjectsModel::cellContentsAboutToChange(WorldCell *cell)
     if (cell != mCell)
         return;
 
+    beginResetModel();
+
     qDeleteAll(mLevels);
     mLevels.clear();
 
     delete mRootItem;
     mRootItem = 0;
 
-    reset();
+    endResetModel();
 
     mSynching = true; // ignore layerGroupAdded
 }

@@ -142,7 +142,7 @@ void LotPackMiniMapItem::setWorld(IsoWorld *world)
 
     if (mGridItem)
         mGridItem->setParentItem(0);
-    qDeleteAll(children());
+    qDeleteAll(childItems());
 
     foreach (LotHeader *h, IsoLot::InfoHeaders) {
         foreach (BuildingDef *bdef, h->Buildings) {

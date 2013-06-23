@@ -567,13 +567,23 @@ void CopyPasteDialog::setup()
 {
     QHeaderView *header = ui->worldTree->header();
     header->setStretchLastSection(false);
+#if QT_VERSION >= 0x050000
+    header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+#else
     header->setResizeMode(0, QHeaderView::ResizeToContents);
     header->setResizeMode(1, QHeaderView::ResizeToContents);
+#endif
 
     header = ui->cellTree->header();
     header->setStretchLastSection(false);
+#if QT_VERSION >= 0x050000
+    header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+#else
     header->setResizeMode(0, QHeaderView::ResizeToContents);
     header->setResizeMode(1, QHeaderView::ResizeToContents);
+#endif
 
     ///// WORLD /////
 

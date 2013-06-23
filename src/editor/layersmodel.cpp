@@ -247,6 +247,8 @@ void LayersModel::setCellDocument(CellDocument *doc)
         mCellDocument->disconnect(this);
     }
 
+    beginResetModel();
+
     mCellDocument = doc;
     mMapComposite = 0;
     mMap = 0;
@@ -273,8 +275,7 @@ void LayersModel::setCellDocument(CellDocument *doc)
     }
 
     setModelData();
-
-    reset();
+    endResetModel();
 }
 
 void LayersModel::setModelData()
@@ -318,17 +319,19 @@ void LayersModel::layerGroupVisibilityChanged(ZTileLayerGroup *layerGroup)
 
 void LayersModel::cellMapFileAboutToChange()
 {
+    beginResetModel();
     delete mRootItem;
     mRootItem = 0;
     mMap = 0;
     mMapComposite = 0;
-    reset();
+    endResetModel();
 }
 
 void LayersModel::cellMapFileChanged()
 {
+    beginResetModel();
     mMapComposite = mCellDocument->scene()->mapComposite();
     mMap = mMapComposite->map();
     setModelData();
-    reset();
+    endResetModel();
 }

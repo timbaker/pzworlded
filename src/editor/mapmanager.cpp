@@ -334,7 +334,7 @@ public:
         xml.setDevice(device);
 #endif
 
-        if (xml.readNextStartElement() && xml.name() == "map") {
+        if (xml.readNextStartElement() && xml.name() == QLatin1String("map")) {
             mMapInfo = readMap();
         } else {
             xml.raiseError(tr("Not a map file."));
@@ -345,7 +345,7 @@ public:
 
     MapInfo *readMap()
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == "map");
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("map"));
 
         const QXmlStreamAttributes atts = xml.attributes();
         const int mapWidth =
@@ -385,7 +385,7 @@ public:
         xml.setDevice(device);
 #endif
 
-        if (xml.readNextStartElement() && xml.name() == "building") {
+        if (xml.readNextStartElement() && xml.name() == QLatin1String("building")) {
             mMapInfo = readBuilding();
         } else {
             xml.raiseError(tr("Not a building file."));
@@ -396,7 +396,7 @@ public:
 
     MapInfo *readBuilding()
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == "building");
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("building"));
 
         const QXmlStreamAttributes atts = xml.attributes();
         const int mapWidth =

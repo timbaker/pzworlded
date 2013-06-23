@@ -634,6 +634,8 @@ LotsModel::Item *LotsModel::toItem(WorldCellLot *lot) const
 
 void LotsModel::setModelData()
 {
+    beginResetModel();
+
     qDeleteAll(mLevels);
     mLevels.clear();
 
@@ -641,7 +643,7 @@ void LotsModel::setModelData()
     mRootItem = 0;
 
     if (!mCell) {
-        reset();
+        endResetModel();
         return;
     }
 
@@ -668,7 +670,7 @@ void LotsModel::setModelData()
         new Item(parent, 0, lot);
     }
 
-    reset();
+    endResetModel();
 }
 
 void LotsModel::setDocument(Document *doc)
@@ -761,13 +763,15 @@ void LotsModel::cellContentsAboutToChange(WorldCell *cell)
     if (cell != mCell)
         return;
 
+    beginResetModel();
+
     qDeleteAll(mLevels);
     mLevels.clear();
 
     delete mRootItem;
     mRootItem = 0;
 
-    reset();
+    endResetModel();
 
     mSynching = true; // ignore layerGroupAdded
 }

@@ -140,6 +140,8 @@ public:
 
     void flush()
     {
+#if QT_VERSION >= 0x050000
+#else
         glEnableClientState(GL_VERTEX_ARRAY);
         glEnableClientState(GL_TEXTURE_COORD_ARRAY);
         glVertexPointer(3, GL_FLOAT, 0, vertices.constData());
@@ -151,6 +153,7 @@ public:
         glDisableClientState(GL_VERTEX_ARRAY);
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
         clear();
+#endif
     }
 
     QVector<GLushort> indices;
@@ -186,11 +189,17 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#if QT_VERSION >= 0x050000
+#else
     glShadeModel(GL_FLAT);
+#endif
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+#if QT_VERSION >= 0x050000
+#else
     glClearDepth(1.0f);
+#endif
     glClear(GL_DEPTH_BUFFER_BIT);
 
     if (mTextureID.isEmpty()) {
@@ -266,8 +275,8 @@ void HeightMapItem::paint2(QPainter *painter, const QStyleOptionGraphicsItem *op
 
     // Determine the tile and pixel coordinates to start at
     QPointF tilePos = mScene->toWorld(rect.x(), rect.y());
-    QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
-                           (int) std::floor(tilePos.y()));
+    QPoint rowItr = QPoint((int) qFloor(tilePos.x()),
+                           (int) qFloor(tilePos.y()));
     QPointF startPos = mScene->toScene(rowItr);
     startPos.rx() -= tileWidth / 2;
     startPos.ry() += tileHeight;

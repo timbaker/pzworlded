@@ -303,7 +303,7 @@ ObjectLabelItem::ObjectLabelItem(ObjectItem *item, QGraphicsItem *parent)
     : QGraphicsSimpleTextItem(parent)
     , mItem(item)
 {
-    setAcceptsHoverEvents(true);
+    setAcceptHoverEvents(true);
     setFlag(ItemIgnoresTransformations);
 
     synch();

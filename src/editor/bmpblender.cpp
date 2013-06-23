@@ -207,7 +207,7 @@ static QStringList normalizeTileNames(const QStringList &tileNames)
 {
     QStringList ret;
     foreach (QString tileName, tileNames) {
-        Q_ASSERT_X(BuildingEditor::BuildingTilesMgr::legalTileName(tileName), "normalizeTileNames", (char*)tileName.toAscii().constData());
+        Q_ASSERT_X(BuildingEditor::BuildingTilesMgr::legalTileName(tileName), "normalizeTileNames", (char*)tileName.toLatin1().constData());
         ret += BuildingEditor::BuildingTilesMgr::normalizeTileName(tileName);
     }
     return ret;

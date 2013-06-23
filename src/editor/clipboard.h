@@ -37,7 +37,7 @@ public:
     World *world() const { return mWorld; }
 
     const QList<WorldCellContents*> &cellsInClipboard() const;
-    const int cellsInClipboardCount() const;
+    int cellsInClipboardCount() const;
 
     void pasteEverythingButCells(WorldDocument *worldDoc);
 

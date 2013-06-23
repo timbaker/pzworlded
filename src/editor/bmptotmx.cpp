@@ -298,7 +298,7 @@ QStringList BMPToTMX::supportedImageFormats()
 {
     QStringList ret;
     foreach (QByteArray format, QImageReader::supportedImageFormats())
-        ret += QString::fromAscii(format);
+        ret += QString::fromLatin1(format);
     return ret;
 }
 

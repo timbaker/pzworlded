@@ -448,7 +448,8 @@ void PropertiesModel::setDocument(WorldDocument *worldDoc)
 
 void PropertiesModel::reset()
 {
-    QAbstractItemModel::reset();
+    beginResetModel();
+    endResetModel();
 
     // When reset() is called, selectionChanged() won't get called in the view
     emit theModelWasReset();

@@ -107,6 +107,7 @@ SOURCES += main.cpp\
     BuildingEditor/building.cpp \
     BuildingEditor/buildingwriter.cpp \
     BuildingEditor/buildingreader.cpp \
+    BuildingEditor/buildingroomdef.cpp \
     BuildingEditor/buildingtemplates.cpp \
     threads.cpp \
     bmpblender.cpp \
@@ -185,6 +186,7 @@ HEADERS  += mainwindow.h \
     BuildingEditor/building.h \
     BuildingEditor/buildingwriter.h \
     BuildingEditor/buildingreader.h \
+    BuildingEditor/buildingroomdef.h \
     BuildingEditor/buildingtemplates.h \
     threads.h \
     bmpblender.h \

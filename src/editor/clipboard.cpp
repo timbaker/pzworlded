@@ -81,7 +81,7 @@ const QList<WorldCellContents *> &Clipboard::cellsInClipboard() const
     return mCellContents;
 }
 
-const int Clipboard::cellsInClipboardCount() const
+int Clipboard::cellsInClipboardCount() const
 {
     return mCellContents.size();
 }

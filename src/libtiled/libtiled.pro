@@ -14,8 +14,26 @@ macx {
 DLLDESTDIR = ../..
 
 win32 {
-    # It is enough to include zlib, since the symbols are available in Qt
-    INCLUDEPATH += ../zlib
+    # With Qt 4 it was enough to include zlib, since the symbols were available
+    # in Qt. Qt 5 no longer exposes zlib symbols, so it needs to be linked.
+    # Get the installer at:
+    #
+    # http://gnuwin32.sourceforge.net/packages/zlib.htm
+    #
+    greaterThan(QT_MAJOR_VERSION, 4) {
+        # If there is an environment variable, take that
+        isEmpty(ZLIB_PATH):ZLIB_PATH = "$$PWD/../zlib"
+
+        isEmpty(ZLIB_PATH) {
+            error("ZLIB_PATH not defined and could not be auto-detected")
+        }
+
+        INCLUDEPATH += $${ZLIB_PATH}
+        win32-g++*:LIBS += -L$${ZLIB_PATH} -lz
+        win32-msvc*:LIBS += -L$${ZLIB_PATH} zlib.lib
+    } else {
+        INCLUDEPATH += ../zlib
+    }
 } else {
     # On other platforms it is necessary to link to zlib explicitly
     LIBS += -lz

@@ -161,6 +161,7 @@ void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor grid
     gridColor.setAlpha(128);
 
     QPen pen;
+    pen.setCosmetic(true);
     QBrush brush(gridColor, Qt::Dense4Pattern);
     brush.setTransform(QTransform::fromScale(1/painter->transform().m11(),
                                              1/painter->transform().m22()));

@@ -148,7 +148,7 @@ public:
         if (value == QLatin1String("true")
                 || value == QLatin1String("false")
                 || isDouble)
-            w->writeKeyAndUnquotedValue(key, value.toAscii());
+            w->writeKeyAndUnquotedValue(key, value.toLatin1());
         else
             w->writeKeyAndValue(key, value);
     }

@@ -250,24 +250,24 @@ void BaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
         mScrollMagnitude = 0;
 #define SCROLL_DISTANCE 64
         // determine the direction of automatic scrolling
-        if(pos.x() < SCROLL_DISTANCE) {
+        if (pos.x() < SCROLL_DISTANCE) {
             mScrollDirection = ScrollLeft;
             distance = pos.x();
         }
-        else if(width()-pos.x() < SCROLL_DISTANCE) {
+        else if (width() - pos.x() < SCROLL_DISTANCE) {
             mScrollDirection = ScrollRight;
             distance = width()-pos.x();
         }
-        if(pos.y() < SCROLL_DISTANCE) {
+        if (pos.y() < SCROLL_DISTANCE) {
             mScrollDirection += ScrollUp;
             distance = pos.y();
         }
-        else if(height()-pos.y() < SCROLL_DISTANCE) {
+        else if(height() - pos.y() < SCROLL_DISTANCE) {
             mScrollDirection += ScrollDown;
             distance = height()-pos.y();
         }
         if(mScrollDirection) {
-            mScrollMagnitude = qRound((SCROLL_DISTANCE-distance)/8);
+            mScrollMagnitude = qRound(float(SCROLL_DISTANCE-distance)/8);
             startAutoScroll();
         } else
             stopAutoScroll();
@@ -379,7 +379,9 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     mViewportItem = new QGraphicsPolygonItem();
-    mViewportItem->setPen(QPen(Qt::white));
+    QPen pen(Qt::white);
+    pen.setCosmetic(true);
+    mViewportItem->setPen(pen);
     mViewportItem->setZValue(100);
     scene->addItem(mViewportItem);
 

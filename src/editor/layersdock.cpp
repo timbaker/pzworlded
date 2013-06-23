@@ -220,7 +220,11 @@ void LayersView::setCellDocument(CellDocument *doc)
     if (mCellDocument) {
 //        setModel(mModel = mCellDocument->levelsModel());
         model()->setCellDocument(mCellDocument);
+#if QT_VERSION >= 0x050000
+        header()->setSectionResizeMode(0, QHeaderView::Stretch); // 2 equal-sized columns, user can't adjust
+#else
         header()->setResizeMode(0, QHeaderView::Stretch); // 2 equal-sized columns, user can't adjust
+#endif
 
         connect(mCellDocument, SIGNAL(currentLevelChanged(int)),
                 SLOT(currentLevelOrLayerIndexChanged(int)));

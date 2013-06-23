@@ -392,7 +392,7 @@ Building *BuildingReaderPrivate::readBuilding(QIODevice *device, const QString &
 
     xml.setDevice(device);
 
-    if (xml.readNextStartElement() && xml.name() == "building") {
+    if (xml.readNextStartElement() && xml.name() == QLatin1String("building")) {
         building = readBuilding();
     } else {
         xml.raiseError(tr("Not a building file."));
@@ -403,7 +403,7 @@ Building *BuildingReaderPrivate::readBuilding(QIODevice *device, const QString &
 
 Building *BuildingReaderPrivate::readBuilding()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "building");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("building"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     const QString versionString = atts.value(QLatin1String("version")).toString();
@@ -422,24 +422,24 @@ Building *BuildingReaderPrivate::readBuilding()
     mBuilding = new Building(width, height);
 
     while (xml.readNextStartElement()) {
-        if (xml.name() == "furniture") {
+        if (xml.name() == QLatin1String("furniture")) {
             if (FurnitureTiles *tiles = readFurnitureTiles()) {
                 mFurnitureTiles += tiles;
                 mFakeFurnitureGroup.mTiles += tiles;
             }
-        } else if (xml.name() == "tile_entry") {
+        } else if (xml.name() == QLatin1String("tile_entry")) {
             if (BuildingTileEntry *entry = readTileEntry())
                 mEntries += entry;
-        } else if (xml.name() == "user_tiles") {
+        } else if (xml.name() == QLatin1String("user_tiles")) {
             readUserTiles();
-        } else if (xml.name() == "used_tiles") {
+        } else if (xml.name() == QLatin1String("used_tiles")) {
             mBuilding->setUsedTiles(readUsedTiles());
-        } else if (xml.name() == "used_furniture") {
+        } else if (xml.name() == QLatin1String("used_furniture")) {
             mBuilding->setUsedFurniture(readUsedFurniture());
-        } else if (xml.name() == "room") {
+        } else if (xml.name() == QLatin1String("room")) {
             if (Room *room = readRoom())
                 mBuilding->insertRoom(mBuilding->roomCount(), room);
-        } else if (xml.name() == "floor") {
+        } else if (xml.name() == QLatin1String("floor")) {
             if (BuildingFloor *floor = readFloor())
                 mBuilding->insertFloor(mBuilding->floorCount(), floor);
         } else
@@ -475,7 +475,7 @@ Building *BuildingReaderPrivate::readBuilding()
 
 FurnitureTiles *BuildingReaderPrivate::readFurnitureTiles()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "furniture");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("furniture"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     bool corners = false;
@@ -499,7 +499,7 @@ FurnitureTiles *BuildingReaderPrivate::readFurnitureTiles()
     ftiles->setLayer(layer);
 
     while (xml.readNextStartElement()) {
-        if (xml.name() == "entry") {
+        if (xml.name() == QLatin1String("entry")) {
             if (FurnitureTile *ftile = readFurnitureTile(ftiles))
                 ftiles->setTile(ftile);
         } else
@@ -522,7 +522,7 @@ FurnitureTiles *BuildingReaderPrivate::readFurnitureTiles()
 
 FurnitureTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTiles *ftiles)
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "entry");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("entry"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     QString orientString = atts.value(QLatin1String("orient")).toString();
@@ -548,7 +548,7 @@ FurnitureTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTiles *ftiles)
     }
 
     while (xml.readNextStartElement()) {
-        if (xml.name() == "tile") {
+        if (xml.name() == QLatin1String("tile")) {
             QPoint pos;
             if (BuildingTile *btile = readFurnitureTile(ftile, pos))
                 ftile->setTile(pos.x(), pos.y(), btile);
@@ -568,7 +568,7 @@ FurnitureTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTiles *ftiles)
 BuildingTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTile *ftile, QPoint &pos)
 {
     Q_UNUSED(ftile)
-    Q_ASSERT(xml.isStartElement() && xml.name() == "tile");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("tile"));
     const QXmlStreamAttributes atts = xml.attributes();
     int x = atts.value(QLatin1String("x")).toString().toInt();
     int y = atts.value(QLatin1String("y")).toString().toInt();
@@ -586,7 +586,7 @@ BuildingTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTile *ftile, QPo
 
 BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "tile_entry");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("tile_entry"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     const QString categoryName = atts.value(QLatin1String("category")).toString();
@@ -600,7 +600,7 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
     mFakeBuildingTilesMgr.mUsedCategories[category] = true;
 
     while (xml.readNextStartElement()) {
-        if (xml.name() == "tile") {
+        if (xml.name() == QLatin1String("tile")) {
             const QXmlStreamAttributes atts = xml.attributes();
             const QString enumName = atts.value(QLatin1String("enum")).toString();
             int e = category->enumFromString(enumName);
@@ -632,10 +632,10 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
 
 void BuildingReaderPrivate::readUserTiles()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "user_tiles");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("user_tiles"));
 
     while (xml.readNextStartElement()) {
-        if (xml.name() == "tile") {
+        if (xml.name() == QLatin1String("tile")) {
             const QXmlStreamAttributes atts = xml.attributes();
             const QString tileName = atts.value(QLatin1String("tile")).toString();
             QString tilesetName;
@@ -655,7 +655,7 @@ void BuildingReaderPrivate::readUserTiles()
 
 QList<BuildingTileEntry *> BuildingReaderPrivate::readUsedTiles()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "used_tiles");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("used_tiles"));
 
     QList<BuildingTileEntry *> result;
 
@@ -679,7 +679,7 @@ QList<BuildingTileEntry *> BuildingReaderPrivate::readUsedTiles()
 
 QList<FurnitureTiles *> BuildingReaderPrivate::readUsedFurniture()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "used_furniture");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("used_furniture"));
 
     QList<FurnitureTiles *> result;
 
@@ -702,7 +702,7 @@ QList<FurnitureTiles *> BuildingReaderPrivate::readUsedFurniture()
 
 Room *BuildingReaderPrivate::readRoom()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "room");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("room"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     const QString name = atts.value(QLatin1String("Name")).toString();
@@ -735,15 +735,15 @@ Room *BuildingReaderPrivate::readRoom()
 
 BuildingFloor *BuildingReaderPrivate::readFloor()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "floor");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("floor"));
 
     BuildingFloor *floor = new BuildingFloor(mBuilding, mBuilding->floorCount());
 
     while (xml.readNextStartElement()) {
-        if (xml.name() == "object") {
+        if (xml.name() == QLatin1String("object")) {
             if (BuildingObject *object = readObject(floor))
                 floor->insertObject(floor->objectCount(), object);
-        } else if (xml.name() == "rooms") {
+        } else if (xml.name() == QLatin1String("rooms")) {
             while (xml.readNext() != QXmlStreamReader::Invalid) {
                 if (xml.isEndElement())
                     break;
@@ -751,7 +751,7 @@ BuildingFloor *BuildingReaderPrivate::readFloor()
                     decodeCSVFloorData(floor, xml.text().toString());
                 }
             }
-        } else if (xml.name() == "tiles") {
+        } else if (xml.name() == QLatin1String("tiles")) {
             const QXmlStreamAttributes atts = xml.attributes();
             const QString layerName = atts.value(QLatin1String("layer")).toString();
             if (layerName.isEmpty()) {
@@ -776,7 +776,7 @@ BuildingFloor *BuildingReaderPrivate::readFloor()
 
 BuildingObject *BuildingReaderPrivate::readObject(BuildingFloor *floor)
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == "object");
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("object"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     const QString type = atts.value(QLatin1String("type")).toString();
