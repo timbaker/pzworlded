@@ -110,7 +110,7 @@ typedef QList<Road*> RoadList;
 
 #include <QVector>
 
-#include "simplefile.h"
+class SimpleFileBlock;
 
 class RoadTemplates
 {
@@ -133,8 +133,8 @@ public:
 
 private:
     void parseRoadsDotTxt();
-    void handleRoad(SimpleFileBlock block);
-    void handleLines(SimpleFileBlock block);
+    void handleRoad(SimpleFileBlock &block);
+    void handleLines(SimpleFileBlock &block);
 
 private:
     Q_DISABLE_COPY(RoadTemplates)

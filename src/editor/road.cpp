@@ -19,6 +19,7 @@
 
 #include "mainwindow.h"
 
+#include "simplefile.h"
 Road::Road(World *world, int x1, int y1, int x2, int y2, int width, int style)
     : mWorld(world)
     , mStart(x1, y1)
@@ -199,12 +200,12 @@ void RoadTemplates::parseRoadsDotTxt()
     }
 }
 
-void RoadTemplates::handleRoad(SimpleFileBlock block)
+void RoadTemplates::handleRoad(SimpleFileBlock &block)
 {
     mRoadTiles += block.value("tile");
 }
 
-void RoadTemplates::handleLines(SimpleFileBlock block)
+void RoadTemplates::handleLines(SimpleFileBlock &block)
 {
     TrafficLines *lines = new TrafficLines;
     lines->name = block.value("name");

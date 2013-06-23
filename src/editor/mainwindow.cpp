@@ -51,6 +51,7 @@
 #include "resizeworlddialog.h"
 #include "roadsdock.h"
 #include "scenetools.h"
+#include "simplefile.h"
 #include "templatesdialog.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
