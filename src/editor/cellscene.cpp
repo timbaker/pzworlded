@@ -1257,21 +1257,24 @@ void CellScene::setGraphicsSceneZOrder()
     int z2 = z;
     if (mActiveTool && mActiveTool->affectsLots())
         z2 += objSpaces;
+    int lotIndex = 0;
     foreach (SubMapItem *item, mSubMapItems)
-        item->setZValue(z2 + item->subMap()->levelOffset());
+        item->setZValue(z2
+                        + item->subMap()->levelOffset() * mSubMapItems.size()
+                        + lotIndex++);
 
     z2 = z;
     if (mActiveTool && mActiveTool->affectsObjects())
         z2 += lotSpaces;
     const WorldCellObjectList &objects = cell()->objects();
+    int objectIndex = 0;
     foreach (ObjectItem *item, mObjectItems) {
         WorldCellObject *obj = item->object();
         int groupIndex = groups.indexOf(obj->group());
-        int objectIndex = objects.indexOf(obj);
         item->setZValue(z2
                         + groups.size() * mObjectItems.size() * obj->level()
                         + groupIndex * mObjectItems.size()
-                        + objectIndex);
+                        + objectIndex++);
     }
 
     mGridItem->setZValue(ZVALUE_GRID);
@@ -1443,61 +1446,38 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
 {
     if (_cell == cell()) {
         WorldCellLot *lot = cell()->lots().at(index);
-#if 1
         MapInfo *subMapInfo = MapManager::instance()->loadMap(
                     lot->mapName(), QString(), true, MapManager::PriorityLow);
-#else
-        MapInfo *subMapInfo = MapManager::instance()->loadMap(lot->mapName());
-#endif
         if (!subMapInfo) {
             qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
             subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
-#if 1
             if (subMapInfo->isLoading())
                 mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
             else {
                 MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
-
                 SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
-#if 1
+
+                // Don't just call mSubMapItems.insert(), due to asynchronous loading.
                 QMap<int,SubMapItem*> zzz;
                 foreach (SubMapItem *item, mSubMapItems)
                     zzz[cell()->lots().indexOf(item->lot())] = item;
-                zzz[cell()->lots().indexOf(lot)] = item;
-                item->setZValue(cell()->lots().indexOf(lot));
-                addItem(item);
+                zzz[index] = item;
                 mSubMapItems = zzz.values();
-#else
-                addItem(item);
-                mSubMapItems.append(item);
-#endif
 
                 // Update with most recent information
                 lot->setMapName(subMapInfo->path());
                 lot->setWidth(subMapInfo->width());
                 lot->setHeight(subMapInfo->height());
 
+                addItem(item);
+
                 if (!mHandleDelayedMapLoadingScheduled) {
                     mHandleDelayedMapLoadingScheduled = true;
                     QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
                 }
             }
-#else
-            MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
-
-            SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
-            addItem(item);
-            mSubMapItems.append(item);
-
-            // Update with most recent information
-            lot->setMapName(subMapInfo->path());
-            lot->setWidth(subMapInfo->width());
-            lot->setHeight(subMapInfo->height());
-
-            doLater(AllGroups | Bounds | Synch | ZOrder);
-#endif
         }
     }
 }
@@ -1514,7 +1494,7 @@ void CellScene::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
             removeItem(item);
             delete item;
 
-            doLater(AllGroups | Bounds | Synch);
+            doLater(AllGroups | Bounds | Synch | ZOrder);
         }
     }
 }
@@ -1565,7 +1545,7 @@ void CellScene::cellObjectAdded(WorldCell *cell, int index)
     ObjectItem *item = new ObjectItem(obj, this);
     addItem(item);
     item->synchWithObject(); // update label coords
-    mObjectItems += item;
+    mObjectItems.insert(index, item);
 
     doLater(ZOrder);
 }
@@ -2319,7 +2299,6 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
             SubMapItem *item = new SubMapItem(subMap, sm.lot, mRenderer);
 #if 1
-            item->setZValue(cell()->lots().indexOf(sm.lot));
             addItem(item);
             QMap<int,SubMapItem*> zzz;
             foreach (SubMapItem *item, mSubMapItems)
