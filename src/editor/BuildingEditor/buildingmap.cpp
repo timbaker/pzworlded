@@ -315,6 +315,42 @@ void BuildingMap::loadNeededTilesets(Building *building)
     }
 }
 
+#include "buildingroomdef.h"
+
+// Copied from BuildingFloor::roomRegion()
+static QList<QRect> cleanupRegion(QRegion region)
+{
+    // Clean up the region by merging vertically-adjacent rectangles of the
+    // same width.
+    QVector<QRect> rects = region.rects();
+    for (int i = 0; i < rects.size(); i++) {
+        QRect r = rects[i];
+        if (!r.isValid()) continue;
+        for (int j = 0; j < rects.size(); j++) {
+            if (i == j) continue;
+            QRect r2 = rects.at(j);
+            if (!r2.isValid()) continue;
+            if (r2.left() == r.left() && r2.right() == r.right()) {
+                if (r.bottom() + 1 == r2.top()) {
+                    r.setBottom(r2.bottom());
+                    rects[j] = QRect();
+                } else if (r.top() == r2.bottom() + 1) {
+                    r.setTop(r2.top());
+                    rects[j] = QRect();
+                }
+            }
+        }
+        rects[i] = r;
+    }
+
+    QList<QRect> ret;
+    foreach (QRect r, rects) {
+        if (r.isValid())
+            ret += r;
+    }
+    return ret;
+}
+
 void BuildingMap::addRoomDefObjects(Map *map)
 {
     foreach (BuildingFloor *floor, mBuilding->floors())
@@ -334,6 +370,21 @@ void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
     QPoint offset(delta, delta);
     int roomID = 1;
     foreach (Room *room, building->rooms()) {
+#if 1
+        BuildingRoomDefecator rd(floor, room);
+        rd.defecate();
+        foreach (QRegion roomRgn, rd.mRegions) {
+            foreach (QRect rect, cleanupRegion(roomRgn)) {
+                QString name = room->internalName + QLatin1Char('#')
+                        + QString::number(roomID);
+                MapObject *mapObject = new MapObject(name, QLatin1String("room"),
+                                                     rect.topLeft() + offset,
+                                                     rect.size());
+                objectGroup->addObject(mapObject);
+            }
+            ++roomID;
+        }
+#else
         foreach (QRect rect, floor->roomRegion(room)) {
             QString name = room->internalName + QLatin1Char('#')
                     + QString::number(roomID);
@@ -343,6 +394,7 @@ void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
             objectGroup->addObject(mapObject);
         }
         ++roomID;
+#endif
     }
 }
 
