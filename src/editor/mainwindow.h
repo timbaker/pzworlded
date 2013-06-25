@@ -152,7 +152,7 @@ private:
 
     void enableDeveloperFeatures();
 
-    struct
+    struct ViewHint
     {
         qreal scale;
         int scrollX;

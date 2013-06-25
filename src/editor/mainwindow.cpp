@@ -67,6 +67,7 @@
 
 #include "layer.h"
 #include "mapobject.h"
+#include "maprenderer.h"
 #include "objectgroup.h"
 #include "tileset.h"
 
@@ -426,9 +427,10 @@ void MainWindow::documentAdded(Document *doc)
         if (mViewHint.valid) {
             view->zoomable()->setScale(mViewHint.scale);
             view->centerOn(mViewHint.scrollX, mViewHint.scrollY);
+        } else {
+            QPointF center = scene->renderer()->tileToPixelCoords(300/2.0, 300/2.0);
+            view->centerOn(center);
         }
-        else
-            view->centerOn(scene->sceneRect().center());
     }
     if (WorldDocument *worldDoc = doc->asWorldDocument()) {
         WorldView *view = new WorldView(this);
