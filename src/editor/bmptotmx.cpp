@@ -525,8 +525,13 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)
     }
 
     // This is the fastest format for QImage::pixel() and QImage::setPixel().
-    if (image.format() != QImage::Format_ARGB32)
+    if (image.format() != QImage::Format_ARGB32) {
         image = image.convertToFormat(QImage::Format_ARGB32);
+        if (image.isNull()) {
+            mError = tr("The image%1 file couldn't be loaded.\n%2\n\nThere might not be enough memory.  Try closing any open Cells or restart the application.")
+                    .arg(suffix).arg(QDir::toNativeSeparators(path));
+        }
+    }
 
     return image;
 }
