@@ -140,6 +140,7 @@ private:
     IsoWorld *mWorld;
     Tiled::Map *mMap;
     Tiled::MapRenderer *mRenderer;
+    QList<LotPackLayerGroup*> mLayerGroups;
     QVector<LotPackLayerGroupItem*> mLayerGroupItems;
     QVector<QGraphicsItem*> mRoomDefGroups;
     bool mShowRoomDefs;
@@ -188,10 +189,13 @@ public:
     void addRecentDirectory(const QString &f);
     void setRecentMenu();
     
+    void closeEvent(QCloseEvent *e);
+
 private slots:
     void open();
     void openRecent();
     void open(const QString &directory);
+    void closeWorld();
     void zoomIn();
     void zoomOut();
     void zoomNormal();

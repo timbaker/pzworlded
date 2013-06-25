@@ -318,6 +318,11 @@ void BaseGraphicsView::addMiniMapItem(QGraphicsItem *item)
     mMiniMap->addItem(item);
 }
 
+void BaseGraphicsView::removeMiniMapItem(QGraphicsItem *item)
+{
+    mMiniMap->removeItem(item);
+}
+
 QRectF BaseGraphicsView::sceneRectForMiniMap() const
 {
     return mScene->sceneRect();
@@ -355,7 +360,6 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     : QGraphicsView(parent)
     , mParentView(parent)
     , mViewportItem(0)
-    , mExtraItem(0)
     , mButtons(new QFrame(this))
     , mBiggerButton(new QToolButton(mButtons))
     , mSmallerButton(new QToolButton(mButtons))
@@ -448,9 +452,17 @@ void MiniMap::viewRectChanged()
 
 void MiniMap::addItem(QGraphicsItem *item)
 {
-    mExtraItem = item;
-    mExtraItem->setScale(scale());
-    scene()->addItem(mExtraItem);
+    item->setScale(scale());
+    scene()->addItem(item);
+    mExtraItems += item;
+}
+
+void MiniMap::removeItem(QGraphicsItem *item)
+{
+    if (mExtraItems.contains(item)) {
+        mExtraItems.removeAll(item);
+        scene()->removeItem(item);
+    }
 }
 
 void MiniMap::sceneRectChanged(const QRectF &_sceneRect)
@@ -469,8 +481,8 @@ void MiniMap::sceneRectChanged(const QRectF &_sceneRect)
 
     viewRectChanged();
 
-    if (mExtraItem)
-        mExtraItem->setScale(scale);
+    foreach (QGraphicsItem *item, mExtraItems)
+        item->setScale(scale);
 }
 
 void MiniMap::bigger()

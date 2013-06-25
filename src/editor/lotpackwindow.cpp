@@ -287,10 +287,19 @@ void LotPackScene::setWorld(IsoWorld *world)
         clear();
         delete mRenderer;
         delete mMap;
+        mRenderer = 0;
+        mMap = 0;
+        mCurrentLevel = 0;
+        qDeleteAll(mLayerGroups);
+        mLayerGroups.clear();
         mLayerGroupItems.clear();
         mRoomDefGroups.clear();
+        setSceneRect(QRectF());
     }
     mWorld = world;
+
+    if (!mWorld)
+        return;
 
     mMap = new Map(Map::LevelIsometric,
                    mWorld->getWidthInTiles(),
@@ -305,6 +314,7 @@ void LotPackScene::setWorld(IsoWorld *world)
         LotPackLayerGroupItem *item = new LotPackLayerGroupItem(lg, mRenderer);
         item->setZValue(z);
         addItem(item);
+        mLayerGroups += lg;
         mLayerGroupItems += item;
 
         QGraphicsRectItem *item2 = new QGraphicsRectItem();
@@ -360,6 +370,7 @@ void LotPackScene::setWorld(IsoWorld *world)
 
 void LotPackScene::setMaxLevel(int max)
 {
+    Q_UNUSED(max)
     highlightCurrentLevel();
 }
 
@@ -436,24 +447,32 @@ void LotPackView::setWorld(IsoWorld *world)
 
     mScene->setWorld(mWorld);
 
-    if (!mMiniMapItem) {
-        mMiniMapItem = new LotPackMiniMapItem(mScene);
-        addMiniMapItem(mMiniMapItem);
-    } else {
-        mMiniMapItem->setWorld(mWorld);
-    }
+    if (mWorld) {
+        if (!mMiniMapItem) {
+            mMiniMapItem = new LotPackMiniMapItem(mScene);
+            addMiniMapItem(mMiniMapItem);
+        } else {
+            mMiniMapItem->setWorld(mWorld);
+        }
 
-    centerOn(mScene->sceneRect().center());
+        centerOn(mScene->sceneRect().center());
+    } else {
+        if (mMiniMapItem) {
+            removeMiniMapItem(mMiniMapItem);
+            delete mMiniMapItem;
+            mMiniMapItem = 0;
+        }
+    }
 }
 
 void LotPackView::scrollContentsBy(int dx, int dy)
 {
-    BaseGraphicsView::scrollContentsBy(dx, dy);
-
     if (!mRecenterScheduled) {
         QMetaObject::invokeMethod(this, "recenter", Qt::QueuedConnection);
         mRecenterScheduled = true;
     }
+
+    BaseGraphicsView::scrollContentsBy(dx, dy);
 }
 
 #include <QMouseEvent>
@@ -474,6 +493,7 @@ bool LotPackView::viewportEvent(QEvent *event)
 void LotPackView::recenter()
 {
     mRecenterScheduled = false;
+    if (!mWorld) return;
 
     QPointF p = mapToScene(viewport()->rect().center());
     QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(p);
@@ -593,7 +613,7 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     connect(mView->zoomable(), SIGNAL(scaleChanged(qreal)), SLOT(updateZoom()));
 
     connect(ui->actionOpen_World, SIGNAL(triggered()), SLOT(open()));
-    connect(ui->actionClose, SIGNAL(triggered()), SLOT(hide()));
+    connect(ui->actionClose, SIGNAL(triggered()), SLOT(close()));
 
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
@@ -669,6 +689,12 @@ void LotPackWindow::setRecentMenu()
     }
 }
 
+void LotPackWindow::closeEvent(QCloseEvent *e)
+{
+    closeWorld();
+    e->accept();
+}
+
 void LotPackWindow::open()
 {
 #if 1
@@ -711,6 +737,20 @@ void LotPackWindow::open(const QString &directory)
 
     addRecentDirectory(directory);
     setRecentMenu();
+}
+
+void LotPackWindow::closeWorld()
+{
+    qDeleteAll(IsoLot::InfoHeaders);
+    IsoLot::InfoHeaders.clear();
+
+    CellLoader::instance()->reset();
+
+    mView->setWorld(0);
+    if (mWorld) {
+        delete mWorld;
+        mWorld = 0;
+    }
 }
 
 void LotPackWindow::zoomIn()

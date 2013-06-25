@@ -37,6 +37,7 @@ public:
     void viewRectChanged();
     qreal scale();
     void addItem(QGraphicsItem *item);
+    void removeItem(QGraphicsItem *item);
 
 public slots:
     void sceneRectChanged(const QRectF &sceneRect);
@@ -54,7 +55,7 @@ private:
     BaseGraphicsView *mParentView;
     BaseGraphicsScene *mScene;
     QGraphicsPolygonItem *mViewportItem;
-    QGraphicsItem *mExtraItem;
+    QList<QGraphicsItem*> mExtraItems;
     QFrame *mButtons;
     QToolButton *mBiggerButton;
     QToolButton *mSmallerButton;
@@ -93,6 +94,7 @@ public:
     void scrollContentsBy(int dx, int dy);
 
     void addMiniMapItem(QGraphicsItem *item);
+    void removeMiniMapItem(QGraphicsItem *item);
     virtual QRectF sceneRectForMiniMap() const;
 
     void ensureRectVisible(const QRectF &rect, int xmargin = 50, int ymargin = 50);
