@@ -32,6 +32,8 @@ public:
 
     void mouseMoveEvent(QMouseEvent *event);
 
+    void paintEvent(QPaintEvent *event);
+
     QRectF sceneRectForMiniMap() const;
 };
 

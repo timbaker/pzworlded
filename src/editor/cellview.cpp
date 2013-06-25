@@ -44,6 +44,13 @@ void CellView::mouseMoveEvent(QMouseEvent *event)
     BaseGraphicsView::mouseMoveEvent(event);
 }
 
+void CellView::paintEvent(QPaintEvent *event)
+{
+    if (scene())
+        scene()->handlePendingUpdates();
+    BaseGraphicsView::paintEvent(event);
+}
+
 QRectF CellView::sceneRectForMiniMap() const
 {
     if (!scene() || !scene()->renderer())

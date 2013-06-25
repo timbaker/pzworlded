@@ -1418,7 +1418,7 @@ void CellScene::loadMap()
     polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomLeft()));
     mMapBordersItem->setPolygon(polygon);
 
-    mPendingFlags |= AllGroups | Bounds | Synch | ZOrder;
+    mPendingFlags |= AllGroups | Bounds | Synch | ZOrder | Paint;
     mPendingDefer = false;
     handlePendingUpdates();
 
