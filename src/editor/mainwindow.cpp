@@ -283,8 +283,10 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
+#if 0 // see enableDeveloperFeatures
     toolManager->addSeparator();
     toolManager->registerTool(HeightMapTool::instance());
+#endif
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -1098,8 +1100,13 @@ void MainWindow::enableDeveloperFeatures()
     // DO NOT WANT MASSIVE SPOILERS FOR FANS OF THE GAME.
     QString sourcePath = QCoreApplication::applicationDirPath()
             + QLatin1Char('/') + QLatin1String("EnableDeveloperFeatures.txt");
-    if (!QFileInfo(sourcePath).exists()) {
+    if (QFileInfo(sourcePath).exists()) {
+        ToolManager::instance()->addSeparator();
+        ToolManager::instance()->registerTool(HeightMapTool::instance());
+    } else {
         ui->menuTools->menuAction()->setVisible(false);
+        ui->menuHeightMap->menuAction()->setVisible(false);
+        ui->actionEditHeightMap->setVisible(false);
 //        ui->actionLotPackViewer->setVisible(false);
     }
 }
