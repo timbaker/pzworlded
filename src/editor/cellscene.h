@@ -445,7 +445,6 @@ public slots:
     void selectedRoadsChanged();
     void roadsChanged();
 
-    void handleDelayedMapLoading();
     void mapCompositeNeedsSynch();
 
 public:
@@ -505,7 +504,6 @@ private:
     bool mHighlightCurrentLevel;
     bool mWasHighlightCurrentLevel;
     QGraphicsPolygonItem *mMapBordersItem;
-    bool mHandleDelayedMapLoadingScheduled;
 
     void doLater(PendingFlags flags);
     PendingFlags mPendingFlags;

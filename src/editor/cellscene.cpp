@@ -289,13 +289,9 @@ QRectF CompositeLayerGroupItem::boundingRect() const
 
 void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *)
 {
-#if 1
-    if (mLayerGroup->needsSynch())
-        mLayerGroup->synch();
-#else
     if (mLayerGroup->needsSynch())
         return; // needed, see MapComposite::mapAboutToChange
-#endif
+
     mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
 #ifdef _DEBUG
     p->drawRect(mBoundingRect);
@@ -1025,7 +1021,6 @@ CellScene::CellScene(QObject *parent)
     , mDarkRectangle(new QGraphicsRectItem)
     , mGridItem(new CellGridItem(this))
     , mMapBordersItem(new QGraphicsPolygonItem)
-    , mHandleDelayedMapLoadingScheduled(false)
     , mPendingFlags(None)
     , mPendingActive(false)
     , mPendingDefer(true)
@@ -1476,12 +1471,10 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
                 lot->setWidth(subMapInfo->width());
                 lot->setHeight(subMapInfo->height());
 
-                addItem(item);
+                // Schedule update *before* addItem() schedules its update.
+                doLater(AllGroups | Bounds | Synch | ZOrder);
 
-                if (!mHandleDelayedMapLoadingScheduled) {
-                    mHandleDelayedMapLoadingScheduled = true;
-                    QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
-                }
+                addItem(item);
             }
         }
     }
@@ -1496,10 +1489,10 @@ void CellScene::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
             mMapComposite->removeMap(item->subMap());
             mSubMapItems.removeAll(item);
             mSelectedSubMapItems.remove(item);
+            doLater(AllGroups | Bounds | Synch | ZOrder | Paint);
             removeItem(item);
             delete item;
 
-            doLater(AllGroups | Bounds | Synch | ZOrder);
         }
     }
 }
@@ -1510,9 +1503,8 @@ void CellScene::cellLotMoved(WorldCellLot *lot)
         return;
     if (SubMapItem *item = itemForLot(lot)) {
         mMapComposite->moveSubMap(item->subMap(), lot->pos());
+        doLater(AllGroups | Bounds | Synch/* | Paint*/);
         item->subMapMoved();
-
-        doLater(AllGroups | Bounds | Synch);
     }
 }
 
@@ -1967,19 +1959,10 @@ void CellScene::roadsChanged()
             mTileLayerGroupItems[0]->update();
 }
 
-void CellScene::handleDelayedMapLoading()
-{
-    mHandleDelayedMapLoadingScheduled = false;
-    doLater(AllGroups | Bounds | Synch | ZOrder);
-}
-
 // Called when our MapComposite adds a sub-map asynchronously.
 void CellScene::mapCompositeNeedsSynch()
 {
-    if (!mHandleDelayedMapLoadingScheduled) {
-        mHandleDelayedMapLoadingScheduled = true;
-        QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
-    }
+    doLater(AllGroups | Bounds | Synch | ZOrder);
 }
 
 void CellScene::updateCurrentLevelHighlight()
@@ -2292,10 +2275,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
         if (am.info == mapInfo) {
             mMapComposite->setAdjacentMap(am.pos.x(), am.pos.y(), am.info);
             mAdjacentMapsLoading.removeAt(i);
-            if (!mHandleDelayedMapLoadingScheduled) {
-                mHandleDelayedMapLoadingScheduled = true;
-                QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
-            }
+            doLater(AllGroups | Bounds | Synch | ZOrder);
             // Keep going, could be duplicate submaps to load
             --i;
         }
@@ -2308,18 +2288,11 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
                                                          sm.lot->level());
 
             SubMapItem *item = new SubMapItem(subMap, sm.lot, mRenderer);
-#if 1
-            addItem(item);
             QMap<int,SubMapItem*> zzz;
             foreach (SubMapItem *item, mSubMapItems)
                 zzz[cell()->lots().indexOf(item->lot())] = item;
             zzz[cell()->lots().indexOf(sm.lot)] = item;
             mSubMapItems = zzz.values();
-#else
-            addItem(item);
-            int index = cell()->lots().indexOf(sm.lot); // for correct ZOrder
-            mSubMapItems.insert(index, item);
-#endif
 
             // Update with most-recent information
             sm.lot->setMapName(sm.mapInfo->path());
@@ -2328,10 +2301,10 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
             mSubMapsLoading.removeAt(i);
 
-            if (!mHandleDelayedMapLoadingScheduled) {
-                mHandleDelayedMapLoadingScheduled = true;
-                QMetaObject::invokeMethod(this, "handleDelayedMapLoading", Qt::QueuedConnection);
-            }
+            // Schedule update *before* addItem() schedules its update.
+            doLater(AllGroups | Bounds | Synch | ZOrder);
+
+            addItem(item);
 
             --i;
         }
