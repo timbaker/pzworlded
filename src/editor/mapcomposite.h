@@ -359,6 +359,7 @@ private:
 
 public:
     MapComposite *root();
+    MapComposite *rootOrAdjacent();
     int mKeepFloorLayerCount;
 };
 

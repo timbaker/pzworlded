@@ -203,8 +203,8 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
 {
     static QLatin1String sFloor("0_Floor");
 
-    MapComposite *root = mOwner->root();
-    if (!mOwner->parent())
+    MapComposite *root = mOwner->rootOrAdjacent();
+    if (root == mOwner)
         root->mKeepFloorLayerCount = 0;
 
     bool cleared = false;
@@ -310,7 +310,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
     static QLatin1String sFloor("0_Floor");
 
     MapComposite *root = mOwner->root();
-    if (!mOwner->parent())
+    if (root == mOwner)
         root->mKeepFloorLayerCount = 0;
 
     bool cleared = false;
@@ -496,7 +496,7 @@ void CompositeLayerGroup::synch()
             maxMargins(m, tl->drawMargins(), m);
             mAnyVisibleLayers = true;
         }
-        if (!mLevel && !mOwner->parent() &&
+        if (!mLevel && (!mOwner->parent() || mOwner->isAdjacentMap()) &&
                 (index == mMaxFloorLayer + 1) &&
                 tl->name().startsWith(QLatin1String("0_Floor")))
             mMaxFloorLayer = index;
@@ -1539,6 +1539,14 @@ MapComposite *MapComposite::root()
 {
     MapComposite *root = this;
     while (root->parent())
+        root = root->parent();
+    return root;
+}
+
+MapComposite *MapComposite::rootOrAdjacent()
+{
+    MapComposite *root = this;
+    while (!root->isAdjacentMap() && root->parent())
         root = root->parent();
     return root;
 }
