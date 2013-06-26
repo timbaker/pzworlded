@@ -40,6 +40,7 @@ namespace BuildingEditor {
 class Building;
 class BuildingFloor;
 class BuildingObject;
+class FloorTileGrid;
 class Room;
 
 class ShadowBuilding;
@@ -92,6 +93,9 @@ public:
 
     void changeFloorGrid(BuildingFloor *floor, const QVector<QVector<Room *> > &grid);
     void resetFloorGrid(BuildingFloor *floor);
+
+    void changeUserTiles(BuildingFloor *floor, const QMap<QString,FloorTileGrid*> &tiles);
+    void resetUserTiles(BuildingFloor *floor);
     /////
 
     BuildingFloor *cloneFloor(BuildingFloor *floor);
@@ -139,6 +143,9 @@ public:
 
     void changeFloorGrid(BuildingFloor *floor, const QVector<QVector<Room*> > &grid);
     void resetFloorGrid(BuildingFloor *floor);
+
+    void changeUserTiles(BuildingFloor *floor, const QMap<QString,FloorTileGrid*> &tiles);
+    void resetUserTiles(BuildingFloor *floor);
 
     void suppressTiles(BuildingFloor *floor, const QRegion &rgn);
     /////

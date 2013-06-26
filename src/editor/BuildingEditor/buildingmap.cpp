@@ -24,6 +24,7 @@
 #include "buildingtiles.h"
 #include "buildingtmx.h"
 
+#include "bmpblender.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "tilemetainfomgr.h"
@@ -252,6 +253,30 @@ void BuildingMap::resetFloorGrid(BuildingFloor *floor)
 {
     mShadowBuilding->resetFloorGrid(floor);
     pendingLayoutToSquares.insert(floor);
+    if (!pending) {
+        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
+        pending = true;
+    }
+}
+
+void BuildingMap::changeUserTiles(BuildingFloor *floor, const QMap<QString,FloorTileGrid*> &tiles)
+{
+    mShadowBuilding->changeUserTiles(floor, tiles);
+    pendingSquaresToTileLayers[floor] |= floor->bounds(1, 1);
+    foreach (QString layerName, floor->grimeLayers())
+        pendingUserTilesToLayer[floor][layerName] |= floor->bounds(1, 1);
+    if (!pending) {
+        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
+        pending = true;
+    }
+}
+
+void BuildingMap::resetUserTiles(BuildingFloor *floor)
+{
+    mShadowBuilding->resetUserTiles(floor);
+    pendingSquaresToTileLayers[floor] |= floor->bounds();
+    foreach (QString layerName, floor->grimeLayers())
+        pendingUserTilesToLayer[floor][layerName] |= floor->bounds(1, 1);
     if (!pending) {
         QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
         pending = true;
@@ -540,6 +565,8 @@ void BuildingMap::BuildingSquaresToTileLayers(BuildingFloor *floor,
                                               const QRect &area,
                                               CompositeLayerGroup *layerGroup)
 {
+    BuildingFloor *shadowFloor = mShadowBuilding->floor(floor->level());
+
     int maxLevel = floor->building()->floorCount() - 1;
     int offset = (mMap->orientation() == Map::LevelIsometric)
             ? 0 : (maxLevel - floor->level()) * 3;
@@ -562,8 +589,7 @@ void BuildingMap::BuildingSquaresToTileLayers(BuildingFloor *floor,
                 if (section != BuildingFloor::Square::SectionFloor
                         && suppress.contains(QPoint(x, y)))
                     continue;
-                const BuildingFloor::Square &square =
-                        mShadowBuilding->floor(floor->level())->squares[x][y];
+                const BuildingFloor::Square &square = shadowFloor->squares[x][y];
                 if (BuildingTile *btile = square.mTiles[section]) {
                     if (!btile->isNone()) {
                         if (Tiled::Tile *tile = BuildingTilesMgr::instance()->tileFor(btile))
@@ -613,13 +639,15 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
     if (mSuppressTiles.contains(floor))
         suppress = mSuppressTiles[floor];
 
+    BuildingFloor *shadowFloor = mShadowBuilding->floor(floor->level());
+
     for (int x = bounds.left(); x <= bounds.right(); x++) {
         for (int y = bounds.top(); y <= bounds.bottom(); y++) {
             if (suppress.contains(QPoint(x, y))) {
                 layer->setCell(x, y, Cell());
                 continue;
             }
-            QString tileName = floor->grimeAt(layerName, x, y);
+            QString tileName = shadowFloor->grimeAt(layerName, x, y);
             Tile *tile = 0;
             if (!tileName.isEmpty()) {
                 tile = TilesetManager::instance()->missingTile();
@@ -875,14 +903,16 @@ void BuildingMap::handlePending()
             layer->resize(QSize(width, height), QPoint());
         mMap->setWidth(width);
         mMap->setHeight(height);
+        MapManager::instance()->mapParametersChanged(mMapComposite->mapInfo());
+        mMapComposite->bmpBlender()->recreate();
 
         foreach (Layer *layer, mBlendMap->layers())
             layer->resize(QSize(width, height), QPoint());
         mBlendMap->setWidth(width);
         mBlendMap->setHeight(height);
+        MapManager::instance()->mapParametersChanged(mBlendMapComposite->mapInfo());
+        mBlendMapComposite->bmpBlender()->recreate();
 
-        MapInfo *mapInfo = mMapComposite->mapInfo();
-        MapManager::instance()->mapParametersChanged(mapInfo);
         foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups())
             lg->setNeedsSynch(true);
 
@@ -1046,7 +1076,6 @@ public:
     BuildingObject *mObject;
 };
 
-
 class ChangeFloorGridModifier : public BuildingModifier
 {
 public:
@@ -1054,7 +1083,6 @@ public:
         BuildingModifier(sb),
         mFloor(floor)
     {
-        // The shadow object should already exist, we're just moving an existing object.
     }
 
     ~ChangeFloorGridModifier()
@@ -1067,6 +1095,30 @@ public:
     {
         BuildingFloor *shadowFloor = mShadowBuilding->floor(mFloor->level());
         shadowFloor->setGrid(grid);
+    }
+
+    BuildingFloor *mFloor;
+};
+
+class ChangeUserTilesModifier : public BuildingModifier
+{
+public:
+    ChangeUserTilesModifier(ShadowBuilding *sb, BuildingFloor *floor) :
+        BuildingModifier(sb),
+        mFloor(floor)
+    {
+    }
+
+    ~ChangeUserTilesModifier()
+    {
+        BuildingFloor *shadowFloor = mShadowBuilding->floor(mFloor->level());
+        qDeleteAll(shadowFloor->setGrime(mFloor->grimeClone()));
+    }
+
+    void setTiles(const QMap<QString,FloorTileGrid*> &tiles)
+    {
+        BuildingFloor *shadowFloor = mShadowBuilding->floor(mFloor->level());
+        qDeleteAll(shadowFloor->setGrime(tiles));
     }
 
     BuildingFloor *mFloor;
@@ -1354,6 +1406,33 @@ void ShadowBuilding::resetFloorGrid(BuildingFloor *floor)
 {
     foreach (BuildingModifier *bmod, mModifiers) {
         if (ChangeFloorGridModifier *mod = dynamic_cast<ChangeFloorGridModifier*>(bmod)) {
+            if (mod->mFloor == floor) {
+                delete mod;
+                return;
+            }
+        }
+    }
+}
+
+void ShadowBuilding::changeUserTiles(BuildingFloor *floor, const QMap<QString,FloorTileGrid*> &tiles)
+{
+    foreach (BuildingModifier *bmod, mModifiers) {
+        if (ChangeUserTilesModifier *mod = dynamic_cast<ChangeUserTilesModifier*>(bmod)) {
+            if (mod->mFloor == floor) {
+                mod->setTiles(tiles);
+                return;
+            }
+        }
+    }
+
+    ChangeUserTilesModifier *mod = new ChangeUserTilesModifier(this, floor);
+    mod->setTiles(tiles);
+}
+
+void ShadowBuilding::resetUserTiles(BuildingFloor *floor)
+{
+    foreach (BuildingModifier *bmod, mModifiers) {
+        if (ChangeUserTilesModifier *mod = dynamic_cast<ChangeUserTilesModifier*>(bmod)) {
             if (mod->mFloor == floor) {
                 delete mod;
                 return;

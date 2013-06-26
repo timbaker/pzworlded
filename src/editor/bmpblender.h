@@ -63,6 +63,8 @@ public:
     { return mRules; }
     QList<BmpRule*> rulesCopy() const;
 
+    void fromMap(Map *map);
+
 private:
     void AddRule(const QString &label, int bitmapIndex, QRgb col, const QStringList &tiles,
                  const QString &layer, QRgb condition);
@@ -97,8 +99,14 @@ public:
     { return mBlends; }
     QList<BmpBlend*> blendsCopy() const;
 
+    void fromMap(Map *map);
+
+private:
+    QString unpaddedTileName(const QString &tileName);
+
 private:
     QList<BmpBlend*> mBlends;
+    QStringList mAliasNames;
     QString mError;
 };
 

@@ -26,7 +26,8 @@ class SimpleFileKeyValue
 {
 public:
     SimpleFileKeyValue() :
-        multiValue(false)
+        multiValue(false),
+        multiValueStride(1)
     {
 
     }
@@ -34,15 +35,17 @@ public:
     SimpleFileKeyValue(const QString &name, const QString &value) :
         name(name),
         value(value),
-        multiValue(false)
+        multiValue(false),
+        multiValueStride(1)
     {
 
     }
 
-    SimpleFileKeyValue(const QString &name, const QStringList &values) :
+    SimpleFileKeyValue(const QString &name, const QStringList &values, int stride = 1) :
         name(name),
         value(values.join(QLatin1String(" "))),
-        multiValue(true)
+        multiValue(true),
+        multiValueStride(stride)
     {
 
     }
@@ -55,6 +58,7 @@ public:
     QString name;
     QString value;
     bool multiValue;
+    int multiValueStride;
     int lineNumber;
 };
 
@@ -87,11 +91,11 @@ public:
 
     void addValue(const char *key, const QString &value)
     { addValue(QLatin1String(key), value); }
-    void addValue(const char *key, const QStringList &values)
-    { addValue(QLatin1String(key), values); }
+    void addValue(const char *key, const QStringList &values, int stride = 1)
+    { addValue(QLatin1String(key), values, stride); }
 
     void addValue(const QString &key, const QString &value);
-    void addValue(const QString &key, const QStringList &values);
+    void addValue(const QString &key, const QStringList &values, int stride = 1);
 
     void renameValue(const char *key, const QString &newName)
     { renameValue(QLatin1String(key), newName); }
