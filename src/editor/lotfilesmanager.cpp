@@ -591,10 +591,11 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
                     }
                     notdonecount = 0;
                     out << qint32(entries.count() + 1);
-#if 0
+#ifdef HEIGHTMAP_IN_CHUNK
+                    out << quint8(mHeightMap ? mHeightMap->heightAt(wx, wy) : 0);
+#else
                     out << qint32(getRoomID(gx, gy, z));
 #endif
-                    out << quint8(mHeightMap ? mHeightMap->heightAt(wx, wy) : 0);
                 }
                 foreach (LotFile::Entry *entry, entries) {
                     Q_ASSERT(TileMap[entry->gid]);

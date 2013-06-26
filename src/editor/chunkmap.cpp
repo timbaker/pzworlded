@@ -403,15 +403,17 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
                             if (count <= 1)
                                 continue;
 #endif
-#if 1
+#ifdef HEIGHTMAP_IN_CHUNK
                             int room = info->getRoomAt(x, y, z);
 #else
                             int room = readInt(in);
 #endif
                             roomIDs[x][y][z] = room;
 
+#ifdef HEIGHTMAP_IN_CHUNK
                             int height = readByte(in);
                             Q_UNUSED(height)
+#endif
 
                             if (count <= 1) {
                                 int brk = 1;
