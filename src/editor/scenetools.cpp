@@ -594,6 +594,7 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
             QRect tileBounds = highlight->mapInfo()->bounds().translated(highlight->originRecursive());
             QPolygonF polygon = mScene->renderer()->tileToPixelCoords(tileBounds);
             mMapHighlightItem->setPolygon(polygon);
+            mMapHighlightItem->setToolTip(QDir::toNativeSeparators(highlight->mapInfo()->path()));
         }
         mMapHighlightItem->setVisible(highlight != 0);
         mHighlightedMap = highlight;
