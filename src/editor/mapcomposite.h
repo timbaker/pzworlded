@@ -279,6 +279,7 @@ public:
 #endif // BUILDINGED
 
     void setAdjacentMap(int x, int y, MapInfo *mapInfo);
+    MapComposite *adjacentMap(int x, int y);
     bool isAdjacentMap()/* const*/
     { return mIsAdjacentMap;/*mParent ? mParent->mAdjacentMaps.contains(this) : false;*/ }
 

@@ -1386,6 +1386,16 @@ void MapComposite::setAdjacentMap(int x, int y, MapInfo *mapInfo)
     mAdjacentMaps[index]->mIsAdjacentMap = true;
 }
 
+MapComposite *MapComposite::adjacentMap(int x, int y)
+{
+    int index = (x + 1) + (y + 1) * 3;
+    if (index < 0 || index == 4 || index > 8) {
+        Q_ASSERT(false);
+        return 0;
+    }
+    return mAdjacentMaps.size() ? mAdjacentMaps[index] : 0;
+}
+
 bool MapComposite::waitingForMapsToLoad() const
 {
     if (mSubMapsLoading.size())

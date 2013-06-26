@@ -482,8 +482,8 @@ private:
         MapInfo *info;
     };
     QList<AdjacentMap> mAdjacentMapsLoading;
+    QList<LoadingSubMap> mAdjacentSubMapsLoading;
     void initAdjacentMaps();
-
 
     Tiled::Map *mMap;
     MapInfo *mMapInfo;

@@ -2240,7 +2240,6 @@ QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
 
 void CellScene::initAdjacentMaps()
 {
-
     connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
     connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
@@ -2263,6 +2262,18 @@ void CellScene::initAdjacentMaps()
                     mAdjacentMapsLoading += AdjacentMap(x - X, y - Y, mapInfo);
                 else
                     mMapComposite->setAdjacentMap(x - X, y - Y, mapInfo);
+
+                MapComposite *adjacentMap = mMapComposite->adjacentMap(x - X, y - Y);
+                foreach (WorldCellLot *lot, cell2->lots()) {
+                    MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                                lot->mapName(), QString(), true, MapManager::PriorityLow);
+                    if (subMapInfo) {
+                        if (subMapInfo->isLoading())
+                            mAdjacentSubMapsLoading += LoadingSubMap(lot, subMapInfo);
+                        else if (adjacentMap)
+                            adjacentMap->addMap(subMapInfo, lot->pos(), lot->level());
+                    }
+                }
             }
         }
     }
@@ -2274,9 +2285,33 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
         AdjacentMap &am = mAdjacentMapsLoading[i];
         if (am.info == mapInfo) {
             mMapComposite->setAdjacentMap(am.pos.x(), am.pos.y(), am.info);
+
+            MapComposite *adjacentMap = mMapComposite->adjacentMap(am.pos.x(),
+                                                                   am.pos.y());
+            WorldCell *cell2 = world()->cellAt(cell()->pos() + am.pos);
+            foreach (WorldCellLot *lot, cell2->lots()) {
+                MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                            lot->mapName(), QString(), true, MapManager::PriorityLow);
+                if (subMapInfo && !subMapInfo->isLoading())
+                    adjacentMap->addMap(subMapInfo, lot->pos(), lot->level());
+            }
+
             mAdjacentMapsLoading.removeAt(i);
             doLater(AllGroups | Bounds | Synch | ZOrder);
             // Keep going, could be duplicate submaps to load
+            --i;
+        }
+    }
+
+    for (int i = 0; i < mAdjacentSubMapsLoading.size(); i++) {
+        LoadingSubMap &sm = mAdjacentSubMapsLoading[i];
+        if (sm.mapInfo == mapInfo) {
+            int x = sm.lot->cell()->x(), y = sm.lot->cell()->y();
+            if (MapComposite *adjacentMap = mMapComposite->adjacentMap(x - cell()->x(),
+                                                                       y - cell()->y()))
+                adjacentMap->addMap(mapInfo, sm.lot->pos(), sm.lot->level());
+            mAdjacentSubMapsLoading.removeAt(i);
+            doLater(AllGroups | Bounds | Synch | ZOrder);
             --i;
         }
     }
@@ -2318,6 +2353,14 @@ void CellScene::mapFailedToLoad(MapInfo *mapInfo)
         if (am.info == mapInfo) {
             mAdjacentMapsLoading.removeAt(i);
             // Keep going, could be duplicate submaps to load
+            --i;
+        }
+    }
+
+    for (int i = 0; i < mAdjacentSubMapsLoading.size(); i++) {
+        LoadingSubMap &sm = mAdjacentSubMapsLoading[i];
+        if (sm.mapInfo == mapInfo) {
+            mAdjacentSubMapsLoading.removeAt(i);
             --i;
         }
     }
