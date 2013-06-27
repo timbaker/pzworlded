@@ -315,6 +315,57 @@ private:
     QRectF mBoundingRect;
 };
 
+class AdjacentMap : public QObject
+{
+    Q_OBJECT
+public:
+    AdjacentMap(CellScene *scene, WorldCell *cell);
+    ~AdjacentMap();
+
+    CellScene *scene() const
+    { return mScene; }
+
+    WorldDocument *worldDocument() const;
+
+    WorldCell *cell() const
+    { return mCell; }
+
+private slots:
+    void cellMapFileChanged(WorldCell *cell);
+    void cellContentsChanged(WorldCell *cell);
+
+    void cellLotAdded(WorldCell *cell, int index);
+    void cellLotAboutToBeRemoved(WorldCell *cell, int index);
+    void cellLotMoved(WorldCellLot *lot);
+    void lotLevelChanged(WorldCellLot *lot);
+
+    void mapLoaded(MapInfo *mapInfo);
+    void mapFailedToLoad(MapInfo *mapInfo);
+
+    // FIXME: world resizing
+
+private:
+    void loadMap();
+    bool alreadyLoading(WorldCellLot *lot);
+    QRectF lotSceneBounds(WorldCellLot *lot);
+
+    struct LoadingSubMap {
+        LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
+            lot(lot),
+            mapInfo(mapInfo)
+        {}
+        WorldCellLot *lot;
+        MapInfo *mapInfo;
+    };
+    QList<LoadingSubMap> mSubMapsLoading;
+
+    CellScene *mScene;
+    WorldCell *mCell;
+    MapComposite *mMapComposite;
+    MapInfo *mMapInfo;
+    QMap<WorldCellLot*,MapComposite*> mLotToMC;
+};
+
 class CellScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -339,6 +390,7 @@ public:
 
     SubMapItem *itemForLot(WorldCellLot *lot);
     WorldCellLot *lotForItem(SubMapItem *item);
+    QList<SubMapItem*> subMapItemsUsingMapInfo(MapInfo *mapInfo);
 
     ObjectItem *itemForObject(WorldCellObject *obj);
 
@@ -401,6 +453,9 @@ public slots:
     bool mapChanged(MapInfo *mapInfo);
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
+
+    void cellAdded(WorldCell *cell);
+    void cellAboutToBeRemoved(WorldCell *cell);
 
     void cellMapFileChanged();
     void cellContentsChanged();
@@ -473,16 +528,8 @@ private:
     };
     QList<LoadingSubMap> mSubMapsLoading;
 
-    struct AdjacentMap {
-        AdjacentMap(int x, int y, MapInfo *info) :
-            pos(x, y),
-            info(info)
-        {}
-        QPoint pos;
-        MapInfo *info;
-    };
-    QList<AdjacentMap> mAdjacentMapsLoading;
-    QList<LoadingSubMap> mAdjacentSubMapsLoading;
+
+    QList<AdjacentMap*> mAdjacentMaps;
     void initAdjacentMaps();
 
     Tiled::Map *mMap;

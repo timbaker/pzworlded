@@ -1371,8 +1371,12 @@ void MapComposite::setAdjacentMap(int x, int y, MapInfo *mapInfo)
     }
     if (mAdjacentMaps.isEmpty())
         mAdjacentMaps.resize(9);
-    if (mAdjacentMaps[index])
-        delete mAdjacentMaps[index];
+    if (mAdjacentMaps[index]) {
+        removeMap(mAdjacentMaps[index]);
+        mAdjacentMaps[index] = 0;
+    }
+    if (!mapInfo)
+        return;
     QPoint pos;
     switch (x) {
     case -1: pos.setX(-mapInfo->width()); break;

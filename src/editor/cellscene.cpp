@@ -39,6 +39,7 @@
 #include "tilelayer.h"
 #include "zlevelrenderer.h"
 
+#include <qmath.h>
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
@@ -1109,6 +1110,11 @@ void CellScene::setDocument(CellDocument *doc)
 {
     mDocument = doc;
 
+    connect(worldDocument(), SIGNAL(cellAdded(WorldCell*)),
+            SLOT(cellAdded(WorldCell*)));
+    connect(worldDocument(), SIGNAL(cellAboutToBeRemoved(WorldCell*)),
+            SLOT(cellAboutToBeRemoved(WorldCell*)));
+
     connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
     connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
     connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
@@ -1162,6 +1168,11 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(selectedRoadsChanged()),
             SLOT(selectedRoadsChanged()));
 
+    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+            SLOT(mapLoaded(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+            SLOT(mapFailedToLoad(MapInfo*)));
+
     loadMap();
 
     connect(Tiled::Internal::TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
@@ -1195,6 +1206,16 @@ SubMapItem *CellScene::itemForLot(WorldCellLot *lot)
 WorldCellLot *CellScene::lotForItem(SubMapItem *item)
 {
     return item->lot();
+}
+
+QList<SubMapItem *> CellScene::subMapItemsUsingMapInfo(MapInfo *mapInfo)
+{
+    QList<SubMapItem *> ret;
+    foreach (SubMapItem *item, mSubMapItems) {
+        if (item->subMap()->mapInfo() == mapInfo)
+            ret += item;
+    }
+    return ret;
 }
 
 ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
@@ -1326,6 +1347,9 @@ void CellScene::loadMap()
         clearScene();
         setSceneRect(QRectF());
 
+        qDeleteAll(mAdjacentMaps);
+        mAdjacentMaps.clear();
+
         delete mMapComposite;
         delete mRenderer;
 
@@ -1430,6 +1454,31 @@ void CellScene::loadMap()
 
     mMapComposite->generateRoadLayers(QPoint(cell()->x()*300, cell()->y()*300),
                                       world()->roads());
+}
+
+void CellScene::cellAdded(WorldCell *_cell)
+{
+    int x = _cell->x() - cell()->x();
+    int y = _cell->y() - cell()->y();
+    if (QRect(-1, -1, 3, 3).contains(x, y)) {
+        if (!mMapComposite->adjacentMap(x, y))
+            mAdjacentMaps += new AdjacentMap(this, _cell);
+    }
+}
+
+void CellScene::cellAboutToBeRemoved(WorldCell *_cell)
+{
+    for (int i = 0; i < mAdjacentMaps.size(); i++) {
+        AdjacentMap *am = mAdjacentMaps[i];
+        if (_cell == am->cell()) {
+            int x = am->cell()->x() - cell()->x();
+            int y = am->cell()->y() - cell()->y();
+            mMapComposite->setAdjacentMap(x, y, 0);
+            delete mAdjacentMaps.takeAt(i);
+            doLater(AllGroups | Bounds | Synch | ZOrder);
+            --i;
+        }
+    }
 }
 
 void CellScene::cellMapFileChanged()
@@ -2240,17 +2289,15 @@ QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
 
 void CellScene::initAdjacentMaps()
 {
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
-
     if (!Preferences::instance()->showAdjacentMaps()) return;
 
     int X = cell()->x(), Y = cell()->y();
     for (int y = Y - 1; y <= Y + 1; y++) {
         for (int x = X - 1; x <= X + 1; x++) {
             WorldCell *cell2 = world()->cellAt(x, y);
+            if (cell2 && cell2 != cell())
+                mAdjacentMaps += new AdjacentMap(this, cell2);
+#if 0
             if (!cell2 || cell2 == cell() || cell2->mapFilePath().isEmpty()) continue;
             QFileInfo info(cell2->mapFilePath());
             if (!info.exists()) continue;
@@ -2275,12 +2322,14 @@ void CellScene::initAdjacentMaps()
                     }
                 }
             }
+#endif
         }
     }
 }
 
 void CellScene::mapLoaded(MapInfo *mapInfo)
 {
+#if 0
     for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
         AdjacentMap &am = mAdjacentMapsLoading[i];
         if (am.info == mapInfo) {
@@ -2315,7 +2364,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
             --i;
         }
     }
-
+#endif
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
         if (sm.mapInfo == mapInfo) {
@@ -2348,6 +2397,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
 void CellScene::mapFailedToLoad(MapInfo *mapInfo)
 {
+#if 0
     for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
         AdjacentMap &am = mAdjacentMapsLoading[i];
         if (am.info == mapInfo) {
@@ -2364,6 +2414,182 @@ void CellScene::mapFailedToLoad(MapInfo *mapInfo)
             --i;
         }
     }
+#endif
+    for (int i = 0; i < mSubMapsLoading.size(); i++) {
+        LoadingSubMap &sm = mSubMapsLoading[i];
+        if (sm.mapInfo == mapInfo) {
+            mSubMapsLoading.removeAt(i);
+            --i;
+        }
+    }
+}
+
+/////
+
+AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
+    QObject(scene), // DELETE WITH SCENE
+    mScene(scene),
+    mCell(cell),
+    mMapComposite(0),
+    mMapInfo(0)
+{
+    connect(worldDocument(), SIGNAL(cellMapFileChanged(WorldCell*)),
+            SLOT(cellMapFileChanged(WorldCell*)));
+    connect(worldDocument(), SIGNAL(cellContentsChanged(WorldCell*)),
+            SLOT(cellContentsChanged(WorldCell*)));
+
+    connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)),
+            SLOT(cellLotAdded(WorldCell*,int)));
+    connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
+            SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
+    connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)),
+            SLOT(cellLotMoved(WorldCellLot*)));
+    connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)),
+            SLOT(lotLevelChanged(WorldCellLot*)));
+
+    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+            SLOT(mapLoaded(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+            SLOT(mapFailedToLoad(MapInfo*)));
+
+    loadMap();
+}
+
+AdjacentMap::~AdjacentMap()
+{
+}
+
+WorldDocument *AdjacentMap::worldDocument() const
+{
+    return mScene->worldDocument();
+}
+
+void AdjacentMap::cellMapFileChanged(WorldCell *_cell)
+{
+    if (_cell != cell()) return;
+
+    loadMap();
+}
+
+void AdjacentMap::cellContentsChanged(WorldCell *_cell)
+{
+    if (_cell != cell()) return;
+
+    loadMap();
+}
+
+void AdjacentMap::cellLotAdded(WorldCell *_cell, int index)
+{
+    if (_cell != cell()) return;
+
+    WorldCellLot *lot = cell()->lots().at(index);
+    MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                lot->mapName(), QString(), true, MapManager::PriorityLow);
+    if (subMapInfo && !alreadyLoading(lot)) {
+        mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
+        if (!subMapInfo->isLoading())
+            mapLoaded(subMapInfo);
+    }
+}
+
+void AdjacentMap::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
+{
+    if (_cell != cell()) return;
+
+    WorldCellLot *lot = cell()->lots().at(index);
+    if (mLotToMC.contains(lot)) {
+        QRectF bounds = lotSceneBounds(lot);
+        mMapComposite->removeMap(mLotToMC[lot]);
+        mLotToMC.remove(lot);
+        scene()->mapCompositeNeedsSynch();
+        scene()->update(bounds);
+    }
+}
+
+void AdjacentMap::cellLotMoved(WorldCellLot *lot)
+{
+    if (lot->cell() != cell()) return;
+
+    if (mLotToMC.contains(lot)) {
+        QRectF bounds = lotSceneBounds(lot);
+        mMapComposite->moveSubMap(mLotToMC[lot], lot->pos());
+        bounds |= lotSceneBounds(lot);
+        scene()->mapCompositeNeedsSynch();
+        scene()->update(bounds);
+    }
+}
+
+void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
+{
+    if (lot->cell() != cell()) return;
+
+    if (mLotToMC.contains(lot)) {
+
+        // When the level changes, the position also changes to keep
+        // the lot in the same visual location.
+        mLotToMC[lot]->setOrigin(lot->pos());
+
+        mLotToMC[lot]->setLevel(lot->level());
+
+        // Make sure there are enough layer-groups to display the submap
+        int maxLevel = lot->level() +  mLotToMC[lot]->maxLevel();
+        if (maxLevel > mMapComposite->maxLevel()) {
+            mMapComposite->ensureMaxLevels(maxLevel);
+        }
+
+        scene()->mapCompositeNeedsSynch();
+    }
+}
+
+void AdjacentMap::mapLoaded(MapInfo *mapInfo)
+{
+    if (mapInfo == mMapInfo) {
+        int x = cell()->x() - scene()->cell()->x();
+        int y = cell()->y() - scene()->cell()->y();
+        scene()->mapComposite()->setAdjacentMap(x, y, mMapInfo);
+        mMapComposite = scene()->mapComposite()->adjacentMap(x, y);
+        scene()->mapCompositeNeedsSynch();
+
+        foreach (WorldCellLot *lot, cell()->lots()) {
+            MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                        lot->mapName(), QString(), true, MapManager::PriorityLow);
+            if (subMapInfo && !alreadyLoading(lot)) {
+                mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
+                if (!subMapInfo->isLoading())
+                    mapLoaded(subMapInfo);
+            }
+        }
+    }
+
+    for (int i = 0; i < mSubMapsLoading.size(); i++) {
+        LoadingSubMap &sm = mSubMapsLoading[i];
+        if (sm.mapInfo == mapInfo) {
+
+            // Update with most-recent information
+            sm.lot->setMapName(sm.mapInfo->path());
+            sm.lot->setWidth(sm.mapInfo->width());
+            sm.lot->setHeight(sm.mapInfo->height());
+
+            if (mMapComposite) {
+                MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, sm.lot->pos(),
+                                                             sm.lot->level());
+
+                mLotToMC[sm.lot] = subMap;
+                scene()->mapCompositeNeedsSynch();
+                scene()->update(lotSceneBounds(sm.lot));
+            }
+
+            mSubMapsLoading.removeAt(i);
+
+            --i;
+        }
+    }
+}
+
+void AdjacentMap::mapFailedToLoad(MapInfo *mapInfo)
+{
+    if (mapInfo == mMapInfo)
+        mMapInfo = 0;
 
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
@@ -2372,4 +2598,35 @@ void CellScene::mapFailedToLoad(MapInfo *mapInfo)
             --i;
         }
     }
+}
+
+void AdjacentMap::loadMap()
+{
+    if (cell()->mapFilePath().isEmpty()) {
+        mMapInfo = MapManager::instance()->getEmptyMap();
+    } else {
+        mMapInfo = MapManager::instance()->loadMap(cell()->mapFilePath(), QString(), true,
+                                                   MapManager::PriorityMedium);
+    }
+    if (mMapInfo && !mMapInfo->isLoading()) {
+        mapLoaded(mMapInfo);
+    }
+
+    // FIXME: if !mMapInfo use a empty map
+}
+
+bool AdjacentMap::alreadyLoading(WorldCellLot *lot)
+{
+    foreach (LoadingSubMap sm, mSubMapsLoading) {
+        if (sm.lot == lot)
+            return true;
+    }
+    return false;
+}
+
+QRectF AdjacentMap::lotSceneBounds(WorldCellLot *lot)
+{
+    Q_ASSERT(mLotToMC.contains(lot));
+    if (!mLotToMC.contains(lot)) return QRectF();
+    return mLotToMC[lot]->boundingRect(scene()->renderer());
 }

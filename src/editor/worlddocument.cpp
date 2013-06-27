@@ -103,6 +103,11 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(worldResized(QSize)),
             SIGNAL(worldResized(QSize)));
 
+    connect(&mUndoRedo, SIGNAL(cellAdded(WorldCell*)),
+            SIGNAL(cellAdded(WorldCell*)));
+    connect(&mUndoRedo, SIGNAL(cellAboutToBeRemoved(WorldCell*)),
+            SIGNAL(cellAboutToBeRemoved(WorldCell*)));
+
     connect(&mUndoRedo, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
             SIGNAL(cellMapFileAboutToChange(WorldCell*)));
     connect(&mUndoRedo, SIGNAL(cellMapFileChanged(WorldCell*)),
@@ -1010,6 +1015,7 @@ QSize WorldDocumentUndoRedo::resizeWorld(const QSize &newSize, QVector<WorldCell
         for (int y = 0; y < mWorld->height(); y++) {
             if (!newBounds.contains(x, y)) {
                 WorldCell *cell = mWorld->cellAt(x, y);
+                emit cellAboutToBeRemoved(cell);
                 // Deselect any cells that are getting chopped off.
                 selection.removeAll(cell);
                 // Close any cell documents for cells that are getting chopped off.
@@ -1026,6 +1032,15 @@ QSize WorldDocumentUndoRedo::resizeWorld(const QSize &newSize, QVector<WorldCell
     mWorld->swapCells(cells);
     mWorld->setSize(newSize);
     emit worldResized(oldSize);
+
+    for (int x = 0; x < newSize.width(); x++) {
+        for (int y = 0; y < newSize.height(); y++) {
+            if (!QRect(QPoint(), oldSize).contains(x, y)) {
+                emit cellAdded(mWorld->cellAt(x, y));
+            }
+        }
+    }
+
     return oldSize;
 }
 
