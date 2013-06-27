@@ -279,6 +279,9 @@ public:
     void setGrime(const QString &layerName, const QRegion &rgn, const QString &tileName);
     void setGrime(const QString &layerName, const QRegion &rgn, const QPoint &pos, const FloorTileGrid *other);
 
+    bool hasUserTiles() const;
+    bool hasUserTiles(const QString &layerName);
+
     void setLayerOpacity(const QString &layerName, qreal opacity)
     { mLayerOpacity[layerName] = opacity; }
 

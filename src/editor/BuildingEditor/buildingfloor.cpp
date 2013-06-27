@@ -1726,6 +1726,20 @@ void BuildingFloor::setGrime(const QString &layerName, const QRegion &rgn,
     mGrimeGrid[layerName]->replace(rgn, pos, other);
 }
 
+bool BuildingFloor::hasUserTiles() const
+{
+    foreach (FloorTileGrid *g, mGrimeGrid)
+        if (!g->isEmpty()) return true;
+    return false;
+}
+
+bool BuildingFloor::hasUserTiles(const QString &layerName)
+{
+    if (mGrimeGrid.contains(layerName))
+        return !mGrimeGrid[layerName]->isEmpty();
+    return false;
+}
+
 /////
 
 BuildingFloor::Square::Square() :
