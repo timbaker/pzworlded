@@ -723,6 +723,8 @@ SubMapItem::SubMapItem(MapComposite *map, WorldCellLot *lot, MapRenderer *render
     QString toolTip = QDir::toNativeSeparators(mapFileName);
     toolTip += QLatin1String(" (lot)");
     setToolTip(toolTip);
+
+    checkValidPos();
 }
 
 QRectF SubMapItem::boundingRect() const
@@ -736,6 +738,8 @@ void SubMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
     QColor color = Qt::darkGray;
     if (mIsEditable)
         color = QColor(0x33,0x99,0xff/*,255/8*/);
+    if (!mIsValidPos)
+        color = QColor(255, 0, 0);
     if (mIsMouseOver)
         color = color.lighter();
     mRenderer->drawFancyRectangle(painter, tileBounds,
@@ -820,10 +824,35 @@ void SubMapItem::setEditable(bool editable)
 
 void SubMapItem::subMapMoved()
 {
+    checkValidPos();
+
     QRectF bounds = mMap->boundingRect(mRenderer);
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
+    }
+}
+
+void SubMapItem::checkValidPos()
+{
+    mIsValidPos = true;
+    foreach (ObjectGroup *og, mMap->map()->objectGroups()) {
+        if (og->name().endsWith(QLatin1String("RoomDefs"))) {
+            foreach (MapObject *o, og->objects()) {
+
+                int x = qFloor(o->x());
+                int y = qFloor(o->y());
+                int w = qCeil(o->x() + o->width()) - x;
+                int h = qCeil(o->y() + o->height()) - y;
+                QRect roomRect(x, y, w, h);
+                roomRect.translate(mLot->pos());
+
+                if (!QRect(0, 0, 300, 300).contains(roomRect)) {
+                    mIsValidPos = false;
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -2127,8 +2156,11 @@ bool CellScene::mapChanged(MapInfo *mapInfo)
         return false;
 
     if (mMapComposite->mapChanged(mapInfo)) {
-        if (mapInfo != mMapComposite->mapInfo())
+        if (mapInfo != mMapComposite->mapInfo()) {
+            foreach (SubMapItem *item, subMapItemsUsingMapInfo(mapInfo))
+                item->subMapMoved(); // update bounds, check valid position
             doLater(AllGroups | Bounds | Synch | Paint); // only a Lot map changed
+        }
     }
 
     if (mapInfo == mMapComposite->mapInfo()) {

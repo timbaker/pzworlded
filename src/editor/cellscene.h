@@ -154,6 +154,8 @@ public:
     WorldCellLot *lot() const { return mLot; }
     MapComposite *subMap() const { return mMap; }
 
+    void checkValidPos();
+
 private:
     MapComposite *mMap;
     Tiled::MapRenderer *mRenderer;
@@ -161,6 +163,7 @@ private:
     WorldCellLot *mLot;
     bool mIsEditable;
     bool mIsMouseOver;
+    bool mIsValidPos;
 };
 
 /**
