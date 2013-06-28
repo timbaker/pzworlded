@@ -1890,28 +1890,10 @@ void CellScene::handlePendingUpdates()
         }
     }
 
-#if 1
     int oldSize = mLayerItems.count();
     mLayerItems.resize(mMap->layerCount());
     for (int layerIndex = oldSize; layerIndex < mMap->layerCount(); ++layerIndex)
         mLayerItems[layerIndex] = new DummyGraphicsItem();
-#else
-    int layerIndex = 0;
-    mLayerItems.resize(mMap->layerCount());
-    foreach (Layer *layer, mMap->layers()) {
-//        layer->setVisible(true);
-        if (TileLayer *tileLayer = layer->asTileLayer()) {
-            mLayerItems[layerIndex++] = new DummyGraphicsItem();
-        } else if (ObjectGroup *objectGroup = layer->asObjectGroup()) {
-            layer->setVisible(true);
-            mLayerItems[layerIndex++] = new ObjectGroupItem(objectGroup, mRenderer);
-            addItem(mLayerItems[layerIndex-1]);
-        } else {
-            // ImageLayer
-            mLayerItems[layerIndex++] = new DummyGraphicsItem();
-        }
-    }
-#endif
 
     if (mPendingFlags & AllGroups)
         mPendingGroupItems = mTileLayerGroupItems.values();
@@ -2329,74 +2311,12 @@ void CellScene::initAdjacentMaps()
             WorldCell *cell2 = world()->cellAt(x, y);
             if (cell2 && cell2 != cell())
                 mAdjacentMaps += new AdjacentMap(this, cell2);
-#if 0
-            if (!cell2 || cell2 == cell() || cell2->mapFilePath().isEmpty()) continue;
-            QFileInfo info(cell2->mapFilePath());
-            if (!info.exists()) continue;
-            MapInfo *mapInfo = MapManager::instance()->loadMap(
-                        info.absoluteFilePath(), QString(), true,
-                        MapManager::PriorityMedium);
-            if (mapInfo) {
-                if (mapInfo->isLoading())
-                    mAdjacentMapsLoading += AdjacentMap(x - X, y - Y, mapInfo);
-                else
-                    mMapComposite->setAdjacentMap(x - X, y - Y, mapInfo);
-
-                MapComposite *adjacentMap = mMapComposite->adjacentMap(x - X, y - Y);
-                foreach (WorldCellLot *lot, cell2->lots()) {
-                    MapInfo *subMapInfo = MapManager::instance()->loadMap(
-                                lot->mapName(), QString(), true, MapManager::PriorityLow);
-                    if (subMapInfo) {
-                        if (subMapInfo->isLoading())
-                            mAdjacentSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-                        else if (adjacentMap)
-                            adjacentMap->addMap(subMapInfo, lot->pos(), lot->level());
-                    }
-                }
-            }
-#endif
         }
     }
 }
 
 void CellScene::mapLoaded(MapInfo *mapInfo)
 {
-#if 0
-    for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
-        AdjacentMap &am = mAdjacentMapsLoading[i];
-        if (am.info == mapInfo) {
-            mMapComposite->setAdjacentMap(am.pos.x(), am.pos.y(), am.info);
-
-            MapComposite *adjacentMap = mMapComposite->adjacentMap(am.pos.x(),
-                                                                   am.pos.y());
-            WorldCell *cell2 = world()->cellAt(cell()->pos() + am.pos);
-            foreach (WorldCellLot *lot, cell2->lots()) {
-                MapInfo *subMapInfo = MapManager::instance()->loadMap(
-                            lot->mapName(), QString(), true, MapManager::PriorityLow);
-                if (subMapInfo && !subMapInfo->isLoading())
-                    adjacentMap->addMap(subMapInfo, lot->pos(), lot->level());
-            }
-
-            mAdjacentMapsLoading.removeAt(i);
-            doLater(AllGroups | Bounds | Synch | ZOrder);
-            // Keep going, could be duplicate submaps to load
-            --i;
-        }
-    }
-
-    for (int i = 0; i < mAdjacentSubMapsLoading.size(); i++) {
-        LoadingSubMap &sm = mAdjacentSubMapsLoading[i];
-        if (sm.mapInfo == mapInfo) {
-            int x = sm.lot->cell()->x(), y = sm.lot->cell()->y();
-            if (MapComposite *adjacentMap = mMapComposite->adjacentMap(x - cell()->x(),
-                                                                       y - cell()->y()))
-                adjacentMap->addMap(mapInfo, sm.lot->pos(), sm.lot->level());
-            mAdjacentSubMapsLoading.removeAt(i);
-            doLater(AllGroups | Bounds | Synch | ZOrder);
-            --i;
-        }
-    }
-#endif
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
         if (sm.mapInfo == mapInfo) {
@@ -2429,24 +2349,6 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
 void CellScene::mapFailedToLoad(MapInfo *mapInfo)
 {
-#if 0
-    for (int i = 0; i < mAdjacentMapsLoading.size(); i++) {
-        AdjacentMap &am = mAdjacentMapsLoading[i];
-        if (am.info == mapInfo) {
-            mAdjacentMapsLoading.removeAt(i);
-            // Keep going, could be duplicate submaps to load
-            --i;
-        }
-    }
-
-    for (int i = 0; i < mAdjacentSubMapsLoading.size(); i++) {
-        LoadingSubMap &sm = mAdjacentSubMapsLoading[i];
-        if (sm.mapInfo == mapInfo) {
-            mAdjacentSubMapsLoading.removeAt(i);
-            --i;
-        }
-    }
-#endif
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
         if (sm.mapInfo == mapInfo) {
