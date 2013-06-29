@@ -1,7 +1,7 @@
 console show
 
-set BIN C:/Programming/PZWorldEd/build-msvc-release
-set SRC C:/Programming/PZWorldEd/PZWorldEd
+set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
+set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
 set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
 set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
