@@ -100,6 +100,7 @@ public:
     class Square
     {
     public:
+        // The order must match buildingmap.cpp:gLayerNames[]
         enum SquareSection
         {
             SectionInvalid = -1,
@@ -107,7 +108,9 @@ public:
             SectionFloorGrime,
             SectionFloorGrime2,
             SectionWall,
+            SectionWallTrim,
             SectionWall2,
+            SectionWallTrim2,
             SectionRoofCap,
             SectionRoofCap2,
             SectionWallOverlay,
@@ -151,9 +154,10 @@ public:
 
         struct WallInfo {
             WallInfo() :
-                entry(0), furniture(0)
+                entry(0), trim(0), furniture(0)
             {}
             BuildingTileEntry *entry;
+            BuildingTileEntry *trim;
             FurnitureTile *furniture;
         } mWallN, mWallW;
 
@@ -161,6 +165,8 @@ public:
         void SetWallW(BuildingTileEntry *tile);
         void SetWallN(FurnitureTile *ftile);
         void SetWallW(FurnitureTile *ftile);
+        void SetWallTrimN(BuildingTileEntry *tile);
+        void SetWallTrimW(BuildingTileEntry *tile);
 
         bool IsWallOrient(WallOrientation orient);
 
@@ -178,6 +184,7 @@ public:
         void ReplaceRoofTop(BuildingTileEntry *tile, int offset);
         void ReplaceFloorGrime(BuildingTileEntry *grimeTile);
         void ReplaceWallGrime(BuildingTileEntry *grimeTile);
+        void ReplaceWallTrim();
 
         int getWallOffset();
     };

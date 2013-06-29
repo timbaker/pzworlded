@@ -68,6 +68,8 @@ DECLARE_FAKE_CATEGORY(DoorFrames)
 DECLARE_FAKE_CATEGORY(Floors)
 DECLARE_FAKE_CATEGORY(EWalls)
 DECLARE_FAKE_CATEGORY(IWalls)
+DECLARE_FAKE_CATEGORY(EWallTrim)
+DECLARE_FAKE_CATEGORY(IWallTrim)
 DECLARE_FAKE_CATEGORY(Stairs)
 DECLARE_FAKE_CATEGORY(Windows)
 DECLARE_FAKE_CATEGORY(GrimeFloor)
@@ -90,6 +92,8 @@ public:
         mCatFloors = NEW_FAKE_CATEGORY(Floors);
         mCatEWalls = NEW_FAKE_CATEGORY(EWalls);
         mCatIWalls = NEW_FAKE_CATEGORY(IWalls);
+        mCatEWallTrim = NEW_FAKE_CATEGORY(EWallTrim);
+        mCatIWallTrim = NEW_FAKE_CATEGORY(IWallTrim);
         mCatStairs = NEW_FAKE_CATEGORY(Stairs);
         mCatWindows = NEW_FAKE_CATEGORY(Windows);
         mCatGrimeFloor = NEW_FAKE_CATEGORY(GrimeFloor);
@@ -98,8 +102,9 @@ public:
         mCatRoofSlopes = NEW_FAKE_CATEGORY(RoofSlopes);
         mCatRoofTops = NEW_FAKE_CATEGORY(RoofTops);
 
-        mCategories << mCatEWalls << mCatIWalls << mCatFloors << mCatDoors <<
-                       mCatDoorFrames << mCatWindows << mCatCurtains << mCatStairs
+        mCategories << mCatEWalls << mCatIWalls << mCatEWallTrim << mCatIWallTrim
+                       << mCatFloors << mCatDoors
+                       << mCatDoorFrames << mCatWindows << mCatCurtains << mCatStairs
                        << mCatGrimeFloor << mCatGrimeWall
                        << mCatRoofCaps << mCatRoofSlopes << mCatRoofTops;
 
@@ -238,6 +243,8 @@ public:
     Fake_Stairs *mCatStairs;
     Fake_EWalls *mCatEWalls;
     Fake_IWalls *mCatIWalls;
+    Fake_EWallTrim *mCatEWallTrim;
+    Fake_IWallTrim *mCatIWallTrim;
     Fake_Windows *mCatWindows;
     Fake_GrimeFloor *mCatGrimeFloor;
     Fake_GrimeWall *mCatGrimeWall;
@@ -261,6 +268,8 @@ DECLARE_FAKE_GETTILE(Floors)
 DECLARE_FAKE_GETTILE(Stairs)
 DECLARE_FAKE_GETTILE(EWalls)
 DECLARE_FAKE_GETTILE(IWalls)
+DECLARE_FAKE_GETTILE(EWallTrim)
+DECLARE_FAKE_GETTILE(IWallTrim)
 DECLARE_FAKE_GETTILE(Windows)
 DECLARE_FAKE_GETTILE(GrimeFloor)
 DECLARE_FAKE_GETTILE(GrimeWall)
@@ -906,7 +915,20 @@ BuildingObject *BuildingReaderPrivate::readObject(BuildingFloor *floor)
         entry = getEntry(interiorTileString);
         if (!entry->asInteriorWall())
             entry = mFakeBuildingTilesMgr.noneTileEntry();
-        wall->setTile(entry, 1);
+        wall->setTile(entry, WallObject::TileInterior);
+
+        QString exteriorTrimString = atts.value(QLatin1String("ExteriorTrim")).toString();
+        entry = getEntry(exteriorTrimString);
+        if (!entry->asExteriorWallTrim())
+            entry = mFakeBuildingTilesMgr.noneTileEntry();
+        wall->setTile(entry, WallObject::TileExteriorTrim);
+
+        QString interiorTrimString = atts.value(QLatin1String("InteriorTrim")).toString();
+        entry = getEntry(interiorTrimString);
+        if (!entry->asInteriorWallTrim())
+            entry = mFakeBuildingTilesMgr.noneTileEntry();
+        wall->setTile(entry, WallObject::TileInteriorTrim);
+
         object = wall;
     } else {
         xml.raiseError(tr("Unknown object type '%1'").arg(type));
@@ -1169,7 +1191,7 @@ void BuildingReaderPrivate::fix(Building *building)
                     fo->setFurnitureTile(fixFurniture(ftiles)->tile(ftile->orient()));
                 }
             } else {
-                for (int i = 0; i < 3; i++) {
+                for (int i = 0; i < object->tiles().size(); i++) {
                     BuildingTileEntry *entry = object->tile(i);
                     if (entry && !entry->isNone()) {
                         object->setTile(fixEntry(entry), i);

@@ -66,6 +66,8 @@ BuildingTilesMgr::BuildingTilesMgr() :
     mCatFloors = new BTC_Floors(QLatin1String("Floors"));
     mCatEWalls = new BTC_EWalls(QLatin1String("Exterior Walls"));
     mCatIWalls = new BTC_IWalls(QLatin1String("Interior Walls"));
+    mCatEWallTrim = new BTC_EWallTrim(QLatin1String("Trim - Exterior Walls"));
+    mCatIWallTrim = new BTC_IWallTrim(QLatin1String("Trim - Interior Walls"));
     mCatStairs = new BTC_Stairs(QLatin1String("Stairs"));
     mCatWindows = new BTC_Windows(QLatin1String("Windows"));
     mCatGrimeFloor = new BTC_GrimeFloor(QLatin1String("Grime - Floors"));
@@ -74,8 +76,9 @@ BuildingTilesMgr::BuildingTilesMgr() :
     mCatRoofSlopes = new BTC_RoofSlopes(QLatin1String("Roof Slopes"));
     mCatRoofTops = new BTC_RoofTops(QLatin1String("Roof Tops"));
 
-    mCategories << mCatEWalls << mCatIWalls << mCatFloors << mCatDoors <<
-                   mCatDoorFrames << mCatWindows << mCatCurtains << mCatStairs
+    mCategories << mCatEWalls << mCatIWalls << mCatEWallTrim << mCatIWallTrim
+                   << mCatFloors << mCatDoors << mCatDoorFrames << mCatWindows
+                   << mCatCurtains << mCatStairs
                    << mCatGrimeFloor << mCatGrimeWall
                    << mCatRoofCaps << mCatRoofSlopes << mCatRoofTops;
 
@@ -84,6 +87,8 @@ BuildingTilesMgr::BuildingTilesMgr() :
 
     mCatEWalls->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_walls.png")));
     mCatIWalls->setShadowImage(mCatEWalls->shadowImage());
+    mCatEWallTrim->setShadowImage(mCatEWalls->shadowImage());
+    mCatIWallTrim->setShadowImage(mCatEWalls->shadowImage());
     mCatFloors->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_floors.png")));
     mCatDoors->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_doors.png")));
     mCatDoorFrames->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_door_frames.png")));
@@ -661,6 +666,16 @@ BuildingTileEntry *BuildingTilesMgr::defaultInteriorWall() const
     return mCatIWalls->defaultEntry();
 }
 
+BuildingTileEntry *BuildingTilesMgr::defaultExteriorWallTrim() const
+{
+    return mCatEWallTrim->defaultEntry();
+}
+
+BuildingTileEntry *BuildingTilesMgr::defaultInteriorWallTrim() const
+{
+    return mCatIWallTrim->defaultEntry();
+}
+
 BuildingTileEntry *BuildingTilesMgr::defaultFloorTile() const
 {
     return mCatFloors->defaultEntry();
@@ -786,6 +801,16 @@ BuildingTileEntry *BuildingTileEntry::asExteriorWall()
 BuildingTileEntry *BuildingTileEntry::asInteriorWall()
 {
     return mCategory->asInteriorWalls() ? this : 0;
+}
+
+BuildingTileEntry *BuildingTileEntry::asExteriorWallTrim()
+{
+    return mCategory->asExteriorWallTrim() ? this : 0;
+}
+
+BuildingTileEntry *BuildingTileEntry::asInteriorWallTrim()
+{
+    return mCategory->asInteriorWallTrim() ? this : 0;
 }
 
 BuildingTileEntry *BuildingTileEntry::asFloor()

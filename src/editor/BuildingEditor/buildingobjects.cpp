@@ -1365,7 +1365,9 @@ WallObject::WallObject(BuildingFloor *floor, int x, int y,
                        Direction dir, int length) :
     BuildingObject(floor, x, y, dir),
     mLength(length),
-    mInteriorTile(0)
+    mExteriorTrimTile(0),
+    mInteriorTile(0),
+    mInteriorTrimTile(0)
 {
 }
 
@@ -1420,8 +1422,8 @@ bool WallObject::isValidPos(const QPoint &offset, BuildingFloor *floor) const
 BuildingObject *WallObject::clone() const
 {
     WallObject *clone = new WallObject(mFloor, mX, mY, mDir, mLength);
-    clone->mTile = mTile;
-    clone->mInteriorTile = mInteriorTile;
+    for (int i = 0; i < TileCount; i++)
+        clone->setTile(tile(i), i);
     return clone;
 }
 

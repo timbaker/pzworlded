@@ -102,6 +102,8 @@ public:
     BuildingTileEntry *asCategory(int n);
     BuildingTileEntry *asExteriorWall();
     BuildingTileEntry *asInteriorWall();
+    BuildingTileEntry *asExteriorWallTrim();
+    BuildingTileEntry *asInteriorWallTrim();
     BuildingTileEntry *asFloor();
     BuildingTileEntry *asDoor();
     BuildingTileEntry *asDoorFrame();
@@ -208,6 +210,8 @@ public:
     virtual BuildingTileCategory *asNone() { return 0; }
     virtual BuildingTileCategory *asExteriorWalls() { return 0; }
     virtual BuildingTileCategory *asInteriorWalls() { return 0; }
+    virtual BuildingTileCategory *asExteriorWallTrim() { return 0; }
+    virtual BuildingTileCategory *asInteriorWallTrim() { return 0; }
     virtual BuildingTileCategory *asFloors() { return 0; }
     virtual BuildingTileCategory *asDoors() { return 0; }
     virtual BuildingTileCategory *asDoorFrames() { return 0; }
@@ -407,6 +411,32 @@ public:
     BuildingTileCategory *asInteriorWalls() { return this; }
 };
 
+class BTC_EWallTrim : public BTC_Walls
+{
+public:
+    BTC_EWallTrim(const QString &label) :
+        BTC_Walls(QLatin1String("exterior_wall_trim"), label)
+    {}
+
+    bool canAssignNone() const
+    { return true; }
+
+    BuildingTileCategory *asExteriorWallTrim() { return this; }
+};
+
+class BTC_IWallTrim : public BTC_Walls
+{
+public:
+    BTC_IWallTrim(const QString &label) :
+        BTC_Walls(QLatin1String("interior_wall_trim"), label)
+    {}
+
+    bool canAssignNone() const
+    { return true; }
+
+    BuildingTileCategory *asInteriorWallTrim() { return this; }
+};
+
 class BTC_Windows : public BuildingTileCategory
 {
 public:
@@ -588,6 +618,8 @@ public:
     enum CategoryEnum {
         ExteriorWalls,
         InteriorWalls,
+        ExteriorWallTrim,
+        InteriorWallTrim,
         Floors,
         Doors,
         DoorFrames,
@@ -674,6 +706,8 @@ public:
 
     BuildingTileCategory *catEWalls() const { return mCatEWalls; }
     BuildingTileCategory *catIWalls() const { return mCatIWalls; }
+    BuildingTileCategory *catEWallTrim() const { return mCatEWallTrim; }
+    BuildingTileCategory *catIWallTrim() const { return mCatIWallTrim; }
     BuildingTileCategory *catFloors() const { return mCatFloors; }
     BuildingTileCategory *catDoors() const { return mCatDoors; }
     BuildingTileCategory *catDoorFrames() const { return mCatDoorFrames; }
@@ -690,6 +724,8 @@ public:
 
     BuildingTileEntry *defaultExteriorWall() const;
     BuildingTileEntry *defaultInteriorWall() const;
+    BuildingTileEntry *defaultExteriorWallTrim() const;
+    BuildingTileEntry *defaultInteriorWallTrim() const;
     BuildingTileEntry *defaultFloorTile() const;
     BuildingTileEntry *defaultDoorTile() const;
     BuildingTileEntry *defaultDoorFrameTile() const;
@@ -744,6 +780,8 @@ private:
     BTC_Stairs *mCatStairs;
     BTC_EWalls *mCatEWalls;
     BTC_IWalls *mCatIWalls;
+    BTC_EWallTrim *mCatEWallTrim;
+    BTC_IWallTrim *mCatIWallTrim;
     BTC_Windows *mCatWindows;
     BTC_GrimeFloor *mCatGrimeFloor;
     BTC_GrimeWall *mCatGrimeWall;

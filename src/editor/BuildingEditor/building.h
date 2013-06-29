@@ -37,6 +37,7 @@ class Building
 public:
     enum Tiles {
         ExteriorWall,
+        ExteriorWallTrim,
         Door,
         DoorFrame,
         Window,
@@ -115,6 +116,12 @@ public:
 
     void setExteriorWall(BuildingTileEntry *entry)
     { mTiles[ExteriorWall] = entry; }
+
+    BuildingTileEntry *exteriorWallTrim() const
+    { return mTiles[ExteriorWallTrim]; }
+
+    void setExteriorWallTrim(BuildingTileEntry *entry)
+    { mTiles[ExteriorWallTrim] = entry; }
 
     BuildingTileEntry *doorTile() const
     { return mTiles[Door]; }

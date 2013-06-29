@@ -161,7 +161,9 @@ static const char *gLayerNames[] = {
     "FloorGrime",
     "FloorGrime2",
     "Walls",
+    "WallTrim",
     "Walls2",
+    "WallTrim2",
     "RoofCap",
     "RoofCap2",
     "WallOverlay",
@@ -1141,8 +1143,8 @@ ShadowBuilding::ShadowBuilding(const Building *building) :
 
 ShadowBuilding::~ShadowBuilding()
 {
-    delete mShadowBuilding;
     qDeleteAll(mModifiers);
+    delete mShadowBuilding;
 }
 
 BuildingFloor *ShadowBuilding::floor(int level) const

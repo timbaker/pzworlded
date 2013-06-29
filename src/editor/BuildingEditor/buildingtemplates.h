@@ -37,6 +37,7 @@ class Room
 public:
     enum Tiles {
         InteriorWall,
+        InteriorWallTrim,
         Floor,
         GrimeFloor,
         GrimeWall,
@@ -61,6 +62,7 @@ public:
     const QVector<BuildingTileEntry*> &tiles() const
     { return mTiles; }
 
+    static QStringList enumLabels();
     static QString enumToString(int n);
     static int categoryEnum(int n);
 
@@ -97,6 +99,7 @@ public:
     // Must match Building::Tiles enum
     enum Tiles {
         ExteriorWall,
+        ExteriorWallTrim,
         Door,
         DoorFrame,
         Window,

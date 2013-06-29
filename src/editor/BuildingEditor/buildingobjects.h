@@ -210,16 +210,34 @@ public:
 
     QRect bounds() const;
 
+    enum {
+        TileExterior,
+        TileInterior,
+        TileExteriorTrim,
+        TileInteriorTrim,
+        TileCount
+    };
+
     void setTile(BuildingTileEntry *tile, int alternate = 0)
-    { alternate ? mInteriorTile = tile : mTile = tile; }
+    {
+        if (alternate == TileInterior) mInteriorTile = tile;
+        else if (alternate == TileExteriorTrim) mExteriorTrimTile = tile;
+        else if (alternate == TileInteriorTrim) mInteriorTrimTile = tile;
+        else mTile = tile;
+    }
 
     BuildingTileEntry *tile(int alternate = 0) const
-    { return alternate ? mInteriorTile : mTile; }
+    {
+        if (alternate == TileInterior) return mInteriorTile;
+        if (alternate == TileExteriorTrim) return mExteriorTrimTile;
+        if (alternate == TileInteriorTrim) return mInteriorTrimTile;
+        return mTile;
+    }
 
     virtual QList<BuildingTileEntry*> tiles() const
     {
         QList<BuildingTileEntry*> ret;
-        ret << mTile << mInteriorTile;
+        ret << mTile << mInteriorTile << mExteriorTrimTile << mInteriorTrimTile;
         return ret;
     }
 
@@ -243,7 +261,9 @@ public:
 
 private:
     int mLength;
+    BuildingTileEntry *mExteriorTrimTile;
     BuildingTileEntry *mInteriorTile;
+    BuildingTileEntry *mInteriorTrimTile;
 };
 
 class Window : public BuildingObject
