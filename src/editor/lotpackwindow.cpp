@@ -56,7 +56,7 @@ QRect LotPackLayerGroup::bounds() const
 
 QMargins LotPackLayerGroup::drawMargins() const
 {
-    return QMargins(0, 128 - 32, 64, 0);
+    return QMargins(0, 128, 64, 0);
 }
 
 bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
