@@ -175,7 +175,9 @@ private:
     MapsDock *mMapsDock;
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
+#ifdef ROAD_UI
     RoadsDock *mRoadsDock;
+#endif
     Document *mCurrentDocument;
     QComboBox *mZoomComboBox;
     QMenu *mCurrentLevelMenu;

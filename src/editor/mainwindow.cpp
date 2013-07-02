@@ -101,7 +101,9 @@ MainWindow::MainWindow(QWidget *parent)
     , mMapsDock(new MapsDock(this))
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
+#ifdef ROAD_UI
     , mRoadsDock(new RoadsDock(this))
+#endif
     , mCurrentDocument(0)
     , mCurrentLevelMenu(new QMenu(this))
     , mObjectGroupMenu(new QMenu(this))
@@ -187,11 +189,15 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mMapsDock->toggleViewAction());
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
+#ifdef ROAD_UI
     ui->menuView->addAction(mRoadsDock->toggleViewAction());
+#endif
 
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
+#ifdef ROAD_UI
     addDockWidget(Qt::LeftDockWidgetArea, mRoadsDock);
+#endif
     addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
     addDockWidget(Qt::RightDockWidgetArea, mLayersDock);
     addDockWidget(Qt::RightDockWidgetArea, mMapsDock);
@@ -236,7 +242,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
+#ifdef ROAD_UI
     connect(ui->actionRemoveRoad, SIGNAL(triggered()), SLOT(removeRoad()));
+#else
+    ui->actionRemoveRoad->setVisible(false);
+#endif
     connect(ui->actionRemoveBMP, SIGNAL(triggered()), SLOT(removeBMP()));
 
     connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
@@ -273,17 +283,21 @@ MainWindow::MainWindow(QWidget *parent)
     ToolManager *toolManager = ToolManager::instance();
     toolManager->registerTool(WorldCellTool::instance());
     toolManager->registerTool(PasteCellsTool::instance());
+#ifdef ROAD_UI
     toolManager->registerTool(WorldSelectMoveRoadTool::instance());
     toolManager->registerTool(WorldCreateRoadTool::instance());
     toolManager->registerTool(WorldEditRoadTool::instance());
+#endif
     toolManager->registerTool(WorldBMPTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SubMapTool::instance());
     toolManager->registerTool(ObjectTool::instance());
     toolManager->registerTool(CreateObjectTool::instance());
+#ifdef ROAD_UI
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
+#endif
 #if 0 // see enableDeveloperFeatures
     toolManager->addSeparator();
     toolManager->registerTool(HeightMapTool::instance());
@@ -505,8 +519,10 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc->worldDocument(),
                     SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
                     SLOT(updateActions()));
+#ifdef ROAD_UI
             connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
+#endif
         }
 
         if (WorldDocument *worldDoc = doc->asWorldDocument()) {
@@ -515,8 +531,10 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(worldDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
             connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
+#ifdef ROAD_UI
             connect(worldDoc, SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
+#endif
             connect(worldDoc, SIGNAL(selectedBMPsChanged()),
                     SLOT(updateActions()));
         }
@@ -528,7 +546,9 @@ void MainWindow::currentDocumentChanged(Document *doc)
 
         mLotsDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
+#ifdef ROAD_UI
         mRoadsDock->setDocument(doc);
+#endif
 
         mZoomable = mCurrentDocument->view()->zoomable();
         mZoomable->connectToComboBox(mZoomComboBox);
@@ -541,7 +561,9 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLayersDock->setCellDocument(0);
         mLotsDock->clearDocument();
         mObjectsDock->clearDocument();
+#ifdef ROAD_UI
         mRoadsDock->clearDocument();
+#endif
     }
 
     ToolManager::instance()->setScene(doc ? doc->view()->scene() : 0);
@@ -1769,9 +1791,11 @@ void MainWindow::updateActions()
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
 
+#ifdef ROAD_UI
     bool removeRoad = (worldDoc && worldDoc->selectedRoadCount()) ||
             (cellDoc && cellDoc->worldDocument()->selectedRoadCount());
     ui->actionRemoveRoad->setEnabled(removeRoad);
+#endif
 
     ui->actionRemoveBMP->setEnabled(worldDoc && worldDoc->selectedBMPCount());
 
