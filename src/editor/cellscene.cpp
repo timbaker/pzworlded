@@ -1312,7 +1312,6 @@ void CellScene::setGraphicsSceneZOrder()
     z2 = z;
     if (mActiveTool && mActiveTool->affectsObjects())
         z2 += lotSpaces;
-    const WorldCellObjectList &objects = cell()->objects();
     int objectIndex = 0;
     foreach (ObjectItem *item, mObjectItems) {
         WorldCellObject *obj = item->object();
