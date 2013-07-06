@@ -120,7 +120,8 @@ SOURCES += main.cpp\
     heightmapdocument.cpp \
     heightmap.cpp \
     heightmapfile.cpp \
-    heightmapundoredo.cpp
+    heightmapundoredo.cpp \
+    gotodialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -199,7 +200,8 @@ HEADERS  += mainwindow.h \
     heightmapdocument.h \
     heightmap.h \
     heightmapfile.h \
-    heightmapundoredo.h
+    heightmapundoredo.h \
+    gotodialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -216,7 +218,8 @@ FORMS    += mainwindow.ui \
     newworlddialog.ui \
     lotpackwindow.ui \
     fromtodialog.ui \
-    unknowncolorsdialog.ui
+    unknowncolorsdialog.ui \
+    gotodialog.ui
 
 OTHER_FILES +=
 

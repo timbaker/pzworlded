@@ -72,6 +72,7 @@ public slots:
     void openFile();
     void newWorld();
     void editCell();
+    void goToXY();
     void setShowGrid(bool show);
 
     void documentAdded(Document *doc);

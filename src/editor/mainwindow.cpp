@@ -28,6 +28,7 @@
 #include "copypastedialog.h"
 #include "documentmanager.h"
 #include "generatelotsdialog.h"
+#include "gotodialog.h"
 #include "heightmapdocument.h"
 #include "heightmaptools.h"
 #include "heightmapview.h"
@@ -213,6 +214,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionNew, SIGNAL(triggered()), SLOT(newWorld()));
     connect(ui->actionOpen, SIGNAL(triggered()), SLOT(openFile()));
     connect(ui->actionEditCell, SIGNAL(triggered()), SLOT(editCell()));
+    connect(ui->actionGoToXY, SIGNAL(triggered()), SLOT(goToXY()));
     connect(ui->actionSave, SIGNAL(triggered()), SLOT(saveFile()));
     connect(ui->actionSaveAs, SIGNAL(triggered()), SLOT(saveFileAs()));
     connect(ui->actionClose, SIGNAL(triggered()), SLOT(closeFile()));
@@ -403,6 +405,29 @@ void MainWindow::editCell()
     if (WorldDocument *worldDoc = doc->asWorldDocument()) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
             worldDoc->editCell(cell);
+    }
+}
+
+void MainWindow::goToXY()
+{
+    Document *doc = docman()->currentDocument();
+    WorldDocument *worldDoc = doc->asWorldDocument();
+    if (!worldDoc)
+        worldDoc = doc->asCellDocument()->worldDocument();
+
+    GoToDialog d(worldDoc->world(), this);
+    if (d.exec() != QDialog::Accepted)
+        return;
+
+    if (WorldCell *cell = worldDoc->world()->cellAt(d.worldX() / 300, d.worldY() / 300)) {
+        worldDoc->editCell(cell);
+        if (CellDocument *cellDoc = docman()->findDocument(cell)) {
+            docman()->setCurrentDocument(cellDoc);
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            QPointF tilePos(d.worldX() - cell->x() * 300,
+                            d.worldY() - cell->y() * 300);
+            cellDoc->view()->centerOn(cellDoc->scene()->renderer()->tileToPixelCoords(tilePos));
+        }
     }
 }
 
@@ -1801,6 +1826,7 @@ void MainWindow::updateActions()
 
     ui->actionEditCell->setEnabled(false);
     ui->actionEditHeightMap->setEnabled(false);
+    ui->actionGoToXY->setEnabled(hasDoc);
     ui->actionResizeWorld->setEnabled(worldDoc);
     ui->actionObjectTypes->setEnabled(hasDoc);
     ui->actionProperties->setEnabled(hasDoc);
