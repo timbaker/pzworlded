@@ -128,7 +128,7 @@ void DocumentManager::closeDocument(int index)
         if (mDocuments.size())
             setCurrentDocument(mDocuments.first());
         else
-            setCurrentDocument(0);
+            setCurrentDocument((Document*)0);
     }
 //    mUndoGroup->removeStack(doc->undoStack());
     delete doc;
