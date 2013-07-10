@@ -80,17 +80,10 @@ public:
         foreach (WorldBMP *bmp, world->bmps())
             writeBMP(w, bmp);
 
-        foreach (PropertyDef *pd, world->propertyDefinitions()) {
-            w.writeStartElement(QLatin1String("propertydef"));
-            w.writeAttribute(QLatin1String("name"), pd->mName);
-            w.writeAttribute(QLatin1String("default"), pd->mDefaultValue);
-            if (!pd->mDescription.isEmpty()) {
-                w.writeStartElement(QLatin1String("description"));
-                w.writeCharacters(pd->mDescription);
-                w.writeEndElement(); // description
-            }
-            w.writeEndElement(); // propertydef
-        }
+        foreach (PropertyEnum *pe, world->propertyEnums())
+            writePropertyEnum(w, pe);
+        foreach (PropertyDef *pd, world->propertyDefinitions())
+            writePropertyDef(w, pd);
         foreach (PropertyTemplate *pt, world->propertyTemplates())
             writeTemplate(w, pt);
 
@@ -117,6 +110,30 @@ public:
             }
         }
         w.writeEndElement();
+    }
+
+    void writePropertyEnum(QXmlStreamWriter &w, PropertyEnum *pe)
+    {
+        w.writeStartElement(QLatin1String("property-enum"));
+        w.writeAttribute(QLatin1String("name"), pe->name());
+        w.writeAttribute(QLatin1String("choices"), pe->values().join(QLatin1String(",")));
+        w.writeAttribute(QLatin1String("multi"), pe->isMulti() ? QLatin1String("true") : QLatin1String("false"));
+        w.writeEndElement(); // property-enum
+    }
+
+    void writePropertyDef(QXmlStreamWriter &w, PropertyDef *pd)
+    {
+        w.writeStartElement(QLatin1String("propertydef"));
+        w.writeAttribute(QLatin1String("name"), pd->mName);
+        w.writeAttribute(QLatin1String("default"), pd->mDefaultValue);
+        if (pd->mEnum)
+            w.writeAttribute(QLatin1String("enum"), pd->mEnum->name());
+        if (!pd->mDescription.isEmpty()) {
+            w.writeStartElement(QLatin1String("description"));
+            w.writeCharacters(pd->mDescription);
+            w.writeEndElement(); // description
+        }
+        w.writeEndElement(); // propertydef
     }
 
     void writeTemplate(QXmlStreamWriter &w, PropertyTemplate *pt)

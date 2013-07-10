@@ -25,8 +25,10 @@
 #include "heightmaptools.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
+#include "mainwindow.h"
 #include "preferences.h"
 #include "progress.h"
+#include "spawntooldialog.h"
 #include "toolmanager.h"
 #include "undoredo.h"
 #include "world.h"
@@ -305,12 +307,17 @@ void ObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         event->accept();
         break;
     case Qt::RightButton:
+        if (mMode == NoMode) {
+            showContextMenu(event->scenePos(), event->screenPos());
+            event->accept();
+        }
         // Right-clicks exits moving, same as the Escape key.
         if (mMode == Moving) {
             foreach (ObjectItem *item, mMovingItems)
                 item->setDragOffset(QPointF());
             mMovingItems.clear();
             mMode = CancelMoving;
+            event->accept();
         }
         break;
     default:
@@ -461,6 +468,39 @@ void ObjectTool::finishMoving(const QPointF &pos)
     }
 
     mMovingItems.clear();
+}
+
+void ObjectTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
+{
+    ObjectItem *item = topmostItemAt(scenePos);
+    if (!item) {
+        return;
+    }
+
+    QList<WorldCellObject*> objects;
+    if (mScene->document()->selectedObjects().contains(item->object()))
+        objects = mScene->document()->selectedObjects();
+    else {
+        objects << item->object();
+        mScene->document()->setSelectedObjects(objects);
+    }
+    int count = objects.size();
+
+    QMenu menu;
+    QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
+    QAction *removeAction = menu.addAction(removeIcon, (count > 1)
+                                           ? tr("Remove %1 Objects").arg(count)
+                                           : tr("Remove Object"));
+
+    QAction *action = menu.exec(screenPos);
+    if (action == removeAction) {
+        if (count > 1)
+            mScene->worldDocument()->undoStack()->beginMacro(removeAction->text());
+        foreach (WorldCellObject *obj, objects)
+            mScene->worldDocument()->removeCellObject(mScene->cell(), obj->index());
+        if (count > 1)
+            mScene->worldDocument()->undoStack()->endMacro();
+    }
 }
 
 ObjectItem *ObjectTool::topmostItemAt(const QPointF &scenePos)
@@ -802,6 +842,153 @@ SubMapItem *SubMapTool::topmostItemAt(const QPointF &scenePos)
 {
     foreach (QGraphicsItem *item, mScene->items(scenePos)) {
         if (SubMapItem *subMapItem = dynamic_cast<SubMapItem*>(item))
+            return subMapItem;
+    }
+    return 0;
+}
+
+/////
+
+SINGLETON_IMPL(SpawnPointTool)
+
+SpawnPointTool::SpawnPointTool()
+    : BaseCellSceneTool(QLatin1String("Place Spawn Point"),
+                        QIcon(QLatin1String(":/images/22x22/tool-spawn-point.png")),
+                        QKeySequence()),
+      mContextMenuVisible(false)
+{
+    new SpawnToolDialog(MainWindow::instance());
+}
+
+void SpawnPointTool::activate()
+{
+    BaseCellSceneTool::activate();
+    SpawnToolDialog::instance().setDocument(mScene->document());
+    SpawnToolDialog::instance().show();
+}
+
+void SpawnPointTool::deactivate()
+{
+    SpawnToolDialog::instance().hide();
+    SpawnToolDialog::instance().setDocument(0);
+    BaseCellSceneTool::activate();
+}
+
+void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+
+    if (event->button() == Qt::RightButton) {
+        showContextMenu(event->scenePos(), event->screenPos());
+        event->accept();
+        return;
+    }
+
+    if (event->button() != Qt::LeftButton)
+        return;
+
+    if (SpawnPointItem *item = topmostItemAt(event->scenePos())) {
+        mScene->document()->setSelectedObjects(WorldCellObjectList() << item->object());
+        event->accept();
+        return;
+    }
+
+    // Try to ignore left-click that closes the context menu
+    if (mContextMenuVisible || (mContextMenuShown.isValid() &&
+            mContextMenuShown.msecsTo(QTime::currentTime()) < 500))
+        return;
+
+    event->accept();
+
+    mScene->document()->undoStack()->beginMacro(tr("Add Spawn Point"));
+
+    // Create the SpawnPoint object type if needed
+    ObjectType *type = mScene->world()->objectType(QLatin1String("SpawnPoint"));
+    if (!type) {
+        type = new ObjectType(QLatin1String("SpawnPoint"));
+        mScene->worldDocument()->addObjectType(type);
+    }
+
+    // Create the Professions property enum if needed
+    PropertyEnum *pe = mScene->world()->propertyEnums().find(QLatin1String("Professions"));
+    if (!pe) {
+        mScene->worldDocument()->addPropertyEnum(QLatin1String("Professions"), true);
+        pe = mScene->world()->propertyEnums().find(QLatin1String("Professions"));
+        QStringList professions;
+        professions << QLatin1String("all")
+                    << QLatin1String("unemployed")
+                    << QLatin1String("policeofficer")
+                    << QLatin1String("constructionworker")
+                    << QLatin1String("securityguard")
+                    << QLatin1String("parkranger")
+                    << QLatin1String("fireofficer");
+        mScene->worldDocument()->setPropertyEnumChoices(pe, professions);
+
+    }
+
+    // Create the Professions property definition if needed
+    PropertyDef *pd = mScene->world()->propertyDefinition(QLatin1String("Professions"));
+    if (!pd) {
+        pd = new PropertyDef(QLatin1String("Professions"), QLatin1String("all"),
+                             tr("Comma-separated list of professions that may spawn here.  Use \"all\" to allow any profession to spawn here."),
+                             pe);
+        mScene->worldDocument()->addPropertyDefinition(pd);
+    }
+
+    // Create the SpawnPoint template if needed
+    PropertyTemplate *pt = mScene->world()->propertyTemplate(QLatin1String("SpawnPoint"));
+    if (!pt) {
+        pt = new PropertyTemplate;
+        pt->mName = QLatin1String("SpawnPoint");
+        pt->mDescription = tr("This template holds the default set of properties for all spawn points in the world.");
+        pt->addProperty(0, new Property(pd, pd->mDefaultValue));
+        mScene->worldDocument()->addTemplate(pt);
+    }
+
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(),
+                                                              mScene->document()->currentLevel());
+
+    WorldObjectGroup *og = mScene->document()->currentObjectGroup();
+    WorldCellObject *obj = new WorldCellObject(mScene->cell(),
+                                               QString(), type, og,
+                                               tilePos.x(), tilePos.y(),
+                                               mScene->document()->currentLevel(),
+                                               1, 1);
+    obj->addTemplate(obj->templates().size(), pt);
+    mScene->worldDocument()->addCellObject(mScene->cell(),
+                                           mScene->cell()->objects().size(),
+                                           obj);
+
+    mScene->document()->undoStack()->endMacro();
+}
+
+void SpawnPointTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
+{
+    SpawnPointItem *item = topmostItemAt(scenePos);
+    if (!item) {
+        return;
+    }
+
+    mContextMenuVisible = true;
+
+//    mScene->document()->setSelectedObjects(WorldCellObjectList() << item->object());
+
+    QMenu menu;
+    QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
+    QAction *removeAction = menu.addAction(removeIcon, tr("Remove Spawn Point"));
+
+    QAction *action = menu.exec(screenPos);
+    if (action == removeAction) {
+        mScene->worldDocument()->removeCellObject(mScene->cell(), item->object()->index());
+    }
+
+    mContextMenuVisible = false;
+    mContextMenuShown = QTime::currentTime();
+}
+
+SpawnPointItem *SpawnPointTool::topmostItemAt(const QPointF &scenePos)
+{
+    foreach (QGraphicsItem *item, mScene->items(scenePos)) {
+        if (SpawnPointItem *subMapItem = dynamic_cast<SpawnPointItem*>(item))
             return subMapItem;
     }
     return 0;

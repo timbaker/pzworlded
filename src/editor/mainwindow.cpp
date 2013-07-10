@@ -295,6 +295,8 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(SubMapTool::instance());
     toolManager->registerTool(ObjectTool::instance());
     toolManager->registerTool(CreateObjectTool::instance());
+    new SpawnPointTool;
+    toolManager->registerTool(SpawnPointTool::instancePtr());
 #ifdef ROAD_UI
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());

@@ -224,6 +224,10 @@ QVariant PropertiesModel::data(const QModelIndex &index, int role) const
     }
     if (Property *p = toProperty(index)) {
         switch (role) {
+        case Qt::ForegroundRole:
+            if (index.column() && (p->mValue != p->mDefinition->mDefaultValue))
+                return Qt::blue;
+            break;
         case Qt::DisplayRole:
             return index.column() ? p->mValue : p->mDefinition->mName;
         case Qt::EditRole:

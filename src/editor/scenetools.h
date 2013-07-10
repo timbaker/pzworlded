@@ -18,6 +18,8 @@
 #ifndef SCENETOOLS_H
 #define SCENETOOLS_H
 
+#include "singleton.h"
+
 #include <QIcon>
 #include <QGraphicsPolygonItem>
 #include <QKeySequence>
@@ -26,6 +28,7 @@
 #include <QPointF>
 #include <QSet>
 #include <QString>
+#include <QTime>
 #include <QTimer>
 
 class BaseCellSceneTool;
@@ -39,6 +42,7 @@ class DnDItem;
 class ObjectItem;
 class MapComposite;
 class Road;
+class SpawnPointItem;
 class SubMapItem;
 class TrafficLines;
 class WorldBMP;
@@ -240,6 +244,8 @@ private:
     void updateMovingItems(const QPointF &pos, Qt::KeyboardModifiers modifiers);
     void finishMoving(const QPointF &pos);
 
+    void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
+
 private:
     Q_DISABLE_COPY(ObjectTool)
 
@@ -324,6 +330,39 @@ private:
     QGraphicsPolygonItem *mMapHighlightItem;
     MapComposite *mHighlightedMap;
     static SubMapTool *mInstance;
+};
+
+/////
+
+class SpawnPointTool : public BaseCellSceneTool, public Singleton<SpawnPointTool>
+{
+    Q_OBJECT
+public:
+    SpawnPointTool();
+
+    void activate();
+    void deactivate();
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+//    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+//    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+     bool affectsLots() const { return false; }
+     bool affectsObjects() const { return true; }
+
+    void languageChanged()
+    {
+        setName(tr("Create Spawn Point"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private:
+    void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
+    SpawnPointItem *topmostItemAt(const QPointF &scenePos);
+
+private:
+    bool mContextMenuVisible;
+    QTime mContextMenuShown;
 };
 
 /////

@@ -34,6 +34,7 @@ class HeightMapRegion;
 class ObjectType;
 class Property;
 class PropertyDef;
+class PropertyEnum;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
@@ -63,7 +64,9 @@ public:
     void addPropertyDefinition(int index, PropertyDef *pd);
     PropertyDef *removePropertyDefinition(int index);
 
-    void changePropertyDefinition(PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc);
+    void changePropertyDefinition(PropertyDef *pd, const QString &name,
+                                  const QString &defValue, const QString &desc,
+                                  PropertyEnum *pe);
     void changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc);
 
     void addProperty(PropertyHolder *ph, int index, Property *p);
@@ -124,6 +127,13 @@ public:
     QPoint moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);
     WorldBMP *removeBMP(int index);
+
+    void insertPropertyEnum(int index, PropertyEnum *pe);
+    PropertyEnum *removePropertyEnum(int index);
+    void changePropertyEnum(PropertyEnum *pe, const QString &name, bool multi);
+    QStringList setPropertyEnumChoices(PropertyEnum *pe, const QStringList &choices);
+
+    QStringList setProfessions(const QStringList &professions);
 
     QString setHeightMapFileName(const QString &fileName);
     void paintHeightMap(const HeightMapRegion &region);
@@ -198,6 +208,13 @@ signals:
     void bmpCoordsChanged(int index);
     void bmpAdded(int index);
     void bmpAboutToBeRemoved(int index);
+
+    void propertyEnumAdded(int index);
+    void propertyEnumAboutToBeRemoved(int index);
+    void propertyEnumChanged(PropertyEnum *pe);
+    void propertyEnumChoicesChanged(PropertyEnum *pe);
+
+    void professionsChanged();
 
     void heightMapFileNameChanged();
     void heightMapPainted(const QRegion &region);
@@ -319,7 +336,9 @@ public:
       * an existing property definition.
       * This operation is undo-able.
       */
-    void changePropertyDefinition(PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc);
+    void changePropertyDefinition(PropertyDef *pd, const QString &name,
+                                  const QString &defValue, const QString &desc,
+                                  PropertyEnum *pe);
     void changePropertyDefinition(PropertyDef *pd, PropertyDef *other);
 
     /**
@@ -363,6 +382,13 @@ public:
     void moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);
     void removeBMP(WorldBMP *bmp);
+
+    void addPropertyEnum(const QString &name, bool multi);
+    void removePropertyEnum(PropertyEnum *pe);
+    void changePropertyEnum(PropertyEnum *pe, const QString &name, bool multi);
+    void setPropertyEnumChoices(PropertyEnum *pe, const QStringList &choices);
+
+    void setProfessions(const QStringList &professions);
 
     void setHeightMapFileName(const QString &fileName);
     void paintHeightMap(const HeightMapRegion &region, bool mergeable);
@@ -457,6 +483,13 @@ signals:
     void bmpAdded(int index);
     void bmpAboutToBeRemoved(int index);
     void bmpCoordsChanged(int index);
+
+    void propertyEnumAdded(int index);
+    void propertyEnumAboutToBeRemoved(int index);
+    void propertyEnumChanged(PropertyEnum *pe);
+    void propertyEnumChoicesChanged(PropertyEnum *pe);
+
+    void professionsChanged();
 
     void heightMapFileNameChanged();
     void heightMapPainted(const QRegion &region);

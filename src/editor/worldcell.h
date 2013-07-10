@@ -18,7 +18,7 @@
 #ifndef WORLDCELL_H
 #define WORLDCELL_H
 
-#include "properties.h"
+#include "worldproperties.h"
 
 #include <QColor>
 #include <QPoint>
@@ -221,6 +221,10 @@ public:
     void setVisible(bool visible) { mVisible = visible; }
     bool isVisible() const { return mVisible; }
 
+    int index();
+
+    bool isSpawnPoint() const;
+
 private:
     QString mName;
     WorldObjectGroup *mGroup;
@@ -293,6 +297,7 @@ public:
     void insertObject(int index, WorldCellObject *obj);
     WorldCellObject *removeObject(int index);
     const WorldCellObjectList &objects() const { return mObjects; }
+    int indexOf(WorldCellObject *obj) { return mObjects.indexOf(obj); }
 
     bool isEmpty() const;
 

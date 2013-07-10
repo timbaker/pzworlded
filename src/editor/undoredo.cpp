@@ -501,13 +501,16 @@ void AddRemovePropertyDef::remove()
 
 /////
 
-EditPropertyDef::EditPropertyDef(WorldDocument *doc, PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc)
+EditPropertyDef::EditPropertyDef(WorldDocument *doc, PropertyDef *pd, const QString &name,
+                                 const QString &defValue, const QString &desc,
+                                 PropertyEnum *pe)
     : QUndoCommand(QCoreApplication::translate("Undo Commands", "Edit Property Definition"))
     , mDocument(doc)
     , mPropertyDef(pd)
     , mName(name)
     , mDefault(defValue)
     , mDesc(desc)
+    , mEnum(pe)
 {
 }
 
@@ -516,8 +519,9 @@ void EditPropertyDef::swap()
     QString a = mPropertyDef->mName;
     QString b = mPropertyDef->mDefaultValue;
     QString c = mPropertyDef->mDescription;
-    mDocument->undoRedo().changePropertyDefinition(mPropertyDef, mName, mDefault, mDesc);
-    mName = a, mDefault = b, mDesc = c;
+    PropertyEnum *pe = mPropertyDef->mEnum;
+    mDocument->undoRedo().changePropertyDefinition(mPropertyDef, mName, mDefault, mDesc, mEnum);
+    mName = a, mDefault = b, mDesc = c, mEnum = pe;
 }
 
 /////
@@ -782,6 +786,66 @@ void AddRemoveBMP::remove()
 
 /////
 
+AddRemovePropertyEnum::AddRemovePropertyEnum(WorldDocument *doc, int index, PropertyEnum *pe) :
+    mDocument(doc),
+    mIndex(index),
+    mPropertyEnum(pe)
+{
+}
+
+AddRemovePropertyEnum::~AddRemovePropertyEnum()
+{
+    delete mPropertyEnum;
+}
+
+void AddRemovePropertyEnum::add()
+{
+    mDocument->undoRedo().insertPropertyEnum(mIndex, mPropertyEnum);
+    mPropertyEnum = 0;
+}
+
+void AddRemovePropertyEnum::remove()
+{
+    mPropertyEnum = mDocument->undoRedo().removePropertyEnum(mIndex);
+}
+
+/////
+
+ChangePropertyEnum::ChangePropertyEnum(WorldDocument *worldDoc, PropertyEnum *pe, const QString &name, bool multi) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Property Enum")),
+    mDocument(worldDoc),
+    mPropertyEnum(pe),
+    mName(name),
+    mMulti(multi)
+{
+}
+
+void ChangePropertyEnum::swap()
+{
+    QString name = mPropertyEnum->name();
+    bool multi = mPropertyEnum->isMulti();
+    mDocument->undoRedo().changePropertyEnum(mPropertyEnum, mName, mMulti);
+    mName = name;
+    mMulti = multi;
+}
+
+/////
+
+SetPropertyEnumChoices::SetPropertyEnumChoices(WorldDocument *worldDoc, PropertyEnum *pe, const QStringList &choices) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Property Enum Choices")),
+    mDocument(worldDoc),
+    mPropertyEnum(pe),
+    mChoices(choices)
+{
+}
+
+void SetPropertyEnumChoices::swap()
+{
+    mChoices = mDocument->undoRedo().setPropertyEnumChoices(mPropertyEnum, mChoices);
+}
+
+/////
+
 ResizeWorld::ResizeWorld(WorldDocument *doc, const QSize &newSize) :
     QUndoCommand(QCoreApplication::translate("Undo Commands", "Resize World")),
     mDocument(doc),
@@ -824,4 +888,18 @@ void ResizeWorld::swap()
 {
     mWorldSize = mSize;
     mSize = mDocument->undoRedo().resizeWorld(mSize, mCells);
+}
+
+/////
+
+SetProfessions::SetProfessions(WorldDocument *worldDoc, const QStringList &professions) :
+    QUndoCommand(QCoreApplication::translate("UndoCommands", "Set Professions")),
+    mWorldDocument(worldDoc),
+    mProfessions(professions)
+{
+}
+
+void SetProfessions::swap()
+{
+    mProfessions = mWorldDocument->undoRedo().setProfessions(mProfessions);
 }

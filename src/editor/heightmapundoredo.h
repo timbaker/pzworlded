@@ -19,6 +19,7 @@
 #define HEIGHTMAPUNDOREDO_H
 
 #include <QRegion>
+#include <QStringList>
 #include <QUndoCommand>
 #include <QVector>
 
@@ -110,7 +111,6 @@ private:
     HeightMapRegion mErased;
     bool mMergeable;
 };
-
 
 class SetHeightMapFileName : public QUndoCommand
 {

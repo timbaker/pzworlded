@@ -121,7 +121,9 @@ SOURCES += main.cpp\
     heightmap.cpp \
     heightmapfile.cpp \
     heightmapundoredo.cpp \
-    gotodialog.cpp
+    gotodialog.cpp \
+    spawntooldialog.cpp \
+    propertyenumdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -154,7 +156,6 @@ HEADERS  += mainwindow.h \
     lotsdock.h \
     objectsdock.h \
     toolmanager.h \
-    properties.h \
     objecttypesdialog.h \
     luatablewriter.h \
     luawriter.h \
@@ -201,7 +202,10 @@ HEADERS  += mainwindow.h \
     heightmap.h \
     heightmapfile.h \
     heightmapundoredo.h \
-    gotodialog.h
+    gotodialog.h \
+    spawntooldialog.h \
+    propertyenumdialog.h \
+    worldproperties.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -219,7 +223,9 @@ FORMS    += mainwindow.ui \
     lotpackwindow.ui \
     fromtodialog.ui \
     unknowncolorsdialog.ui \
-    gotodialog.ui
+    gotodialog.ui \
+    spawntooldialog.ui \
+    propertyenumdialog.ui
 
 OTHER_FILES +=
 

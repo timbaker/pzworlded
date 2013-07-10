@@ -21,6 +21,7 @@
 #include <QDialog>
 
 class PropertyDef;
+class PropertyEnum;
 class WorldDocument;
 
 class QTreeWidgetItem;
@@ -43,15 +44,20 @@ private slots:
     void clearUI();
     void synchButtons();
 
+    void editEnums();
+    void currentEnumChanged();
+
 private:
     void setList();
+    void setEnums();
 
 private:
     Ui::PropertyDefinitionsDialog *ui;
     WorldDocument *mWorldDoc;
     PropertyDef *mDef;
+    PropertyEnum *mEnum;
     QTreeWidgetItem *mItem;
-    bool mSynching;
+    int mSynching;
 };
 
 #endif // PROPERTYDEFINITIONSDIALOG_H

@@ -53,3 +53,13 @@ WorldCellObject::WorldCellObject(WorldCell *cell, WorldCellObject *other)
     ObjectType *ot = world->objectTypes().find(other->type()->name());
     mType = ot ? ot : world->nullObjectType();
 }
+
+int WorldCellObject::index()
+{
+    return mCell->indexOf(this);
+}
+
+bool WorldCellObject::isSpawnPoint() const
+{
+    return mType->name() == QLatin1String("SpawnPoint");
+}

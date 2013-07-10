@@ -15,17 +15,45 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "properties.h"
+#include "worldproperties.h"
 
 #include "world.h"
+
+PropertyEnum::PropertyEnum(const QString &name, const QStringList &values, bool multi) :
+    mName(name),
+    mValues(values),
+    mMulti(multi)
+{
+}
+
+bool PropertyEnum::operator ==(const PropertyEnum &other) const
+{
+    return mName == other.mName &&
+            mValues == other.mValues &&
+            mMulti == other.mMulti;
+}
+
+/////
+
+PropertyEnum *PropertyEnumList::find(const QString &name) const
+{
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        if ((*it)->name() == name)
+            return *it;
+        it++;
+    }
+    return 0;
+}
 
 /////
 
 PropertyDef::PropertyDef(const QString &name, const QString &defaultValue,
-                         const QString &description)
+                         const QString &description, PropertyEnum *pe)
     : mName(name)
     , mDefaultValue(defaultValue)
     , mDescription(description)
+    , mEnum(pe)
 {
 }
 
@@ -33,6 +61,7 @@ PropertyDef::PropertyDef(PropertyDef *other)
     : mName(other->mName)
     , mDefaultValue(other->mDefaultValue)
     , mDescription(other->mDescription)
+    , mEnum(other->mEnum)
 {
 }
 
@@ -40,7 +69,8 @@ bool PropertyDef::operator ==(const PropertyDef &other) const
 {
     return mName == other.mName &&
             mDefaultValue == other.mDefaultValue &&
-            mDescription == other.mDescription;
+            mDescription == other.mDescription &&
+            mEnum == other.mEnum;
 }
 
 /////

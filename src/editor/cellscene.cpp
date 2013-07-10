@@ -589,12 +589,14 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << left << right);
     }
+
+    painter->translate(-mBoundingRect.topLeft());
 }
 
 void ObjectItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
-    if ((++mHoverRefCount == 1) && ObjectTool::instance()->isCurrent()) {
+    if ((++mHoverRefCount == 1) && hoverToolCurrent()) {
         update();
 
         mLabel->synch();
@@ -614,15 +616,7 @@ void ObjectItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 
 QPainterPath ObjectItem::shape() const
 {
-    // FIXME: MapRenderer should return a poly for a cell rectangle (like MapRenderer::shape)
-    int level = mObject->level();
-    const QRectF rect(tileBounds());
-    const QPointF topLeft = mRenderer->tileToPixelCoords(rect.topLeft(), level);
-    const QPointF topRight = mRenderer->tileToPixelCoords(rect.topRight(), level);
-    const QPointF bottomRight = mRenderer->tileToPixelCoords(rect.bottomRight(), level);
-    const QPointF bottomLeft = mRenderer->tileToPixelCoords(rect.bottomLeft(), level);
-    QPolygonF polygon;
-    polygon << topLeft << topRight << bottomRight << bottomLeft;
+    QPolygonF polygon = mRenderer->tileToPixelCoords(tileBounds(), mObject->level());
 
     QPainterPath path;
     path.addPolygon(polygon);
@@ -697,7 +691,87 @@ QRectF ObjectItem::tileBounds() const
 
 bool ObjectItem::isMouseOverHighlighted() const
 {
-    return (mHoverRefCount > 0) && ObjectTool::instance()->isCurrent();
+    return (mHoverRefCount > 0) && hoverToolCurrent();
+}
+
+bool ObjectItem::hoverToolCurrent() const
+{
+    return ObjectTool::instance()->isCurrent();
+}
+
+/////
+
+SpawnPointItem::SpawnPointItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent) :
+    ObjectItem(object, scene, parent)
+{
+//    setFlag(ItemIgnoresTransformations);
+}
+
+QRectF SpawnPointItem::boundingRect() const
+{
+    return mRenderer->boundingRect(QRect(mObject->pos().x() - 3, mObject->pos().y() - 3, 1, 1),
+                                   mObject->level())
+            | mRenderer->boundingRect(QRect(mObject->pos().x(), mObject->pos().y(), 1, 1),
+                                      mObject->level());
+}
+
+void SpawnPointItem::paint(QPainter *painter,
+                           const QStyleOptionGraphicsItem *option,
+                           QWidget *widget)
+{
+    ObjectItem::paint(painter, option, widget);
+
+    painter->setPen(QPen(Qt::black));
+    QColor color = mObject->group()->color();
+    color.setAlpha(200);
+
+    int level = mObject->level();
+
+    qreal inset = 0.15;
+    QPointF pos = mObject->pos() + mDragOffset;
+
+    // Bottom-right
+    QPolygonF poly;
+    poly << mRenderer->tileToPixelCoords(pos + QPointF(0.5, 0.5), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 0), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << poly.first();
+    painter->setBrush(color.darker(125));
+    painter->drawPolygon(poly);
+    poly.clear();
+
+    // Bottom-left
+    poly << mRenderer->tileToPixelCoords(pos + QPointF(0.5, 0.5), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(0, 1-inset), level);
+    poly << poly.first();
+    painter->setBrush(color.darker(115));
+    painter->drawPolygon(poly);
+    poly.clear();
+
+    // Top-right
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 0), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(3, 3) + QPointF(0.5, 0.5), level);
+    poly << poly.first();
+    painter->setBrush(color.lighter(100));
+    painter->drawPolygon(poly);
+    poly.clear();
+
+    // Top-left
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(3, 3) + QPointF(0.5, 0.5), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(0, 1-inset), level);
+    poly << poly.first();
+    painter->setBrush(color.lighter(115));
+    painter->drawPolygon(poly);
+    poly.clear();
+}
+
+bool SpawnPointItem::hoverToolCurrent() const
+{
+    return SpawnPointTool::instancePtr()->isCurrent() ||
+            ObjectTool::instance()->isCurrent();
 }
 
 /////
@@ -1440,7 +1514,8 @@ void CellScene::loadMap()
         cellLotAdded(cell(), i);
 
     foreach (WorldCellObject *obj, cell()->objects()) {
-        ObjectItem *item = new ObjectItem(obj, this);
+        ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, this)
+                                               : new ObjectItem(obj, this);
         addItem(item);
         item->synchWithObject(); // for ObjectLabelItem
         mObjectItems += item;
@@ -1616,7 +1691,8 @@ void CellScene::cellObjectAdded(WorldCell *cell, int index)
         return;
 
     WorldCellObject *obj = cell->objects().at(index);
-    ObjectItem *item = new ObjectItem(obj, this);
+    ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, this)
+                                           : new ObjectItem(obj, this);
     addItem(item);
     item->synchWithObject(); // update label coords
     mObjectItems.insert(index, item);
@@ -1674,8 +1750,11 @@ void CellScene::objectXXXXChanged(WorldCellObject *obj)
     if (obj->cell() != cell())
         return;
 
-    // Just updating the tooltip
     if (ObjectItem *item = itemForObject(obj)) {
+        if (item->isSpawnPoint() != obj->isSpawnPoint()) {
+            cellObjectAboutToBeRemoved(obj->cell(), obj->index());
+            cellObjectAdded(obj->cell(), obj->index());
+        }
         item->synchWithObject();
     }
 }

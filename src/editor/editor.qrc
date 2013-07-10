@@ -75,5 +75,6 @@
         <file>images/22x22/bmp-tool-select.png</file>
         <file>images/missing-tile.png</file>
         <file>images/22x22/heightmap-paint.png</file>
+        <file>images/22x22/tool-spawn-point.png</file>
     </qresource>
 </RCC>

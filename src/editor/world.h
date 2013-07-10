@@ -18,11 +18,12 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#include "properties.h"
+#include "worldproperties.h"
 #include "road.h"
 
 #include <QRect>
 #include <QSize>
+#include <QStringList>
 #include <QVector>
 
 class BMPToTMXImages;
@@ -181,16 +182,29 @@ public:
     { mPropertyTemplates.insert(index, pt); }
     PropertyTemplate *removeTemplate(int index)
     { return mPropertyTemplates.takeAt(index); }
+    PropertyTemplate *propertyTemplate(const QString &name)
+    { return mPropertyTemplates.find(name); }
 
     void addPropertyDefinition(int index, PropertyDef *pd)
     { mPropertyDefs.insert(index, pd); }
     PropertyDef *removePropertyDefinition(int index);
+    PropertyDef *propertyDefinition(const QString &name)
+    { return mPropertyDefs.findPropertyDef(name); }
+
+    void insertPropertyEnum(int index, PropertyEnum *pe)
+    { mPropertyEnums.insert(index, pe); }
+    PropertyEnum *removePropertyEnum(int index)
+    { return mPropertyEnums.takeAt(index); }
+    const PropertyEnumList &propertyEnums() const
+    { return mPropertyEnums; }
 
     void insertObjectGroup(int index, WorldObjectGroup *og);
     WorldObjectGroup *removeObjectGroup(int index);
 
     void insertObjectType(int index, ObjectType *ot);
     ObjectType *removeObjectType(int index);
+    ObjectType *objectType(const QString &name)
+    { return mObjectTypes.find(name); }
 
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
@@ -227,6 +241,11 @@ public:
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
+    void setProfessions(const QStringList &professions)
+    { mProfessions = professions; }
+    QStringList professions() const
+    { return mProfessions; }
+
     void setHeightMapFileName(const QString &fileName)
     { mHeightMapFileName = fileName; }
     const QString &hmFileName() const
@@ -240,12 +259,14 @@ private:
     ObjectType *mNullObjectType;
     ObjectGroupList mObjectGroups;
     WorldObjectGroup *mNullObjectGroup;
+    PropertyEnumList mPropertyEnums;
     PropertyDefList mPropertyDefs;
     PropertyTemplateList mPropertyTemplates;
     RoadList mRoads;
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
+    QStringList mProfessions;
     QString mHeightMapFileName;
 };
 

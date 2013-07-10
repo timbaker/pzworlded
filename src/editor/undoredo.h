@@ -31,6 +31,7 @@ class GenerateLotsSettings;
 class ObjectType;
 class Property;
 class PropertyDef;
+class PropertyEnum;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
@@ -673,7 +674,9 @@ public:
 class EditPropertyDef : public QUndoCommand
 {
 public:
-    EditPropertyDef(WorldDocument *doc, PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc);
+    EditPropertyDef(WorldDocument *doc, PropertyDef *pd, const QString &name,
+                    const QString &defValue, const QString &desc,
+                    PropertyEnum *pe);
 
     void undo() { swap(); }
     void redo() { swap(); }
@@ -686,6 +689,7 @@ private:
     QString mName;
     QString mDefault;
     QString mDesc;
+    PropertyEnum *mEnum;
 };
 
 /////
@@ -1054,6 +1058,103 @@ private:
     QSize mSize;
     QVector<WorldCell*> mCells;
     QSize mWorldSize;
+};
+
+/////
+
+class AddRemovePropertyEnum : public QUndoCommand
+{
+public:
+    AddRemovePropertyEnum(WorldDocument *worldDoc, int index, PropertyEnum *pe);
+    ~AddRemovePropertyEnum();
+
+    void add();
+    void remove();
+
+private:
+    WorldDocument *mDocument;
+    int mIndex;
+    PropertyEnum *mPropertyEnum;
+};
+
+class AddPropertyEnum : public AddRemovePropertyEnum
+{
+public:
+    AddPropertyEnum(WorldDocument *worldDoc, int index, PropertyEnum *pe) :
+        AddRemovePropertyEnum(worldDoc, index, pe)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Add Property Enum"));
+    }
+
+    void undo() { remove(); }
+    void redo() { add(); }
+};
+
+class RemovePropertyEnum : public AddRemovePropertyEnum
+{
+public:
+    RemovePropertyEnum(WorldDocument *worldDoc, int index) :
+        AddRemovePropertyEnum(worldDoc, index, 0)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Remove Property Enum"));
+    }
+
+    void undo() { add(); }
+    void redo() { remove(); }
+};
+
+/////
+
+class ChangePropertyEnum : public QUndoCommand
+{
+public:
+    ChangePropertyEnum(WorldDocument *worldDoc, PropertyEnum *pe, const QString &name, bool multi);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+    void swap();
+
+private:
+    WorldDocument *mDocument;
+    PropertyEnum *mPropertyEnum;
+    QString mName;
+    bool mMulti;
+};
+
+/////
+
+class SetPropertyEnumChoices : public QUndoCommand
+{
+public:
+    SetPropertyEnumChoices(WorldDocument *worldDoc, PropertyEnum *pe, const QStringList &choices);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+    void swap();
+
+private:
+    WorldDocument *mDocument;
+    PropertyEnum *mPropertyEnum;
+    QStringList mChoices;
+};
+
+/////
+
+class SetProfessions : public QUndoCommand
+{
+public:
+    SetProfessions(WorldDocument *worldDoc, const QStringList &professions);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+    void swap();
+
+private:
+    WorldDocument *mWorldDocument;
+    QStringList mProfessions;
 };
 
 #endif // UNDOREDO_H

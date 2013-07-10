@@ -41,6 +41,14 @@ World::World(int width, int height)
 
     // The nameless default type for WorldCellObjects
     mObjectTypes.append(mNullObjectType);
+
+    // Yuck! Used by spawn points
+    mProfessions << QLatin1String("unemployed")
+                 << QLatin1String("policeofficer")
+                 << QLatin1String("constructionworker")
+                 << QLatin1String("securityguard")
+                 << QLatin1String("parkranger")
+                 << QLatin1String("fireofficer");
 }
 
 World::~World()

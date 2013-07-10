@@ -116,7 +116,10 @@ public:
 
     bool isMouseOverHighlighted() const;
 
-private:
+    virtual bool isSpawnPoint() const { return false; }
+    virtual bool hoverToolCurrent() const;
+
+protected:
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
     WorldCellObject *mObject;
@@ -127,6 +130,17 @@ private:
     QSizeF mResizeDelta;
     ResizeHandle *mResizeHandle;
     ObjectLabelItem *mLabel;
+};
+
+class SpawnPointItem : public ObjectItem
+{
+public:
+    SpawnPointItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
+    bool isSpawnPoint() const { return true; }
+    bool hoverToolCurrent() const;
 };
 
 /**

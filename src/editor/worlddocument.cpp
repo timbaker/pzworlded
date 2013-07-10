@@ -175,6 +175,18 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(bmpCoordsChanged(int)),
             SIGNAL(bmpCoordsChanged(int)));
 
+    connect(&mUndoRedo, SIGNAL(propertyEnumAdded(int)),
+            SIGNAL(propertyEnumAdded(int)));
+    connect(&mUndoRedo, SIGNAL(propertyEnumAboutToBeRemoved(int)),
+            SIGNAL(propertyEnumAboutToBeRemoved(int)));
+    connect(&mUndoRedo, SIGNAL(propertyEnumChanged(PropertyEnum*)),
+            SIGNAL(propertyEnumChanged(PropertyEnum*)));
+    connect(&mUndoRedo, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
+            SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)));
+
+    connect(&mUndoRedo, SIGNAL(professionsChanged()),
+            SIGNAL(professionsChanged()));
+
     connect(&mUndoRedo, SIGNAL(heightMapPainted(QRegion)),
             SIGNAL(heightMapPainted(QRegion)));
     connect(&mUndoRedo, SIGNAL(heightMapFileNameChanged()),
@@ -602,16 +614,18 @@ void WorldDocument::removeTemplate(int index)
 }
 
 void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &name,
-                                             const QString &defValue, const QString &desc)
+                                             const QString &defValue, const QString &desc,
+                                             PropertyEnum *pe)
 {
-    undoStack()->push(new EditPropertyDef(this, pd, name, defValue, desc));
+    undoStack()->push(new EditPropertyDef(this, pd, name, defValue, desc, pe));
 }
 
 void WorldDocument::changePropertyDefinition(PropertyDef *pd, PropertyDef *other)
 {
     undoStack()->push(new EditPropertyDef(this, pd, other->mName,
                                           other->mDefaultValue,
-                                          other->mDescription));
+                                          other->mDescription,
+                                          other->mEnum));
 }
 
 void WorldDocument::changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc)
@@ -815,6 +829,45 @@ void WorldDocument::removeBMP(WorldBMP *bmp)
     undoStack()->push(new RemoveBMP(this, index));
 }
 
+void WorldDocument::addPropertyEnum(const QString &name, bool multi)
+{
+    PropertyEnum *pe = new PropertyEnum(name, QStringList(), multi);
+    undoStack()->push(new AddPropertyEnum(this, mWorld->propertyEnums().size(), pe));
+}
+
+void WorldDocument::removePropertyEnum(PropertyEnum *pe)
+{
+    undoStack()->beginMacro(tr("Remove Property Enum (%1)").arg(pe->name()));
+
+    // Remove the enum from all property definitions using it
+    foreach (PropertyDef *pd, mWorld->propertyDefinitions()) {
+        if (pd->mEnum == pe) {
+            changePropertyDefinition(pd, pd->mName, pd->mDefaultValue,
+                                     pd->mDescription, 0);
+        }
+    }
+
+    int index = mWorld->propertyEnums().indexOf(pe);
+    undoStack()->push(new RemovePropertyEnum(this, index));
+
+    undoStack()->endMacro();
+}
+
+void WorldDocument::changePropertyEnum(PropertyEnum *pe, const QString &name, bool multi)
+{
+    undoStack()->push(new ChangePropertyEnum(this, pe, name, multi));
+}
+
+void WorldDocument::setPropertyEnumChoices(PropertyEnum *pe, const QStringList &choices)
+{
+    undoStack()->push(new SetPropertyEnumChoices(this, pe, choices));
+}
+
+void WorldDocument::setProfessions(const QStringList &professions)
+{
+    undoStack()->push(new SetProfessions(this, professions));
+}
+
 void WorldDocument::setHeightMapFileName(const QString &fileName)
 {
     undoStack()->push(new SetHeightMapFileName(this, fileName));
@@ -874,14 +927,16 @@ PropertyDef *WorldDocumentUndoRedo::removePropertyDefinition(int index)
     return mWorld->removePropertyDefinition(index);
 }
 
-void WorldDocumentUndoRedo::changePropertyDefinition(PropertyDef *pd, const QString &name, const QString &defValue, const QString &desc)
+void WorldDocumentUndoRedo::changePropertyDefinition(PropertyDef *pd, const QString &name,
+                                                     const QString &defValue, const QString &desc,
+                                                     PropertyEnum *pe)
 {
     pd->mName = name;
     pd->mDefaultValue = defValue;
     pd->mDescription = desc;
+    pd->mEnum = pe;
     emit propertyDefinitionChanged(pd);
 }
-
 
 void WorldDocumentUndoRedo::changeTemplate(PropertyTemplate *pt, const QString &name, const QString &desc)
 {
@@ -1288,6 +1343,41 @@ WorldBMP *WorldDocumentUndoRedo::removeBMP(int index)
     bmp = mWorld->removeBmp(index);
     // emit bmpRemoved(bmp)
     return bmp;
+}
+
+void WorldDocumentUndoRedo::insertPropertyEnum(int index, PropertyEnum *pe)
+{
+    mWorld->insertPropertyEnum(index, pe);
+    emit propertyEnumAdded(index);
+}
+
+PropertyEnum *WorldDocumentUndoRedo::removePropertyEnum(int index)
+{
+    emit propertyEnumAboutToBeRemoved(index);
+    return mWorld->removePropertyEnum(index);
+}
+
+void WorldDocumentUndoRedo::changePropertyEnum(PropertyEnum *pe, const QString &name, bool multi)
+{
+    pe->setName(name);
+    pe->setMulti(multi);
+    emit propertyEnumChanged(pe);
+}
+
+QStringList WorldDocumentUndoRedo::setPropertyEnumChoices(PropertyEnum *pe, const QStringList &choices)
+{
+    QStringList old = pe->values();
+    pe->setValues(choices);
+    emit propertyEnumChoicesChanged(pe);
+    return old;
+}
+
+QStringList WorldDocumentUndoRedo::setProfessions(const QStringList &professions)
+{
+    QStringList old = mWorld->professions();
+    mWorld->setProfessions(professions);
+    emit professionsChanged();
+    return old;
 }
 
 QString WorldDocumentUndoRedo::setHeightMapFileName(const QString &fileName)
