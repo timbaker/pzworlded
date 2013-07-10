@@ -108,6 +108,7 @@ public slots:
     void preferencesDialog();
     void objectGroupsDialog();
     void objectTypesDialog();
+    void propertyEnumsDialog();
     void properyDefinitionsDialog();
     void templatesDialog();
 

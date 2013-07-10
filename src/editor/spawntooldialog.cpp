@@ -23,6 +23,7 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include <QMessageBox>
 #include <QSettings>
 
 SINGLETON_IMPL(SpawnToolDialog)
@@ -77,55 +78,115 @@ void SpawnToolDialog::setDocument(CellDocument *doc)
     if (mDocument) {
         connect(mDocument, SIGNAL(selectedObjectsChanged()),
                 SLOT(selectedObjectsChanged()));
-        connect(mDocument->worldDocument(), SIGNAL(professionsChanged()),
-                SLOT(professionsChanged()));
+        connect(worldDocument(), SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
+                SLOT(propertyEnumChoicesChanged(PropertyEnum*)));
+        connect(worldDocument(), SIGNAL(propertyAdded(PropertyHolder*,int)),
+                SLOT(propertiesChanged(PropertyHolder*)));
+        connect(worldDocument(), SIGNAL(propertyRemoved(PropertyHolder*,int)),
+                SLOT(propertiesChanged(PropertyHolder*)));
+        connect(worldDocument(), SIGNAL(propertyValueChanged(PropertyHolder*,int)),
+                SLOT(propertiesChanged(PropertyHolder*)));
         setList();
         selectedObjectsChanged();
     }
 }
 
+WorldDocument *SpawnToolDialog::worldDocument()
+{
+    return mDocument->worldDocument();
+}
+
 void SpawnToolDialog::selectedObjectsChanged()
 {
     int count = selectedSpawnPoints().size();
-    ui->label->setText(tr("%1 objects selected").arg(count));
+    ui->label->setText(tr("%1 spawnpoints selected").arg(count));
+    setList();
 }
 
-void SpawnToolDialog::professionsChanged()
+void SpawnToolDialog::propertyEnumChoicesChanged(PropertyEnum *pe)
 {
-    setList();
+    if (pe->name() == QLatin1String("Professions"))
+        setList();
+}
+
+void SpawnToolDialog::propertiesChanged(PropertyHolder *ph)
+{
+//    Property *p = ph->properties().at(index);
+//    if (p->mDefinition->mEnum == professionsEnum())
+    if (selectedSpawnPoints().contains((WorldCellObject*)ph)) {
+        setList();
+    }
 }
 
 void SpawnToolDialog::addItem()
 {
-    mDocument->worldDocument()->setProfessions(mDocument->world()->professions()
-                                               << QLatin1String("newprofession"));
+    PropertyEnum *pe = professionsEnum();
+    if (!pe) {
+        worldDocument()->addPropertyEnum(QLatin1String("Professions"), QStringList(), true);
+        pe = mDocument->world()->propertyEnums().find(QLatin1String("Professions"));
+    }
+    QString name = makeNameUnique(QLatin1String("profession"), -1);
+    worldDocument()->insertPropertyEnumChoice(pe, pe->values().size(), name);
+    ui->list->editItem(ui->list->item(ui->list->count() - 1));
 }
 
 void SpawnToolDialog::removeItem()
 {
+    int row = ui->list->currentRow();
+    PropertyEnum *pe = professionsEnum();
+    QString profession = pe->values().at(row);
+
+    int ret = QMessageBox::warning(this, tr("Remove Profession"),
+                                   tr("Removing this profession will affect all spawnpoints in the world!\nReally remove the '%1' profession?").arg(profession),
+                                   QMessageBox::Yes, QMessageBox::No);
+    if (ret != QMessageBox::Yes) return;
+
+    worldDocument()->removePropertyEnumChoice(pe, row);
 }
 
 void SpawnToolDialog::itemChanged(QListWidgetItem *item)
 {
     int row = ui->list->row(item);
-    QStringList professions = mDocument->world()->professions();
-    if (item->text() != professions.at(row)) {
-        professions[row] = item->text();
-        mDocument->worldDocument()->setProfessions(professions);
+    if (item->text() != professions().at(row)) {
+        QString name = makeNameUnique(item->text(), row);
+        if (name != professions().at(row))
+            worldDocument()->renamePropertyEnumChoice(professionsEnum(), row, name);
+        else
+            item->setText(name);
+        return;
     }
-
     if (selectedSpawnPoints().size())
         toObjects();
+}
+
+static void resolveProperties(PropertyHolder *ph, PropertyList &result)
+{
+    foreach (PropertyTemplate *pt, ph->templates())
+        resolveProperties(pt, result);
+    foreach (Property *p, ph->properties()) {
+        result.removeAll(p->mDefinition);
+        result += p;
+    }
 }
 
 void SpawnToolDialog::setList()
 {
     ui->list->clear();
 
-    foreach (QString profession, mDocument->world()->professions()) {
+    QList<WorldCellObject*> spawnPoints = selectedSpawnPoints();
+    QStringList current;
+    PropertyDef *pd = mDocument->world()->propertyDefinition(QLatin1String("Professions"));
+    if (spawnPoints.size() && pd) {
+        PropertyList properties;
+        resolveProperties(spawnPoints.first(), properties);
+        if (Property *p = properties.find(pd))
+            current = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+    }
+
+    foreach (QString profession, professions()) {
         QListWidgetItem *item = new QListWidgetItem(profession);
         item->setFlags(item->flags() | Qt::ItemIsEditable);
-        item->setCheckState(Qt::Checked);
+        item->setCheckState(current.contains(profession) ? Qt::Checked : Qt::Unchecked);
         ui->list->addItem(item);
     }
 }
@@ -143,9 +204,10 @@ void SpawnToolDialog::toObjects()
     QString value = professions.join(QLatin1String(","));
 
     foreach (WorldCellObject *obj, selectedSpawnPoints()) {
-        if (Property *p = obj->properties().find(pd))
-            mDocument->worldDocument()->setPropertyValue(obj, p, value);
-        else
+        if (Property *p = obj->properties().find(pd)) {
+            if (p->mValue != value)
+                mDocument->worldDocument()->setPropertyValue(obj, p, value);
+        } else
             mDocument->worldDocument()->addProperty(obj, pd->mName, value);
     }
 }
@@ -157,4 +219,27 @@ QList<WorldCellObject *> SpawnToolDialog::selectedSpawnPoints()
         if (obj->isSpawnPoint())
             objects += obj;
     return objects;
+}
+
+QStringList SpawnToolDialog::professions()
+{
+    PropertyEnum *pe = professionsEnum();
+    return pe ? pe->values() : QStringList();
+}
+
+PropertyEnum *SpawnToolDialog::professionsEnum()
+{
+    return mDocument->world()->propertyEnums().find(QLatin1String("Professions"));
+}
+
+QString SpawnToolDialog::makeNameUnique(const QString &name, int ignore)
+{
+    QString unique = name;
+    int n = 1;
+    while (1) {
+        int index = professions().indexOf(unique);
+        if ((index < 0) || (index == ignore)) break;
+        unique = QString::fromLatin1("%1_%2").arg(name).arg(n++);
+    }
+    return unique;
 }

@@ -504,7 +504,7 @@ void AddRemovePropertyDef::remove()
 EditPropertyDef::EditPropertyDef(WorldDocument *doc, PropertyDef *pd, const QString &name,
                                  const QString &defValue, const QString &desc,
                                  PropertyEnum *pe)
-    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Edit Property Definition"))
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Edit Property Definition (%1)").arg(pd->mName))
     , mDocument(doc)
     , mPropertyDef(pd)
     , mName(name)
@@ -789,30 +789,43 @@ void AddRemoveBMP::remove()
 AddRemovePropertyEnum::AddRemovePropertyEnum(WorldDocument *doc, int index, PropertyEnum *pe) :
     mDocument(doc),
     mIndex(index),
-    mPropertyEnum(pe)
+    mEnum(pe)
 {
 }
 
 AddRemovePropertyEnum::~AddRemovePropertyEnum()
 {
-    delete mPropertyEnum;
+    delete mEnum;
 }
 
 void AddRemovePropertyEnum::add()
 {
-    mDocument->undoRedo().insertPropertyEnum(mIndex, mPropertyEnum);
-    mPropertyEnum = 0;
+    mDocument->undoRedo().insertPropertyEnum(mIndex, mEnum);
+    mEnum = 0;
 }
 
 void AddRemovePropertyEnum::remove()
 {
-    mPropertyEnum = mDocument->undoRedo().removePropertyEnum(mIndex);
+    mEnum = mDocument->undoRedo().removePropertyEnum(mIndex);
+}
+
+AddPropertyEnum::AddPropertyEnum(WorldDocument *worldDoc, int index, PropertyEnum *pe) :
+    AddRemovePropertyEnum(worldDoc, index, pe)
+{
+    setText(QCoreApplication::translate("Undo Commands", "Add Property Enum (%1)").arg(pe->name()));
+}
+
+RemovePropertyEnum::RemovePropertyEnum(WorldDocument *worldDoc, int index) :
+    AddRemovePropertyEnum(worldDoc, index, 0)
+{
+    PropertyEnum *pe = worldDoc->world()->propertyEnums().at(index);
+    setText(QCoreApplication::translate("Undo Commands", "Remove Property Enum (%1)").arg(pe->name()));
 }
 
 /////
 
 ChangePropertyEnum::ChangePropertyEnum(WorldDocument *worldDoc, PropertyEnum *pe, const QString &name, bool multi) :
-    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Property Enum")),
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Property Enum (%1)").arg(pe->name())),
     mDocument(worldDoc),
     mPropertyEnum(pe),
     mName(name),
@@ -831,17 +844,55 @@ void ChangePropertyEnum::swap()
 
 /////
 
-SetPropertyEnumChoices::SetPropertyEnumChoices(WorldDocument *worldDoc, PropertyEnum *pe, const QStringList &choices) :
-    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Property Enum Choices")),
+AddRemovePropertyEnumChoice::AddRemovePropertyEnumChoice(WorldDocument *worldDoc,
+                                                   PropertyEnum *pe, int index,
+                                                   const QString &choice) :
     mDocument(worldDoc),
-    mPropertyEnum(pe),
-    mChoices(choices)
+    mEnum(pe),
+    mIndex(index),
+    mChoice(choice)
 {
 }
 
-void SetPropertyEnumChoices::swap()
+void AddRemovePropertyEnumChoice::add()
 {
-    mChoices = mDocument->undoRedo().setPropertyEnumChoices(mPropertyEnum, mChoices);
+    mDocument->undoRedo().insertPropertyEnumChoice(mEnum, mIndex, mChoice);
+}
+
+void AddRemovePropertyEnumChoice::remove()
+{
+    mChoice = mDocument->undoRedo().removePropertyEnumChoice(mEnum, mIndex);
+}
+
+AddPropertyEnumChoice::AddPropertyEnumChoice(WorldDocument *worldDoc, PropertyEnum *pe, int index, const QString &choice) :
+    AddRemovePropertyEnumChoice(worldDoc, pe, index, choice)
+{
+    setText(QCoreApplication::translate("Undo Commands", "Add Property Enum Choice (%1 [%2])").arg(pe->name()).arg(choice));
+}
+
+RemovePropertyEnumChoice::RemovePropertyEnumChoice(WorldDocument *worldDoc, PropertyEnum *pe, int index) :
+    AddRemovePropertyEnumChoice(worldDoc, pe, index, QString())
+{
+    QString choice = pe->values().at(index);
+    setText(QCoreApplication::translate("Undo Commands", "Remove Property Enum Choice (%1)").arg(pe->name()).arg(choice));
+}
+
+/////
+
+RenamePropertyEnumChoice::RenamePropertyEnumChoice(WorldDocument *worldDoc,
+                                                   PropertyEnum *pe, int index,
+                                                   const QString &choice) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Rename Property Enum Choice (%1 [%2])").arg(pe->name()).arg(choice)),
+    mDocument(worldDoc),
+    mEnum(pe),
+    mIndex(index),
+    mChoice(choice)
+{
+}
+
+void RenamePropertyEnumChoice::swap()
+{
+    mChoice = mDocument->undoRedo().renamePropertyEnumChoice(mEnum, mIndex, mChoice);
 }
 
 /////
@@ -892,14 +943,53 @@ void ResizeWorld::swap()
 
 /////
 
-SetProfessions::SetProfessions(WorldDocument *worldDoc, const QStringList &professions) :
-    QUndoCommand(QCoreApplication::translate("UndoCommands", "Set Professions")),
-    mWorldDocument(worldDoc),
-    mProfessions(professions)
+#include <QApplication>
+#include <QToolButton>
+
+UndoRedoButtons::UndoRedoButtons(WorldDocument *worldDoc, QObject *parent) :
+    QObject(parent),
+    mDocument(worldDoc)
 {
+    connect(mDocument->undoStack(), SIGNAL(indexChanged(int)),
+            SLOT(updateActions()));
+
+    mUndo = new QToolButton();
+    mUndo->setObjectName(QString::fromUtf8("undo"));
+    QIcon icon2;
+    icon2.addFile(QString::fromUtf8(":/images/16x16/edit-undo.png"), QSize(), QIcon::Normal, QIcon::Off);
+    mUndo->setIcon(icon2);
+    mUndo->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+
+    mRedo = new QToolButton();
+    mRedo->setObjectName(QString::fromUtf8("redo"));
+    QIcon icon3;
+    icon3.addFile(QString::fromUtf8(":/images/16x16/edit-redo.png"), QSize(), QIcon::Normal, QIcon::Off);
+    mRedo->setIcon(icon3);
+    mRedo->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+
+    connect(mUndo, SIGNAL(clicked()), mDocument->undoStack(), SLOT(undo()));
+    connect(mRedo, SIGNAL(clicked()), mDocument->undoStack(), SLOT(redo()));
+
+    retranslateUi();
+
+    mUndoIndex = mDocument->undoStack()->index();
+    updateActions();
 }
 
-void SetProfessions::swap()
+void UndoRedoButtons::retranslateUi()
 {
-    mProfessions = mWorldDocument->undoRedo().setProfessions(mProfessions);
+    mUndo->setText(QApplication::translate("UndoRedoButtons", "Undo", 0, QApplication::UnicodeUTF8));
+    mRedo->setText(QApplication::translate("UndoRedoButtons", "Redo", 0, QApplication::UnicodeUTF8));
+}
+
+void UndoRedoButtons::resetIndex()
+{
+    mUndoIndex = mDocument->undoStack()->index();
+    updateActions();
+}
+
+void UndoRedoButtons::updateActions()
+{
+    mUndo->setEnabled(mDocument->undoStack()->index() > mUndoIndex);
+    mRedo->setEnabled(mDocument->undoStack()->canRedo());
 }

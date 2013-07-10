@@ -23,7 +23,10 @@
 #include <QDialog>
 
 class CellDocument;
+class PropertyEnum;
+class PropertyHolder;
 class WorldCellObject;
+class WorldDocument;
 
 class QListWidgetItem;
 
@@ -42,10 +45,12 @@ public:
     void setVisible(bool visible);
 
     void setDocument(CellDocument *doc);
+    WorldDocument *worldDocument();
 
 private slots:
     void selectedObjectsChanged();
-    void professionsChanged();
+    void propertyEnumChoicesChanged(PropertyEnum *pe);
+    void propertiesChanged(PropertyHolder *ph);
 
     void addItem();
     void removeItem();
@@ -56,6 +61,9 @@ private:
     void setList();
     void toObjects();
     QList<WorldCellObject*> selectedSpawnPoints();
+    QStringList professions();
+    PropertyEnum *professionsEnum();
+    QString makeNameUnique(const QString &name, int ignore);
 
 private:
     Ui::SpawnToolDialog *ui;

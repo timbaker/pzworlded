@@ -44,6 +44,8 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
+class QToolButton;
+
 /**
  * These undo command IDs are used by Qt to determine whether two undo commands
  * can be merged.
@@ -1071,21 +1073,16 @@ public:
     void add();
     void remove();
 
-private:
+protected:
     WorldDocument *mDocument;
     int mIndex;
-    PropertyEnum *mPropertyEnum;
+    PropertyEnum *mEnum;
 };
 
 class AddPropertyEnum : public AddRemovePropertyEnum
 {
 public:
-    AddPropertyEnum(WorldDocument *worldDoc, int index, PropertyEnum *pe) :
-        AddRemovePropertyEnum(worldDoc, index, pe)
-    {
-        setText(QCoreApplication::translate("Undo Commands", "Add Property Enum"));
-    }
-
+    AddPropertyEnum(WorldDocument *worldDoc, int index, PropertyEnum *pe);
     void undo() { remove(); }
     void redo() { add(); }
 };
@@ -1093,12 +1090,7 @@ public:
 class RemovePropertyEnum : public AddRemovePropertyEnum
 {
 public:
-    RemovePropertyEnum(WorldDocument *worldDoc, int index) :
-        AddRemovePropertyEnum(worldDoc, index, 0)
-    {
-        setText(QCoreApplication::translate("Undo Commands", "Remove Property Enum"));
-    }
-
+    RemovePropertyEnum(WorldDocument *worldDoc, int index);
     void undo() { add(); }
     void redo() { remove(); }
 };
@@ -1124,10 +1116,43 @@ private:
 
 /////
 
-class SetPropertyEnumChoices : public QUndoCommand
+class AddRemovePropertyEnumChoice : public QUndoCommand
 {
 public:
-    SetPropertyEnumChoices(WorldDocument *worldDoc, PropertyEnum *pe, const QStringList &choices);
+    AddRemovePropertyEnumChoice(WorldDocument *worldDoc, PropertyEnum *pe, int index, const QString &choice);
+
+    void add();
+    void remove();
+
+private:
+    WorldDocument *mDocument;
+    PropertyEnum *mEnum;
+    int mIndex;
+    QString mChoice;
+};
+
+class AddPropertyEnumChoice : public AddRemovePropertyEnumChoice
+{
+public:
+    AddPropertyEnumChoice(WorldDocument *worldDoc, PropertyEnum *pe, int index, const QString &choice);
+    void undo() { remove(); }
+    void redo() { add(); }
+};
+
+class RemovePropertyEnumChoice : public AddRemovePropertyEnumChoice
+{
+public:
+    RemovePropertyEnumChoice(WorldDocument *worldDoc, PropertyEnum *pe, int index);
+    void undo() { add(); }
+    void redo() { remove(); }
+};
+
+/////
+
+class RenamePropertyEnumChoice : public QUndoCommand
+{
+public:
+    RenamePropertyEnumChoice(WorldDocument *worldDoc, PropertyEnum *pe, int index, const QString &choice);
 
     void undo() { swap(); }
     void redo() { swap(); }
@@ -1136,25 +1161,37 @@ public:
 
 private:
     WorldDocument *mDocument;
-    PropertyEnum *mPropertyEnum;
-    QStringList mChoices;
+    PropertyEnum *mEnum;
+    int mIndex;
+    QString mChoice;
 };
+
 
 /////
 
-class SetProfessions : public QUndoCommand
+class UndoRedoButtons : public QObject
 {
+    Q_OBJECT
 public:
-    SetProfessions(WorldDocument *worldDoc, const QStringList &professions);
+    UndoRedoButtons(WorldDocument *worldDoc, QObject *parent = 0);
 
-    void undo() { swap(); }
-    void redo() { swap(); }
+    void resetIndex();
 
-    void swap();
+    QToolButton *undoButton() const
+    { return mUndo; }
+
+    QToolButton *redoButton() const
+    { return mRedo; }
+
+public slots:
+    void updateActions();
+    void retranslateUi();
 
 private:
-    WorldDocument *mWorldDocument;
-    QStringList mProfessions;
+    WorldDocument *mDocument;
+    QToolButton *mUndo;
+    QToolButton *mRedo;
+    int mUndoIndex;
 };
 
 #endif // UNDOREDO_H

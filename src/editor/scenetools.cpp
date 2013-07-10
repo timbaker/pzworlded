@@ -911,8 +911,6 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     // Create the Professions property enum if needed
     PropertyEnum *pe = mScene->world()->propertyEnums().find(QLatin1String("Professions"));
     if (!pe) {
-        mScene->worldDocument()->addPropertyEnum(QLatin1String("Professions"), true);
-        pe = mScene->world()->propertyEnums().find(QLatin1String("Professions"));
         QStringList professions;
         professions << QLatin1String("all")
                     << QLatin1String("unemployed")
@@ -921,8 +919,8 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                     << QLatin1String("securityguard")
                     << QLatin1String("parkranger")
                     << QLatin1String("fireofficer");
-        mScene->worldDocument()->setPropertyEnumChoices(pe, professions);
-
+        mScene->worldDocument()->addPropertyEnum(QLatin1String("Professions"), professions, true);
+        pe = mScene->world()->propertyEnums().find(QLatin1String("Professions"));
     }
 
     // Create the Professions property definition if needed
@@ -957,6 +955,8 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     mScene->worldDocument()->addCellObject(mScene->cell(),
                                            mScene->cell()->objects().size(),
                                            obj);
+
+    mScene->document()->setSelectedObjects(WorldCellObjectList() << obj);
 
     mScene->document()->undoStack()->endMacro();
 }

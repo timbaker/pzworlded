@@ -18,6 +18,7 @@
 #include "propertyenumdialog.h"
 #include "ui_propertyenumdialog.h"
 
+#include "undoredo.h"
 #include "world.h"
 #include "worlddocument.h"
 
@@ -26,11 +27,15 @@
 PropertyEnumDialog::PropertyEnumDialog(WorldDocument *worldDoc, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::PropertyEnumDialog),
+    mUndoRedoButtons(new UndoRedoButtons(worldDoc, this)),
     mDocument(worldDoc),
     mCurrentEnum(0),
     mSynching(0)
 {
     ui->setupUi(this);
+
+    ui->buttonsLayout->insertWidget(0, mUndoRedoButtons->undoButton());
+    ui->buttonsLayout->insertWidget(1, mUndoRedoButtons->redoButton());
 
     connect(ui->enumList, SIGNAL(currentRowChanged(int)), SLOT(currentEnumChanged(int)));
     connect(ui->enumList, SIGNAL(itemChanged(QListWidgetItem*)), SLOT(enumItemChanged(QListWidgetItem*)));
@@ -43,9 +48,6 @@ PropertyEnumDialog::PropertyEnumDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(ui->removeChoice, SIGNAL(clicked()), SLOT(removeChoice()));
 
     connect(ui->multiCheckBox, SIGNAL(toggled(bool)), SLOT(multiToggled(bool)));
-
-    connect(ui->undo, SIGNAL(clicked()), mDocument->undoStack(), SLOT(undo()));
-    connect(ui->redo, SIGNAL(clicked()), mDocument->undoStack(), SLOT(redo()));
 
     connect(mDocument, SIGNAL(propertyEnumAdded(int)), SLOT(setEnumsList()));
     connect(mDocument, SIGNAL(propertyEnumAboutToBeRemoved(int)),
@@ -63,8 +65,6 @@ PropertyEnumDialog::PropertyEnumDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(mDocument->undoStack(), SIGNAL(indexChanged(int)),
             SLOT(updateActions()));
 
-    mUndoIndex = mDocument->undoStack()->index();
-
     setEnumsList();
     updateActions();
 }
@@ -81,7 +81,8 @@ World *PropertyEnumDialog::world()
 
 void PropertyEnumDialog::addEnum()
 {
-    mDocument->addPropertyEnum(tr("MyNewEnum"), false); // fixme: ensure unique
+    QString name = makeNameUnique(tr("MyNewEnum"), 0);
+    mDocument->addPropertyEnum(name, QStringList(), false);
     ui->enumList->setCurrentRow(ui->enumList->count() - 1);
     ui->enumList->editItem(ui->enumList->item(ui->enumList->count() - 1));
 }
@@ -121,16 +122,14 @@ void PropertyEnumDialog::propertyEnumChanged(PropertyEnum *pe)
 
 void PropertyEnumDialog::addChoice()
 {
-    QStringList choices = mCurrentEnum->values();
-    mDocument->setPropertyEnumChoices(mCurrentEnum, choices << tr("MyNewChoice"));
+    QString choice = makeChoiceUnique(tr("MyNewChoice"), -1);
+    mDocument->insertPropertyEnumChoice(mCurrentEnum, mCurrentEnum->values().size(), choice);
     ui->choiceList->editItem(ui->choiceList->item(ui->choiceList->count() - 1));
 }
 
 void PropertyEnumDialog::removeChoice()
 {
-    QStringList choices = mCurrentEnum->values();
-    choices.removeAt(ui->choiceList->currentRow());
-    mDocument->setPropertyEnumChoices(mCurrentEnum, choices);
+    mDocument->removePropertyEnumChoice(mCurrentEnum, ui->choiceList->currentRow());
 }
 
 void PropertyEnumDialog::currentChoiceChanged(int row)
@@ -153,8 +152,6 @@ void PropertyEnumDialog::updateActions()
     ui->removeChoice->setEnabled(ui->choiceList->currentRow() != -1);
     ui->multiCheckBox->setEnabled(mCurrentEnum != 0);
     ui->multiCheckBox->setChecked(mCurrentEnum ? mCurrentEnum->isMulti() : false);
-    ui->undo->setEnabled(mDocument->undoStack()->index() > mUndoIndex);
-    ui->redo->setEnabled(mDocument->undoStack()->canRedo());
     mSynching--;
 }
 
@@ -187,13 +184,44 @@ void PropertyEnumDialog::enumItemChanged(QListWidgetItem *item)
     if (mSynching) return;
     int row = ui->enumList->row(item);
     PropertyEnum *pe = mDocument->world()->propertyEnums().at(row);
-    mDocument->changePropertyEnum(pe, item->text(), pe->isMulti());
+    QString name = makeNameUnique(item->text(), pe);
+    if (name != pe->name())
+        mDocument->changePropertyEnum(pe, name, pe->isMulti());
+    else
+        item->setText(name);
 }
 
 void PropertyEnumDialog::choiceItemChanged(QListWidgetItem *item)
 {
     if (mSynching) return;
-    QStringList choices = mCurrentEnum->values();
-    choices[ui->choiceList->row(item)] = item->text();
-    mDocument->setPropertyEnumChoices(mCurrentEnum, choices);
+    int row = ui->choiceList->row(item);
+    QString choice = makeChoiceUnique(item->text(), row);
+    if (choice != mCurrentEnum->values().at(row))
+        mDocument->renamePropertyEnumChoice(mCurrentEnum, row, choice);
+    else
+        item->setText(choice);
+}
+
+QString PropertyEnumDialog::makeNameUnique(const QString &name, PropertyEnum *ignore)
+{
+    QString unique = name;
+    int n = 1;
+    while (1) {
+        PropertyEnum *pe = mDocument->world()->propertyEnums().find(unique);
+        if (!pe || pe == ignore) break;
+        unique = QString::fromLatin1("%1_%2").arg(name).arg(n++);
+    }
+    return unique;
+}
+
+QString PropertyEnumDialog::makeChoiceUnique(const QString &name, int ignore)
+{
+    QString unique = name;
+    int n = 1;
+    while (1) {
+        int index = mCurrentEnum->values().indexOf(unique);
+        if ((index < 0) || (index == ignore)) break;
+        unique = QString::fromLatin1("%1_%2").arg(name).arg(n++);
+    }
+    return unique;
 }

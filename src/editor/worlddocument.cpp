@@ -56,6 +56,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(propertyAdded(PropertyHolder*,int)));
     connect(&mUndoRedo, SIGNAL(propertyAboutToBeRemoved(PropertyHolder*,int)),
             SIGNAL(propertyAboutToBeRemoved(PropertyHolder*,int)));
+    connect(&mUndoRedo, SIGNAL(propertyRemoved(PropertyHolder*,int)),
+            SIGNAL(propertyRemoved(PropertyHolder*,int)));
     connect(&mUndoRedo, SIGNAL(propertyValueChanged(PropertyHolder*,int)),
             SIGNAL(propertyValueChanged(PropertyHolder*,int)));
 
@@ -183,9 +185,6 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(propertyEnumChanged(PropertyEnum*)));
     connect(&mUndoRedo, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
             SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)));
-
-    connect(&mUndoRedo, SIGNAL(professionsChanged()),
-            SIGNAL(professionsChanged()));
 
     connect(&mUndoRedo, SIGNAL(heightMapPainted(QRegion)),
             SIGNAL(heightMapPainted(QRegion)));
@@ -562,11 +561,13 @@ bool WorldDocument::removePropertyDefinition(PropertyDef *pd)
     undoStack()->beginMacro(tr("Remove Property Definition (%1)").arg(pd->mName));
 
     // Remove all properties using this definition from templates and cells
-    foreach (PropertyTemplate *pt, mWorld->propertyTemplates()) {
+    foreach (PropertyTemplate *pt, mWorld->propertyTemplates())
         removePropertyDefinition(pt, pd);
-    }
-    foreach (WorldCell *cell, mWorld->cells())
+    foreach (WorldCell *cell, mWorld->cells()) {
         removePropertyDefinition(cell, pd);
+        foreach (WorldCellObject *obj, cell->objects())
+            removePropertyDefinition(obj, pd);
+    }
 
     int index = mWorld->propertyDefinitions().indexOf(pd);
     undoStack()->push(new RemovePropertyDef(this, index, pd));
@@ -617,7 +618,22 @@ void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &nam
                                              const QString &defValue, const QString &desc,
                                              PropertyEnum *pe)
 {
+    undoStack()->beginMacro(tr("Edit Property Definition (%1)").arg(pd->mName));
+
+    if (pe != pd->mEnum) {
+        // Update the values of every affected property.
+        foreach (PropertyTemplate *pt, mWorld->propertyTemplates())
+            syncPropertyEnumChoices(pt, pe, pe->values());
+        foreach (WorldCell *cell, mWorld->cells()) {
+            syncPropertyEnumChoices(cell, pe, pe->values());
+            foreach (WorldCellObject *obj, cell->objects())
+                syncPropertyEnumChoices(obj, pe, pe->values());
+        }
+    }
+
     undoStack()->push(new EditPropertyDef(this, pd, name, defValue, desc, pe));
+
+    undoStack()->endMacro();
 }
 
 void WorldDocument::changePropertyDefinition(PropertyDef *pd, PropertyDef *other)
@@ -829,9 +845,9 @@ void WorldDocument::removeBMP(WorldBMP *bmp)
     undoStack()->push(new RemoveBMP(this, index));
 }
 
-void WorldDocument::addPropertyEnum(const QString &name, bool multi)
+void WorldDocument::addPropertyEnum(const QString &name, const QStringList &choices, bool multi)
 {
-    PropertyEnum *pe = new PropertyEnum(name, QStringList(), multi);
+    PropertyEnum *pe = new PropertyEnum(name, choices, multi);
     undoStack()->push(new AddPropertyEnum(this, mWorld->propertyEnums().size(), pe));
 }
 
@@ -858,14 +874,47 @@ void WorldDocument::changePropertyEnum(PropertyEnum *pe, const QString &name, bo
     undoStack()->push(new ChangePropertyEnum(this, pe, name, multi));
 }
 
-void WorldDocument::setPropertyEnumChoices(PropertyEnum *pe, const QStringList &choices)
+void WorldDocument::insertPropertyEnumChoice(PropertyEnum *pe, int index, const QString &name)
 {
-    undoStack()->push(new SetPropertyEnumChoices(this, pe, choices));
+    undoStack()->push(new AddPropertyEnumChoice(this, pe, index, name));
 }
 
-void WorldDocument::setProfessions(const QStringList &professions)
+void WorldDocument::removePropertyEnumChoice(PropertyEnum *pe, int index)
 {
-    undoStack()->push(new SetProfessions(this, professions));
+    QString choice = pe->values()[index];
+    undoStack()->beginMacro(tr("Remove Property Enum Choice (%1 [%2])").arg(pe->name()).arg(choice));
+
+    // Update the values of every affected property.
+    foreach (PropertyTemplate *pt, mWorld->propertyTemplates())
+        removePropertyEnumChoice(pt, pe, choice);
+    foreach (WorldCell *cell, mWorld->cells()) {
+        removePropertyEnumChoice(cell, pe, choice);
+        foreach (WorldCellObject *obj, cell->objects())
+            removePropertyEnumChoice(obj, pe, choice);
+    }
+
+    undoStack()->push(new RemovePropertyEnumChoice(this, pe, index));
+
+    undoStack()->endMacro();
+}
+
+void WorldDocument::renamePropertyEnumChoice(PropertyEnum *pe, int index, const QString &name)
+{
+    QString oldName = pe->values()[index];
+    undoStack()->beginMacro(tr("Rename Property Enum Choice (%1 [%2])").arg(pe->name()).arg(oldName));
+
+    // Update the values of every affected property.
+    foreach (PropertyTemplate *pt, mWorld->propertyTemplates())
+        renamePropertyEnumChoice(pt, pe, oldName, name);
+    foreach (WorldCell *cell, mWorld->cells()) {
+        renamePropertyEnumChoice(cell, pe, oldName, name);
+        foreach (WorldCellObject *obj, cell->objects())
+            renamePropertyEnumChoice(obj, pe, oldName, name);
+    }
+
+    undoStack()->push(new RenamePropertyEnumChoice(this, pe, index, name));
+
+    undoStack()->endMacro();
 }
 
 void WorldDocument::setHeightMapFileName(const QString &fileName)
@@ -905,6 +954,49 @@ void WorldDocument::removeTemplate(PropertyHolder *ph, PropertyTemplate *pt)
     int index = ph->templates().indexOf(pt);
     if (index != -1)
         undoStack()->push(new RemoveTemplateFromPH(this, ph, index, pt));
+}
+
+void WorldDocument::removePropertyEnumChoice(PropertyHolder *ph, PropertyEnum *pe,
+                                             const QString &name)
+{
+    foreach (Property *p, ph->properties()) {
+        if (p->mDefinition->mEnum == pe) {
+            QStringList values = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            values.removeAll(name);
+            QString value = values.join(QLatin1String(","));
+            if (value != p->mValue)
+               setPropertyValue(ph, p, value);
+        }
+    }
+}
+
+void WorldDocument::renamePropertyEnumChoice(PropertyHolder *ph, PropertyEnum *pe,
+                                             const QString &oldName, const QString &newName)
+{
+    foreach (Property *p, ph->properties()) {
+        if (p->mDefinition->mEnum == pe) {
+            QString value = p->mValue;
+            value.replace(oldName, newName);
+            if (value != p->mValue)
+               setPropertyValue(ph, p, value);
+        }
+    }
+}
+
+void WorldDocument::syncPropertyEnumChoices(PropertyHolder *ph, PropertyEnum *pe, const QStringList &choices)
+{
+    foreach (Property *p, ph->properties()) {
+        if (p->mDefinition->mEnum == pe) {
+            QStringList values = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            for (int i = 0; i < values.size(); i++) {
+                if (!choices.contains(values[i]))
+                    values.removeAt(i--);
+            }
+            QString value = values.join(QLatin1String(","));
+            if (value != p->mValue)
+               setPropertyValue(ph, p, value);
+        }
+    }
 }
 
 /////
@@ -954,7 +1046,9 @@ void WorldDocumentUndoRedo::addProperty(PropertyHolder *ph, int index, Property 
 Property *WorldDocumentUndoRedo::removeProperty(PropertyHolder *ph, int index)
 {
     emit propertyAboutToBeRemoved(ph, index);
-    return ph->removeProperty(index);
+    Property *p = ph->removeProperty(index);
+    emit propertyRemoved(ph, index);
+    return p;
 }
 
 void WorldDocumentUndoRedo::addTemplateToWorld(int index, PropertyTemplate *pt)
@@ -1364,19 +1458,30 @@ void WorldDocumentUndoRedo::changePropertyEnum(PropertyEnum *pe, const QString &
     emit propertyEnumChanged(pe);
 }
 
-QStringList WorldDocumentUndoRedo::setPropertyEnumChoices(PropertyEnum *pe, const QStringList &choices)
+void WorldDocumentUndoRedo::insertPropertyEnumChoice(PropertyEnum *pe, int index, const QString &choice)
 {
-    QStringList old = pe->values();
+    QStringList choices = pe->values();
+    choices.insert(index, choice);
+    pe->setValues(choices);
+    emit propertyEnumChoicesChanged(pe);
+}
+
+QString WorldDocumentUndoRedo::removePropertyEnumChoice(PropertyEnum *pe, int index)
+{
+    QStringList choices = pe->values();
+    QString old = choices.takeAt(index);
     pe->setValues(choices);
     emit propertyEnumChoicesChanged(pe);
     return old;
 }
 
-QStringList WorldDocumentUndoRedo::setProfessions(const QStringList &professions)
+QString WorldDocumentUndoRedo::renamePropertyEnumChoice(PropertyEnum *pe, int index, const QString &name)
 {
-    QStringList old = mWorld->professions();
-    mWorld->setProfessions(professions);
-    emit professionsChanged();
+    QStringList choices = pe->values();
+    QString old = choices.at(index);
+    choices[index] = name;
+    pe->setValues(choices);
+    emit propertyEnumChoicesChanged(pe);
     return old;
 }
 

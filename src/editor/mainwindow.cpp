@@ -49,6 +49,7 @@
 #include "progress.h"
 #include "propertiesdock.h"
 #include "propertydefinitionsdialog.h"
+#include "propertyenumdialog.h"
 #include "resizeworlddialog.h"
 #include "roadsdock.h"
 #include "scenetools.h"
@@ -242,6 +243,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionResizeWorld, SIGNAL(triggered()), SLOT(resizeWorld()));
     connect(ui->actionObjectGroups, SIGNAL(triggered()), SLOT(objectGroupsDialog()));
     connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
+    connect(ui->actionEnums, SIGNAL(triggered()), SLOT(propertyEnumsDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
 #ifdef ROAD_UI
@@ -1332,6 +1334,17 @@ void MainWindow::objectTypesDialog()
     dialog.exec();
 }
 
+void MainWindow::propertyEnumsDialog()
+{
+    if (!mCurrentDocument)
+        return;
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    PropertyEnumDialog d(worldDoc, this);
+    d.exec();
+}
+
 void MainWindow::properyDefinitionsDialog()
 {
     if (!mCurrentDocument)
@@ -1831,6 +1844,7 @@ void MainWindow::updateActions()
     ui->actionGoToXY->setEnabled(hasDoc);
     ui->actionResizeWorld->setEnabled(worldDoc);
     ui->actionObjectTypes->setEnabled(hasDoc);
+    ui->actionEnums->setEnabled(hasDoc);
     ui->actionProperties->setEnabled(hasDoc);
     ui->actionTemplates->setEnabled(hasDoc);
 

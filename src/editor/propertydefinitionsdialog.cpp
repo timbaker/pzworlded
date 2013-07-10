@@ -19,18 +19,25 @@
 #include "ui_propertiesdialog.h"
 
 #include "propertyenumdialog.h"
+#include "undoredo.h"
 #include "worlddocument.h"
 #include "world.h"
+
+#include <QMessageBox>
 
 PropertyDefinitionsDialog::PropertyDefinitionsDialog(WorldDocument *worldDoc, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::PropertyDefinitionsDialog)
+    , mUndoRedoButtons(new UndoRedoButtons(worldDoc, this))
     , mWorldDoc(worldDoc)
     , mDef(0)
     , mEnum(0)
     , mSynching(0)
 {
     ui->setupUi(this);
+
+    ui->buttonsLayout->insertWidget(0, mUndoRedoButtons->undoButton());
+    ui->buttonsLayout->insertWidget(1, mUndoRedoButtons->redoButton());
 
     connect(ui->definitionsList, SIGNAL(itemSelectionChanged()), SLOT(definitionSelected()));
     connect(ui->addDefButton, SIGNAL(clicked()), SLOT(addDefinition()));
@@ -45,10 +52,46 @@ PropertyDefinitionsDialog::PropertyDefinitionsDialog(WorldDocument *worldDoc, QW
     connect(ui->enumCombo, SIGNAL(currentIndexChanged(int)), SLOT(currentEnumChanged()));
     connect(ui->enumEdit, SIGNAL(clicked()), SLOT(editEnums()));
 
+    connect(mWorldDoc, SIGNAL(propertyDefinitionAdded(PropertyDef*,int)),
+            SLOT(propertyDefinitionAdded(PropertyDef*,int)));
+    connect(mWorldDoc, SIGNAL(propertyDefinitionAboutToBeRemoved(int)),
+            SLOT(propertyDefinitionAboutToBeRemoved(int)));
+    connect(mWorldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
+            SLOT(propertyDefinitionChanged(PropertyDef*)));
+
     setEnums();
     setList();
 
     synchButtons();
+}
+
+void PropertyDefinitionsDialog::propertyDefinitionAdded(PropertyDef *, int)
+{
+    setList();
+    clearUI();
+}
+
+void PropertyDefinitionsDialog::propertyDefinitionAboutToBeRemoved(int index)
+{
+    mSynching++;
+    PropertyDef *pd = mWorldDoc->world()->propertyDefinitions().at(index);
+    int row = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
+    delete ui->definitionsList->topLevelItem(row);
+    mSynching--;
+
+    // Another row may have been selected during deletion; deselect it
+    clearUI();
+}
+
+void PropertyDefinitionsDialog::propertyDefinitionChanged(PropertyDef *pd)
+{
+    int row = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
+    QTreeWidgetItem *item = ui->definitionsList->topLevelItem(row);
+    item->setData(0, Qt::DisplayRole, pd->mName);
+    item->setData(1, Qt::DisplayRole, pd->mDefaultValue);
+
+    if (pd == mDef)
+        definitionSelected();
 }
 
 void PropertyDefinitionsDialog::definitionSelected()
@@ -95,7 +138,7 @@ void PropertyDefinitionsDialog::addDefinition()
     PropertyDef *pd = new PropertyDef(name, defaultValue, description, pe);
 
     mWorldDoc->addPropertyDefinition(pd);
-
+#if 0
     setList();
 
     // If nothing was selected...
@@ -104,18 +147,26 @@ void PropertyDefinitionsDialog::addDefinition()
     ui->defDescEdit->clear();
 
     synchButtons();
+#endif
 }
 
 void PropertyDefinitionsDialog::updateDefinition()
 {
     Q_ASSERT(mDef && mItem);
 
+    if (mEnum != mDef->mEnum) {
+        int ret = QMessageBox::warning(this, tr("Change Enum"),
+                                       tr("You are about to change the enum assigned to this property definition.\nDoing so might change the property value of all cells and objects in the world!\nReally apply these changes?"),
+                                       QMessageBox::Yes, QMessageBox::No);
+        if (ret != QMessageBox::Yes) return;
+    }
+
     mWorldDoc->changePropertyDefinition(mDef,
                                         ui->defNameEdit->text(),
                                         ui->defDefaultEdit->text(),
                                         ui->defDescEdit->toPlainText(),
                                         mEnum);
-
+#if 0
     PropertyDef *pd = mDef;
     setList();
     int row = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
@@ -123,18 +174,21 @@ void PropertyDefinitionsDialog::updateDefinition()
     ui->definitionsList->setCurrentItem(item);
 
     synchButtons();
+#endif
 }
 
 void PropertyDefinitionsDialog::removeDefinition()
 {
     Q_ASSERT(mDef && mItem);
     if (mWorldDoc->removePropertyDefinition(mDef)) {
+#if 0
         mSynching++;
         delete mItem; // removes it from view
         mSynching--;
 
         // Another row may have been selected during deletion; deselect it
         clearUI();
+#endif
     }
 }
 
@@ -188,7 +242,7 @@ void PropertyDefinitionsDialog::synchButtons()
     ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd &&
                                                                !enableUpdate);
 
-    ui->enumCombo->setEnabled(mDef);
+//    ui->enumCombo->setEnabled(mDef);
 }
 
 void PropertyDefinitionsDialog::editEnums()
@@ -206,7 +260,7 @@ void PropertyDefinitionsDialog::editEnums()
 
 void PropertyDefinitionsDialog::currentEnumChanged()
 {
-    if (mSynching || !mDef) return;
+//    if (mSynching || !mDef) return;
     int index = ui->enumCombo->currentIndex();
     mEnum = (index > 0) ? mWorldDoc->world()->propertyEnums().at(index - 1) : 0;
 #if 1

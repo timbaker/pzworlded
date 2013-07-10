@@ -22,6 +22,7 @@
 
 class PropertyDef;
 class PropertyEnum;
+class UndoRedoButtons;
 class WorldDocument;
 
 class QTreeWidgetItem;
@@ -37,6 +38,10 @@ public:
     explicit PropertyDefinitionsDialog(WorldDocument *worldDoc, QWidget *parent = 0);
 
 private slots:
+    void propertyDefinitionAdded(PropertyDef *pd, int index);
+    void propertyDefinitionAboutToBeRemoved(int index);
+    void propertyDefinitionChanged(PropertyDef *pd);
+
     void definitionSelected();
     void addDefinition();
     void updateDefinition();
@@ -53,6 +58,7 @@ private:
 
 private:
     Ui::PropertyDefinitionsDialog *ui;
+    UndoRedoButtons *mUndoRedoButtons;
     WorldDocument *mWorldDoc;
     PropertyDef *mDef;
     PropertyEnum *mEnum;

@@ -288,6 +288,7 @@
     <addaction name="actionObjectGroups"/>
     <addaction name="actionObjectTypes"/>
     <addaction name="separator"/>
+    <addaction name="actionEnums"/>
     <addaction name="actionProperties"/>
     <addaction name="actionTemplates"/>
     <addaction name="separator"/>
@@ -757,6 +758,11 @@
   <action name="actionGoToXY">
    <property name="text">
     <string>Go To Coordinates...</string>
+   </property>
+  </action>
+  <action name="actionEnums">
+   <property name="text">
+    <string>Enums...</string>
    </property>
   </action>
  </widget>

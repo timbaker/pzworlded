@@ -241,11 +241,6 @@ public:
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
-    void setProfessions(const QStringList &professions)
-    { mProfessions = professions; }
-    QStringList professions() const
-    { return mProfessions; }
-
     void setHeightMapFileName(const QString &fileName)
     { mHeightMapFileName = fileName; }
     const QString &hmFileName() const
@@ -266,7 +261,6 @@ private:
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
-    QStringList mProfessions;
     QString mHeightMapFileName;
 };
 

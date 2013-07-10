@@ -21,6 +21,7 @@
 #include <QDialog>
 
 class PropertyEnum;
+class UndoRedoButtons;
 class World;
 class WorldDocument;
 
@@ -62,11 +63,15 @@ private slots:
     void choiceItemChanged(QListWidgetItem *item);
 
 private:
+    QString makeNameUnique(const QString &name, PropertyEnum *ignore);
+    QString makeChoiceUnique(const QString &name, int ignore);
+
+private:
     Ui::PropertyEnumDialog *ui;
+    UndoRedoButtons *mUndoRedoButtons;
     WorldDocument *mDocument;
     PropertyEnum *mCurrentEnum;
     int mSynching;
-    int mUndoIndex;
 };
 
 #endif // PROPERTYENUMDIALOG_H
