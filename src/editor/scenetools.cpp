@@ -887,7 +887,19 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
 
     if (SpawnPointItem *item = topmostItemAt(event->scenePos())) {
-        mScene->document()->setSelectedObjects(WorldCellObjectList() << item->object());
+        QSet<WorldCellObject*> selection = mScene->document()->selectedObjects().toSet();
+        if (event->modifiers() & Qt::ShiftModifier)
+            selection += item->object();
+        else if (event->modifiers() & Qt::ControlModifier) {
+            if (selection.contains(item->object()))
+                selection -= item->object();
+            else
+                selection += item->object();
+        } else {
+            selection.clear();
+            selection += item->object();
+        }
+        mScene->document()->setSelectedObjects(selection.toList());
         event->accept();
         return;
     }
