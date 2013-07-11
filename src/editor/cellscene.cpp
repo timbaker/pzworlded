@@ -1755,6 +1755,7 @@ void CellScene::objectXXXXChanged(WorldCellObject *obj)
         if (item->isSpawnPoint() != obj->isSpawnPoint()) {
             cellObjectAboutToBeRemoved(obj->cell(), obj->index());
             cellObjectAdded(obj->cell(), obj->index());
+            item = itemForObject(obj);
         }
         item->synchWithObject();
     }
