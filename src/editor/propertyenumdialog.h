@@ -63,6 +63,7 @@ private slots:
     void choiceItemChanged(QListWidgetItem *item);
 
 private:
+    int rowOf(PropertyEnum *pe);
     QString makeNameUnique(const QString &name, PropertyEnum *ignore);
     QString makeChoiceUnique(const QString &name, int ignore);
 
