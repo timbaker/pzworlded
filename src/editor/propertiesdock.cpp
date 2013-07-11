@@ -416,14 +416,14 @@ void PropertiesModel::fixPropertyEnum(PropertiesModel::Item *item)
             peDisplayed = item->children.first()->pe;
         PropertyEnum *peCurrent = item->p->mDefinition->mEnum;
         if (peDisplayed != peCurrent) {
-            if (peDisplayed) {
+            if (peDisplayed && item->parent->children.size()) {
                 beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
                 qDeleteAll(item->children);
                 item->children.clear();
                 endRemoveRows();
             }
-            if (peCurrent) {
-                beginInsertRows(index(item), 0, peCurrent->values().size());
+            if (peCurrent && peCurrent->values().size()) {
+                beginInsertRows(index(item), 0, peCurrent->values().size() - 1);
                 for (int i = 0; i < peCurrent->values().size(); i++)
                     new Item(item, i, peCurrent);
                 endInsertRows();
@@ -675,15 +675,18 @@ void PropertiesModel::propertyDefinitionChanged(PropertyDef *pd)
 void PropertiesModel::propertyEnumChoicesChanged(PropertyEnum *pe)
 {
     foreach (Item *item, mRootItem->itemsFor(pe)) {
-        beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
-        qDeleteAll(item->children);
-        item->children.clear();
-        endRemoveRows();
-
-        beginInsertRows(index(item), 0, pe->values().size());
-        for (int i = 0; i < pe->values().size(); i++)
-            new Item(item, i, pe);
-        endInsertRows();
+        if (item->parent->children.size()) {
+            beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
+            qDeleteAll(item->children);
+            item->children.clear();
+            endRemoveRows();
+        }
+        if (pe->values().size()) {
+            beginInsertRows(index(item), 0, pe->values().size() - 1);
+            for (int i = 0; i < pe->values().size(); i++)
+                new Item(item, i, pe);
+            endInsertRows();
+        }
     }
 }
 
