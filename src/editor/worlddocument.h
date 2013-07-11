@@ -386,8 +386,10 @@ public:
     void removeBMP(WorldBMP *bmp);
 
     void addPropertyEnum(const QString &name, const QStringList &choices, bool multi);
+    void addPropertyEnum(PropertyEnum *pe);
     void removePropertyEnum(PropertyEnum *pe);
     void changePropertyEnum(PropertyEnum *pe, const QString &name, bool multi);
+    void changePropertyEnum(PropertyEnum *pe, PropertyEnum *other);
     void insertPropertyEnumChoice(PropertyEnum *pe, int index, const QString &name);
     void removePropertyEnumChoice(PropertyEnum *pe, int index);
     void renamePropertyEnumChoice(PropertyEnum *pe, int index, const QString &name);

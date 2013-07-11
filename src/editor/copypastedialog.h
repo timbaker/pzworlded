@@ -49,18 +49,21 @@ public:
 
 private:
     void setup();
+    PropertyDef *clonePropertyDef(World *world, PropertyDef *pdIn) const;
     PropertyTemplate *cloneTemplate(World *world, PropertyTemplate *ptIn) const;
     Property *cloneProperty(World *world, Property *pIn) const;
 
     enum WorldCat {
         FirstWorldCat = 0,
-        PropertyDefs = FirstWorldCat,
+        PropertyEnums = FirstWorldCat,
+        PropertyDefs,
         Templates,
         ObjectTypes,
         ObjectGroups,
         MaxWorldCat
     };
 
+    void showPropertyEnums();
     void showPropertyDefs();
     void showTemplates();
     void showObjectTypes();
@@ -115,6 +118,7 @@ public: // public for Q_DECLARE_METATYPE
     class ObjectGroupItem;
     class ObjectItem;
     class ObjectTypeItem;
+    class PropertyEnumItem;
     class PropertyDefItem;
     class PropertyItem;
     class TemplateItem;

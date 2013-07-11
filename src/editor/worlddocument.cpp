@@ -856,6 +856,11 @@ void WorldDocument::addPropertyEnum(const QString &name, const QStringList &choi
     undoStack()->push(new AddPropertyEnum(this, mWorld->propertyEnums().size(), pe));
 }
 
+void WorldDocument::addPropertyEnum(PropertyEnum *pe)
+{
+    undoStack()->push(new AddPropertyEnum(this, mWorld->propertyEnums().size(), pe));
+}
+
 void WorldDocument::removePropertyEnum(PropertyEnum *pe)
 {
     undoStack()->beginMacro(tr("Remove Property Enum (%1)").arg(pe->name()));
@@ -877,6 +882,15 @@ void WorldDocument::removePropertyEnum(PropertyEnum *pe)
 void WorldDocument::changePropertyEnum(PropertyEnum *pe, const QString &name, bool multi)
 {
     undoStack()->push(new ChangePropertyEnum(this, pe, name, multi));
+}
+
+void WorldDocument::changePropertyEnum(PropertyEnum *pe, PropertyEnum *other)
+{
+    changePropertyEnum(pe, other->name(), other->isMulti());
+    for (int i = 0; i < pe->values().size(); i++)
+        removePropertyEnumChoice(pe, i);
+    for (int i = 0; i < other->values().size(); i++)
+        insertPropertyEnumChoice(pe, i, other->values()[i]);
 }
 
 void WorldDocument::insertPropertyEnumChoice(PropertyEnum *pe, int index, const QString &name)

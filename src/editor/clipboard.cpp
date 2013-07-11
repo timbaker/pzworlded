@@ -44,6 +44,8 @@ bool Clipboard::isEmpty() const
         return true;
     if (mCellContents.size())
         return false;
+    if (mWorld->propertyEnums().size())
+        return false;
     if (mWorld->propertyDefinitions().size())
         return false;
     if (mWorld->propertyTemplates().size())
@@ -95,13 +97,23 @@ void Clipboard::pasteEverythingButCells(WorldDocument *worldDoc)
     worldDoc->undoStack()->beginMacro(tr("Paste"));
     World *world = worldDoc->world();
     World *worldClip = mWorld;
+    foreach (PropertyEnum *peClip, worldClip->propertyEnums()) {
+        PropertyEnum *pe = world->propertyEnums().find(peClip->name());
+        if (pe) {
+            if (*pe != *peClip)
+                worldDoc->changePropertyEnum(pe, peClip);
+        } else {
+            pe = new PropertyEnum(peClip);
+            worldDoc->addPropertyEnum(pe);
+        }
+    }
     foreach (PropertyDef *pdClip, worldClip->propertyDefinitions()) {
         PropertyDef *pd = world->propertyDefinitions().findPropertyDef(pdClip->mName);
         if (pd) {
             if (*pd != *pdClip)
                 worldDoc->changePropertyDefinition(pd, pdClip);
         } else {
-            pd = new PropertyDef(pdClip);
+            pd = new PropertyDef(world, pdClip);
             worldDoc->addPropertyDefinition(pd);
         }
     }

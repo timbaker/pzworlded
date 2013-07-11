@@ -26,6 +26,13 @@ PropertyEnum::PropertyEnum(const QString &name, const QStringList &values, bool 
 {
 }
 
+PropertyEnum::PropertyEnum(const PropertyEnum *other) :
+    mName(other->mName),
+    mValues(other->mValues),
+    mMulti(other->mMulti)
+{
+}
+
 bool PropertyEnum::operator ==(const PropertyEnum &other) const
 {
     return mName == other.mName &&
@@ -46,6 +53,24 @@ PropertyEnum *PropertyEnumList::find(const QString &name) const
     return 0;
 }
 
+PropertyEnumList PropertyEnumList::sorted() const
+{
+    PropertyEnumList sorted;
+    const_iterator it = constBegin();
+    while (it != constEnd()) {
+        PropertyEnum *pe = *it;
+        int index = 0;
+        foreach (PropertyEnum *pe2, sorted) {
+            if (pe2->name() > pe->name())
+                break;
+            ++index;
+        }
+        sorted.insert(index, pe);
+        ++it;
+    }
+    return sorted;
+}
+
 /////
 
 PropertyDef::PropertyDef(const QString &name, const QString &defaultValue,
@@ -57,12 +82,16 @@ PropertyDef::PropertyDef(const QString &name, const QString &defaultValue,
 {
 }
 
-PropertyDef::PropertyDef(PropertyDef *other)
+PropertyDef::PropertyDef(World *world, PropertyDef *other)
     : mName(other->mName)
     , mDefaultValue(other->mDefaultValue)
     , mDescription(other->mDescription)
-    , mEnum(other->mEnum)
+    , mEnum(0)
 {
+    if (other->mEnum) {
+        mEnum = world->propertyEnums().find(other->mEnum->name());
+        Q_ASSERT(mEnum);
+    }
 }
 
 bool PropertyDef::operator ==(const PropertyDef &other) const
@@ -110,7 +139,7 @@ Property::Property(World *world, Property *other)
     : mValue(other->mValue)
     , mNote(other->mNote)
 {
-    mDefinition = world->propertyDefinitions().findPropertyDef(other->mDefinition->mName);
+    mDefinition = world->propertyDefinition(other->mDefinition->mName);
     Q_ASSERT(mDefinition);
 }
 

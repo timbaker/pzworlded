@@ -28,6 +28,7 @@ class PropertyEnum
 {
 public:
     PropertyEnum(const QString &name, const QStringList &values, bool multi);
+    PropertyEnum(const PropertyEnum *other);
 
     void setName(const QString &name)
     { mName = name; }
@@ -59,6 +60,7 @@ class PropertyEnumList : public QList<PropertyEnum*>
 {
 public:
     PropertyEnum *find(const QString &name) const;
+    PropertyEnumList sorted() const;
 };
 
 class PropertyDef
@@ -66,7 +68,7 @@ class PropertyDef
 public:
     PropertyDef(const QString &name, const QString &defaultValue,
                 const QString &description, PropertyEnum *pe);
-    PropertyDef(PropertyDef *other);
+    PropertyDef(World *world, PropertyDef *other);
 
     bool operator ==(const PropertyDef &other) const;
     bool operator !=(const PropertyDef &other) const

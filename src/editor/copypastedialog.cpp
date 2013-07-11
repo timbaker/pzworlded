@@ -41,6 +41,7 @@ public:
         Object,
         ObjectGroup,
         ObjectType_Type,
+        PropertyEnumType,
         PropertyType,
         PropertyDefType,
         TemplateType
@@ -101,6 +102,7 @@ public:
     typedef CopyPasteDialog::ObjectItem ObjectItem;
     typedef CopyPasteDialog::ObjectTypeItem ObjectTypeItem;
     typedef CopyPasteDialog::PropertyItem PropertyItem;
+    typedef CopyPasteDialog::PropertyEnumItem PropertyEnumItem;
     typedef CopyPasteDialog::PropertyDefItem PropertyDefItem;
     typedef CopyPasteDialog::TemplateItem TemplateItem;
 
@@ -112,6 +114,7 @@ public:
     ObjectGroupItem *asObjectGroupItem();
     ObjectTypeItem *asObjectTypeItem();
     PropertyItem *asPropertyItem();
+    PropertyEnumItem *asPropertyEnumItem();
     PropertyDefItem *asPropertyDefItem();
     TemplateItem *asTemplateItem();
 
@@ -244,6 +247,18 @@ public:
     Property *mProperty;
 };
 
+class CopyPasteDialog::PropertyEnumItem : public CopyPasteDialog::Item
+{
+public:
+    PropertyEnumItem(PropertyEnum *pe)
+        : Item(PropertyEnumType)
+        , mEnum(pe)
+    {
+    }
+
+    PropertyEnum *mEnum;
+};
+
 class CopyPasteDialog::PropertyDefItem : public CopyPasteDialog::Item
 {
 public:
@@ -308,6 +323,11 @@ CopyPasteDialog::Item::ObjectTypeItem *CopyPasteDialog::Item::asObjectTypeItem()
 CopyPasteDialog::Item::PropertyItem *CopyPasteDialog::Item::asPropertyItem()
 {
     return (mType == PropertyType) ? static_cast<PropertyItem*>(this) : 0;
+}
+
+CopyPasteDialog::Item::PropertyEnumItem *CopyPasteDialog::Item::asPropertyEnumItem()
+{
+    return (mType == PropertyEnumType) ? static_cast<PropertyEnumItem*>(this) : 0;
 }
 
 CopyPasteDialog::Item::PropertyDefItem *CopyPasteDialog::Item::asPropertyDefItem()
@@ -407,12 +427,22 @@ World *CopyPasteDialog::toWorld() const
 {
     World *world = new World(mWorld->width(), mWorld->height());
 
+    if (ui->worldCat->item(PropertyEnums)->checkState() == Qt::Checked) {
+        Item *root = mWorldRootItem[PropertyEnums];
+        foreach (Item *item, root->children()) {
+            PropertyEnumItem *peItem = item->asPropertyEnumItem();
+            if (peItem->mChecked) {
+                PropertyEnum *pe = new PropertyEnum(peItem->mEnum);
+                world->insertPropertyEnum(world->propertyEnums().size(), pe);
+            }
+        }
+    }
     if (ui->worldCat->item(PropertyDefs)->checkState() == Qt::Checked) {
         Item *root = mWorldRootItem[PropertyDefs];
         foreach (Item *item, root->children()) {
             PropertyDefItem *pdItem = item->asPropertyDefItem();
             if (pdItem->mChecked) {
-                PropertyDef *pd = new PropertyDef(pdItem->mPropertyDef);
+                PropertyDef *pd = new PropertyDef(world, pdItem->mPropertyDef);
                 world->addPropertyDefinition(world->propertyDefinitions().size(), pd);
             }
         }
@@ -594,12 +624,17 @@ void CopyPasteDialog::setup()
     connect(ui->worldCheckAll, SIGNAL(clicked()), SLOT(worldCheckAll()));
     connect(ui->worldCheckNone, SIGNAL(clicked()), SLOT(worldCheckNone()));
 
+    mWorldRootItem[PropertyEnums] = new Item;
     mWorldRootItem[PropertyDefs] = new Item();
     mWorldRootItem[Templates] = new Item();
     mWorldRootItem[ObjectTypes] = new Item();
     mWorldRootItem[ObjectGroups] = new Item();
 
-    Item *root = mWorldRootItem[PropertyDefs];
+    Item *root = mWorldRootItem[PropertyEnums];
+    foreach (PropertyEnum *pe, mWorld->propertyEnums().sorted())
+        root->insertChild(-1, new PropertyEnumItem(pe));
+
+    root = mWorldRootItem[PropertyDefs];
     foreach (PropertyDef *pd, mWorld->propertyDefinitions().sorted())
         root->insertChild(-1, new PropertyDefItem(pd));
 
@@ -710,12 +745,26 @@ PropertyTemplate *CopyPasteDialog::cloneTemplate(World *world, PropertyTemplate 
 
 Property *CopyPasteDialog::cloneProperty(World *world, Property *pIn) const
 {
-    if (world->propertyDefinitions().findPropertyDef(pIn->mDefinition->mName) != 0)
+    if (world->propertyDefinition(pIn->mDefinition->mName) != 0)
         return new Property(world, pIn);
     return 0;
 }
 
 ///// WORLD /////
+
+void CopyPasteDialog::showPropertyEnums()
+{
+    QTreeWidget *v = ui->worldTree;
+    v->setColumnHidden(1, false);
+    v->clear();
+    Item *root = mWorldRootItem[PropertyEnums];
+    root->setViewItem(0);
+    foreach (Item *item, root->children()) {
+        PropertyEnumItem *peItem = item->asPropertyEnumItem();
+        addToTree(v, 0, -1, item, peItem->mEnum->name(),
+                  peItem->mEnum->values().join(QLatin1String(",")));
+    }
+}
 
 void CopyPasteDialog::showPropertyDefs()
 {
@@ -773,6 +822,9 @@ void CopyPasteDialog::worldSelectionChanged(int index)
 
     mWorldCat = static_cast<enum WorldCat>(index);
     switch (mWorldCat) {
+    case PropertyEnums:
+        showPropertyEnums();
+        break;
     case PropertyDefs:
         showPropertyDefs();
         break;
@@ -801,6 +853,7 @@ void CopyPasteDialog::worldCheckAll()
 {
     QTreeWidget *view = ui->worldTree;
     switch (mWorldCat) {
+    case PropertyEnums:
     case PropertyDefs:
     case Templates:
     case ObjectTypes:
@@ -817,6 +870,7 @@ void CopyPasteDialog::worldCheckNone()
 {
     QTreeWidget *view = ui->worldTree;
     switch (mWorldCat) {
+    case PropertyEnums:
     case PropertyDefs:
     case Templates:
     case ObjectTypes:
