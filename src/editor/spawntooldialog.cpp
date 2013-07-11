@@ -194,20 +194,38 @@ void SpawnToolDialog::setList()
 {
     ui->list->clear();
 
+    // Count the number of checked professions for all selected spawnpoints.
+    QStringList professions = this->professions();
     QList<WorldCellObject*> spawnPoints = selectedSpawnPoints();
-    QStringList current;
+    QVector<int> checkCount(professions.size());
+    checkCount.fill(0);
     PropertyDef *pd = mDocument->world()->propertyDefinition(QLatin1String("Professions"));
     if (spawnPoints.size() && pd) {
-        PropertyList properties;
-        resolveProperties(spawnPoints.first(), properties);
-        if (Property *p = properties.find(pd))
-            current = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+        foreach (WorldCellObject *obj, spawnPoints) {
+            PropertyList properties;
+            resolveProperties(obj, properties);
+            if (Property *p = properties.find(pd)) {
+                QStringList choices = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+                foreach (QString choice, choices) {
+                    int index = professions.indexOf(choice);
+                    if (index >= 0) {
+                        checkCount[index]++;
+                    }
+                }
+            }
+        }
+
     }
 
-    foreach (QString profession, professions()) {
-        QListWidgetItem *item = new QListWidgetItem(profession);
+    for (int i = 0; i < professions.size(); i++) {
+        QListWidgetItem *item = new QListWidgetItem(professions[i]);
         item->setFlags(item->flags() | Qt::ItemIsEditable);
-        item->setCheckState(current.contains(profession) ? Qt::Checked : Qt::Unchecked);
+        if ((checkCount[i] == spawnPoints.size()) && checkCount[i])
+            item->setCheckState(Qt::Checked);
+        else if (checkCount[i] == 0)
+            item->setCheckState(Qt::Unchecked);
+        else
+            item->setCheckState(Qt::PartiallyChecked);
         ui->list->addItem(item);
     }
 }
