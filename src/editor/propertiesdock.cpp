@@ -54,8 +54,15 @@ public:
 
         // Don't draw mouse-over highlight or draw the selection beneath "add" buttons
         // or Templates/Properties headers.
-        if (!model->toProperty(index) && !model->toTemplate(index)) {
+        if (!model->toProperty(index) &&
+                !model->toTemplate(index) &&
+                !model->toPropertyEnum(index)) {
             opt.state &= ~QStyle::State_Selected;
+            opt.state &= ~QStyle::State_MouseOver;
+        }
+
+        // Non-editable property enum
+        if (!(model->flags(index) & Qt::ItemIsSelectable)) {
             opt.state &= ~QStyle::State_MouseOver;
         }
 
@@ -240,6 +247,19 @@ QVariant PropertiesModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     }
+    if (PropertyEnum *pe = item->pe) {
+        switch (role) {
+        case Qt::DisplayRole:
+            return index.column() ? QVariant() : item->peChoice;
+        case Qt::CheckStateRole: {
+            if (index.column()) break;
+            QStringList values = item->parent->p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            return values.contains(item->peChoice) ? Qt::Checked : Qt::Unchecked;
+        }
+        default:
+            return QVariant();
+        }
+    }
     return QVariant();
 }
 
@@ -257,6 +277,37 @@ bool PropertiesModel::setData(const QModelIndex &index, const QVariant &value,
         }
         break;
     }
+    if (PropertyEnum *pe = item->pe) {
+        switch (role) {
+        case Qt::CheckStateRole: {
+            if (item->parent->parent->parent != mRootItem) break;
+            if (index.column()) break;
+            Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
+            QStringList values = item->parent->p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            QStringList choices = pe->values();
+            for (int i = 0; i < choices.size(); i++) {
+                if (!pe->isMulti()) {
+                    if (i != item->indexOf() || c == Qt::Unchecked)
+                        choices[i].clear();
+                    continue;
+                }
+                if (i == item->indexOf()) {
+                    if (c == Qt::Unchecked)
+                        choices[i].clear();
+                    continue;
+                }
+                if (!values.contains(choices[i]))
+                    choices[i].clear();
+            }
+            choices.removeAll(QLatin1String(""));
+            QString value = choices.join(QLatin1String(","));
+            mWorldDoc->setPropertyValue(mPropertyHolder, item->parent->p, value);
+            return true;
+        }
+        default:
+            break;
+        }
+    }
 
     return QAbstractItemModel::setData(index, value, role);
 }
@@ -267,6 +318,12 @@ Qt::ItemFlags PropertiesModel::flags(const QModelIndex &index) const
     if (Item *item = toItem(index)) {
         if (isPropertyOfCell(item) && (index.column() == 1))
             rc |= Qt::ItemIsEditable;
+        if (item->pe) {
+            if (item->parent->parent->parent != mRootItem)
+                rc &= ~Qt::ItemIsSelectable;
+            else
+                rc |= Qt::ItemIsUserCheckable;
+        }
     }
     return rc;
 }
@@ -351,6 +408,33 @@ void PropertiesModel::redrawTemplate(Item *item, PropertyTemplate *pt)
         redrawTemplate(child, pt);
 }
 
+void PropertiesModel::fixPropertyEnum(PropertiesModel::Item *item)
+{
+    if (item->p) {
+        PropertyEnum *peDisplayed = 0;
+        if (item->children.size())
+            peDisplayed = item->children.first()->pe;
+        PropertyEnum *peCurrent = item->p->mDefinition->mEnum;
+        if (peDisplayed != peCurrent) {
+            if (peDisplayed) {
+                beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
+                qDeleteAll(item->children);
+                item->children.clear();
+                endRemoveRows();
+            }
+            if (peCurrent) {
+                beginInsertRows(index(item), 0, peCurrent->values().size());
+                for (int i = 0; i < peCurrent->values().size(); i++)
+                    new Item(item, i, peCurrent);
+                endInsertRows();
+            }
+        }
+        return;
+    }
+    foreach (Item *child, item->children)
+        fixPropertyEnum(child);
+}
+
 PropertyTemplate *PropertiesModel::toTemplate(const QModelIndex &index) const
 {
     if (index.isValid())
@@ -362,6 +446,13 @@ Property *PropertiesModel::toProperty(const QModelIndex &index) const
 {
     if (index.isValid())
         return static_cast<Item*>(index.internalPointer())->p;
+    return 0;
+}
+
+PropertyEnum *PropertiesModel::toPropertyEnum(const QModelIndex &index) const
+{
+    if (index.isValid())
+        return static_cast<Item*>(index.internalPointer())->pe;
     return 0;
 }
 
@@ -430,6 +521,9 @@ void PropertiesModel::setDocument(WorldDocument *worldDoc)
 
         connect(mWorldDoc, SIGNAL(propertyValueChanged(PropertyHolder*,int)),
                 SLOT(propertyValueChanged(PropertyHolder*,int)));
+
+        connect(mWorldDoc, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
+                SLOT(propertyEnumChoicesChanged(PropertyEnum*)));
 
         connect(mWorldDoc, SIGNAL(templateAdded(int)),
                 SLOT(updateMenusLater()));
@@ -548,7 +642,12 @@ void PropertiesModel::addTemplate(Item *parent, int index, PropertyTemplate *pt)
 
 void PropertiesModel::addProperty(PropertiesModel::Item *parent, int index, Property *p)
 {
-    new Item(parent, index, p);
+    Item *item = new Item(parent, index, p);
+
+    if (PropertyEnum *pe = p->mDefinition->mEnum) {
+        for (int i = 0; i < pe->values().size(); i++)
+            new Item(item, i, pe);
+    }
 }
 
 void PropertiesModel::addTemplate(QAction *action)
@@ -566,8 +665,26 @@ void PropertiesModel::propertyDefinitionChanged(PropertyDef *pd)
     // Redisplay any property items using the definition
     redrawProperty(mRootItem, pd);
 
+    // The property enum might have changed
+    fixPropertyEnum(mRootItem);
+
     // Update the name in the popup menu
     updateMenusLater();
+}
+
+void PropertiesModel::propertyEnumChoicesChanged(PropertyEnum *pe)
+{
+    foreach (Item *item, mRootItem->itemsFor(pe)) {
+        beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
+        qDeleteAll(item->children);
+        item->children.clear();
+        endRemoveRows();
+
+        beginInsertRows(index(item), 0, pe->values().size());
+        for (int i = 0; i < pe->values().size(); i++)
+            new Item(item, i, pe);
+        endInsertRows();
+    }
 }
 
 void PropertiesModel::templateChanged(PropertyTemplate *pt)
@@ -665,9 +782,16 @@ void PropertiesModel::propertyValueChanged(PropertyHolder *ph, int index)
         Item *parentItem = item->findChild(Item::HeaderProperties);
         QModelIndex parent = this->index(parentItem);
         Property *p = ph->properties().at(index);
-        int row = parentItem->findChild(p)->indexOf();
+        Item *propertyItem = parentItem->findChild(p);
+        int row = propertyItem->indexOf();
         QModelIndex child = this->index(row, 1, parent);
         emit dataChanged(child, child);
+
+        // Redraw property enum
+        if (propertyItem->children.size())
+            emit dataChanged(this->index(0, 0, child),
+                             this->index(propertyItem->children.size() - 1, 0, child));
+
     }
 }
 

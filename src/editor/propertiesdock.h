@@ -61,6 +61,7 @@ public:
 
     PropertyTemplate *toTemplate(const QModelIndex &index) const;
     Property *toProperty(const QModelIndex &index) const;
+    PropertyEnum *toPropertyEnum(const QModelIndex &index) const;
     QWidget *toWidget(const QModelIndex &index) const;
 
     void setView(PropertiesView *view) { mView = view; }
@@ -91,6 +92,8 @@ private slots:
     void addProperty(QAction *action);
 
     void propertyDefinitionChanged(PropertyDef *pd);
+
+    void propertyEnumChoicesChanged(PropertyEnum *pe);
 
     void templateChanged(PropertyTemplate *pt);
 
@@ -130,6 +133,7 @@ private:
             , header(HeaderInvalid)
             , ph(ph)
             , widget(0)
+            , pe(0)
         {
         }
 
@@ -140,6 +144,7 @@ private:
             , header(HeaderInvalid)
             , ph(0)
             , widget(0)
+            , pe(0)
         {
             parent->children.insert(index, this);
         }
@@ -150,6 +155,7 @@ private:
             , header(HeaderInvalid)
             , ph(0)
             , widget(0)
+            , pe(0)
         {
             parent->children.insert(index, this);
         }
@@ -160,6 +166,7 @@ private:
             , header(header)
             , ph(0)
             , widget(0)
+            , pe(0)
         {
             Q_ASSERT(header != HeaderInvalid);
             parent->children.insert(index, this);
@@ -171,6 +178,19 @@ private:
             , header(HeaderInvalid)
             , ph(0)
             , widget(widget)
+            , pe(0)
+        {
+            parent->children.insert(index, this);
+        }
+        Item(Item *parent, int index, PropertyEnum *pe)
+            : parent(parent)
+            , pt(0)
+            , p(0)
+            , header(HeaderInvalid)
+            , ph(0)
+            , widget(0)
+            , pe(pe)
+            , peChoice(pe->values().at(index))
         {
             parent->children.insert(index, this);
         }
@@ -210,6 +230,16 @@ private:
             return items;
         }
 
+        QList<Item*> itemsFor(PropertyEnum *pe)
+        {
+            QList<Item*> items;
+            if (p && p->mDefinition->mEnum == pe)
+                items += this;
+            foreach (Item *child, children)
+                items += child->itemsFor(pe);
+            return items;
+        }
+
         Item *findChild(Header h)
         {
             foreach (Item *item, children) {
@@ -237,6 +267,15 @@ private:
             return 0;
         }
 
+        Item *findChild(PropertyEnum *pe)
+        {
+            foreach (Item *item, children) {
+                if (item->pe == pe)
+                    return item;
+            }
+            return 0;
+        }
+
         PropertyHolder *propertyHolder() const
         {
             Q_ASSERT(p || pt);
@@ -252,6 +291,8 @@ private:
         Header header;
         PropertyHolder *ph;
         QWidget *widget;
+        PropertyEnum *pe;
+        QString peChoice;
     };
 
     QModelIndex index(Item *item);
@@ -266,6 +307,7 @@ private:
     void createAddPropertyWidget();
     void redrawProperty(Item *item, PropertyDef *pd);
     void redrawTemplate(Item *item, PropertyTemplate *pt);
+    void fixPropertyEnum(Item *item);
 
     WorldDocument *mWorldDoc;
     PropertyHolder *mPropertyHolder;
