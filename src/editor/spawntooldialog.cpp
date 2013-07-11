@@ -70,8 +70,10 @@ void SpawnToolDialog::setVisible(bool visible)
 
 void SpawnToolDialog::setDocument(CellDocument *doc)
 {
-    if (mDocument)
+    if (mDocument) {
         mDocument->disconnect(this);
+        worldDocument()->disconnect(this);
+    }
 
     mDocument = doc;
 
