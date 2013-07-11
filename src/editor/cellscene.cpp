@@ -709,10 +709,11 @@ SpawnPointItem::SpawnPointItem(WorldCellObject *object, CellScene *scene, QGraph
 
 QRectF SpawnPointItem::boundingRect() const
 {
-    return mRenderer->boundingRect(QRect(mObject->pos().x() - 3, mObject->pos().y() - 3, 1, 1),
-                                   mObject->level())
-            | mRenderer->boundingRect(QRect(mObject->pos().x(), mObject->pos().y(), 1, 1),
-                                      mObject->level());
+    QRectF bounds = ObjectItem::boundingRect();
+    QPointF pos = mObject->pos() + mDragOffset;
+    bounds |= mRenderer->boundingRect(QRect(pos.x() - 3, pos.y() - 3, 1, 1), mObject->level());
+    bounds |= mRenderer->boundingRect(QRect(pos.x(), pos.y(), 1, 1), mObject->level());
+    return bounds;
 }
 
 void SpawnPointItem::paint(QPainter *painter,
