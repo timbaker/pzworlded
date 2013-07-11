@@ -115,11 +115,11 @@ public:
 
     void writePropertyEnum(QXmlStreamWriter &w, PropertyEnum *pe)
     {
-        w.writeStartElement(QLatin1String("property-enum"));
+        w.writeStartElement(QLatin1String("propertyenum"));
         w.writeAttribute(QLatin1String("name"), pe->name());
         w.writeAttribute(QLatin1String("choices"), pe->values().join(QLatin1String(",")));
         w.writeAttribute(QLatin1String("multi"), pe->isMulti() ? QLatin1String("true") : QLatin1String("false"));
-        w.writeEndElement(); // property-enum
+        w.writeEndElement(); // propertyenum
     }
 
     void writePropertyDef(QXmlStreamWriter &w, PropertyDef *pd)

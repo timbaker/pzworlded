@@ -94,7 +94,7 @@ private:
         mWorld = new World(width, height);
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1String("property-enum"))
+            if (xml.name() == QLatin1String("propertyenum"))
                 readPropertyEnum();
             else if (xml.name() == QLatin1String("propertydef"))
                 readPropertyDef();
@@ -133,7 +133,7 @@ private:
 
     void readPropertyEnum()
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("property-enum"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("propertyenum"));
 
         const QXmlStreamAttributes atts = xml.attributes();
         const QString name = atts.value(QLatin1String("name")).toString();
@@ -600,7 +600,7 @@ private:
             QFileInfo info(path);
             if (info.exists())
                 return info.canonicalFilePath();
-            return path;
+            return QDir::cleanPath(path);
         }
         return fileName;
     }
