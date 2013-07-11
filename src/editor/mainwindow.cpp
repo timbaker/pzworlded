@@ -297,7 +297,7 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(WorldBMPTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SubMapTool::instance());
-    toolManager->registerTool(ObjectTool::instance());
+    toolManager->registerTool(SelectMoveObjectTool::instance());
     toolManager->registerTool(CreateObjectTool::instance());
     new SpawnPointTool;
     toolManager->registerTool(SpawnPointTool::instancePtr());

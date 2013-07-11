@@ -257,21 +257,21 @@ void CreateObjectTool::finishNewMapObject()
 
 /////
 
-ObjectTool *ObjectTool::mInstance = 0;
+SelectMoveObjectTool *SelectMoveObjectTool::mInstance = 0;
 
-ObjectTool *ObjectTool::instance()
+SelectMoveObjectTool *SelectMoveObjectTool::instance()
 {
     if (!mInstance)
-        mInstance = new ObjectTool();
+        mInstance = new SelectMoveObjectTool();
     return mInstance;
 }
 
-void ObjectTool::deleteInstance()
+void SelectMoveObjectTool::deleteInstance()
 {
     delete mInstance;
 }
 
-ObjectTool::ObjectTool()
+SelectMoveObjectTool::SelectMoveObjectTool()
     : BaseCellSceneTool(QLatin1String("Select and Move Objects"),
                         QIcon(QLatin1String(":/images/22x22/tool-select-objects.png")),
                         QKeySequence())
@@ -281,7 +281,7 @@ ObjectTool::ObjectTool()
 {
 }
 
-void ObjectTool::keyPressEvent(QKeyEvent *event)
+void SelectMoveObjectTool::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
         if (mMode == Moving) {
@@ -294,7 +294,7 @@ void ObjectTool::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void ObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+void SelectMoveObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
 
     switch (event->button()) {
@@ -325,7 +325,7 @@ void ObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void ObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+void SelectMoveObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     if (mMode == NoMode && mMousePressed) {
         const int dragDistance = (mStartScenePos - event->scenePos()).manhattanLength();
@@ -354,7 +354,7 @@ void ObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         event->accept();
 }
 
-void ObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+void SelectMoveObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() != Qt::LeftButton)
         return;
@@ -395,13 +395,13 @@ void ObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     mClickedItem = 0;
 }
 
-void ObjectTool::startSelecting()
+void SelectMoveObjectTool::startSelecting()
 {
     mMode = Selecting;
 //    mScene->addItem(mSelectionRectangle);
 }
 
-void ObjectTool::startMoving()
+void SelectMoveObjectTool::startMoving()
 {
     mMovingItems = mScene->selectedObjectItems();
 
@@ -415,7 +415,7 @@ void ObjectTool::startMoving()
     mMode = Moving;
 }
 
-void ObjectTool::updateMovingItems(const QPointF &pos,
+void SelectMoveObjectTool::updateMovingItems(const QPointF &pos,
                                    Qt::KeyboardModifiers modifiers)
 {
     Q_UNUSED(modifiers)
@@ -450,7 +450,7 @@ void ObjectTool::updateMovingItems(const QPointF &pos,
         item->setDragOffset(newTilePos - startTilePos);
 }
 
-void ObjectTool::finishMoving(const QPointF &pos)
+void SelectMoveObjectTool::finishMoving(const QPointF &pos)
 {
     Q_UNUSED(pos)
     Q_ASSERT(mMode == Moving);
@@ -470,7 +470,7 @@ void ObjectTool::finishMoving(const QPointF &pos)
     mMovingItems.clear();
 }
 
-void ObjectTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
+void SelectMoveObjectTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
 {
     ObjectItem *item = topmostItemAt(scenePos);
     if (!item) {
@@ -503,7 +503,7 @@ void ObjectTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
     }
 }
 
-ObjectItem *ObjectTool::topmostItemAt(const QPointF &scenePos)
+ObjectItem *SelectMoveObjectTool::topmostItemAt(const QPointF &scenePos)
 {
     // ObjectLabelItem uses ItemIgnoresTransformations to keep its size the
     // same regardless of the view's scale.

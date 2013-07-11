@@ -696,7 +696,7 @@ bool ObjectItem::isMouseOverHighlighted() const
 
 bool ObjectItem::hoverToolCurrent() const
 {
-    return ObjectTool::instance()->isCurrent();
+    return SelectMoveObjectTool::instance()->isCurrent();
 }
 
 /////
@@ -772,7 +772,7 @@ void SpawnPointItem::paint(QPainter *painter,
 bool SpawnPointItem::hoverToolCurrent() const
 {
     return SpawnPointTool::instancePtr()->isCurrent() ||
-            ObjectTool::instance()->isCurrent();
+            SelectMoveObjectTool::instance()->isCurrent();
 }
 
 /////
@@ -1185,7 +1185,7 @@ void CellScene::setTool(AbstractTool *tool)
         setSelectedSubMapItems(QSet<SubMapItem*>());
 
     // Deselect all objects if they can't be edited
-    if (mActiveTool != ObjectTool::instance())
+    if (mActiveTool != SelectMoveObjectTool::instance())
         setSelectedObjectItems(QSet<ObjectItem*>());
     else {
         foreach (ObjectItem *item, mSelectedObjectItems)
@@ -1791,7 +1791,7 @@ void CellScene::selectedObjectsChanged()
         item->setEditable(false);
     }
 
-    bool editable = ObjectTool::instance()->isCurrent();
+    bool editable = SelectMoveObjectTool::instance()->isCurrent();
     foreach (ObjectItem *item, items - mSelectedObjectItems) {
         item->setSelected(true);
         item->setEditable(editable);

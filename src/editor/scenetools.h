@@ -216,12 +216,12 @@ private:
 /**
   * This CellScene tool selects and moves WorldCellObjects.
   */
-class ObjectTool : public BaseCellSceneTool
+class SelectMoveObjectTool : public BaseCellSceneTool
 {
     Q_OBJECT
 
 public:
-    static ObjectTool *instance();
+    static SelectMoveObjectTool *instance();
     static void deleteInstance();
 
     virtual void keyPressEvent(QKeyEvent *event);
@@ -247,10 +247,10 @@ private:
     void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
 
 private:
-    Q_DISABLE_COPY(ObjectTool)
+    Q_DISABLE_COPY(SelectMoveObjectTool)
 
-    explicit ObjectTool();
-    ~ObjectTool() {}
+    explicit SelectMoveObjectTool();
+    ~SelectMoveObjectTool() {}
 
     enum Mode {
         NoMode,
@@ -266,7 +266,7 @@ private:
     QPointF mStartScenePos;
     ObjectItem *mClickedItem;
     QSet<ObjectItem*> mMovingItems;
-    static ObjectTool *mInstance;
+    static SelectMoveObjectTool *mInstance;
 };
 
 /////
