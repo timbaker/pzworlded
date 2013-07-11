@@ -337,6 +337,12 @@ public:
 signals:
     void closeItem(const QModelIndex &index);
 
+private slots:
+    void rowsInserted(const QModelIndex &parent, int start, int end);
+
+private:
+    void expandProperties(const QModelIndex &parent, int start, int end);
+
 public:
     PropertiesModel *mModel;
 };

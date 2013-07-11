@@ -865,6 +865,11 @@ void PropertiesModel::setModelData()
         mView->setIndexWidget(widgetIndex, mAddPropertyWidget);
         mView->expand(index(1, 0));
     }
+
+    foreach (PropertyEnum *pe, mWorldDoc->world()->propertyEnums()) {
+        foreach (Item *item, mRootItem->itemsFor(pe))
+            mView->expand(index(item));
+    }
 }
 
 /////
@@ -907,6 +912,24 @@ void PropertiesView::setPropertyHolder(WorldDocument *worldDoc, PropertyHolder *
 void PropertiesView::clearPropertyHolder()
 {
     mModel->clearPropertyHolder();
+}
+
+void PropertiesView::rowsInserted(const QModelIndex &parent, int start, int end)
+{
+    QTreeView::rowsInserted(parent, start, end);
+    expandProperties(parent, start, end);
+}
+
+void PropertiesView::expandProperties(const QModelIndex &parent, int start, int end)
+{
+    for (int row = start; row <= end; row++) {
+        QModelIndex index = mModel->index(row, 0, parent);
+        if (mModel->toProperty(index))
+            expand(index);
+        else if (mModel->rowCount(index)) {
+            expandProperties(index, 0, mModel->rowCount(index) - 1);
+        }
+    }
 }
 
 /////
