@@ -26,6 +26,7 @@ class TemplatesDialog;
 }
 
 class PropertyTemplate;
+class UndoRedoButtons;
 class WorldDocument;
 
 class TemplatesDialog : public QDialog
@@ -36,6 +37,7 @@ public:
     
 private:
     void setList();
+    int rowOf(PropertyTemplate *pt);
 
 private slots:
     void selectionChanged();
@@ -47,8 +49,13 @@ private slots:
     void displayDescription();
     void synchButtons();
 
+    void templateAdded(int index);
+    void templateAboutToBeRemoved(int index);
+    void templateChanged(PropertyTemplate *pt);
+
 private:
     Ui::TemplatesDialog *ui;
+    UndoRedoButtons *mUndoRedoButtons;
     WorldDocument *mWorldDoc;
     PropertyTemplate *mTemplate;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2013, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,16 +18,23 @@
 #include "templatesdialog.h"
 #include "ui_templatesdialog.h"
 
+#include "undoredo.h"
 #include "world.h"
 #include "worlddocument.h"
+
+#include <QToolButton>
 
 TemplatesDialog::TemplatesDialog(WorldDocument *worldDoc, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::TemplatesDialog)
+    , mUndoRedoButtons(new UndoRedoButtons(worldDoc, this))
     , mWorldDoc(worldDoc)
     , mTemplate(0)
 {
     ui->setupUi(this);
+
+    ui->buttonsLayout->insertWidget(0, mUndoRedoButtons->undoButton());
+    ui->buttonsLayout->insertWidget(1, mUndoRedoButtons->redoButton());
 
     setList();
 
@@ -52,6 +59,13 @@ TemplatesDialog::TemplatesDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(ui->templateName, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
     connect(ui->templateDesc, SIGNAL(textChanged()), SLOT(synchButtons()));
 
+    connect(mWorldDoc, SIGNAL(templateAboutToBeRemoved(int)),
+            SLOT(templateAboutToBeRemoved(int)));
+    connect(mWorldDoc, SIGNAL(templateAdded(int)),
+            SLOT(templateAdded(int)));
+    connect(mWorldDoc, SIGNAL(templateChanged(PropertyTemplate*)),
+            SLOT(templateChanged(PropertyTemplate*)));
+
     synchButtons();
 }
 
@@ -61,6 +75,11 @@ void TemplatesDialog::setList()
     view->clear();
     foreach (PropertyTemplate *pt, mWorldDoc->world()->propertyTemplates().sorted())
         view->addItem(pt->mName);
+}
+
+int TemplatesDialog::rowOf(PropertyTemplate *pt)
+{
+    return mWorldDoc->world()->propertyTemplates().sorted().indexOf(pt);
 }
 
 void TemplatesDialog::selectionChanged()
@@ -110,11 +129,13 @@ void TemplatesDialog::updateSelectedTemplate()
 {
     mWorldDoc->changeTemplate(mTemplate, ui->templateName->text(),
                               ui->templateDesc->toPlainText());
+#if 0
     PropertyTemplate *pt = mTemplate;
     setList();
     int row = mWorldDoc->world()->propertyTemplates().sorted().indexOf(pt);
     ui->templatesView->setCurrentRow(row, QItemSelectionModel::Select);
     synchButtons();
+#endif
 }
 
 void TemplatesDialog::removeSelectedTemplate()
@@ -122,17 +143,21 @@ void TemplatesDialog::removeSelectedTemplate()
     int row = ui->templatesView->currentRow();
     int index = mWorldDoc->world()->propertyTemplates().indexOf(mTemplate);
     mWorldDoc->removeTemplate(index);
+#if 0
     clearTemplate();
     delete ui->templatesView->takeItem(row);
+#endif
 }
 
 void TemplatesDialog::addTemplate()
 {
     mWorldDoc->addTemplate(ui->templateName->text(),
                            ui->templateDesc->toPlainText());
+#if 0
     setList();
 //    ui->templatesView->clearSelection();
     clearTemplate();
+#endif
 }
 
 void TemplatesDialog::displayDescription()
@@ -184,4 +209,33 @@ void TemplatesDialog::synchButtons()
     ui->updateTemplate->setDefault(enableUpdate);
     ui->buttonBox->button(QDialogButtonBox::Close)->setDefault(!enableAdd &&
                                                                !enableUpdate);
+}
+
+void TemplatesDialog::templateAdded(int index)
+{
+    Q_UNUSED(index)
+    PropertyTemplate *pt = mTemplate;
+    setList();
+    if (pt)
+        ui->templatesView->setCurrentRow(rowOf(pt));
+    else
+        clearTemplate();
+}
+
+void TemplatesDialog::templateAboutToBeRemoved(int index)
+{
+    PropertyTemplate *pt = mWorldDoc->world()->propertyTemplates().at(index);
+    int row = rowOf(pt);
+    if (row == ui->templatesView->currentRow()) {
+        clearTemplate();
+    }
+    delete ui->templatesView->takeItem(row);
+}
+
+void TemplatesDialog::templateChanged(PropertyTemplate *pt)
+{
+    PropertyTemplate *current = mTemplate;
+    setList();
+    if (current)
+        ui->templatesView->setCurrentRow(rowOf(pt));
 }
