@@ -1832,15 +1832,17 @@ void MainWindow::updateActions()
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
 
-    ui->actionGenerateLotsAll->setEnabled(worldDoc);
+    ui->menuGenerate_Lots->setEnabled(worldDoc != 0);
+    ui->actionGenerateLotsAll->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
                                                worldDoc->selectedCellCount());
 
-    ui->actionBMPToTMXAll->setEnabled(worldDoc);
+    ui->menuBMP_To_TMX->setEnabled(worldDoc != 0);
+    ui->actionBMPToTMXAll->setEnabled(worldDoc != 0);
     ui->actionBMPToTMXSelected->setEnabled(worldDoc &&
                                            worldDoc->selectedCellCount());
 
-    ui->actionLUAObjectDump->setEnabled(worldDoc);
+    ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
