@@ -78,14 +78,23 @@ void SpawnToolDialog::setDocument(CellDocument *doc)
     if (mDocument) {
         connect(mDocument, SIGNAL(selectedObjectsChanged()),
                 SLOT(selectedObjectsChanged()));
+
+        connect(worldDocument(), SIGNAL(propertyEnumAdded(int)),
+                SLOT(checkProfessionsEnum()));
+        connect(worldDocument(), SIGNAL(propertyEnumAboutToBeRemoved(int)),
+                SLOT(propertyEnumAboutToBeRemoved(int)));
         connect(worldDocument(), SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
                 SLOT(propertyEnumChoicesChanged(PropertyEnum*)));
+        connect(worldDocument(), SIGNAL(propertyEnumChanged(PropertyEnum*)),
+                SLOT(checkProfessionsEnum()));
+
         connect(worldDocument(), SIGNAL(propertyAdded(PropertyHolder*,int)),
                 SLOT(propertiesChanged(PropertyHolder*)));
         connect(worldDocument(), SIGNAL(propertyRemoved(PropertyHolder*,int)),
                 SLOT(propertiesChanged(PropertyHolder*)));
         connect(worldDocument(), SIGNAL(propertyValueChanged(PropertyHolder*,int)),
                 SLOT(propertiesChanged(PropertyHolder*)));
+
         setList();
         selectedObjectsChanged();
     }
@@ -103,9 +112,21 @@ void SpawnToolDialog::selectedObjectsChanged()
     setList();
 }
 
+void SpawnToolDialog::propertyEnumAboutToBeRemoved(int index)
+{
+    if (mDocument->world()->propertyEnums().at(index) == professionsEnum())
+        ui->list->clear();
+}
+
 void SpawnToolDialog::propertyEnumChoicesChanged(PropertyEnum *pe)
 {
     if (pe->name() == QLatin1String("Professions"))
+        setList();
+}
+
+void SpawnToolDialog::checkProfessionsEnum()
+{
+    if ((ui->list->count() == 0) != (professionsEnum() == 0))
         setList();
 }
 

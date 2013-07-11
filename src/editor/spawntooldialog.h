@@ -49,7 +49,11 @@ public:
 
 private slots:
     void selectedObjectsChanged();
+
+    void propertyEnumAboutToBeRemoved(int index);
     void propertyEnumChoicesChanged(PropertyEnum *pe);
+    void checkProfessionsEnum();
+
     void propertiesChanged(PropertyHolder *ph);
 
     void addItem();
