@@ -48,6 +48,7 @@ World::~World()
     qDeleteAll(mCells);
     qDeleteAll(mPropertyTemplates);
     qDeleteAll(mPropertyDefs);
+    qDeleteAll(mPropertyEnums);
     qDeleteAll(mObjectTypes);
     qDeleteAll(mBMPs);
 }
