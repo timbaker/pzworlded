@@ -416,8 +416,8 @@ void PropertiesModel::fixPropertyEnum(PropertiesModel::Item *item)
             peDisplayed = item->children.first()->pe;
         PropertyEnum *peCurrent = item->p->mDefinition->mEnum;
         if (peDisplayed != peCurrent) {
-            if (peDisplayed && item->parent->children.size()) {
-                beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
+            if (peDisplayed && item->children.size()) {
+                beginRemoveRows(index(item), 0, item->children.size() - 1);
                 qDeleteAll(item->children);
                 item->children.clear();
                 endRemoveRows();
@@ -675,8 +675,9 @@ void PropertiesModel::propertyDefinitionChanged(PropertyDef *pd)
 void PropertiesModel::propertyEnumChoicesChanged(PropertyEnum *pe)
 {
     foreach (Item *item, mRootItem->itemsFor(pe)) {
-        if (item->parent->children.size()) {
-            beginRemoveRows(index(item), 0, item->parent->children.size() - 1);
+        Q_ASSERT(item->p);
+        if (item->children.size()) {
+            beginRemoveRows(index(item), 0, item->children.size() - 1);
             qDeleteAll(item->children);
             item->children.clear();
             endRemoveRows();
