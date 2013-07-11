@@ -42,6 +42,10 @@ private slots:
     void propertyDefinitionAboutToBeRemoved(int index);
     void propertyDefinitionChanged(PropertyDef *pd);
 
+    void propertyEnumAdded(int index);
+    void propertyEnumAboutToBeRemoved(int index);
+    void propertyEnumChanged(PropertyEnum *pe);
+
     void definitionSelected();
     void addDefinition();
     void updateDefinition();

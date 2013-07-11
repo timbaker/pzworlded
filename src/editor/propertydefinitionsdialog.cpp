@@ -59,6 +59,13 @@ PropertyDefinitionsDialog::PropertyDefinitionsDialog(WorldDocument *worldDoc, QW
     connect(mWorldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
             SLOT(propertyDefinitionChanged(PropertyDef*)));
 
+    connect(mWorldDoc, SIGNAL(propertyEnumAdded(int)),
+            SLOT(propertyEnumAdded(int)));
+    connect(mWorldDoc, SIGNAL(propertyEnumChanged(PropertyEnum*)),
+            SLOT(propertyEnumChanged(PropertyEnum*)));
+    connect(mWorldDoc, SIGNAL(propertyEnumAboutToBeRemoved(int)),
+            SLOT(propertyEnumAboutToBeRemoved(int)));
+
     setEnums();
     setList();
 
@@ -85,6 +92,16 @@ void PropertyDefinitionsDialog::propertyDefinitionAboutToBeRemoved(int index)
 
 void PropertyDefinitionsDialog::propertyDefinitionChanged(PropertyDef *pd)
 {
+#if 1
+    // Changing the name might change the sort order
+    PropertyDef *current = mDef;
+    setList();
+    if (current != 0) {
+        int row = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
+        QTreeWidgetItem *item = ui->definitionsList->topLevelItem(row);
+        ui->definitionsList->setCurrentItem(item);
+    }
+#else
     int row = mWorldDoc->world()->propertyDefinitions().sorted().indexOf(pd);
     QTreeWidgetItem *item = ui->definitionsList->topLevelItem(row);
     item->setData(0, Qt::DisplayRole, pd->mName);
@@ -92,6 +109,23 @@ void PropertyDefinitionsDialog::propertyDefinitionChanged(PropertyDef *pd)
 
     if (pd == mDef)
         definitionSelected();
+#endif
+}
+
+void PropertyDefinitionsDialog::propertyEnumAdded(int index)
+{
+    setEnums();
+}
+
+void PropertyDefinitionsDialog::propertyEnumAboutToBeRemoved(int index)
+{
+    ui->enumCombo->removeItem(index + 1);
+}
+
+void PropertyDefinitionsDialog::propertyEnumChanged(PropertyEnum *pe)
+{
+    int index = mWorldDoc->world()->propertyEnums().indexOf(pe) + 1;
+    ui->enumCombo->setItemText(index, pe->name());
 }
 
 void PropertyDefinitionsDialog::definitionSelected()
