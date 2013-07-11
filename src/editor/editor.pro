@@ -123,7 +123,8 @@ SOURCES += main.cpp\
     heightmapundoredo.cpp \
     gotodialog.cpp \
     spawntooldialog.cpp \
-    propertyenumdialog.cpp
+    propertyenumdialog.cpp \
+    writespawnpointsdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -205,7 +206,8 @@ HEADERS  += mainwindow.h \
     gotodialog.h \
     spawntooldialog.h \
     propertyenumdialog.h \
-    worldproperties.h
+    worldproperties.h \
+    writespawnpointsdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -225,7 +227,8 @@ FORMS    += mainwindow.ui \
     unknowncolorsdialog.ui \
     gotodialog.ui \
     spawntooldialog.ui \
-    propertyenumdialog.ui
+    propertyenumdialog.ui \
+    writespawnpointsdialog.ui
 
 OTHER_FILES +=
 

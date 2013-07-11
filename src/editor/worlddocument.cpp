@@ -222,6 +222,17 @@ bool WorldDocument::save(const QString &filePath, QString &error)
         return false;
     }
 
+    QString luaFileName = world()->getLuaSettings().spawnPointsFile;
+    if (!luaFileName.isEmpty()) {
+        LuaWriter writer;
+        if (!writer.writeSpawnPoints(world(), luaFileName)) {
+            QMessageBox::warning(MainWindow::instance(), tr("Error saving spawnpoints"),
+                                 tr("An error occurred saving the LUA spawnpoints file.\n%1\n\n%2")
+                                 .arg(writer.errorString())
+                                 .arg(QDir::toNativeSeparators(luaFileName)));
+        }
+    }
+
 #if 0
     {
         QFileInfo fi(filePath);

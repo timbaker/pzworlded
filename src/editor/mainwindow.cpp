@@ -65,6 +65,7 @@
 #include "worldscene.h"
 #include "worldview.h"
 #include "worldwriter.h"
+#include "writespawnpointsdialog.h"
 #include "zoomable.h"
 
 #include "layer.h"
@@ -1218,33 +1219,14 @@ void MainWindow::closeAllFiles()
         docman()->closeAllDocuments();
 }
 
-#include "luawriter.h"
 void MainWindow::LUAObjectDump()
 {
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
     if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
         worldDoc = cellDoc->worldDocument();
 
-    QString fileName = worldDoc->world()->getLuaSettings().spawnPointsFile;
-    if (fileName.isEmpty() && !worldDoc->fileName().isEmpty()) {
-        QFileInfo info(worldDoc->fileName());
-        fileName = info.absolutePath() + QLatin1String("/") + info.completeBaseName() + QLatin1String(".lua");
-    }
-    QString f = QFileDialog::getSaveFileName(this, tr("Choose Spawn Points File"),
-                                             fileName, tr("LUA files (*.lua)"));
-    if (f.isEmpty())
-        return;
-
-    LuaWriter writer;
-    if (!writer.writeSpawnPoints(mCurrentDocument->asWorldDocument()->world(), f)) {
-        QMessageBox::warning(this, tr("LUA Dump Failed"), writer.errorString());
-        return;
-    }
-
-    LuaSettings settings = worldDoc->world()->getLuaSettings();
-    settings.spawnPointsFile = QFileInfo(f).canonicalFilePath();
-    if (settings != worldDoc->world()->getLuaSettings())
-        worldDoc->changeLuaSettings(settings);
+    WriteSpawnPointsDialog d(worldDoc, this);
+    d.exec();
 }
 
 void MainWindow::updateWindowTitle()
