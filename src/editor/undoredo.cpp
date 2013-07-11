@@ -874,7 +874,7 @@ RemovePropertyEnumChoice::RemovePropertyEnumChoice(WorldDocument *worldDoc, Prop
     AddRemovePropertyEnumChoice(worldDoc, pe, index, QString())
 {
     QString choice = pe->values().at(index);
-    setText(QCoreApplication::translate("Undo Commands", "Remove Property Enum Choice (%1)").arg(pe->name()).arg(choice));
+    setText(QCoreApplication::translate("Undo Commands", "Remove Property Enum Choice (%1 [%2])").arg(pe->name()).arg(choice));
 }
 
 /////
