@@ -228,6 +228,7 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(BMPToTMXAll()));
     connect(ui->actionBMPToTMXSelected, SIGNAL(triggered()),
             SLOT(BMPToTMXSelected()));
+    connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(LUAObjectDump()));
     connect(ui->actionFromToAll, SIGNAL(triggered()),
             SLOT(FromToAll()));
     connect(ui->actionFromToSelected, SIGNAL(triggered()),
@@ -1217,6 +1218,35 @@ void MainWindow::closeAllFiles()
         docman()->closeAllDocuments();
 }
 
+#include "luawriter.h"
+void MainWindow::LUAObjectDump()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+
+    QString fileName = worldDoc->world()->getLuaSettings().spawnPointsFile;
+    if (fileName.isEmpty() && !worldDoc->fileName().isEmpty()) {
+        QFileInfo info(worldDoc->fileName());
+        fileName = info.absolutePath() + QLatin1String("/") + info.completeBaseName() + QLatin1String(".lua");
+    }
+    QString f = QFileDialog::getSaveFileName(this, tr("Choose Spawn Points File"),
+                                             fileName, tr("LUA files (*.lua)"));
+    if (f.isEmpty())
+        return;
+
+    LuaWriter writer;
+    if (!writer.writeSpawnPoints(mCurrentDocument->asWorldDocument()->world(), f)) {
+        QMessageBox::warning(this, tr("LUA Dump Failed"), writer.errorString());
+        return;
+    }
+
+    LuaSettings settings = worldDoc->world()->getLuaSettings();
+    settings.spawnPointsFile = QFileInfo(f).canonicalFilePath();
+    if (settings != worldDoc->world()->getLuaSettings())
+        worldDoc->changeLuaSettings(settings);
+}
+
 void MainWindow::updateWindowTitle()
 {
     QString fileName = mCurrentDocument ? mCurrentDocument->fileName() : QString();
@@ -1827,6 +1857,8 @@ void MainWindow::updateActions()
     ui->actionBMPToTMXAll->setEnabled(worldDoc);
     ui->actionBMPToTMXSelected->setEnabled(worldDoc &&
                                            worldDoc->selectedCellCount());
+
+    ui->actionLUAObjectDump->setEnabled(worldDoc);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

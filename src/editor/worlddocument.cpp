@@ -828,6 +828,11 @@ void WorldDocument::changeGenerateLotsSettings(const GenerateLotsSettings &setti
     undoStack()->push(new ChangeGenerateLotsSettings(this, settings));
 }
 
+void WorldDocument::changeLuaSettings(const LuaSettings &settings)
+{
+    undoStack()->push(new ChangeLuaSettings(this, settings));
+}
+
 void WorldDocument::moveBMP(WorldBMP *bmp, const QPoint &topLeft)
 {
     undoStack()->push(new MoveBMP(this, bmp, topLeft));
@@ -1409,6 +1414,13 @@ GenerateLotsSettings WorldDocumentUndoRedo::changeGenerateLotsSettings(const Gen
 {
     GenerateLotsSettings old = mWorld->getGenerateLotsSettings();
     mWorld->setGenerateLotsSettings(settings);
+    return old;
+}
+
+LuaSettings WorldDocumentUndoRedo::changeLuaSettings(const LuaSettings &settings)
+{
+    LuaSettings old = mWorld->getLuaSettings();
+    mWorld->setLuaSettings(settings);
     return old;
 }
 

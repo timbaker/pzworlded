@@ -74,6 +74,7 @@ public:
 
         writeBMPToTMX(w);
         writeGenerateLots(w);
+        writeLuaSettings(w);
 
         writeHeightMap(w);
 
@@ -356,6 +357,18 @@ public:
         writePoint(w, QLatin1String("origin"), settings.worldOrigin);
         w.writeEndElement();
         w.writeEndElement(); // </GenerateLots>
+    }
+
+    void writeLuaSettings(QXmlStreamWriter &w)
+    {
+        const LuaSettings &settings = mWorld->getLuaSettings();
+
+        w.writeStartElement(QLatin1String("LuaSettings"));
+        w.writeStartElement(QLatin1String("spawnPointsFile"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(settings.spawnPointsFile));
+        w.writeEndElement();
+        w.writeEndElement();
     }
 
     void writeBMP(QXmlStreamWriter &w, WorldBMP *bmp)

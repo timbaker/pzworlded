@@ -746,6 +746,25 @@ void ChangeGenerateLotsSettings::swap()
 
 /////
 
+ChangeLuaSettings::ChangeLuaSettings(WorldDocument *doc, const LuaSettings &settings) :
+    QUndoCommand(QCoreApplication::translate("Undo Commands", "Change Lua Settings")),
+    mDocument(doc),
+    mSettings(new LuaSettings(settings))
+{
+}
+
+ChangeLuaSettings::~ChangeLuaSettings()
+{
+    delete mSettings;
+}
+
+void ChangeLuaSettings::swap()
+{
+    *mSettings = mDocument->undoRedo().changeLuaSettings(*mSettings);
+}
+
+/////
+
 MoveBMP::MoveBMP(WorldDocument *doc, WorldBMP *bmp, const QPoint &topLeft) :
     QUndoCommand(QCoreApplication::translate("Undo Commands", "Move BMP Image")),
     mDocument(doc),

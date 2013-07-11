@@ -28,6 +28,7 @@
 
 class BMPToTMXSettings;
 class GenerateLotsSettings;
+class LuaSettings;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -978,6 +979,24 @@ private:
 
     WorldDocument *mDocument;
     GenerateLotsSettings *mSettings;
+};
+
+/////
+
+class ChangeLuaSettings : public QUndoCommand
+{
+public:
+    ChangeLuaSettings(WorldDocument *doc, const LuaSettings &settings);
+    ~ChangeLuaSettings();
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    LuaSettings *mSettings;
 };
 
 /////

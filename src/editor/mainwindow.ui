@@ -235,6 +235,7 @@
     <addaction name="separator"/>
     <addaction name="menuBMP_To_TMX"/>
     <addaction name="menuGenerate_Lots"/>
+    <addaction name="actionLUAObjectDump"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -763,6 +764,11 @@
   <action name="actionEnums">
    <property name="text">
     <string>Enums...</string>
+   </property>
+  </action>
+  <action name="actionLUAObjectDump">
+   <property name="text">
+    <string>Write Spawn Points...</string>
    </property>
   </action>
  </widget>

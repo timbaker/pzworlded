@@ -100,6 +100,20 @@ public:
     { return !operator==(other); }
 };
 
+class LuaSettings
+{
+public:
+    QString spawnPointsFile;
+
+    bool operator == (const LuaSettings &other)
+    {
+        return spawnPointsFile == other.spawnPointsFile;
+    }
+
+    bool operator != (const LuaSettings &other)
+    { return !operator==(other); }
+};
+
 /**
   * This class represents a single .bmp file used by BMP -> TMX conversion.
   */
@@ -238,6 +252,12 @@ public:
     const GenerateLotsSettings &getGenerateLotsSettings() const
     { return mGenerateLotsSettings; }
 
+    void setLuaSettings(const LuaSettings &settings)
+    { mLuaSettings = settings; }
+
+    const LuaSettings &getLuaSettings() const
+    { return mLuaSettings; }
+
     WorldObjectGroup *nullObjectGroup() const { return mNullObjectGroup; }
     ObjectType *nullObjectType() const { return mNullObjectType; }
 
@@ -261,6 +281,7 @@ private:
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     GenerateLotsSettings mGenerateLotsSettings;
+    LuaSettings mLuaSettings;
     QString mHeightMapFileName;
 };
 

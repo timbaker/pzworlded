@@ -29,6 +29,7 @@
 
 class BMPToTMXSettings;
 class GenerateLotsSettings;
+class LuaSettings;
 class HeightMapFile;
 class HeightMapRegion;
 class ObjectType;
@@ -123,6 +124,7 @@ public:
 
     BMPToTMXSettings changeBMPToTMXSettings(const BMPToTMXSettings &settings);
     GenerateLotsSettings changeGenerateLotsSettings(const GenerateLotsSettings &settings);
+    LuaSettings changeLuaSettings(const LuaSettings &settings);
 
     QPoint moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);
@@ -377,6 +379,7 @@ public:
 
     void changeBMPToTMXSettings(const BMPToTMXSettings &settings);
     void changeGenerateLotsSettings(const GenerateLotsSettings &settings);
+    void changeLuaSettings(const LuaSettings &settings);
 
     void moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);

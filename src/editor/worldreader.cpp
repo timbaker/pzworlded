@@ -112,6 +112,8 @@ private:
                 readBMPToTMX();
             else if (xml.name() == QLatin1String("GenerateLots"))
                 readGenerateLots();
+            else if (xml.name() == QLatin1String("LuaSettings"))
+                readLuaSettings();
             else if (xml.name() == QLatin1String("bmp"))
                 readBMP();
             else if (xml.name() == QLatin1String("heightmap"))
@@ -510,6 +512,24 @@ private:
         }
 
         mWorld->setGenerateLotsSettings(settings);
+    }
+
+    void readLuaSettings()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("LuaSettings"));
+
+        LuaSettings settings;
+
+        while (xml.readNextStartElement()) {
+            if (xml.name() == QLatin1String("spawnPointsFile")) {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.spawnPointsFile = resolveReference(path, mPath);
+                xml.skipCurrentElement();
+            } else
+                readUnknownElement();
+        }
+
+        mWorld->setLuaSettings(settings);
     }
 
     void readBMP()

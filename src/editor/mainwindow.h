@@ -95,6 +95,8 @@ public slots:
     void closeFile();
     void closeAllFiles();
 
+    void LUAObjectDump();
+
     void updateWindowTitle();
 
     void generateLotsAll();
