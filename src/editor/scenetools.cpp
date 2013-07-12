@@ -849,6 +849,104 @@ SubMapItem *SubMapTool::topmostItemAt(const QPointF &scenePos)
 
 /////
 
+class SpawnPointCursorItem : public QGraphicsItem
+{
+public:
+    SpawnPointCursorItem(CellScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    void updateBounds();
+
+    CellScene *mScene;
+    MapRenderer *mRenderer;
+    QRectF mBoundingRect;
+    QPointF mPos;
+    int mLevel;
+};
+
+SpawnPointCursorItem::SpawnPointCursorItem(CellScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mScene(scene),
+    mRenderer(scene->renderer())
+{
+}
+
+QRectF SpawnPointCursorItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+void SpawnPointCursorItem::paint(QPainter *painter,
+                           const QStyleOptionGraphicsItem *,
+                           QWidget *)
+{
+    QColor color = mScene->document()->currentObjectGroup()->color();
+    color = color.lighter();
+    mRenderer->drawFancyRectangle(painter, QRectF(mPos, QSizeF(1, 1)), color, mLevel);
+
+    painter->setPen(QPen(Qt::black));
+    color = mScene->document()->currentObjectGroup()->color();
+    color.setAlpha(200);
+
+    int level = mLevel;
+
+    qreal inset = 0.15;
+    QPointF pos = mPos;
+
+    // Bottom-right
+    QPolygonF poly;
+    poly << mRenderer->tileToPixelCoords(pos + QPointF(0.5, 0.5), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 0), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << poly.first();
+    painter->setBrush(color.darker(125));
+    painter->drawPolygon(poly);
+    poly.clear();
+
+    // Bottom-left
+    poly << mRenderer->tileToPixelCoords(pos + QPointF(0.5, 0.5), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(0, 1-inset), level);
+    poly << poly.first();
+    painter->setBrush(color.darker(115));
+    painter->drawPolygon(poly);
+    poly.clear();
+
+    // Top-right
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 0), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(3, 3) + QPointF(0.5, 0.5), level);
+    poly << poly.first();
+    painter->setBrush(color.lighter(100));
+    painter->drawPolygon(poly);
+    poly.clear();
+
+    // Top-left
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(1-inset, 1-inset), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(3, 3) + QPointF(0.5, 0.5), level);
+    poly << mRenderer->tileToPixelCoords(pos - QPointF(1.5, 1.5) + QPointF(0, 1-inset), level);
+    poly << poly.first();
+    painter->setBrush(color.lighter(115));
+    painter->drawPolygon(poly);
+    poly.clear();
+}
+
+void SpawnPointCursorItem::updateBounds()
+{
+    QPointF pos = mPos;
+    QRectF bounds;
+    bounds |= mRenderer->boundingRect(QRect(pos.x() - 3, pos.y() - 3, 1, 1), mLevel);
+    bounds |= mRenderer->boundingRect(QRect(pos.x(), pos.y(), 1, 1), mLevel);
+    bounds.adjust(-2, -3, 2, 2);
+    if (bounds != mBoundingRect) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
+}
+
+/////
+
 SINGLETON_IMPL(SpawnPointTool)
 
 SpawnPointTool::SpawnPointTool()
@@ -863,6 +961,11 @@ SpawnPointTool::SpawnPointTool()
 void SpawnPointTool::activate()
 {
     BaseCellSceneTool::activate();
+
+    mCursorItem = new SpawnPointCursorItem(mScene);
+    mCursorItem->setZValue(mScene->ZVALUE_GRID + 1);
+    mScene->addItem(mCursorItem);
+
     SpawnToolDialog::instance().setDocument(mScene->document());
     SpawnToolDialog::instance().show();
 }
@@ -871,6 +974,9 @@ void SpawnPointTool::deactivate()
 {
     SpawnToolDialog::instance().hide();
     SpawnToolDialog::instance().setDocument(0);
+
+    delete mCursorItem;
+
     BaseCellSceneTool::activate();
 }
 
@@ -971,6 +1077,18 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     mScene->document()->setSelectedObjects(WorldCellObjectList() << obj);
 
     mScene->document()->undoStack()->endMacro();
+}
+
+void SpawnPointTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    // Doesn't work because ObjectItem accepts hover events
+//    mCursorItem->setVisible(topmostItemAt(event->scenePos()) == 0);
+
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(),
+                                                              mScene->document()->currentLevel());
+    mCursorItem->mPos = tilePos;
+    mCursorItem->mLevel = mScene->document()->currentLevel();
+    mCursorItem->updateBounds();
 }
 
 void SpawnPointTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)

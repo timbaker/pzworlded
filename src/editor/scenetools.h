@@ -334,6 +334,8 @@ private:
 
 /////
 
+class SpawnPointCursorItem;
+
 class SpawnPointTool : public BaseCellSceneTool, public Singleton<SpawnPointTool>
 {
     Q_OBJECT
@@ -344,7 +346,7 @@ public:
     void deactivate();
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
-//    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 //    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 
      bool affectsLots() const { return false; }
@@ -363,6 +365,7 @@ private:
 private:
     bool mContextMenuVisible;
     QTime mContextMenuShown;
+    SpawnPointCursorItem *mCursorItem;
 };
 
 /////
