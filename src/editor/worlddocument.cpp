@@ -632,13 +632,15 @@ void WorldDocument::changePropertyDefinition(PropertyDef *pd, const QString &nam
     undoStack()->beginMacro(tr("Edit Property Definition (%1)").arg(pd->mName));
 
     if (pe != pd->mEnum) {
-        // Update the values of every affected property.
+        // Remove unknown values from every affected property.
+        QStringList choices;
+        if (pe) choices = pe->values();
         foreach (PropertyTemplate *pt, mWorld->propertyTemplates())
-            syncPropertyEnumChoices(pt, pe, pe->values());
+            syncPropertyEnumChoices(pt, pd, choices);
         foreach (WorldCell *cell, mWorld->cells()) {
-            syncPropertyEnumChoices(cell, pe, pe->values());
+            syncPropertyEnumChoices(cell, pd, choices);
             foreach (WorldCellObject *obj, cell->objects())
-                syncPropertyEnumChoices(obj, pe, pe->values());
+                syncPropertyEnumChoices(obj, pd, choices);
         }
     }
 
@@ -1013,10 +1015,10 @@ void WorldDocument::renamePropertyEnumChoice(PropertyHolder *ph, PropertyEnum *p
     }
 }
 
-void WorldDocument::syncPropertyEnumChoices(PropertyHolder *ph, PropertyEnum *pe, const QStringList &choices)
+void WorldDocument::syncPropertyEnumChoices(PropertyHolder *ph, PropertyDef *pd, const QStringList &choices)
 {
     foreach (Property *p, ph->properties()) {
-        if (p->mDefinition->mEnum == pe) {
+        if (p->mDefinition == pd) {
             QStringList values = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
             for (int i = 0; i < values.size(); i++) {
                 if (!choices.contains(values[i]))

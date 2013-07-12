@@ -409,7 +409,7 @@ private:
     void removePropertyEnumChoice(PropertyHolder *ph, PropertyEnum *pe, const QString &name);
     void renamePropertyEnumChoice(PropertyHolder *ph, PropertyEnum *pe,
                                   const QString &oldName, const QString &newName);
-    void syncPropertyEnumChoices(PropertyHolder *ph, PropertyEnum *pe, const QStringList &choices);
+    void syncPropertyEnumChoices(PropertyHolder *ph, PropertyDef *pd, const QStringList &choices);
 
     void removeRoadFromSelection(Road *road);
     void removeBMPFromSelection(WorldBMP *bmp);
