@@ -31,18 +31,25 @@ class GoToDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit GoToDialog(World *world, QWidget *parent = 0);
+    explicit GoToDialog(World *world, const QPoint &initial, QWidget *parent = 0);
     ~GoToDialog();
 
     int worldX() const;
     int worldY() const;
     
 private slots:
-    void xChanged(int val);
-    void yChanged(int val);
+    void worldXChanged(int val);
+    void worldYChanged(int val);
+
+    void cellXChanged(int val);
+    void cellYChanged(int val);
+
+    void posXChanged(int val);
+    void posYChanged(int val);
 
 private:
     Ui::GoToDialog *ui;
+    int mSynching;
 };
 
 #endif // GOTODIALOG_H

@@ -20,23 +20,40 @@
 
 #include "world.h"
 
-GoToDialog::GoToDialog(World *world, QWidget *parent) :
+GoToDialog::GoToDialog(World *world, const QPoint &initial, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::GoToDialog)
+    ui(new Ui::GoToDialog),
+    mSynching(0)
 {
     ui->setupUi(this);
 
-    ui->spinX->setMaximum(world->width() * 300);
-    ui->spinY->setMaximum(world->height() * 300);
+    ui->worldX->setMaximum(world->width() * 300);
+    ui->worldY->setMaximum(world->height() * 300);
 
-    ui->rangeX->setText(tr("Min: %1    Max %2").arg(ui->spinX->minimum()).arg(ui->spinX->maximum()));
-    ui->rangeY->setText(tr("Min: %1    Max %2").arg(ui->spinY->minimum()).arg(ui->spinY->maximum()));
+    ui->rangeX->setText(tr("Min: %1    Max %2").arg(ui->worldX->minimum()).arg(ui->worldX->maximum()));
+    ui->rangeY->setText(tr("Min: %1    Max %2").arg(ui->worldY->minimum()).arg(ui->worldY->maximum()));
 
-    xChanged(ui->spinX->value());
-    yChanged(ui->spinY->value());
+    ui->cellX->setRange(0, world->width());
+    ui->cellY->setRange(0, world->height());
 
-    connect(ui->spinX, SIGNAL(valueChanged(int)), SLOT(xChanged(int)));
-    connect(ui->spinY, SIGNAL(valueChanged(int)), SLOT(yChanged(int)));
+    ui->posX->setRange(0, 299);
+    ui->posY->setRange(0, 299);
+
+    mSynching++;
+    ui->worldX->setValue(initial.x());
+    ui->worldY->setValue(initial.y());
+    ui->cellX->setValue(initial.x() / 300);
+    ui->cellY->setValue(initial.y() / 300);
+    ui->posX->setValue(initial.x() % 300);
+    ui->posY->setValue(initial.y() % 300);
+    mSynching--;
+
+    connect(ui->worldX, SIGNAL(valueChanged(int)), SLOT(worldXChanged(int)));
+    connect(ui->worldY, SIGNAL(valueChanged(int)), SLOT(worldYChanged(int)));
+    connect(ui->cellX, SIGNAL(valueChanged(int)), SLOT(cellXChanged(int)));
+    connect(ui->cellY, SIGNAL(valueChanged(int)), SLOT(cellYChanged(int)));
+    connect(ui->posX, SIGNAL(valueChanged(int)), SLOT(posXChanged(int)));
+    connect(ui->posY, SIGNAL(valueChanged(int)), SLOT(posYChanged(int)));
 }
 
 GoToDialog::~GoToDialog()
@@ -46,20 +63,60 @@ GoToDialog::~GoToDialog()
 
 int GoToDialog::worldX() const
 {
-    return ui->spinX->value();
+    return ui->worldX->value();
 }
 
 int GoToDialog::worldY() const
 {
-    return ui->spinY->value();
+    return ui->worldY->value();
 }
 
-void GoToDialog::xChanged(int val)
+void GoToDialog::worldXChanged(int val)
 {
-    ui->cellX->setText(tr("Cell X: %1").arg(val / 300));
+    if (mSynching) return;
+    mSynching++;
+    ui->cellX->setValue(val / 300);
+    ui->posX->setValue(val % 300);
+    mSynching--;
 }
 
-void GoToDialog::yChanged(int val)
+void GoToDialog::worldYChanged(int val)
 {
-    ui->cellY->setText(tr("Cell Y: %1").arg(val / 300));
+    if (mSynching) return;
+    mSynching++;
+    ui->cellY->setValue(val / 300);
+    ui->posY->setValue(val % 300);
+    mSynching--;
+}
+
+void GoToDialog::cellXChanged(int val)
+{
+    if (mSynching) return;
+    mSynching++;
+    ui->worldX->setValue(val * 300 + ui->posX->value());
+    mSynching--;
+}
+
+void GoToDialog::cellYChanged(int val)
+{
+    if (mSynching) return;
+    mSynching++;
+    ui->worldY->setValue(val * 300 + ui->posY->value());
+    mSynching--;
+}
+
+void GoToDialog::posXChanged(int val)
+{
+    if (mSynching) return;
+    mSynching++;
+    ui->worldX->setValue(ui->cellX->value() * 300 + val);
+    mSynching--;
+}
+
+void GoToDialog::posYChanged(int val)
+{
+    if (mSynching) return;
+    mSynching++;
+    ui->worldY->setValue(ui->cellY->value() * 300 + val);
+    mSynching--;
 }

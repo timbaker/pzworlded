@@ -7,13 +7,56 @@
     <x>0</x>
     <y>0</y>
     <width>327</width>
-    <height>149</height>
+    <height>166</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Go To Coordinates</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="1">
+    <widget class="QLabel" name="rangeY">
+     <property name="text">
+      <string>Min: X Max: X</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,1">
+     <item>
+      <widget class="QLabel" name="labelX_4">
+       <property name="text">
+        <string>Pos Y:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="posY">
+       <property name="maximum">
+        <number>300000</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
+     <item>
+      <widget class="QLabel" name="labelX_2">
+       <property name="text">
+        <string>Cell X:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="cellX">
+       <property name="maximum">
+        <number>300000</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item row="5" column="0">
     <spacer name="verticalSpacer">
      <property name="orientation">
@@ -37,14 +80,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="0" colspan="2">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>Enter the world coordinates to go to.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
+   <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1">
      <item>
       <widget class="QLabel" name="labelX">
@@ -54,7 +90,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="spinX">
+      <widget class="QSpinBox" name="worldX">
        <property name="maximum">
         <number>300000</number>
        </property>
@@ -62,7 +98,7 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="1">
+   <item row="0" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
      <item>
       <widget class="QLabel" name="labelY">
@@ -72,7 +108,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="spinY">
+      <widget class="QSpinBox" name="worldY">
        <property name="maximum">
         <number>300000</number>
        </property>
@@ -80,36 +116,67 @@
      </item>
     </layout>
    </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="cellX">
-     <property name="text">
-      <string>Cell: X</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
+   <item row="1" column="0">
     <widget class="QLabel" name="rangeX">
      <property name="text">
       <string>Min: X Max: X</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="rangeY">
-     <property name="text">
-      <string>Min: X Max: X</string>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="1">
-    <widget class="QLabel" name="cellY">
-     <property name="text">
-      <string>Cell: Y</string>
+    <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,1">
+     <item>
+      <widget class="QLabel" name="labelY_2">
+       <property name="text">
+        <string>Cell Y:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="cellY">
+       <property name="maximum">
+        <number>300000</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,1">
+     <item>
+      <widget class="QLabel" name="labelX_3">
+       <property name="text">
+        <string>Pos X:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="posX">
+       <property name="maximum">
+        <number>300000</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>worldX</tabstop>
+  <tabstop>worldY</tabstop>
+  <tabstop>cellX</tabstop>
+  <tabstop>cellY</tabstop>
+  <tabstop>posX</tabstop>
+  <tabstop>posY</tabstop>
+  <tabstop>buttonBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

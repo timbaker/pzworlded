@@ -418,10 +418,16 @@ void MainWindow::goToXY()
 {
     Document *doc = docman()->currentDocument();
     WorldDocument *worldDoc = doc->asWorldDocument();
-    if (!worldDoc)
+    QPoint initial;
+    if (worldDoc) {
+        if (worldDoc->selectedCellCount() == 1)
+            initial = worldDoc->selectedCells().first()->pos() * 300;
+    } else {
         worldDoc = doc->asCellDocument()->worldDocument();
+        initial = doc->asCellDocument()->cell()->pos() * 300;
+    }
 
-    GoToDialog d(worldDoc->world(), this);
+    GoToDialog d(worldDoc->world(), initial, this);
     if (d.exec() != QDialog::Accepted)
         return;
 
