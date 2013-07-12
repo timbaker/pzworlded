@@ -285,6 +285,12 @@ public:
 
     bool waitingForMapsToLoad() const;
 
+    void setSuppressRegion(const QRegion &rgn, int level);
+    QRegion suppressRegion() const
+    { return mSuppressRgn; }
+    int suppressLevel() const
+    { return mSuppressLevel; }
+
 #if 1 // ROAD_CRUD
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
     Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
@@ -351,6 +357,9 @@ private:
         int level;
     };
     QList<SubMapLoading> mSubMapsLoading;
+
+    QRegion mSuppressRgn;
+    int mSuppressLevel;
 
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer1;

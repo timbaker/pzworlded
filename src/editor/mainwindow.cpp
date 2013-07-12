@@ -141,6 +141,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowObjectNames->setChecked(prefs->showObjectNames());
     ui->actionShowBMP->setChecked(prefs->showBMPs());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
+    ui->actionHighlightRoomUnderPointer->setChecked(prefs->highlightRoomUnderPointer());
 
     // Make sure Ctrl+= also works for zooming in
     QList<QKeySequence> keys = QKeySequence::keyBindings(QKeySequence::ZoomIn);
@@ -269,6 +270,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowObjectNames, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjectNames(bool)));
     connect(ui->actionShowBMP, SIGNAL(toggled(bool)), prefs, SLOT(setShowBMPs(bool)));
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
+    connect(ui->actionHighlightRoomUnderPointer, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightRoomUnderPointer(bool)));
     connect(ui->actionLevelAbove, SIGNAL(triggered()), SLOT(selectLevelAbove()));
     connect(ui->actionLevelBelow, SIGNAL(triggered()), SLOT(selectLevelBelow()));
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));

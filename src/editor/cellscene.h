@@ -32,6 +32,7 @@ class BaseCellSceneTool;
 class CellDocument;
 class CellGridItem;
 class CompositeLayerGroup;
+class MapBuildings;
 class MapComposite;
 class MapImage;
 class MapInfo;
@@ -427,6 +428,9 @@ public:
     void setLevelOpacity(int level, qreal opacity);
     qreal levelOpacity(int level);
 
+    void setHighlightRoomPosition(const QPoint &tilePos);
+    QRegion getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn);
+
     void keyPressEvent(QKeyEvent *event);
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
@@ -508,6 +512,7 @@ public slots:
     void gridColorChanged(const QColor &gridColor);
     void showObjectNamesChanged(bool show);
     void setHighlightCurrentLevel(bool highlight);
+    void highlightRoomUnderPointerChanged(bool highlight);
     void handlePendingUpdates();
 
     void roadAdded(int index);
@@ -545,7 +550,6 @@ private:
     };
     QList<LoadingSubMap> mSubMapsLoading;
 
-
     QList<AdjacentMap*> mAdjacentMaps;
     void initAdjacentMaps();
 
@@ -568,6 +572,10 @@ private:
     bool mHighlightCurrentLevel;
     bool mWasHighlightCurrentLevel;
     QGraphicsPolygonItem *mMapBordersItem;
+
+    QPoint mHighlightRoomPosition;
+    MapBuildings *mMapBuildings;
+    bool mMapBuildingsInvalid;
 
     void doLater(PendingFlags flags);
     PendingFlags mPendingFlags;

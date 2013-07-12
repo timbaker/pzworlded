@@ -89,6 +89,8 @@ Preferences::Preferences()
     mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
+    mHighlightRoomUnderPointer = mSettings->value(QLatin1String("HighlightRoomUnderPointer"),
+                                                  false).toBool();
     mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
     mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
     mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
@@ -299,6 +301,16 @@ void Preferences::setHighlightCurrentLevel(bool highlight)
     mHighlightCurrentLevel = highlight;
     mSettings->setValue(QLatin1String("Interface/HighlightCurrentLevel"), mHighlightCurrentLevel);
     emit highlightCurrentLevelChanged(mHighlightCurrentLevel);
+}
+
+void Preferences::setHighlightRoomUnderPointer(bool highlight)
+{
+    if (highlight == mHighlightRoomUnderPointer)
+        return;
+    mHighlightRoomUnderPointer = highlight;
+    mSettings->setValue(QLatin1String("Interface/HighlightRoomUnderPointer"),
+                        mHighlightRoomUnderPointer);
+    emit highlightRoomUnderPointerChanged(mHighlightRoomUnderPointer);
 }
 
 void Preferences::setHeightMapDisplayStyle(int style)

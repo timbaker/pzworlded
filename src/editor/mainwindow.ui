@@ -269,6 +269,7 @@
     <addaction name="actionShowBMP"/>
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
+    <addaction name="actionHighlightRoomUnderPointer"/>
     <addaction name="actionLevelAbove"/>
     <addaction name="actionLevelBelow"/>
     <addaction name="separator"/>
@@ -769,6 +770,17 @@
   <action name="actionLUAObjectDump">
    <property name="text">
     <string>Write Spawn Points...</string>
+   </property>
+  </action>
+  <action name="actionHighlightRoomUnderPointer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Highlight Room Under Pointer</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>

@@ -42,7 +42,8 @@ public:
     bool showMiniMap() const;
     int miniMapWidth() const;
     bool highlightCurrentLevel() const;
-
+    bool highlightRoomUnderPointer() const
+    { return mHighlightRoomUnderPointer; }
 
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
@@ -91,6 +92,7 @@ signals:
     void tilesDirectoryChanged();
     void showAdjacentMapsChanged(bool show);
     void heightMapDisplayStyleChanged(int style);
+    void highlightRoomUnderPointerChanged(bool highlight);
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -103,6 +105,7 @@ public slots:
     void setShowObjectNames(bool show);
     void setShowBMPs(bool show);
     void setHighlightCurrentLevel(bool highlight);
+    void setHighlightRoomUnderPointer(bool highlight);
     void setHeightMapDisplayStyle(int style);
 
 private:
@@ -129,6 +132,7 @@ private:
     QString mOpenFileDirectory;
     bool mShowAdjacentMaps;
     int mHeightMapDisplayStyle;
+    bool mHighlightRoomUnderPointer;
 
     static Preferences *mInstance;
 };

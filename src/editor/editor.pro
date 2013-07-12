@@ -124,7 +124,8 @@ SOURCES += main.cpp\
     gotodialog.cpp \
     spawntooldialog.cpp \
     propertyenumdialog.cpp \
-    writespawnpointsdialog.cpp
+    writespawnpointsdialog.cpp \
+    mapbuildings.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -207,7 +208,8 @@ HEADERS  += mainwindow.h \
     spawntooldialog.h \
     propertyenumdialog.h \
     worldproperties.h \
-    writespawnpointsdialog.h
+    writespawnpointsdialog.h \
+    mapbuildings.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

@@ -20,6 +20,7 @@
 #include "bmpblender.h"
 #include "celldocument.h"
 #include "mainwindow.h"
+#include "mapbuildings.h"
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
@@ -1126,6 +1127,8 @@ CellScene::CellScene(QObject *parent)
     , mDarkRectangle(new QGraphicsRectItem)
     , mGridItem(new CellGridItem(this))
     , mMapBordersItem(new QGraphicsPolygonItem)
+    , mMapBuildings(new MapBuildings)
+    , mMapBuildingsInvalid(true)
     , mPendingFlags(None)
     , mPendingActive(false)
     , mPendingDefer(true)
@@ -1161,6 +1164,7 @@ CellScene::~CellScene()
     // mMap, mMapInfo are shared, don't destroy
     delete mMapComposite;
     delete mRenderer;
+    delete mMapBuildings;
 }
 
 void CellScene::setTool(AbstractTool *tool)
@@ -1281,6 +1285,9 @@ void CellScene::setDocument(CellDocument *doc)
 
     connect(Tiled::Internal::TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
             SLOT(tilesetChanged(Tileset*)));
+
+    connect(Preferences::instance(), SIGNAL(highlightRoomUnderPointerChanged(bool)),
+            SLOT(highlightRoomUnderPointerChanged(bool)));
 }
 
 WorldDocument *CellScene::worldDocument() const
@@ -1430,6 +1437,40 @@ qreal CellScene::levelOpacity(int level)
     return 1.0;
 }
 
+void CellScene::highlightRoomUnderPointerChanged(bool highlight)
+{
+    Q_UNUSED(highlight)
+    setHighlightRoomPosition(mHighlightRoomPosition);
+}
+
+void CellScene::setHighlightRoomPosition(const QPoint &tilePos)
+{
+    QRegion buildingRgn, roomRgn;
+    if (Preferences::instance()->highlightRoomUnderPointer())
+        buildingRgn = getBuildingRegion(tilePos, roomRgn);
+    if (buildingRgn - roomRgn != mMapComposite->suppressRegion() ||
+            document()->currentLevel() != mMapComposite->suppressLevel()) {
+        mMapComposite->setSuppressRegion(buildingRgn - roomRgn, document()->currentLevel());
+        update();
+    }
+    mHighlightRoomPosition = tilePos;
+}
+
+QRegion CellScene::getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn)
+{
+    if (!mMapComposite)
+        return QRegion();
+    if (mMapBuildingsInvalid) {
+        mMapBuildings->calculate(mMapComposite);
+        mMapBuildingsInvalid = false;
+    }
+    if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel())) {
+        roomRgn = room->region();
+        return room->building->region();
+    }
+    return QRegion();
+}
+
 void CellScene::keyPressEvent(QKeyEvent *event)
 {
     mActiveTool->keyPressEvent(event);
@@ -1558,6 +1599,8 @@ void CellScene::loadMap()
 
     mMapComposite->generateRoadLayers(QPoint(cell()->x()*300, cell()->y()*300),
                                       world()->roads());
+
+    mMapBuildingsInvalid = true;
 }
 
 void CellScene::cellAdded(WorldCell *_cell)
@@ -1606,11 +1649,17 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
             subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
+#if 1
+            mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
+            if (!subMapInfo->isLoading())
+                mapLoaded(subMapInfo);
+#else
             if (subMapInfo->isLoading())
                 mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
             else {
                 MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
                 SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
+                mMapBuildingsInvalid = true;
 
                 // Don't just call mSubMapItems.insert(), due to asynchronous loading.
                 QMap<int,SubMapItem*> zzz;
@@ -1629,6 +1678,7 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
 
                 addItem(item);
             }
+#endif
         }
     }
 }
@@ -1645,7 +1695,7 @@ void CellScene::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
             doLater(AllGroups | Bounds | Synch | ZOrder | Paint);
             removeItem(item);
             delete item;
-
+            mMapBuildingsInvalid = true;
         }
     }
 }
@@ -1658,6 +1708,7 @@ void CellScene::cellLotMoved(WorldCellLot *lot)
         mMapComposite->moveSubMap(item->subMap(), lot->pos());
         doLater(AllGroups | Bounds | Synch/* | Paint*/);
         item->subMapMoved();
+        mMapBuildingsInvalid = true;
     }
 }
 
@@ -1683,6 +1734,8 @@ void CellScene::lotLevelChanged(WorldCellLot *lot)
         }
 
         doLater(AllGroups | Bounds | Synch | ZOrder);
+
+        mMapBuildingsInvalid = true;
     }
 }
 
@@ -2102,6 +2155,7 @@ void CellScene::roadsChanged()
 // Called when our MapComposite adds a sub-map asynchronously.
 void CellScene::mapCompositeNeedsSynch()
 {
+    mMapBuildingsInvalid = true;
     doLater(AllGroups | Bounds | Synch | ZOrder);
 }
 
@@ -2222,6 +2276,7 @@ bool CellScene::mapChanged(MapInfo *mapInfo)
             foreach (SubMapItem *item, subMapItemsUsingMapInfo(mapInfo))
                 item->subMapMoved(); // update bounds, check valid position
             doLater(AllGroups | Bounds | Synch | Paint); // only a Lot map changed
+            mMapBuildingsInvalid = true;
         }
     }
 
@@ -2251,6 +2306,11 @@ void CellScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         if (event->buttons() & (Qt::LeftButton | Qt::MiddleButton | Qt::RightButton))
             return;
     }
+
+    QPoint tilePos = mRenderer->pixelToTileCoordsInt(event->scenePos(),
+                                                     document()->currentLevel());
+    if (tilePos != mHighlightRoomPosition)
+        setHighlightRoomPosition(tilePos);
 
     if (mActiveTool)
         mActiveTool->mouseMoveEvent(event);
@@ -2408,6 +2468,8 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
                                                          sm.lot->level());
 
             SubMapItem *item = new SubMapItem(subMap, sm.lot, mRenderer);
+
+            // Don't just call mSubMapItems.insert(), due to asynchronous loading.
             QMap<int,SubMapItem*> zzz;
             foreach (SubMapItem *item, mSubMapItems)
                 zzz[cell()->lots().indexOf(item->lot())] = item;
@@ -2425,6 +2487,8 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
             doLater(AllGroups | Bounds | Synch | ZOrder);
 
             addItem(item);
+
+            mMapBuildingsInvalid = true;
 
             --i;
         }
