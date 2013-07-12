@@ -236,7 +236,7 @@ void ObjectsViewDelegate::setEditorData(QWidget *editor, const QModelIndex &inde
             QComboBox *comboBox = static_cast<QComboBox*>(editor);
             comboBox->clear();
             QStringList types = obj->cell()->world()->objectTypes().names().mid(1);
-            comboBox->addItem(tr("<unspecified>"));
+            comboBox->addItem(tr("<no type>"));
             comboBox->addItems(types);
             int comboIndex = obj->type()->name().isEmpty()
                     ? 0 : types.indexOf(obj->type()->name()) + 1;
@@ -589,9 +589,16 @@ QVariant ObjectsModel::data(const QModelIndex &index, int role) const
             break;
         }
         case Qt::DisplayRole: {
-            QString value = (index.column() == typeColumn()) ? obj->type()->name() : obj->name();
-            if (value.isEmpty())
-                value = tr("<unspecified>");
+            QString value;
+            if (index.column() == typeColumn()) {
+                value = obj->type()->name();
+                if (value.isEmpty())
+                    value = tr("<no type>");
+            } else {
+                value = obj->name();
+                if (value.isEmpty())
+                    value = tr("<no name>");
+            }
             return value;
         }
         case Qt::EditRole:
