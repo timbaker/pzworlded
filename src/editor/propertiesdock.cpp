@@ -300,6 +300,10 @@ bool PropertiesModel::setData(const QModelIndex &index, const QVariant &value,
                     choices[i].clear();
             }
             choices.removeAll(QLatin1String(""));
+            if (pe->isMulti() && item->peChoice == QLatin1String("all") && c == Qt::Checked)
+                choices = QStringList(QLatin1String("all"));
+            else if (pe->isMulti() && item->peChoice != QLatin1String("all") && c == Qt::Checked)
+                choices.removeAll(QLatin1String("all"));
             QString value = choices.join(QLatin1String(","));
             mWorldDoc->setPropertyValue(mPropertyHolder, item->parent->p, value);
             return true;

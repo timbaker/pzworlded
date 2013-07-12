@@ -178,6 +178,21 @@ void SpawnToolDialog::itemChanged(QListWidgetItem *item)
             item->setText(name);
         return;
     }
+    if (item->checkState() == Qt::Checked) {
+        if (item->text() == QLatin1String("all")) {
+            for (int i = 0; i < ui->list->count(); i++) {
+                QListWidgetItem *item2 = ui->list->item(i);
+                if (item2 != item)
+                    item2->setCheckState(Qt::Unchecked);
+            }
+        } else {
+            for (int i = 0; i < ui->list->count(); i++) {
+                QListWidgetItem *item2 = ui->list->item(i);
+                if (item2->text() == QLatin1String("all"))
+                    item2->setCheckState(Qt::Unchecked);
+            }
+        }
+    }
     if (selectedSpawnPoints().size())
         toObjects();
 }
@@ -242,6 +257,8 @@ void SpawnToolDialog::toObjects()
         if (ui->list->item(row)->checkState() == Qt::Checked)
             professions += ui->list->item(row)->text();
     }
+    if (professions.contains(QLatin1String("all")))
+        professions = QStringList(QLatin1String("all"));
     QString value = professions.join(QLatin1String(","));
 
     foreach (WorldCellObject *obj, selectedSpawnPoints()) {
