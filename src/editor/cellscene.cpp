@@ -2245,8 +2245,12 @@ void CellScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 void CellScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsScene::mouseMoveEvent(event);
-    if (event->isAccepted())
-        return;
+    if (event->isAccepted()) {
+        // If an item receives Hover events, this event will get swallowed.
+        // That will stop the active tool getting the mouse move event.
+        if (event->buttons() & (Qt::LeftButton | Qt::MiddleButton | Qt::RightButton))
+            return;
+    }
 
     if (mActiveTool)
         mActiveTool->mouseMoveEvent(event);

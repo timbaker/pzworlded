@@ -1081,8 +1081,7 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void SpawnPointTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-    // Doesn't work because ObjectItem accepts hover events
-//    mCursorItem->setVisible(topmostItemAt(event->scenePos()) == 0);
+    mCursorItem->setVisible(topmostItemAt(event->scenePos()) == 0);
 
     QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(),
                                                               mScene->document()->currentLevel());
