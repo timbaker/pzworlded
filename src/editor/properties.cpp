@@ -379,3 +379,11 @@ bool PropertyHolder::operator ==(const PropertyHolder &other) const
         return false;
     return true;
 }
+
+bool PropertyHolder::usesTemplate(PropertyTemplate *pt) const
+{
+    foreach (PropertyTemplate *pt2, mTemplates)
+        if ((pt == pt2) || pt2->usesTemplate(pt))
+            return true;
+    return false;
+}

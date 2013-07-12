@@ -163,6 +163,8 @@ public:
     bool operator !=(const PropertyHolder &other) const
     { return !(*this == other); }
 
+    bool usesTemplate(PropertyTemplate *pt) const;
+
 private:
     PropertyTemplateList mTemplates;
     PropertyList mProperties;

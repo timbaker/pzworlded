@@ -97,6 +97,11 @@ void SpawnToolDialog::setDocument(CellDocument *doc)
         connect(worldDocument(), SIGNAL(propertyValueChanged(PropertyHolder*,int)),
                 SLOT(propertiesChanged(PropertyHolder*)));
 
+        connect(worldDocument(), SIGNAL(templateAdded(PropertyHolder*,int)),
+                SLOT(propertiesChanged(PropertyHolder*)));
+        connect(worldDocument(), SIGNAL(templateRemoved(PropertyHolder*,int)),
+                SLOT(propertiesChanged(PropertyHolder*)));
+
         setList();
         selectedObjectsChanged();
     }
@@ -136,8 +141,9 @@ void SpawnToolDialog::propertiesChanged(PropertyHolder *ph)
 {
 //    Property *p = ph->properties().at(index);
 //    if (p->mDefinition->mEnum == professionsEnum())
-    if (selectedSpawnPoints().contains((WorldCellObject*)ph)) {
-        setList();
+    foreach (WorldCellObject *obj, selectedSpawnPoints()) {
+        if (obj == ph || (ph->isTemplate() && obj->usesTemplate((PropertyTemplate*)ph)))
+            setList();
     }
 }
 

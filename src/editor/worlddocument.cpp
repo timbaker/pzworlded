@@ -99,6 +99,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(templateAdded(PropertyHolder*,int)));
     connect(&mUndoRedo, SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)),
             SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)));
+    connect(&mUndoRedo, SIGNAL(templateRemoved(PropertyHolder*,int)),
+            SIGNAL(templateRemoved(PropertyHolder*,int)));
 
     connect(&mUndoRedo, SIGNAL(worldAboutToResize(QSize)),
             SIGNAL(worldAboutToResize(QSize)));
@@ -1104,7 +1106,9 @@ void WorldDocumentUndoRedo::addTemplate(PropertyHolder *ph, int index, PropertyT
 PropertyTemplate *WorldDocumentUndoRedo::removeTemplate(PropertyHolder *ph, int index)
 {
     emit templateAboutToBeRemoved(ph, index);
-    return ph->removeTemplate(index);
+    PropertyTemplate *old = ph->removeTemplate(index);
+    emit templateRemoved(ph, index);
+    return old;
 }
 
 QString WorldDocumentUndoRedo::setPropertyValue(PropertyHolder *ph, Property *p, const QString &value)

@@ -166,6 +166,7 @@ signals:
 
     void templateAdded(PropertyHolder *ph, int index);
     void templateAboutToBeRemoved(PropertyHolder *ph, int index);
+    void templateRemoved(PropertyHolder *ph, int index);
 
     void propertyValueChanged(PropertyHolder *ph, int index);
 
@@ -484,6 +485,7 @@ signals:
 
     void templateAdded(PropertyHolder *ph, int index);
     void templateAboutToBeRemoved(PropertyHolder *ph, int index);
+    void templateRemoved(PropertyHolder *ph, int index);
 
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
