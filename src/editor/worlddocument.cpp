@@ -616,11 +616,14 @@ void WorldDocument::removeTemplate(int index)
 
     undoStack()->beginMacro(tr("Remove Template (%1)").arg(remove->mName));
 
-    // Remove the template from other templates and cells
+    // Remove the template from other templates, cells and objects
     foreach (PropertyTemplate *pt, mWorld->propertyTemplates())
         removeTemplate(pt, remove);
-    foreach (WorldCell *cell, mWorld->cells())
+    foreach (WorldCell *cell, mWorld->cells()) {
         removeTemplate(cell, remove);
+        foreach (WorldCellObject *obj, cell->objects())
+            removeTemplate(obj, remove);
+    }
 
     undoStack()->push(new RemoveTemplateFromWorld(this, index, remove));
 
