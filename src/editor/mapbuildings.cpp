@@ -138,13 +138,14 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
             QString layerName = QString::fromLatin1("%1_RoomDefs").arg(level);
             int index = mc->map()->indexOfLayer(layerName, Layer::ObjectGroupType);
             if (index >= 0) {
-                // FIXME: handle levelRecursive()
                 QList<MapObject*> mapObjects = mc->map()->layerAt(index)->asObjectGroup()->objects();
                 foreach (MapObject *mapObject, mapObjects) {
                     int x = qFloor(mapObject->x());
                     int y = qFloor(mapObject->y());
                     int w = qCeil(mapObject->x() + mapObject->width()) - x;
                     int h = qCeil(mapObject->y() + mapObject->height()) - y;
+                    x += mc->orientAdjustTiles().x() * level;
+                    y += mc->orientAdjustTiles().y() * level;
                     mRoomRectsByLevel[level + rootLevel] +=
                             new MapBuildingsNS::RoomRect(
                                 mapObject->name(),
