@@ -164,11 +164,7 @@ public:
     inline QPointF pixelToTileCoords(const QPointF &point, int level = 0) const
     { return pixelToTileCoords(point.x(), point.y(), level); }
 
-    inline QPoint pixelToTileCoordsInt(const QPointF &point, int level = 0) const
-    {
-        QPointF tileCoord = pixelToTileCoords(point.x(), point.y(), level);
-        return QPoint(tileCoord.x(), tileCoord.y()); // Do not use toPoint(), it rounds up
-    }
+    QPoint pixelToTileCoordsInt(const QPointF &point, int level = 0) const;
 
     /**
      * Returns the pixel coordinates matching the given tile coordinates.

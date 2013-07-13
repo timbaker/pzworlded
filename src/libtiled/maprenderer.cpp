@@ -24,6 +24,19 @@
 
 using namespace Tiled;
 
+#ifdef ZOMBOID
+#include <qmath.h>
+// Returns the nearest rounded tile coordinate no greater than the given
+// fractional coordinate.  Does not call QPointF::toPoint() because that
+// may round up or down to the nearest integer.  Using qFloor() instead
+// of truncating handles negative coordinates properly.
+QPoint MapRenderer::pixelToTileCoordsInt(const QPointF &point, int level) const
+{
+    QPointF tileCoord = pixelToTileCoords(point.x(), point.y(), level);
+    return QPoint(qFloor(tileCoord.x()), qFloor(tileCoord.y()));
+}
+#endif
+
 /**
  * Converts a line running from \a start to \a end to a polygon which
  * extends 5 pixels from the line in all directions.
