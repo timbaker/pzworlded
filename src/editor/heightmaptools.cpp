@@ -29,7 +29,7 @@
 BaseHeightMapTool::BaseHeightMapTool(const QString &name, const QIcon &icon,
                                      const QKeySequence &shortcut,
                                      QObject *parent) :
-    AbstractTool(name, icon, shortcut, HeightMapToolType)
+    AbstractTool(name, icon, shortcut, HeightMapToolType, parent)
 {
 }
 
