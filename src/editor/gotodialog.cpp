@@ -30,8 +30,8 @@ GoToDialog::GoToDialog(World *world, const QPoint &initial, QWidget *parent) :
     ui->worldX->setMaximum(world->width() * 300);
     ui->worldY->setMaximum(world->height() * 300);
 
-    ui->rangeX->setText(tr("Min: %1    Max %2").arg(ui->worldX->minimum()).arg(ui->worldX->maximum()));
-    ui->rangeY->setText(tr("Min: %1    Max %2").arg(ui->worldY->minimum()).arg(ui->worldY->maximum()));
+    ui->rangeX->setText(tr("Min: %1    Max: %2").arg(ui->worldX->minimum()).arg(ui->worldX->maximum()));
+    ui->rangeY->setText(tr("Min: %1    Max: %2").arg(ui->worldY->minimum()).arg(ui->worldY->maximum()));
 
     ui->cellX->setRange(0, world->width());
     ui->cellY->setRange(0, world->height());
