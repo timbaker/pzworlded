@@ -46,7 +46,7 @@ void WriteSpawnPointsDialog::browse()
     QString fileName = mSpawnPointsFileName;
     if (fileName.isEmpty() && !mDocument->fileName().isEmpty()) {
         QFileInfo info(mDocument->fileName());
-        fileName = info.absolutePath() + QLatin1String("/") + info.completeBaseName() + QLatin1String(".lua");
+        fileName = info.absolutePath() + QLatin1String("/spawnpoints.lua");
     }
     QString f = QFileDialog::getSaveFileName(this, tr("Save Spawn Points As"),
                                              fileName, tr("LUA files (*.lua)"));
