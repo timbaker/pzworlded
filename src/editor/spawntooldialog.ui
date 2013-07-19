@@ -40,6 +40,9 @@
         <iconset resource="editor.qrc">
          <normaloff>:/images/22x22/add.png</normaloff>:/images/22x22/add.png</iconset>
        </property>
+       <property name="autoRaise">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>
@@ -53,6 +56,9 @@
        <property name="icon">
         <iconset resource="editor.qrc">
          <normaloff>:/images/22x22/remove.png</normaloff>:/images/22x22/remove.png</iconset>
+       </property>
+       <property name="autoRaise">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
