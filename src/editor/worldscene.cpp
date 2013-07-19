@@ -638,7 +638,8 @@ void WorldScene::handlePendingThumbnails()
 
     if (mPendingThumbnails.size()) {
         WorldCellItem *item = mPendingThumbnails.first();
-        if (item->thumbnailsAreGo()) {
+        int loaded = item->thumbnailsAreGo();
+        if (loaded != 2) {
             mPendingThumbnails.takeFirst();
             if (mPendingThumbnails.size()) {
                 QMetaObject::invokeMethod(this, "handlePendingThumbnails",
@@ -1077,15 +1078,15 @@ void WorldCellItem::mapFileCreated(const QString &path)
         cellContentsChanged();
 }
 
-bool WorldCellItem::thumbnailsAreGo()
+int WorldCellItem::thumbnailsAreGo()
 {
     if (mMapImage && mMapImage->isLoaded())
-        return true;
+        return 1;
     mWantsImages = true;
     cellContentsChanged();
     if (mMapImage && mMapImage->isLoaded())
-        return true;
-    return false;
+        return 1;
+    return (mMapImage != 0) ? 2 : 0;
 }
 
 void WorldCellItem::thumbnailsAreFail()

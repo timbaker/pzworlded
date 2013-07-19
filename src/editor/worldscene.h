@@ -195,7 +195,7 @@ public:
     void lotMoved(WorldCellLot *lot);
     void cellContentsChanged();
     void mapFileCreated(const QString &path);
-    bool thumbnailsAreGo();
+    int thumbnailsAreGo();
     void thumbnailsAreFail();
 
 protected:
