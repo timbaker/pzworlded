@@ -382,6 +382,10 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
         return true;
     if (mBmpBlendLayers[index] && !mBmpBlendLayers[index]->isEmpty())
         return false;
+#if 1
+    // There could be no user-drawn tiles, only blender tiles.
+    if (mLevel == 0) return false; // FIXME: check for non-empty BMP images
+#endif
 #ifdef BUILDINGED
     if (mForceNonEmpty[index])
         return false;
