@@ -62,7 +62,8 @@ public:
 
     static QStringList supportedImageFormats();
 
-    BMPToTMXImages *getImages(const QString &path, const QPoint &origin);
+    BMPToTMXImages *getImages(const QString &path, const QPoint &origin,
+                              QImage::Format format = QImage::Format_ARGB32);
     QSize validateImages(const QString &path);
 
     void assignMapsToCells(WorldDocument *worldDoc, GenerateMode mode);
@@ -74,7 +75,8 @@ public:
 private:
     bool shouldGenerateCell(WorldCell *cell, int &bmpIndex);
 
-    QImage loadImage(const QString &path, const QString &suffix = QString());
+    QImage loadImage(const QString &path, const QString &suffix = QString(),
+                     QImage::Format format = QImage::Format_ARGB32);
     bool LoadBaseXML();
     bool LoadRules();
     bool LoadBlends();

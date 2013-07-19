@@ -44,6 +44,7 @@
 #include "objectsdock.h"
 #include "objectgroupsdialog.h"
 #include "objecttypesdialog.h"
+#include "pngbuildingdialog.h"
 #include "preferences.h"
 #include "preferencesdialog.h"
 #include "progress.h"
@@ -235,6 +236,7 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(FromToAll()));
     connect(ui->actionFromToSelected, SIGNAL(triggered()),
             SLOT(FromToSelected()));
+    connect(ui->actionBuildingsToPNG, SIGNAL(triggered()), SLOT(BuildingsToPNG()));
     connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
 
     connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
@@ -977,6 +979,15 @@ void MainWindow::FromToAll()
 void MainWindow::FromToSelected()
 {
     FromToAux(true);
+}
+
+void MainWindow::BuildingsToPNG()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
+    PNGBuildingDialog d(worldDoc->world(), this);
+    d.exec();
 }
 
 void MainWindow::heightMapEditor()

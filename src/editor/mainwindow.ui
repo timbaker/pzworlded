@@ -323,6 +323,7 @@
     </widget>
     <addaction name="actionLotPackViewer"/>
     <addaction name="menuAlias_Fixup"/>
+    <addaction name="actionBuildingsToPNG"/>
    </widget>
    <widget class="QMenu" name="menuHeightMap">
     <property name="title">
@@ -781,6 +782,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionBuildingsToPNG">
+   <property name="text">
+    <string>Buildings To PNG...</string>
    </property>
   </action>
  </widget>

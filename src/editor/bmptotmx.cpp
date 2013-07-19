@@ -302,7 +302,8 @@ QStringList BMPToTMX::supportedImageFormats()
     return ret;
 }
 
-BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
+BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin,
+                                    QImage::Format format)
 {
     QFileInfo info(path);
     if (!info.exists()) {
@@ -317,13 +318,13 @@ BMPToTMXImages *BMPToTMX::getImages(const QString &path, const QPoint &origin)
         return 0;
     }
 
-    QImage image = loadImage(info.canonicalFilePath());
+    QImage image = loadImage(info.canonicalFilePath(), QString(), format);
     if (image.isNull()) {
         return 0;
     }
 
     QImage imageVeg = loadImage(infoVeg.canonicalFilePath(),
-                                QLatin1String("_veg"));
+                                QLatin1String("_veg"), format);
     if (imageVeg.isNull()) {
         return 0;
     }
@@ -510,7 +511,8 @@ void BMPToTMX::reportUnknownColors()
     }
 }
 
-QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)
+QImage BMPToTMX::loadImage(const QString &path, const QString &suffix,
+                           QImage::Format format)
 {
     QImage image;
     if (!image.load(path)) {
@@ -525,8 +527,8 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix)
     }
 
     // This is the fastest format for QImage::pixel() and QImage::setPixel().
-    if (image.format() != QImage::Format_ARGB32) {
-        image = image.convertToFormat(QImage::Format_ARGB32);
+    if (image.format() != format) {
+        image = image.convertToFormat(format);
         if (image.isNull()) {
             mError = tr("The image%1 file couldn't be loaded.\n%2\n\nThere might not be enough memory.  Try closing any open Cells or restart the application.")
                     .arg(suffix).arg(QDir::toNativeSeparators(path));

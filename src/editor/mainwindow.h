@@ -141,6 +141,8 @@ public slots:
     void FromToAll();
     void FromToSelected();
 
+    void BuildingsToPNG();
+
     void heightMapEditor();
     void setHeightMapAsMesh(bool mesh);
     void setHeightMapAsFlat(bool flat);
