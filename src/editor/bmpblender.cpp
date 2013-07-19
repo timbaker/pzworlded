@@ -718,6 +718,21 @@ void BmpBlender::updateWarnings()
         ++blendIndex;
     }
 
+    for (int y = 0; y < mMap->rbmpMain().height(); y++) {
+        for (int x = 0; x < mMap->rbmpMain().width(); x++) {
+            QRgb color = mMap->rbmpMain().pixel(x, y);
+            if (color != qRgb(0,0,0) && !mRuleByColor.contains(color)) {
+                warnings += tr("Map BMP image #%1 contains unknown color %2,%3,%4 at %5,%6")
+                        .arg(0).arg(qRed(color)).arg(qGreen(color)).arg(qBlue(color)).arg(x).arg(y);
+            }
+            color = mMap->rbmpVeg().pixel(x, y);
+            if (color != qRgb(0,0,0) && !mRuleByColor.contains(color)) {
+                warnings += tr("Map BMP image #%1 contains unknown color %2,%3,%4 at %5,%6")
+                        .arg(1).arg(qRed(color)).arg(qGreen(color)).arg(qBlue(color)).arg(x).arg(y);
+            }
+        }
+    }
+
     if (warnings != mWarnings) {
         mWarnings = warnings;
         emit warningsChanged();
