@@ -208,7 +208,7 @@ bool BMPToTMX::generateCell(WorldCell *cell)
     int bmpIndex;
     if (!shouldGenerateCell(cell, bmpIndex))
         return true;
-
+#ifndef COPY_IMAGE_TO_MAP
     BMPToTMXImages *images = mImages[bmpIndex];
 
     QImage bmp = images->mBmp;
@@ -290,7 +290,7 @@ bool BMPToTMX::generateCell(WorldCell *cell)
     }
 
     BlendMap();
-
+#endif // COPY_IMAGE_TO_MAP
     return WriteMap(cell, bmpIndex);
 }
 
@@ -806,6 +806,7 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
             TileLayer *tl = new TileLayer(layer.mName, 0, 0,
                                           map.width(), map.height());
             map.addLayer(tl);
+#ifndef COPY_IMAGE_TO_MAP
             int index = -1;
             if (layer.mName == QLatin1String("0_Floor"))
                 index = 0;
@@ -822,6 +823,7 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
                         tl->setCell(x, y, Cell(tile));
                 }
             }
+#endif // COPY_IMAGE_TO_MAP
         } else if (layer.mType == LayerInfo::Object) {
             ObjectGroup *og = new ObjectGroup(layer.mName, 0, 0,
                                               map.width(), map.height());
@@ -843,6 +845,18 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
     foreach (BmpRule *rule, mRules)
         rules += new BmpRule(rule);
     map.rbmpSettings()->setRules(rules);
+
+#ifdef COPY_IMAGE_TO_MAP
+    if (bmpIndex != -1) {
+        BMPToTMXImages *images = mImages[bmpIndex];
+        QImage bmp = images->mBmp;
+        QImage bmpVeg = images->mBmpVeg;
+        int ix = (cell->x() - images->mBounds.x()) * 300;
+        int iy = (cell->y() - images->mBounds.y()) * 300;
+        map.rbmpMain().rimage() = bmp.copy(ix, iy, 300, 300);
+        map.rbmpVeg().rimage() = bmpVeg.copy(ix, iy, 300, 300);
+    }
+#endif // COPY_IMAGE_TO_MAP
 
     QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
     if (!QFileInfo(filePath).exists())
