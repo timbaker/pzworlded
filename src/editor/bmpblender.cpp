@@ -50,6 +50,7 @@ BmpBlender::BmpBlender(Map *map, QObject *parent) :
     QObject(parent),
     mMap(map),
     mFakeTileGrid(0),
+    mInitTilesLater(true),
     mAliases(map->bmpSettings()->aliases()),
     mRules(map->bmpSettings()->rules()),
     mBlendList(map->bmpSettings()->blends()),
@@ -114,6 +115,11 @@ void BmpBlender::flush(const MapRenderer *renderer, const QRect &rect, const QPo
         return;
     mDirtyRegion -= dirty;
 
+    if (mInitTilesLater) {
+        initTiles();
+        mInitTilesLater = false;
+    }
+
     foreach (QRect r, dirty.rects()) {
         int x1 = r.left(), x2 = r.right(), y1 = r.top(), y2 = r.bottom();
         x1 -= 2, x2 += 2, y1 -= 2, y2 += 2;
@@ -131,6 +137,11 @@ void BmpBlender::flush(const QRect &rect)
         return;
     mDirtyRegion -= dirty;
 
+    if (mInitTilesLater) {
+        initTiles();
+        mInitTilesLater = false;
+    }
+
     int x1 = rect.left(), x2 = rect.right(), y1 = rect.top(), y2 = rect.bottom();
     x1 -= 2, x2 += 2, y1 -= 2, y2 += 2;
 
@@ -142,16 +153,16 @@ void BmpBlender::flush(const QRect &rect)
 void BmpBlender::tilesetAdded(Tileset *ts)
 {
     if (mTilesetNames.contains(ts->name())) {
-        initTiles();
-        tileNamesToLayers(0, 0, mMap->width(), mMap->height());
+        mInitTilesLater = true;
+        mDirtyRegion = QRegion(0, 0, mMap->width(), mMap->height());
     }
 }
 
 void BmpBlender::tilesetRemoved(const QString &tilesetName)
 {
     if (mTilesetNames.contains(tilesetName)) {
-        initTiles();
-        tileNamesToLayers(0, 0, mMap->width(), mMap->height());
+        mInitTilesLater = true;
+        mDirtyRegion = QRegion(0, 0, mMap->width(), mMap->height());
     }
 }
 
@@ -165,6 +176,11 @@ void BmpBlender::tilesToPixels(int x1, int y1, int x2, int y2)
     x2 = qBound(0, x2, mMap->width() - 1);
     y1 = qBound(0, y1, mMap->height() - 1);
     y2 = qBound(0, y2, mMap->height() - 1);
+
+    if (mInitTilesLater) {
+        initTiles();
+        mInitTilesLater = false;
+    }
 
     for (int y = y1; y <= y2; y++) {
         for (int x = x1; x <= x2; x++) {
@@ -301,7 +317,7 @@ void BmpBlender::fromMap()
 
     mTileNames = normalizeTileNames(tileNames.values());
 
-    initTiles();
+    mInitTilesLater = true;
 
     mDirtyRegion = QRegion(QRect(QPoint(), mMap->size()));
 }
@@ -523,6 +539,8 @@ void BmpBlender::blend(int x1, int y1, int x2, int y2)
             mapLayers[layerName] = mMap->layerAt(n)->asTileLayer();
     }
 
+    QVector<QString> neighbors(9);
+
     for (int y = y1; y <= y2; y++) {
         for (int x = x1; x <= x2; x++) {
             QString tileName = grid->at(x, y);
@@ -530,8 +548,13 @@ void BmpBlender::blend(int x1, int y1, int x2, int y2)
                                                          mMap->rbmpVeg().rimage(),
                                                          x, y))
                 tileName = mFakeTileGrid->at(x, y);
+
+            for (int dy = -1; dy <= +1; dy++)
+                for (int dx = -1; dx <= +1; dx++)
+                    neighbors[(dx + 1) + (dy + 1) * 3] = getNeighbouringTile(x + dx, y + dy);
+
             foreach (QString layerName, mBlendLayers) {
-                if (BmpBlend *blend = getBlendRule(x, y, tileName, layerName)) {
+                if (BmpBlend *blend = getBlendRule(x, y, tileName, layerName, neighbors)) {
 
                     for (int i = 0; i < blend->exclude2.size(); i += 2) {
                         if (mapLayers.contains(blend->exclude2[i + 1])) {
@@ -716,11 +739,15 @@ QString BmpBlender::getNeighbouringTile(int x, int y)
 }
 
 BmpBlend *BmpBlender::getBlendRule(int x, int y, const QString &tileName,
-                                   const QString &layer)
+                                   const QString &layer,
+                                   const QVector<QString> &neighbors)
 {
     BmpBlend *lastBlend = 0;
     if (tileName.isEmpty())
         return lastBlend;
+
+#define NEIGHBOR(X,Y) neighbors[((X) - x + 1) + ((Y) - y + 1) * 3]
+
     foreach (BmpBlend *blend, mBlendsByLayer[layer]) {
         Q_ASSERT(blend->targetLayer == layer);
         if (blend->targetLayer != layer)
@@ -736,37 +763,36 @@ BmpBlend *BmpBlender::getBlendRule(int x, int y, const QString &tileName,
             bool bPass = false;
             switch (blend->dir) {
             case BmpBlend::N:
-                bPass = mainTiles.contains(getNeighbouringTile(x, y - 1));
+                bPass = mainTiles.contains(NEIGHBOR(x, y - 1));
                 break;
             case BmpBlend::S:
-                bPass = mainTiles.contains(getNeighbouringTile(x, y + 1));
+                bPass = mainTiles.contains(NEIGHBOR(x, y + 1));
                 break;
             case BmpBlend::E:
-                bPass = mainTiles.contains(getNeighbouringTile(x + 1, y));
+                bPass = mainTiles.contains(NEIGHBOR(x + 1, y));
                 break;
             case BmpBlend::W:
-                bPass = mainTiles.contains(getNeighbouringTile(x - 1, y));
+                bPass = mainTiles.contains(NEIGHBOR(x - 1, y));
                 break;
             case BmpBlend::NE:
-                bPass = mainTiles.contains(getNeighbouringTile(x, y - 1)) &&
-                        mainTiles.contains(getNeighbouringTile(x + 1, y));
+                bPass = mainTiles.contains(NEIGHBOR(x, y - 1)) &&
+                        mainTiles.contains(NEIGHBOR(x + 1, y));
                 break;
             case BmpBlend::SE:
-                bPass = mainTiles.contains(getNeighbouringTile(x, y + 1)) &&
-                        mainTiles.contains(getNeighbouringTile(x + 1, y));
+                bPass = mainTiles.contains(NEIGHBOR(x, y + 1)) &&
+                        mainTiles.contains(NEIGHBOR(x + 1, y));
                 break;
             case BmpBlend::NW:
-                bPass = mainTiles.contains(getNeighbouringTile(x, y - 1)) &&
-                        mainTiles.contains(getNeighbouringTile(x - 1, y));
+                bPass = mainTiles.contains(NEIGHBOR(x, y - 1)) &&
+                        mainTiles.contains(NEIGHBOR(x - 1, y));
                 break;
             case BmpBlend::SW:
-                bPass = mainTiles.contains(getNeighbouringTile(x, y + 1)) &&
-                        mainTiles.contains(getNeighbouringTile(x - 1, y));
+                bPass = mainTiles.contains(NEIGHBOR(x, y + 1)) &&
+                        mainTiles.contains(NEIGHBOR(x - 1, y));
                 break;
             default:
                 break;
             }
-
             if (bPass)
                 lastBlend = blend;
         }
