@@ -24,10 +24,7 @@
 #include <QRgb>
 #include <QSet>
 #include <QStringList>
-
-namespace BuildingEditor {
-class FloorTileGrid;
-}
+#include <QVector>
 
 namespace Tiled {
 class BmpAlias;
@@ -35,6 +32,7 @@ class BmpBlend;
 class BmpRule;
 class Map;
 class MapRenderer;
+class SparseTileGrid;
 class Tile;
 class TileLayer;
 class Tileset;
@@ -122,6 +120,7 @@ public:
 
     void fromMap();
     void recreate();
+    void markDirty(const QRect &r);
     void markDirty(int x1, int y1, int x2, int y2);
     void flush(const MapRenderer *renderer, const QRect &rect, const QPoint &mapPos);
     void flush(const QRect &rect);
@@ -162,14 +161,14 @@ public slots:
 private:
     QList<Tile *> tileNamesToTiles(const QStringList &names);
     void initTiles();
-    void imagesToTileNames(int x1, int y1, int x2, int y2);
+    void imagesToTileGrids(int x1, int y1, int x2, int y2);
     void blend(int x1, int y1, int x2, int y2);
-    void tileNamesToLayers(int x1, int y1, int x2, int y2);
+    void tileGridsToLayers(int x1, int y1, int x2, int y2);
     QString resolveAlias(const QString &tileName, int randForPos) const;
 
     Map *mMap;
-    QMap<QString,BuildingEditor::FloorTileGrid*> mTileNameGrids;
-    BuildingEditor::FloorTileGrid *mFakeTileGrid;
+    QMap<QString,SparseTileGrid*> mTileGrids;
+    SparseTileGrid *mFakeTileGrid;
     QMap<QString,TileLayer*> mTileLayers;
 
     QStringList mTilesetNames;
@@ -177,33 +176,63 @@ private:
     QMap<QString,Tile*> mTileByName;
     bool mInitTilesLater;
 
-    QString getNeighbouringTile(int x, int y);
-    BmpBlend *getBlendRule(int x, int y, const QString &tileName, const QString &layer,
-                           const QVector<QString> &neighbors);
+    Tile *getNeighbouringTile(int x, int y);
+    class BlendWrapper;
+    BlendWrapper *getBlendRule(int x, int y, Tile *tile, const QString &layer,
+                               const QVector<Tile *> &neighbors);
 
-    QList<BmpAlias*> mAliases;
-    QMap<QString,BmpAlias*> mAliasByName;
-    QMap<QString,QStringList> mAliasTiles;
+    class AliasWrapper
+    {
+    public:
+        AliasWrapper(BmpAlias *alias) :
+            mAlias(alias)
+        {
+        }
+        BmpAlias *mAlias;
+        QStringList mTiles;
+    };
+    QList<AliasWrapper*> mAliases;
+    QMap<QString,AliasWrapper*> mAliasByName;
 
-    QList<BmpRule*> mRules;
-    QMap<QRgb,QList<BmpRule*> > mRuleByColor;
-    QMap<BmpRule*,QStringList> mRuleTileNames;
+    class RuleWrapper
+    {
+    public:
+        RuleWrapper(BmpRule *rule) :
+            mRule(rule)
+        {
+        }
+        BmpRule *mRule;
+        QStringList mTileNames;
+        QVector<Tile*> mTiles;
+    };
+
+    QList<RuleWrapper*> mRules;
+    QMap<QRgb,QList<RuleWrapper*> > mRuleByColor;
     QStringList mRuleLayers;
-    QList<BmpRule*> mFloor0Rules;
-    QList<QStringList> mFloor0RuleTiles;
-    QMap<Tile*,BmpRule*> mFloorTileToRule;
+    QList<RuleWrapper*> mFloor0Rules;
+    QMap<Tile*,RuleWrapper*> mFloorTileToRule;
 
-    QList<BmpBlend*> mBlendList;
+    class BlendWrapper
+    {
+    public:
+        BlendWrapper(BmpBlend *blend) :
+            mBlend(blend)
+        {}
+        BmpBlend *mBlend;
+        QVector<Tile*> mMainTiles;
+        QVector<Tile*> mBlendTiles;
+        QVector<Tile*> mExcludeTiles;
+        QList<QVector<Tile*> > mExclude2Tiles;
+    };
+
+    QList<BlendWrapper*> mBlendList;
     QStringList mBlendLayers;
-    QMap<QString,QList<BmpBlend*> > mBlendsByLayer;
-    QMap<BmpBlend*,QStringList> mBlendExcludes;
-    QMap<BmpBlend*,QList<QList<Tile*> > > mBlendExclude2;
+    QMap<QString,QList<BlendWrapper*> > mBlendsByLayer;
     QSet<QString> mBlendExclude2Layers;
 
     QSet<Tile*> mKnownBlendTiles;
-    QMap<BmpBlend*,QList<Tile*> > mBlendTiles;
     bool mHack;
-    typedef QHash<int,BmpBlend*> BlendGrid;
+    typedef QHash<int,BlendWrapper*> BlendGrid;
     QMap<QString,BlendGrid> mBlendGrids; // blend at each x,y
 
     QRegion mDirtyRegion;
