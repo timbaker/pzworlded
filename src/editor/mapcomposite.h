@@ -265,6 +265,11 @@ public:
     Tiled::Internal::BmpBlender *bmpBlender() const
     { return mBmpBlender; }
 
+    void setShowBMPTiles(bool show)
+    { mShowBMPTiles = show; }
+    bool showBMPTiles() const
+    { return mShowBMPTiles; }
+
     void setShowMapTiles(bool show)
     { mShowMapTiles = show; }
     bool showMapTiles() const
@@ -340,7 +345,9 @@ private:
     bool mSavedGroupVisible;
     bool mSavedVisible;
     bool mHiddenDuringDrag;
+    bool mShowBMPTiles;
     bool mShowMapTiles;
+    bool mSavedShowBMPTiles;
     bool mSavedShowMapTiles;
     bool mIsAdjacentMap;
 
