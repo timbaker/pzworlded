@@ -83,12 +83,6 @@ private:
 
     void AddRule(Tiled::BmpRule *rule);
 
-    bool BlendMap();
-    QString getNeighbouringTile(int x, int y);
-    Tiled::BmpBlend *getBlendRule(int x, int y, const QString &floorTile, const QString &layer);
-
-    QString resolveAlias(const QString &tileName, int randForPos) const;
-
     bool WriteMap(WorldCell *cell, int bmpIndex);
 
     Tiled::Tile *getTileFromTileName(const QString &tileName);
@@ -114,9 +108,8 @@ private:
     QList<Tiled::BmpAlias*> mAliases;
     QMap<QString,Tiled::BmpAlias*> mAliasByName;
     QList<Tiled::BmpRule*> mRules;
-    QMap<QRgb,QList<Tiled::BmpRule*> > mRulesByColor;
-
-    QVector<QVector<QVector<QString> > > Entries;
+    QMap<QRgb,QList<Tiled::BmpRule*> > mRulesByColor0;
+    QMap<QRgb,QList<Tiled::BmpRule*> > mRulesByColor1;
 
     class LayerInfo
     {
@@ -138,9 +131,6 @@ private:
 
     QString mBlendFileName;
     QList<Tiled::BmpBlend*> mBlends;
-    QStringList mBlendLayers;
-    QMap<QString,QList<Tiled::BmpBlend*> > mBlendsByLayer;
-    QMap<Tiled::BmpBlend*,QStringList> mBlendExcludes;
 
     QString mError;
 
