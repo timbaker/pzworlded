@@ -7,7 +7,7 @@
 #include <QDir>
 #include <QFile>
 
-#if defined(Q_OS_WIN) && (_MSC_VER == 1600)
+#if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the MapRands class as so:
 // class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
 // Suddenly I'm getting a 'multiply-defined symbol' error.

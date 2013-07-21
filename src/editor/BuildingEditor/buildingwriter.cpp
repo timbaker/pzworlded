@@ -37,7 +37,7 @@ using namespace BuildingEditor;
 #define VERSION2 2
 #define VERSION_LATEST VERSION2
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
 // class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
 // Suddenly I'm getting a 'multiply-defined symbol' error.
