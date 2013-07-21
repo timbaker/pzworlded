@@ -638,6 +638,8 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         blends += new BmpBlend(blend);
     map.rbmpSettings()->setBlends(blends);
 
+    const BMPToTMXSettings &settings = mWorldDoc->world()->getBMPToTMXSettings();
+
     if (bmpIndex != -1) {
         MapBmp &rbmpMain = map.rbmpMain();
         MapBmp &rbmpVeg = map.rbmpVeg();
@@ -650,7 +652,7 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         rbmpMain.rimage() = bmp.copy(ix, iy, 300, 300);
         rbmpVeg.rimage() = bmpVeg.copy(ix, iy, 300, 300);
 
-        if (mWorldDoc->world()->getBMPToTMXSettings().warnUnknownColors) {
+        if (settings.warnUnknownColors) {
             const QRgb black = qRgb(0, 0, 0);
             for (int y = 0; y < map.height(); y++) {
                 for (int x = 0; x < map.width(); x++) {
@@ -673,23 +675,24 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         }
     }
 
-#ifndef COPY_IMAGE_TO_MAP
-    Tiled::Internal::BmpBlender blender(&map);
-    blender.flush(QRect(0, 0, map.width(), map.height()));
+    Tiled::Internal::BmpBlender blender;
     QMap<QString,TileLayer*> blendLayers;
-    foreach (TileLayer *blendLayer, blender.tileLayers())
-        blendLayers[blendLayer->name()] = blendLayer;
-#endif // COPY_IMAGE_TO_MAP
+    if (!settings.copyPixels) {
+        blender.setMap(&map);
+        blender.flush(QRect(0, 0, map.width(), map.height()));
+        foreach (TileLayer *blendLayer, blender.tileLayers())
+            blendLayers[blendLayer->name()] = blendLayer;
+    }
 
     foreach (LayerInfo layer, mLayers) {
         if (layer.mType == LayerInfo::Tile) {
             TileLayer *tl = new TileLayer(layer.mName, 0, 0,
                                           map.width(), map.height());
             map.addLayer(tl);
-#ifndef COPY_IMAGE_TO_MAP
-            if (TileLayer *blendLayer = blendLayers[tl->name()])
-                tl->setCells(0, 0, blendLayer);
-#endif // COPY_IMAGE_TO_MAP
+            if (!settings.copyPixels) {
+                if (TileLayer *blendLayer = blendLayers[tl->name()])
+                    tl->setCells(0, 0, blendLayer);
+            }
         } else if (layer.mType == LayerInfo::Object) {
             ObjectGroup *og = new ObjectGroup(layer.mName, 0, 0,
                                               map.width(), map.height());
@@ -697,10 +700,10 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         }
     }
 
-#ifndef COPY_IMAGE_TO_MAP
-    map.rbmpMain().rimage().fill(qRgb(0, 0, 0));
-    map.rbmpVeg().rimage().fill(qRgb(0, 0, 0));
-#endif // COPY_IMAGE_TO_MAP
+    if (!settings.copyPixels) {
+        map.rbmpMain().rimage().fill(qRgb(0, 0, 0));
+        map.rbmpVeg().rimage().fill(qRgb(0, 0, 0));
+    }
 
     QString filePath = tmxNameForCell(cell, cell->world()->bmps().at(bmpIndex));
     if (!QFileInfo(filePath).exists())

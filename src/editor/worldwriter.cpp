@@ -337,6 +337,11 @@ public:
                          QLatin1String(settings.compress ? "true" : "false"));
         w.writeEndElement();
 
+        w.writeStartElement(QLatin1String("copy-pixels"));
+        w.writeAttribute(QLatin1String("checked"),
+                         QLatin1String(settings.copyPixels ? "true" : "false"));
+        w.writeEndElement();
+
         w.writeEndElement(); // </BMPToTMX>
     }
 

@@ -43,6 +43,7 @@ BmpBlender::BmpBlender(QObject *parent) :
     QObject(parent),
     mMap(0),
     mFakeTileGrid(0),
+    mInitTilesLater(true),
     mHack(false)
 {
 }

@@ -480,6 +480,10 @@ private:
                 QString value = xml.attributes().value(QLatin1String("checked")).toString();
                 settings.compress = value == QLatin1String("true");
                 xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("copy-pixels")) {
+                QString value = xml.attributes().value(QLatin1String("checked")).toString();
+                settings.copyPixels = value == QLatin1String("true");
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }
