@@ -131,6 +131,8 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
     mRoomRectsByLevel.clear();
 
     foreach (MapComposite *mc, mapComposite->maps()) {
+        if (!mc->isGroupVisible() || !mc->isVisible())
+            continue;
         int ox = mc->originRecursive().x();
         int oy = mc->originRecursive().y();
         int rootLevel = mc->levelRecursive();

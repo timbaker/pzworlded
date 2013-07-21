@@ -1412,6 +1412,7 @@ void CellScene::setSubMapVisible(WorldCellLot *lot, bool visible)
     if (SubMapItem *item = itemForLot(lot)) {
         item->subMap()->setVisible(visible);
 //        item->setVisible(visible && mDocument->isLotLevelVisible(lot->level()));
+        mMapBuildingsInvalid = true;
         doLater(AllGroups | Bounds | Synch | LotVisibility/*Paint*/);
     }
 }
@@ -1885,6 +1886,7 @@ void CellScene::lotLevelVisibilityChanged(int level)
             SubMapItem *item = itemForLot(lot);
             item->subMap()->setGroupVisible(visible);
 //            item->setVisible(visible && item->subMap()->isVisible());
+            mMapBuildingsInvalid = true;
             doLater(AllGroups | Bounds | Synch | LotVisibility/*Paint*/);
         }
     }
