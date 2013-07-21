@@ -28,11 +28,14 @@
 
 #include "mapobject.h"
 #include "objectgroup.h"
+#include "tile.h"
+#include "tileset.h"
 
 #include <qmath.h>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPainter>
+#include <QSettings>
 
 using namespace Tiled;
 
@@ -47,10 +50,15 @@ PNGBuildingDialog::PNGBuildingDialog(World *world, QWidget *parent) :
     ui->color->setColor(mColor);
 
     connect(ui->pngBrowse, SIGNAL(clicked()), SLOT(browse()));
+
+    QSettings settings;
+    ui->pngEdit->setText(settings.value(QLatin1String("PNGBuildingDialog/FileName")).toString());
 }
 
 PNGBuildingDialog::~PNGBuildingDialog()
 {
+    QSettings settings;
+    settings.setValue(QLatin1String("PNGBuildingDialog/FileName"), ui->pngEdit->text());
     delete ui;
 }
 
@@ -167,6 +175,25 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     }
 
     processObjectGroups(cell, mapComposite);
+
+    // Place green pixels whereever vegetation_trees_01 tileset is used
+    int n = mapInfo->map()->indexOfLayer(QLatin1String("0_Vegetation"), Layer::TileLayerType);
+    TileLayer *vegetationLayer = (n >= 0) ? mapInfo->map()->layerAt(n)->asTileLayer() : 0;
+    QList<Tileset*> tilesets;
+    foreach (Tileset *ts, mapInfo->map()->tilesets())
+        if (ts->name().startsWith(QLatin1String("vegetation_trees_")))
+            tilesets += ts;
+    if (vegetationLayer && !tilesets.isEmpty()) {
+        QRgb treeColor = qRgb(47, 76, 64); // same dark green as MapImageManager uses
+        for (int y = 0; y < mapInfo->map()->height(); y++) {
+            for (int x = 0; x < mapInfo->map()->width(); x++) {
+                if (Tile *tile = vegetationLayer->cellAt(x, y).tile) {
+                    if (tilesets.contains(tile->tileset()))
+                        mImage.setPixel(cell->x() * 300 + x, cell->y() * 300 + y, treeColor);
+                }
+            }
+        }
+    }
 
     return true;
 }
