@@ -1,10 +1,31 @@
-console show
+if {[llength [info commands console]]} {
+    console show
+    update
+}
 
-set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
+set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Qt4_MSVC_64-Release
 set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
-set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
-set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
+set QT_BINARY_DIR C:/Programming/Qt/qt-4.8.x-MSVC-2012-64bit-build/bin
+set QT_PLUGINS_DIR C:/Programming/Qt/qt-4.8.x-MSVC-2012-64bit-build/plugins
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
+
+if {$argc > 0} {
+    switch -- [lindex $argv 0] {
+        32bit {
+            puts "dist.tcl: 32-bit"
+            set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
+            set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
+            set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
+            set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
+        }
+        64bit {
+            puts "dist.tcl: 64-bit"
+        }
+        default {
+            error "unknown arguments to dist.tcl: $argv"
+        }
+    }
+}
 
 proc copyFile {SOURCE DEST name {name2 ""}} {
     if {$name2 == ""} { set name2 $name }
@@ -19,7 +40,7 @@ proc copyFile {SOURCE DEST name {name2 ""}} {
             set relative [string range $src [string length [set ::$var]] end]
         }
     }
-    if {![file exists $dst] || ([file mtime $src] > [file mtime $dst])} {
+    if {![file exists $dst] || ([file mtime $src] > [file mtime $dst]) || ([file size $src] != [file size $dst])} {
         file mkdir [file dirname $dst]
         if {[file extension $name2] == ".txt"} {
             set chan [open $src r]
@@ -77,6 +98,7 @@ proc removeFD {dir name} {
     return
 }
 if 1 {
+removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} vcredist*
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} .pzeditor
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} lots
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} *.bak
