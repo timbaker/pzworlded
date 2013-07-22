@@ -624,7 +624,15 @@ void MainWindow::documentCloseRequested(int tabIndex)
         if (!confirmSave())
             return;
     }
+
+    WorldDocument *worldDoc = 0;
+    if (doc->asCellDocument() && docman()->currentDocument() == doc)
+        worldDoc = doc->asCellDocument()->worldDocument();
+
     docman()->closeDocument(tabIndex);
+
+    if (worldDoc)
+        docman()->setCurrentDocument(worldDoc);
 }
 
 void MainWindow::selectLevelAbove()
