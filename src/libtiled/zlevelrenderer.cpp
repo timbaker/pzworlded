@@ -316,6 +316,7 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
 }
 
 #ifdef ZOMBOID
+#include <QThreadStorage>
 void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *layerGroup,
                             const QRectF &exposed) const
 {
@@ -372,8 +373,15 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
 
     QTransform baseTransform = painter->transform();
 
+#if 0
+    QThreadStorage<QVector<const Cell*> > cellStorage;
+    QThreadStorage<QVector<qreal> > opacityStorage;
+    QVector<const Cell*> &cells = cellStorage.localData();
+    QVector<qreal> &opacities = opacityStorage.localData();
+#else
     /*static*/ QVector<const Cell*> cells(40); // or QVarLengthArray
     /*static*/ QVector<qreal> opacities(40); // or QVarLengthArray
+#endif
 
     layerGroup->prepareDrawing(this, rect);
 
