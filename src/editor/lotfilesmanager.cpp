@@ -27,6 +27,7 @@
 #include "preferences.h"
 #include "progress.h"
 #include "tilemetainfomgr.h"
+#include "tilesetmanager.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
@@ -278,6 +279,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             mGridData[x][y].fill(LotFile::Square(), MaxLevel);
     }
 
+    Tile *missingTile = Tiled::Internal::TilesetManager::instance()->missingTile();
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
         lg->prepareDrawing2();
@@ -288,7 +290,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
                 foreach (const Tiled::Cell *cell, cells) {
-                    LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));
+                    if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;
                     if (mapInfo->orientation() == Map::Isometric) {
                         lx = x + lg->level() * 3;
@@ -296,6 +298,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                     }
                     if (lx >= mapWidth) continue;
                     if (ly >= mapHeight) continue;
+                    LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));
                     mGridData[lx][ly][lg->level()].Entries.append(e);
                     TileMap[e->gid]->used = true;
                 }
