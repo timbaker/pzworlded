@@ -674,6 +674,7 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
 
     // BmpBlender sends a signal to the MapComposite when it has finished
     // blending.  That needs to happen in the render thread.
+    Q_ASSERT(mRenderMapComposite->bmpBlender()->parent() == mRenderMapComposite);
     mRenderMapComposite->moveToThread(mImageRenderThread);
 
     QMetaObject::invokeMethod(mImageRenderWorker,

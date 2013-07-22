@@ -114,6 +114,7 @@ void PropertyDefinitionsDialog::propertyDefinitionChanged(PropertyDef *pd)
 
 void PropertyDefinitionsDialog::propertyEnumAdded(int index)
 {
+    Q_UNUSED(index)
     setEnums();
 }
 

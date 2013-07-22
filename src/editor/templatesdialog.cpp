@@ -140,7 +140,9 @@ void TemplatesDialog::updateSelectedTemplate()
 
 void TemplatesDialog::removeSelectedTemplate()
 {
+#if 0
     int row = ui->templatesView->currentRow();
+#endif
     int index = mWorldDoc->world()->propertyTemplates().indexOf(mTemplate);
     mWorldDoc->removeTemplate(index);
 #if 0

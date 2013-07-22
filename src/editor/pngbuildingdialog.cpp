@@ -182,12 +182,12 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
         if (ts->name().startsWith(QLatin1String("vegetation_trees_")))
             tilesets += ts;
     if (layerGroup && !tilesets.isEmpty()) {
-        QVector<const Cell*> cells;
+        QVector<const Cell*> cells(40);
         layerGroup->prepareDrawing2();
         QRgb treeColor = qRgb(47, 76, 64); // same dark green as MapImageManager uses
         for (int y = 0; y < mapInfo->map()->height(); y++) {
             for (int x = 0; x < mapInfo->map()->width(); x++) {
-                cells.clear();
+                cells.resize(0);
                 if (layerGroup->orderedCellsAt2(QPoint(x, y), cells)) {
                     foreach (const Cell *tileCell, cells) {
                         if (tilesets.contains(tileCell->tile->tileset())) {
