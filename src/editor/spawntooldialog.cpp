@@ -36,6 +36,7 @@ SpawnToolDialog::SpawnToolDialog(QWidget *parent) :
     ui->setupUi(this);
 
     ui->list->setSortingEnabled(false);
+    ui->remove->setEnabled(false);
 
     setWindowFlags(windowFlags() | Qt::Tool);
 
@@ -43,6 +44,7 @@ SpawnToolDialog::SpawnToolDialog(QWidget *parent) :
     connect(ui->remove, SIGNAL(clicked()), SLOT(removeItem()));
     connect(ui->list, SIGNAL(itemChanged(QListWidgetItem*)),
             SLOT(itemChanged(QListWidgetItem*)));
+    connect(ui->list, SIGNAL(currentRowChanged(int)), SLOT(currentRowChanged(int)));
 }
 
 SpawnToolDialog::~SpawnToolDialog()
@@ -201,6 +203,11 @@ void SpawnToolDialog::itemChanged(QListWidgetItem *item)
     }
     if (selectedSpawnPoints().size())
         toObjects();
+}
+
+void SpawnToolDialog::currentRowChanged(int row)
+{
+    ui->remove->setEnabled(row != -1);
 }
 
 static void resolveProperties(PropertyHolder *ph, PropertyList &result)

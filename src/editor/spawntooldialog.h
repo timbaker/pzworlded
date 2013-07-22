@@ -60,6 +60,7 @@ private slots:
     void removeItem();
 
     void itemChanged(QListWidgetItem *item);
+    void currentRowChanged(int row);
     
 private:
     void setList();
