@@ -79,7 +79,7 @@ void PNGBuildingDialog::accept()
 void PNGBuildingDialog::browse()
 {
     QString f = QFileDialog::getSaveFileName(this, tr("Save PNG As..."),
-                                             QString(), QLatin1String("PNG Files (*.png)"));
+                                             ui->pngEdit->text(), QLatin1String("PNG Files (*.png)"));
     if (f.isEmpty())
         return;
     ui->pngEdit->setText(QDir::toNativeSeparators(f));
