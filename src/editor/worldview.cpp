@@ -23,6 +23,7 @@
 #include "worldscene.h"
 #include "zoomable.h"
 
+#include <qmath.h>
 #include <QGraphicsPixmapItem>
 #include <QMouseEvent>
 
@@ -48,8 +49,8 @@ WorldScene *WorldView::scene() const
 
 void WorldView::mouseMoveEvent(QMouseEvent *event)
 {
-    QPoint tilePos = scene()->pixelToCellCoordsInt(mapToScene(event->pos()));
-    emit statusBarCoordinatesChanged(tilePos.x(), tilePos.y());
+    QPointF cellPos = scene()->pixelToCellCoords(mapToScene(event->pos()));
+    emit statusBarCoordinatesChanged(cellPos.x() * 300, cellPos.y() * 300);
 
     BaseGraphicsView::mouseMoveEvent(event);
 }

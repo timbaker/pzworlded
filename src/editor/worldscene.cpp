@@ -350,12 +350,7 @@ QPointF WorldScene::pixelToCellCoords(qreal x, qreal y) const
 QPoint WorldScene::pixelToCellCoordsInt(const QPointF &point) const
 {
     QPointF pos = pixelToCellCoords(point.x(), point.y());
-    qreal x = pos.x(), y = pos.y();
-    if (x < 0)
-        x = -qCeil(qAbs(x));
-    if (y < 0)
-        y = -qCeil(qAbs(y));
-    return QPoint(x, y); // Do not use toPoint(), it rounds up
+    return QPoint(qFloor(pos.x()), qFloor(pos.y()));
 }
 
 WorldCell *WorldScene::pointToCell(const QPointF &point)

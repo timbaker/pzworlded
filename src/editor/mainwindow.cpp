@@ -123,9 +123,13 @@ MainWindow::MainWindow(QWidget *parent)
     setStatusBar(0);
     mZoomComboBox = ui->zoomComboBox;
 
-    QString coordString = QString(QLatin1String("%1,%2")).arg(300).arg(300);
+    QString coordString = QLatin1String("Cell x,y=300,300");
     int width = ui->coordinatesLabel->fontMetrics().width(coordString);
     ui->coordinatesLabel->setMinimumWidth(width + 8);
+
+    coordString = QLatin1String("World x,y=9999,9999");
+    width = ui->coordinatesLabel->fontMetrics().width(coordString);
+    ui->worldCoordinatesLabel->setMinimumWidth(width + 8);
 
     ui->actionSave->setShortcuts(QKeySequence::Save);
     ui->actionSaveAs->setShortcuts(QKeySequence::SaveAs);
@@ -847,7 +851,31 @@ bool MainWindow::InitConfigFiles()
 
 void MainWindow::setStatusBarCoords(int x, int y)
 {
-    ui->coordinatesLabel->setText(QString(QLatin1String("%1,%2")).arg(x).arg(y));
+    if (mCurrentDocument) {
+        WorldCell *cell = 0;
+        WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+        if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
+            cell = cellDoc->cell();
+            worldDoc = cellDoc->worldDocument();
+        } else if (HeightMapDocument *hmDoc = mCurrentDocument->asHeightMapDocument()) {
+            cell = hmDoc->cell();
+            worldDoc = hmDoc->worldDocument();
+        }
+        int ox = worldDoc->world()->getGenerateLotsSettings().worldOrigin.x();
+        int oy = worldDoc->world()->getGenerateLotsSettings().worldOrigin.y();
+        if (cell) {
+            ui->coordinatesLabel->setText(QString::fromLatin1("Cell x,y=%1,%2")
+                                          .arg(x).arg(y));
+            ui->worldCoordinatesLabel->setText(QString::fromLatin1("World x,y=%3,%4")
+                                          .arg((ox + cell->x()) * 300 + x)
+                                          .arg((oy + cell->y()) * 300 + y));
+        } else if (/*WorldDocument *worldDoc = */mCurrentDocument->asWorldDocument()) {
+            x += ox * 300, y += oy * 300;
+            int cellX = qFloor(x / 300.0), cellY = qFloor(y / 300.0);
+            ui->coordinatesLabel->setText(QString(QLatin1String("Cell x,y=%1,%2")).arg(cellX).arg(cellY));
+            ui->worldCoordinatesLabel->setText(QString(QLatin1String("World x,y=%1,%2")).arg(x).arg(y));
+        }
+    }
 }
 
 void MainWindow::aboutToShowCurrentLevelMenu()
@@ -1949,6 +1977,7 @@ void MainWindow::updateActions()
         ui->objectGroupButton->setEnabled(true);
     } else {
         ui->coordinatesLabel->clear();
+        ui->worldCoordinatesLabel->clear();
         ui->currentCellLabel->setText(tr("Current cell: <none> "));
         ui->currentLevelButton->setText(tr("Level: ? ")); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(false);

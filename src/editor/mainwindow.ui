@@ -122,7 +122,7 @@
           </size>
          </property>
          <property name="text">
-          <string>x,y</string>
+          <string>Cell x,y</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -131,6 +131,29 @@
        </item>
        <item>
         <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="worldCoordinatesLabel">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>World x,y</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line_4">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
