@@ -480,7 +480,7 @@ void MainWindow::documentAdded(Document *doc)
 
         int pos = docman()->documents().indexOf(doc);
         ui->documentTabWidget->insertTab(pos, view,
-            tr("Cell %1,%2").arg(cellDoc->cell()->x()).arg(cellDoc->cell()->y()));
+            tr("Cell %1,%2").arg(cellDoc->cell()->displayPos().x()).arg(cellDoc->cell()->displayPos().y()));
         ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
 
         if (mViewHint.valid) {
@@ -564,6 +564,8 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc->worldDocument(),
                     SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
                     SLOT(updateActions()));
+            connect(cellDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
+                    SLOT(generateLotSettingsChanged()));
 #ifdef ROAD_UI
             connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
@@ -576,6 +578,8 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(worldDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
             connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
+            connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
+                    SLOT(generateLotSettingsChanged()));
 #ifdef ROAD_UI
             connect(worldDoc, SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
@@ -587,6 +591,8 @@ void MainWindow::currentDocumentChanged(Document *doc)
         if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
             connect(hmDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
+            connect(hmDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
+                    SLOT(generateLotSettingsChanged()));
         }
 
         mLotsDock->setDocument(doc);
@@ -861,16 +867,15 @@ void MainWindow::setStatusBarCoords(int x, int y)
             cell = hmDoc->cell();
             worldDoc = hmDoc->worldDocument();
         }
-        int ox = worldDoc->world()->getGenerateLotsSettings().worldOrigin.x();
-        int oy = worldDoc->world()->getGenerateLotsSettings().worldOrigin.y();
         if (cell) {
             ui->coordinatesLabel->setText(QString::fromLatin1("Cell x,y=%1,%2")
                                           .arg(x).arg(y));
             ui->worldCoordinatesLabel->setText(QString::fromLatin1("World x,y=%3,%4")
-                                          .arg((ox + cell->x()) * 300 + x)
-                                          .arg((oy + cell->y()) * 300 + y));
+                                          .arg(cell->displayPos().x() * 300 + x)
+                                          .arg(cell->displayPos().y() * 300 + y));
         } else if (/*WorldDocument *worldDoc = */mCurrentDocument->asWorldDocument()) {
-            x += ox * 300, y += oy * 300;
+            QPoint worldOrigin = worldDoc->world()->getGenerateLotsSettings().worldOrigin;
+            x += worldOrigin.x() * 300, y += worldOrigin.y() * 300;
             int cellX = qFloor(x / 300.0), cellY = qFloor(y / 300.0);
             ui->coordinatesLabel->setText(QString(QLatin1String("Cell x,y=%1,%2")).arg(cellX).arg(cellY));
             ui->worldCoordinatesLabel->setText(QString(QLatin1String("World x,y=%1,%2")).arg(x).arg(y));
@@ -1221,6 +1226,18 @@ void MainWindow::enableDeveloperFeatures()
     }
 }
 
+WorldDocument *MainWindow::currentWorldDocument()
+{
+    if (mCurrentDocument) {
+        if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+            return cellDoc->worldDocument();
+        if (HeightMapDocument *hmDoc = mCurrentDocument->asHeightMapDocument())
+            return hmDoc->worldDocument();
+        return mCurrentDocument->asWorldDocument();
+    }
+    return 0;
+}
+
 bool MainWindow::saveFile()
 {
     if (!mCurrentDocument)
@@ -1328,6 +1345,27 @@ void MainWindow::generateLotsAll()
 void MainWindow::generateLotsSelected()
 {
     generateLots(this, mCurrentDocument, LotFilesManager::GenerateSelected);
+}
+
+void MainWindow::generateLotSettingsChanged()
+{
+    // Update the tab names when worldOrigin changes.
+    WorldDocument *worldDoc = currentWorldDocument();
+    int pos = 0;
+    foreach (Document *doc, docman()->documents()) {
+        CellDocument *cellDoc = doc->asCellDocument();
+        HeightMapDocument *hmDoc = doc->asHeightMapDocument();
+        if (cellDoc && cellDoc->worldDocument() == worldDoc) {
+            QPoint cellPos = cellDoc->cell()->displayPos();
+            ui->documentTabWidget->setTabText(pos, tr("Cell %1,%2").arg(cellPos.x()).arg(cellPos.y()));
+        } else if (hmDoc && hmDoc->worldDocument() == worldDoc) {
+            QPoint cellPos = hmDoc->cell()->displayPos();
+            ui->documentTabWidget->setTabText(pos, tr("HeightMap %1,%2").arg(cellPos.x()).arg(cellPos.y()));
+        }
+        ++pos;
+    }
+
+    updateActions();
 }
 
 static void _BMPToTMX(MainWindow *mainWin, Document *doc,
@@ -1953,7 +1991,7 @@ void MainWindow::updateActions()
             ui->actionEditHeightMap->setEnabled(true);
             ui->actionClearCell->setEnabled(true);
             ui->actionClearMapOnly->setEnabled(true);
-            ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));
+            ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->displayPos().x()).arg(cell->displayPos().y()));
         } else
             ui->currentCellLabel->setText(tr("Current cell: <none>"));
         ui->currentLevelButton->setText(tr("Level: ? ")); // extra space cuz of down-arrow placement on Windows
@@ -1964,7 +2002,7 @@ void MainWindow::updateActions()
         ui->actionClearCell->setEnabled(true);
         ui->actionClearMapOnly->setEnabled(true);
         WorldCell *cell = cellDoc->cell();
-        ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->x()).arg(cell->y()));
+        ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->displayPos().x()).arg(cell->displayPos().y()));
         int level = cellDoc->currentLevel();
         ui->currentLevelButton->setText(tr("Level: %1 ").arg(level)); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(true);

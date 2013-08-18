@@ -411,6 +411,8 @@ public slots:
     void worldAboutToResize(const QSize &newSize);
     void worldResized(const QSize &oldSize);
 
+    void generateLotsSettingsChanged();
+
     void selectedCellsChanged();
     void cellMapFileChanged(WorldCell *cell);
     void cellLotAdded(WorldCell *cell, int index);

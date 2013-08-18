@@ -101,6 +101,7 @@ public slots:
 
     void generateLotsAll();
     void generateLotsSelected();
+    void generateLotSettingsChanged();
 
     void BMPToTMXAll();
     void BMPToTMXSelected();
@@ -157,6 +158,8 @@ private:
     void readSettings();
 
     void enableDeveloperFeatures();
+
+    WorldDocument *currentWorldDocument();
 
     struct ViewHint
     {

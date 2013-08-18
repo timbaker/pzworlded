@@ -93,6 +93,9 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
             SLOT(cellContentsChanged(WorldCell*)));
 
+    connect(mWorldDoc, SIGNAL(generateLotSettingsChanged()),
+            SLOT(generateLotsSettingsChanged()));
+
     connect(mWorldDoc, SIGNAL(selectedRoadsChanged()),
             SLOT(selectedRoadsChanged()));
     connect(mWorldDoc, SIGNAL(roadAdded(int)),
@@ -331,6 +334,11 @@ void WorldScene::worldResized(const QSize &oldSize)
         item->synchWithBMP();
     foreach (WorldRoadItem *item, mRoadItems)
         item->synchWithRoad();
+}
+
+void WorldScene::generateLotsSettingsChanged()
+{
+    mCoordItem->update();
 }
 
 QPointF WorldScene::pixelToCellCoords(qreal x, qreal y) const
@@ -1303,9 +1311,11 @@ void WorldCoordItem::paint(QPainter *painter,
     const QFontMetrics fm = painter->fontMetrics();
     int lineHeight = fm.lineSpacing();
 
+    QPoint worldOrigin = mScene->world()->getGenerateLotsSettings().worldOrigin;
+
     for (int y = startY; y <= endY; ++y) {
         for (int x = startX; x <= endX; ++x) {
-            QString text = QString(QLatin1String("%1,%2")).arg(x).arg(y);
+            QString text = QString(QLatin1String("%1,%2")).arg(worldOrigin.x() + x).arg(worldOrigin.y() + y);
 
             int textWidth = fm.width(text);
             QPointF center = mScene->cellToPixelCoords(x + 0.5, y + 0.5);

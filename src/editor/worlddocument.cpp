@@ -107,6 +107,9 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(worldResized(QSize)),
             SIGNAL(worldResized(QSize)));
 
+    connect(&mUndoRedo, SIGNAL(generateLotSettingsChanged()),
+            SIGNAL(generateLotSettingsChanged()));
+
     connect(&mUndoRedo, SIGNAL(cellAdded(WorldCell*)),
             SIGNAL(cellAdded(WorldCell*)));
     connect(&mUndoRedo, SIGNAL(cellAboutToBeRemoved(WorldCell*)),
@@ -1448,6 +1451,7 @@ GenerateLotsSettings WorldDocumentUndoRedo::changeGenerateLotsSettings(const Gen
 {
     GenerateLotsSettings old = mWorld->getGenerateLotsSettings();
     mWorld->setGenerateLotsSettings(settings);
+    emit generateLotSettingsChanged();
     return old;
 }
 

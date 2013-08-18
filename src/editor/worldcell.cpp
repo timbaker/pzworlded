@@ -57,6 +57,11 @@ WorldCell::~WorldCell()
     qDeleteAll(mObjects);
 }
 
+QPoint WorldCell::displayPos() const
+{
+    return pos() + (mWorld ? mWorld->getGenerateLotsSettings().worldOrigin : QPoint());
+}
+
 void WorldCell::setMapFilePath(const QString &path)
 {
     mMapFilePath = path;

@@ -173,6 +173,8 @@ signals:
     void worldAboutToResize(const QSize &newSize);
     void worldResized(const QSize &oldSize);
 
+    void generateLotSettingsChanged();
+
     void cellAdded(WorldCell *cell);
     void cellAboutToBeRemoved(WorldCell *cell);
 
@@ -447,6 +449,8 @@ signals:
 
     void worldAboutToResize(const QSize &newSize);
     void worldResized(const QSize &oldSize);
+
+    void generateLotSettingsChanged();
 
     void cellAdded(WorldCell *cell);
     void cellAboutToBeRemoved(WorldCell *cell);

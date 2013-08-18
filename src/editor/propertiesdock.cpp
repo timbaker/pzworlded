@@ -999,6 +999,11 @@ void PropertiesDock::retranslateUi()
     setWindowTitle(tr("Properties"));
 }
 
+void PropertiesDock::updateLabel()
+{
+    setLabel(mPropertyHolder);
+}
+
 void PropertiesDock::setDocument(Document *doc)
 {
     if (mWorldDoc)
@@ -1029,6 +1034,8 @@ void PropertiesDock::setDocument(Document *doc)
                 SLOT(objectNameChanged(WorldCellObject*)));
         connect(worldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
                 SLOT(selectionChanged()));
+        connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
+                SLOT(updateLabel()));
     }
     setLabel(mPropertyHolder);
 }
@@ -1092,9 +1099,9 @@ void PropertiesDock::setLabel(PropertyHolder *ph)
         else
             name = tr("'%1'").arg(name);
         WorldCell *cell = obj->cell();
-        mLabel->setText(tr("Object %1 in Cell %2,%3").arg(name).arg(cell->x()).arg(cell->y()));
+        mLabel->setText(tr("Object %1 in Cell %2,%3").arg(name).arg(cell->displayPos().x()).arg(cell->displayPos().y()));
     } else if (WorldCell *cell = dynamic_cast<WorldCell*>(ph))
-        mLabel->setText(tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        mLabel->setText(tr("Cell %1,%2").arg(cell->displayPos().x()).arg(cell->displayPos().y()));
 }
 
 void PropertiesDock::objectNameChanged(WorldCellObject *obj)

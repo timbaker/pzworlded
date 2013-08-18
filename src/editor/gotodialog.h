@@ -49,6 +49,7 @@ private slots:
 
 private:
     Ui::GoToDialog *ui;
+    World *mWorld;
     int mSynching;
 };
 

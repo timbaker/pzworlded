@@ -20,32 +20,41 @@
 
 #include "world.h"
 
+#include <qmath.h>
+
+// Modulo with a possibly-negative number
+#define NMOD(a,b) ((a) - qFloor((a) / (b)) * (b))
+
 GoToDialog::GoToDialog(World *world, const QPoint &initial, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GoToDialog),
+    mWorld(world),
     mSynching(0)
 {
     ui->setupUi(this);
 
-    ui->worldX->setMaximum(world->width() * 300);
-    ui->worldY->setMaximum(world->height() * 300);
+    QPoint worldOrigin = world->getGenerateLotsSettings().worldOrigin;
+
+    ui->worldX->setRange(worldOrigin.x() * 300, (worldOrigin.x() + world->width()) * 300);
+    ui->worldY->setRange(worldOrigin.y() * 300, (worldOrigin.y() + world->height()) * 300);
 
     ui->rangeX->setText(tr("Min: %1    Max: %2").arg(ui->worldX->minimum()).arg(ui->worldX->maximum()));
     ui->rangeY->setText(tr("Min: %1    Max: %2").arg(ui->worldY->minimum()).arg(ui->worldY->maximum()));
 
-    ui->cellX->setRange(0, world->width());
-    ui->cellY->setRange(0, world->height());
+    ui->cellX->setRange(worldOrigin.x(), worldOrigin.x() + world->width() - 1);
+    ui->cellY->setRange(worldOrigin.y(), worldOrigin.y() + world->height() - 1);
 
     ui->posX->setRange(0, 299);
     ui->posY->setRange(0, 299);
 
     mSynching++;
-    ui->worldX->setValue(initial.x());
-    ui->worldY->setValue(initial.y());
-    ui->cellX->setValue(initial.x() / 300);
-    ui->cellY->setValue(initial.y() / 300);
-    ui->posX->setValue(initial.x() % 300);
-    ui->posY->setValue(initial.y() % 300);
+    QPoint p = worldOrigin * 300 + initial;
+    ui->worldX->setValue(p.x());
+    ui->worldY->setValue(p.y());
+    ui->cellX->setValue(qFloor(p.x() / 300));
+    ui->cellY->setValue(qFloor(p.y() / 300));
+    ui->posX->setValue(NMOD(p.x(), 300.0));
+    ui->posY->setValue(NMOD(p.y(), 300.0));
     mSynching--;
 
     connect(ui->worldX, SIGNAL(valueChanged(int)), SLOT(worldXChanged(int)));
@@ -63,20 +72,20 @@ GoToDialog::~GoToDialog()
 
 int GoToDialog::worldX() const
 {
-    return ui->worldX->value();
+    return ui->worldX->value() - mWorld->getGenerateLotsSettings().worldOrigin.x() * 300;
 }
 
 int GoToDialog::worldY() const
 {
-    return ui->worldY->value();
+    return ui->worldY->value() - mWorld->getGenerateLotsSettings().worldOrigin.y() * 300;
 }
 
 void GoToDialog::worldXChanged(int val)
 {
     if (mSynching) return;
     mSynching++;
-    ui->cellX->setValue(val / 300);
-    ui->posX->setValue(val % 300);
+    ui->cellX->setValue(qFloor(val / 300.0));
+    ui->posX->setValue(NMOD(val, 300.0));
     mSynching--;
 }
 
@@ -84,8 +93,8 @@ void GoToDialog::worldYChanged(int val)
 {
     if (mSynching) return;
     mSynching++;
-    ui->cellY->setValue(val / 300);
-    ui->posY->setValue(val % 300);
+    ui->cellY->setValue(qFloor(val / 300.0));
+    ui->posY->setValue(NMOD(val, 300.0));
     mSynching--;
 }
 

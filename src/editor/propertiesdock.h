@@ -362,6 +362,7 @@ private:
     void retranslateUi();
 
 private slots:
+    void updateLabel();
     void selectedCellsChanged();
     void selectedObjectsChanged();
     void setLabel(PropertyHolder *ph);

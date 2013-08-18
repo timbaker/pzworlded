@@ -278,6 +278,7 @@ public:
     int y() const { return mY; }
 
     QPoint pos() const { return QPoint(mX, mY); }
+    QPoint displayPos() const;
 
     World *world() const { return mWorld; }
 
