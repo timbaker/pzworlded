@@ -360,6 +360,23 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
     if (!images)
         return ImageData();
 
+#if 1
+    QImage bmpRecolored = images->mBmp.convertToFormat(QImage::Format_ARGB32);
+    images->mBmp = QImage();
+    QRgb ruleColor = qRgb(255, 0, 0);
+    QRgb treeColor = qRgb(47, 76, 64);
+    for (int cy = 0; cy < images->mBmpVeg.height() / 300; cy++) {
+        for (int cx = 0; cx < images->mBmpVeg.width() / 300; cx++) {
+            QImage bmpVeg = images->mBmpVeg.copy(cx * 300, cy * 300, 300, 300).convertToFormat(QImage::Format_ARGB32);
+            for (int y = 0; y < 300; y++) {
+                for (int x = 0; x < 300; x++) {
+                    if (bmpVeg.pixel(x, y) == ruleColor)
+                        bmpRecolored.setPixel(cx * 300 + x, cy * 300 + y, treeColor);
+                }
+            }
+        }
+    }
+#else
     QImage bmpRecolored(images->mBmp);
     for (int x = 0; x < images->mBmp.width(); x++) {
         for (int y = 0; y < images->mBmp.height(); y++) {
@@ -367,11 +384,12 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
                 bmpRecolored.setPixel(x, y, qRgb(47, 76, 64));
         }
     }
+#endif
 
     delete images; // ***** ***** *****
 
     ImageData data;
-    data.image = bmpRecolored.transformed(xform);;
+    data.image = bmpRecolored.transformed(xform);
     data.scale = 1.0f;
     data.levelZeroBounds = QRectF(0, 0, imageSize.width() / 300, imageSize.height() / 300);
     data.valid = true;

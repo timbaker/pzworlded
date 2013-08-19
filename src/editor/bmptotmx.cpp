@@ -450,6 +450,7 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix,
         return QImage();
     }
 
+#if 0
     // This is the fastest format for QImage::pixel() and QImage::setPixel().
     if (image.format() != format) {
         image = image.convertToFormat(format);
@@ -458,6 +459,7 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix,
                     .arg(suffix).arg(QDir::toNativeSeparators(path));
         }
     }
+#endif
 
     return image;
 }
@@ -649,8 +651,8 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         QImage bmpVeg = images->mBmpVeg;
         int ix = (cell->x() - images->mBounds.x()) * 300;
         int iy = (cell->y() - images->mBounds.y()) * 300;
-        rbmpMain.rimage() = bmp.copy(ix, iy, 300, 300);
-        rbmpVeg.rimage() = bmpVeg.copy(ix, iy, 300, 300);
+        rbmpMain.rimage() = bmp.copy(ix, iy, 300, 300).convertToFormat(QImage::Format_ARGB32);
+        rbmpVeg.rimage() = bmpVeg.copy(ix, iy, 300, 300).convertToFormat(QImage::Format_ARGB32);
 
         if (settings.warnUnknownColors) {
             const QRgb black = qRgb(0, 0, 0);
