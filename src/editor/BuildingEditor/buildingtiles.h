@@ -334,6 +334,9 @@ public:
 
     BuildingTileEntry *createEntryFromSingleTile(const QString &tileName);
 
+    bool canAssignNone() const
+    { return true; }
+
     BuildingTileCategory *asFloors() { return this; }
 
     int shadowToEnum(int shadowIndex);
