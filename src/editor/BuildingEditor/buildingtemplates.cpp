@@ -241,7 +241,7 @@ bool TemplatesFile::read(const QString &fileName)
             }
             mTemplates += def;
         } else {
-            mError = tr("Unknown block name '%1': expected 'Template'.\n%2")
+            mError = tr("Unknown block name '%1'.\n%2")
                     .arg(block.name)
                     .arg(path);
             return false;
