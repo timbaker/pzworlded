@@ -57,6 +57,9 @@ Map::Map(Orientation orientation,
 Map::~Map()
 {
     qDeleteAll(mLayers);
+#ifdef ZOMBOID
+    qDeleteAll(mNoBlend);
+#endif
 }
 
 static QMargins maxMargins(const QMargins &a,
@@ -284,6 +287,13 @@ void Map::addTileLayerGroup(ZTileLayerGroup *tileLayerGroup)
     }
     mTileLayerGroups.insert(arrayIndex, tileLayerGroup);
 }
+
+MapNoBlend *Map::noBlend(const QString &layerName)
+{
+    if (!mNoBlend.contains(layerName))
+        mNoBlend[layerName] = new MapNoBlend(layerName, width(), height());
+    return mNoBlend[layerName];
+}
 #endif // ZOMBOID
 
 Map *Map::clone() const
@@ -501,4 +511,22 @@ QList<QRgb> MapBmp::colors() const
     }
     return colorSet.toList();
 }
+
+/////
+
+MapNoBlend::MapNoBlend(const QString &layerName, int width, int height) :
+    mLayerName(layerName),
+    mWidth(width),
+    mHeight(height),
+    mBits(width * height)
+{
+}
+
+void MapNoBlend::replace(MapNoBlend *other)
+{
+    mWidth = other->width();
+    mHeight = other->height();
+    mBits = other->mBits;
+}
+
 #endif // ZOMBOID

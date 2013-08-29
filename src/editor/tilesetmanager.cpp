@@ -54,6 +54,18 @@ TilesetManager::TilesetManager():
     mMissingTile = mMissingTileset->tileAt(0);
     addReference(mMissingTileset);
 
+    mNoBlendTileset = new Tileset(QLatin1String("noblend"), 64, 128);
+    mNoBlendTileset->setTransparentColor(Qt::white);
+    mNoBlendTileset->setMissing(true);
+    fileName = QLatin1String(":/images/noblend.png");
+    if (!mNoBlendTileset->loadFromImage(QImage(fileName), fileName)) {
+        QImage image(64, 128, QImage::Format_ARGB32);
+        image.fill(Qt::red);
+        mNoBlendTileset->loadFromImage(image, fileName);
+    }
+    mNoBlendTile = mNoBlendTileset->tileAt(0);
+    addReference(mNoBlendTileset);
+
     qRegisterMetaType<Tileset*>("Tileset*");
 
     mImageReaderThreads.resize(8);
@@ -83,6 +95,7 @@ TilesetManager::~TilesetManager()
 {
 #ifdef ZOMBOID
     removeReference(mMissingTileset);
+    removeReference(mNoBlendTileset);
     for (int i = 0; i < mImageReaderThreads.size(); i++) {
         mImageReaderThreads[i]->interrupt();
         mImageReaderThreads[i]->quit();

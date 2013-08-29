@@ -34,6 +34,9 @@
 #include "layer.h"
 #include "object.h"
 
+#ifdef ZOMBOID
+#include <QBitArray>
+#endif
 #include <QList>
 #include <QMargins>
 #include <QSize>
@@ -90,6 +93,28 @@ public:
 
     QImage mImage;
     MapRands mRands;
+};
+
+class TILEDSHARED_EXPORT MapNoBlend
+{
+public:
+    MapNoBlend(const QString &layerName, int width, int height);
+
+    QString layerName() const { return mLayerName; }
+
+    int width() const { return mWidth; }
+    int height() const { return mHeight; }
+
+    void set(int x, int y, bool noblend) { mBits.setBit(x + y * mWidth, noblend); }
+    bool get(int x, int y) { return mBits.testBit(x + y * mWidth); }
+
+    void replace(MapNoBlend *other);
+
+private:
+    QString mLayerName;
+    int mWidth;
+    int mHeight;
+    QBitArray mBits;
 };
 
 class TILEDSHARED_EXPORT BmpAlias
@@ -465,6 +490,9 @@ public:
     MapBmp bmpMain() const { return mBmpMain; }
     MapBmp bmpVeg() const { return mBmpVeg; }
 
+    MapNoBlend *noBlend(const QString &layerName);
+    QList<MapNoBlend*> noBlends() const { return mNoBlend.values(); }
+
     BmpSettings *rbmpSettings() { return &mBmpSettings; }
     const BmpSettings *bmpSettings() const { return &mBmpSettings; }
 #endif
@@ -498,6 +526,7 @@ private:
     QMap<Tileset*,int> mUsedTilesets;
     MapBmp mBmpMain;
     MapBmp mBmpVeg;
+    QMap<QString,MapNoBlend*> mNoBlend;
     BmpSettings mBmpSettings;
 #endif
 };

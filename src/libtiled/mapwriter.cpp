@@ -92,6 +92,7 @@ private:
     QString rgbString(QRgb rgb);
     void writeBmpSettings(QXmlStreamWriter &w, const BmpSettings *settings);
     void writeBmpImage(QXmlStreamWriter &w, int index, const MapBmp &bmp);
+    void writeNoBlend(QXmlStreamWriter &w, MapNoBlend *noBlend);
 #endif
 
     QDir mMapDir;     // The directory in which the map is being saved
@@ -217,6 +218,8 @@ void MapWriterPrivate::writeMap(QXmlStreamWriter &w, const Map *map)
     writeBmpSettings(w, map->bmpSettings());
     writeBmpImage(w, 0, map->bmpMain());
     writeBmpImage(w, 1, map->bmpVeg());
+    foreach (MapNoBlend *noBlend, map->noBlends())
+        writeNoBlend(w, noBlend);
 #endif
 
     w.writeEndElement();
@@ -694,6 +697,33 @@ void MapWriterPrivate::writeBmpImage(QXmlStreamWriter &w,
     w.writeEndElement();
 
     w.writeEndElement();
+}
+
+void MapWriterPrivate::writeNoBlend(QXmlStreamWriter &w, MapNoBlend *noBlend)
+{
+    QByteArray data;
+    int numTrue = 0;
+    for (int y = 0; y < noBlend->width(); y++) {
+        for (int x = 0; x < noBlend->height(); x++) {
+            data.append(uchar(noBlend->get(x, y) ? 1 : 0));
+            if (noBlend->get(x, y)) numTrue++;
+        }
+    }
+
+    if (numTrue == 0)
+        return;
+
+    w.writeStartElement(QLatin1String("bmp-noblend"));
+    w.writeAttribute(QLatin1String("layer"), noBlend->layerName());
+
+    w.writeStartElement(QLatin1String("bits"));
+    w.writeCharacters(QLatin1String("\n   "));
+    QString chars = QString::fromLatin1(compress(data, Gzip).toBase64());
+    w.writeCharacters(chars);
+    w.writeCharacters(QLatin1String("\n  "));
+    w.writeEndElement(); // bits
+
+    w.writeEndElement(); // bmp-noblend
 }
 #endif // ZOMBOID
 

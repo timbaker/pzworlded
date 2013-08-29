@@ -121,9 +121,13 @@ private:
     void readBmpAliases();
     void readBmpRules();
     void readBmpBlends();
+
     void readBmpImage();
     void readBmpPixels(int index, const QList<QRgb> &colors);
     void decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors, const QStringRef &text);
+
+    void readNoBlend();
+    void decodeNoBlendBits(MapNoBlend *noBlend, const QStringRef &text);
 #endif
 
     MapReader *p;
@@ -259,6 +263,8 @@ Map *MapReaderPrivate::readMap()
             readBmpSettings();
         else if (xml.name() == QLatin1String("bmp-image"))
             readBmpImage();
+        else if (xml.name() == QLatin1String("bmp-noblend"))
+            readNoBlend();
 #endif
         else
             readUnknownElement();
@@ -1198,6 +1204,61 @@ void MapReaderPrivate::decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors,
     }
 }
 
+void MapReaderPrivate::readNoBlend()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("bmp-noblend"));
+
+    const QXmlStreamAttributes atts = xml.attributes();
+    QString layerName = atts.value(QLatin1String("layer")).toString();
+
+    MapNoBlend *noBlend = mMap->noBlend(layerName);
+
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("bits")) {
+            while (xml.readNext() != QXmlStreamReader::Invalid) {
+                if (xml.isEndElement()) {
+                    break;
+                } else if (xml.isCharacters() && !xml.isWhitespace()) {
+                    decodeNoBlendBits(noBlend, xml.text());
+                }
+            }
+        } else {
+            readUnknownElement();
+        }
+    }
+}
+
+void MapReaderPrivate::decodeNoBlendBits(MapNoBlend *noBlend, const QStringRef &text)
+{
+#if QT_VERSION < 0x040800
+    const QString textData = QString::fromRawData(text.unicode(), text.size());
+    const QByteArray latin1Text = textData.toLatin1();
+#else
+    const QByteArray latin1Text = text.toLatin1();
+#endif
+    QByteArray tileData = QByteArray::fromBase64(latin1Text);
+    const int size = (noBlend->width() * noBlend->height());
+
+    tileData = decompress(tileData, size);
+
+    if (size != tileData.length()) {
+        xml.raiseError(tr("Corrupt noblend data"));
+        return;
+    }
+
+    const uchar *data = reinterpret_cast<const uchar*>(tileData.constData());
+    int x = 0;
+    int y = 0;
+
+    for (int i = 0; i < size; i++) {
+        noBlend->set(x, y, data[i] != 0);
+        x++;
+        if (x == noBlend->width()) {
+            x = 0;
+            y++;
+        }
+    }
+}
 #endif // ZOMBOID
 
 
