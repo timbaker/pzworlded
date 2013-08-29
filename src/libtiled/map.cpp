@@ -309,6 +309,8 @@ Map *Map::clone() const
     o->mBmpMain = mBmpMain;
     o->mBmpVeg = mBmpVeg;
     o->mBmpSettings.clone(mBmpSettings);
+    foreach (MapNoBlend *noBlend, mNoBlend)
+        o->noBlend(noBlend->layerName())->replace(noBlend);
 #endif
     o->setProperties(properties());
     return o;
@@ -522,11 +524,41 @@ MapNoBlend::MapNoBlend(const QString &layerName, int width, int height) :
 {
 }
 
-void MapNoBlend::replace(MapNoBlend *other)
+void MapNoBlend::replace(const MapNoBlend *other)
 {
     mWidth = other->width();
     mHeight = other->height();
     mBits = other->mBits;
+}
+
+void MapNoBlend::replace(const MapNoBlend *other, const QRegion &rgn)
+{
+    QRect bounds = rgn.boundingRect();
+    Q_ASSERT(other->width() == bounds.width() && other->height() == bounds.height());
+    QRegion clipped = rgn & QRect(0, 0, width(), height());
+
+    foreach (QRect r, clipped.rects()) {
+        for (int y = r.top(); y <= r.bottom(); y++) {
+            for (int x = r.x(); x <= r.right(); x++) {
+                set(x, y, other->get(x - bounds.x(),  y - bounds.y()));
+            }
+        }
+    }
+}
+
+MapNoBlend MapNoBlend::copy(const QRegion &rgn)
+{
+    QRect bounds = rgn.boundingRect();
+    MapNoBlend copy(layerName(), bounds.width(), bounds.height());
+    QRegion clipped = rgn & QRect(0, 0, width(), height());
+    foreach (QRect r, clipped.rects()) {
+        for (int y = r.top(); y <= r.bottom(); y++) {
+            for (int x = r.x(); x <= r.right(); x++) {
+                copy.set(x - bounds.x(), y - bounds.y(), get(x, y));
+            }
+        }
+    }
+    return copy;
 }
 
 #endif // ZOMBOID

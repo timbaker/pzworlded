@@ -106,9 +106,13 @@ public:
     int height() const { return mHeight; }
 
     void set(int x, int y, bool noblend) { mBits.setBit(x + y * mWidth, noblend); }
-    bool get(int x, int y) { return mBits.testBit(x + y * mWidth); }
+    bool get(int x, int y) const { return mBits.testBit(x + y * mWidth); }
 
-    void replace(MapNoBlend *other);
+    void replace(const MapNoBlend *other);
+
+    void replace(const MapNoBlend *other, const QRegion &rgn);
+
+    MapNoBlend copy(const QRegion &rgn);
 
 private:
     QString mLayerName;
