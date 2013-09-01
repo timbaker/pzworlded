@@ -25,6 +25,7 @@
 #include "BuildingEditor/buildingtiles.h"
 
 #include "map.h"
+#include "maprenderer.h"
 #include "tilelayer.h"
 #include "tileset.h"
 
@@ -38,6 +39,8 @@
 
 using namespace Tiled;
 using namespace Tiled::Internal;
+
+static QString STR_0Floor = QLatin1String("0_Floor");
 
 BmpBlender::BmpBlender(QObject *parent) :
     QObject(parent),
@@ -92,6 +95,11 @@ void BmpBlender::recreate()
     }
 }
 
+void BmpBlender::markDirty(const QRegion &rgn)
+{
+    mDirtyRegion += rgn;
+}
+
 void BmpBlender::markDirty(const QRect &r)
 {
     mDirtyRegion += r;
@@ -102,7 +110,6 @@ void BmpBlender::markDirty(int x1, int y1, int x2, int y2)
     mDirtyRegion += QRect(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 }
 
-#include "maprenderer.h"
 void BmpBlender::flush(const MapRenderer *renderer, const QRect &rect, const QPoint &mapPos)
 {
     if (mDirtyRegion.isEmpty())
@@ -173,7 +180,7 @@ void BmpBlender::tilesetRemoved(const QString &tilesetName)
 
 void BmpBlender::tilesToPixels(int x1, int y1, int x2, int y2)
 {
-    int index = mMap->indexOfLayer(QLatin1String("0_Floor"), Layer::TileLayerType);
+    int index = mMap->indexOfLayer(STR_0Floor, Layer::TileLayerType);
     if (index == -1) return;
     TileLayer *floorLayer = mMap->layerAt(index)->asTileLayer();
 
@@ -276,7 +283,7 @@ void BmpBlender::fromMap()
                 tiles += tileName;
         }
         ruleW->mTileNames = normalizeTileNames(tiles);
-        if (rule->targetLayer == QLatin1String("0_Floor") && rule->bitmapIndex == 0) {
+        if (rule->targetLayer == STR_0Floor && rule->bitmapIndex == 0) {
             mFloor0Rules += ruleW;
         }
         mRules += ruleW;
@@ -364,7 +371,7 @@ void BmpBlender::initTiles()
     mFloorTileToRule.clear();
     foreach (RuleWrapper *ruleW, mRules) {
         ruleW->mTiles = tileNamesToTiles(ruleW->mTileNames).toVector();
-        if (ruleW->mRule->targetLayer != QLatin1String("0_Floor"))
+        if (ruleW->mRule->targetLayer != STR_0Floor)
             continue;
         foreach (Tile *tile, ruleW->mTiles)
             mFloorTileToRule[tile] = ruleW;
@@ -422,7 +429,7 @@ void BmpBlender::imagesToTileGrids(int x1, int y1, int x2, int y2)
 
     // Hack - If a pixel is black, and the user-drawn map tile in 0_Floor is
     // one of the Rules.txt tiles, pretend that that pixel exists in the image.
-    int index = mMap->indexOfLayer(QLatin1String("0_Floor"), Layer::TileLayerType);
+    int index = mMap->indexOfLayer(STR_0Floor, Layer::TileLayerType);
     TileLayer *floorLayer = (index == -1) ? 0 : mMap->layerAt(index)->asTileLayer();
 
     x1 = qBound(0, x1, mMap->width() - 1);
@@ -496,7 +503,7 @@ void BmpBlender::blend(int x1, int y1, int x2, int y2)
     y1 = qBound(0, y1, mMap->height() - 1);
     y2 = qBound(0, y2, mMap->height() - 1);
 
-    SparseTileGrid *grid = mTileGrids[QLatin1String("0_Floor")];
+    SparseTileGrid *grid = mTileGrids[STR_0Floor];
     if (!grid)
         return;
 
@@ -727,7 +734,7 @@ Tile *BmpBlender::getNeighbouringTile(int x, int y)
 {
     if (x < 0 || y < 0 || x >= mMap->width() || y >= mMap->height())
         return 0;
-    SparseTileGrid *grid = mTileGrids[QLatin1String("0_Floor")];
+    SparseTileGrid *grid = mTileGrids[STR_0Floor];
     Tile *tile = grid->at(x, y).tile;
     if (!tile)
         tile = mFakeTileGrid->at(x, y).tile;

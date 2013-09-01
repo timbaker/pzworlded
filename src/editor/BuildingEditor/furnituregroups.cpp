@@ -658,7 +658,7 @@ bool FurnitureTile::isCornerOrient(FurnitureTile::FurnitureOrientation orient)
 FloorTileGrid *FurnitureTile::toFloorTileGrid(QRegion &rgn)
 {
     rgn = QRegion();
-    if (size().isNull())
+    if (size().isNull() || isEmpty())
         return 0;
 
     FloorTileGrid *tiles = new FloorTileGrid(width(), height());
@@ -671,6 +671,10 @@ FloorTileGrid *FurnitureTile::toFloorTileGrid(QRegion &rgn)
                 }
             }
         }
+    }
+    if (rgn.isEmpty()) {
+        delete tiles;
+        return 0;
     }
     return tiles;
 }

@@ -213,23 +213,8 @@ public:
 
         foreach (BuildingFloor *floor, mBuilding->floors()) {
             foreach (BuildingObject *object, floor->objects()) {
-#if 1
                 foreach (BuildingTileEntry *entry, object->tiles())
                     addEntry(entry);
-#else
-                addEntry(object->tile());
-                if (Door *door = object->asDoor()) {
-                    addEntry(door->frameTile());
-                } else if (RoofObject *roof = object->asRoof()) {
-                    addEntry(roof->capTiles());
-                    addEntry(roof->slopeTiles());
-                    addEntry(roof->topTiles());
-                } else if (WallObject *wall = object->asWall()) {
-                    addEntry(wall->tile(WallObject::TileInterior));
-                } else if (Window *window = object->asWindow()) {
-                    addEntry(window->curtainsTile());
-                }
-#endif
             }
         }
 
