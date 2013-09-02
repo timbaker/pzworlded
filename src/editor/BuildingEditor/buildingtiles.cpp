@@ -20,6 +20,7 @@
 #include "preferences.h"
 #include "simplefile.h"
 
+#include "preferences.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 
@@ -476,8 +477,7 @@ bool BuildingTilesMgr::upgradeTxt()
 
     // Not the latest version -> upgrade it.
 
-    QString sourcePath = QCoreApplication::applicationDirPath() + QLatin1Char('/')
-            + txtName();
+    QString sourcePath = Preferences::instance()->appConfigPath(txtName());
 
     SimpleFile sourceFile;
     if (!sourceFile.read(sourcePath)) {
@@ -541,8 +541,7 @@ bool BuildingTilesMgr::mergeTxt()
     }
     Q_ASSERT(userFile.version() == VERSION_LATEST);
 
-    QString sourcePath = QCoreApplication::applicationDirPath() + QLatin1Char('/')
-            + txtName();
+    QString sourcePath = Preferences::instance()->appConfigPath(txtName());
 
     SimpleFile sourceFile;
     if (!sourceFile.read(sourcePath)) {
