@@ -997,8 +997,8 @@ UndoRedoButtons::UndoRedoButtons(WorldDocument *worldDoc, QObject *parent) :
 
 void UndoRedoButtons::retranslateUi()
 {
-    mUndo->setText(QApplication::translate("UndoRedoButtons", "Undo", 0, QApplication::UnicodeUTF8));
-    mRedo->setText(QApplication::translate("UndoRedoButtons", "Redo", 0, QApplication::UnicodeUTF8));
+    mUndo->setText(QApplication::translate("UndoRedoButtons", "Undo"));
+    mRedo->setText(QApplication::translate("UndoRedoButtons", "Redo"));
 }
 
 void UndoRedoButtons::resetIndex()
