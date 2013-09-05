@@ -176,6 +176,7 @@ public:
         void ReplaceFrame(BuildingTileEntry *tile, int offset);
         void ReplaceWindow(BuildingTileEntry *tile, int offset);
         void ReplaceCurtains(Window *window, bool exterior);
+        void ReplaceShutters(Window *window, bool first);
         void ReplaceFurniture(BuildingTileEntry *tile, int offset = 0);
         void ReplaceFurniture(BuildingTile *btile, SquareSection sectionMin,
                               SquareSection sectionMax);

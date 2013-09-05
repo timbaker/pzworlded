@@ -109,6 +109,7 @@ public:
     BuildingTileEntry *asDoorFrame();
     BuildingTileEntry *asWindow();
     BuildingTileEntry *asCurtains();
+    BuildingTileEntry *asShutters();
     BuildingTileEntry *asStairs();
     BuildingTileEntry *asRoofCap();
     BuildingTileEntry *asRoofSlope();
@@ -217,6 +218,7 @@ public:
     virtual BuildingTileCategory *asDoorFrames() { return 0; }
     virtual BuildingTileCategory *asWindows() { return 0; }
     virtual BuildingTileCategory *asCurtains() { return 0; }
+    virtual BuildingTileCategory *asShutters() { return 0; }
     virtual BuildingTileCategory *asStairs() { return 0; }
     virtual BuildingTileCategory *asGrimeFloor() { return 0; }
     virtual BuildingTileCategory *asGrimeWall() { return 0; }
@@ -271,6 +273,30 @@ public:
     { return true; }
 
     virtual BuildingTileCategory *asCurtains() { return this; }
+
+    int shadowToEnum(int shadowIndex);
+};
+
+class BTC_Shutters : public BuildingTileCategory
+{
+public:
+    enum TileEnum
+    {
+        WestBelow,
+        WestAbove,
+        NorthLeft,
+        NorthRight,
+        EnumCount
+    };
+
+    BTC_Shutters(const QString &label);
+
+    BuildingTileEntry *createEntryFromSingleTile(const QString &tileName);
+
+    bool canAssignNone() const
+    { return true; }
+
+    virtual BuildingTileCategory *asShutters() { return this; }
 
     int shadowToEnum(int shadowIndex);
 };
@@ -628,6 +654,7 @@ public:
         DoorFrames,
         Windows,
         Curtains,
+        Shutters,
         Stairs,
         GrimeFloor,
         GrimeWall,
@@ -785,6 +812,7 @@ private:
     BTC_IWalls *mCatIWalls;
     BTC_EWallTrim *mCatEWallTrim;
     BTC_IWallTrim *mCatIWallTrim;
+    BTC_Shutters *mCatShutters;
     BTC_Windows *mCatWindows;
     BTC_GrimeFloor *mCatGrimeFloor;
     BTC_GrimeWall *mCatGrimeWall;

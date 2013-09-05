@@ -19,6 +19,7 @@
 
 #include "preferences.h"
 
+#include "building.h"
 #include "buildingtiles.h"
 #include "furnituregroups.h"
 #include "simplefile.h"
@@ -676,6 +677,7 @@ QStringList BuildingTemplate::mTileNames;
 BuildingTemplate::BuildingTemplate() :
     mTiles(TileCount)
 {
+    Q_ASSERT(TileCount == Building::TileCount);
 }
 
 BuildingTemplate::BuildingTemplate(BuildingTemplate *other)
@@ -714,6 +716,7 @@ int BuildingTemplate::categoryEnum(int n)
     case DoorFrame: return BuildingTilesMgr::DoorFrames;
     case Window: return BuildingTilesMgr::Windows;
     case Curtains: return BuildingTilesMgr::Curtains;
+    case Shutters: return BuildingTilesMgr::Shutters;
     case Stairs: return BuildingTilesMgr::Stairs;
     case RoofCap: return BuildingTilesMgr::RoofCaps;
     case RoofSlope: return BuildingTilesMgr::RoofSlopes;
@@ -749,6 +752,7 @@ void BuildingTemplate::initNames()
     mEnumNames += QLatin1String("DoorFrame");
     mEnumNames += QLatin1String("Window");
     mEnumNames += QLatin1String("Curtains");
+    mEnumNames += QLatin1String("Shutters");
     mEnumNames += QLatin1String("Stairs");
     mEnumNames += QLatin1String("RoofCap");
     mEnumNames += QLatin1String("RoofSlope");
@@ -764,6 +768,7 @@ void BuildingTemplate::initNames()
     mTileNames += QCoreApplication::tr("Door frame");
     mTileNames += QCoreApplication::tr("Window");
     mTileNames += QCoreApplication::tr("Curtains");
+    mTileNames += QCoreApplication::tr("Shutters");
     mTileNames += QCoreApplication::tr("Stairs");
     mTileNames += QCoreApplication::tr("Roof Cap");
     mTileNames += QCoreApplication::tr("Roof Slope");

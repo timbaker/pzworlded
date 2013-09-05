@@ -271,21 +271,37 @@ class Window : public BuildingObject
 public:
     Window(BuildingFloor *floor, int x, int y, Direction dir) :
         BuildingObject(floor, x, y, dir),
-        mCurtainsTile(0)
+        mCurtainsTile(0),
+        mShuttersTile(0)
     {
 
     }
 
+    enum {
+        TileWindow,
+        TileCurtains,
+        TileShutters,
+        TileCount
+    };
+
     void setTile(BuildingTileEntry *tile, int alternate = 0)
-    { alternate ? mCurtainsTile = tile : mTile = tile; }
+    {
+        if (alternate == TileCurtains) mCurtainsTile = tile;
+        else if (alternate == TileShutters) mShuttersTile = tile;
+        else mTile = tile;
+    }
 
     BuildingTileEntry *tile(int alternate = 0) const
-    { return alternate ? mCurtainsTile : mTile; }
+    {
+        if (alternate == TileCurtains) return mCurtainsTile;
+        if (alternate == TileShutters) return mShuttersTile;
+        return mTile;
+    }
 
     virtual QList<BuildingTileEntry*> tiles() const
     {
         QList<BuildingTileEntry*> ret;
-        ret << mTile << mCurtainsTile;
+        ret << mTile << mCurtainsTile << mShuttersTile;
         return ret;
     }
 
@@ -301,8 +317,12 @@ public:
     BuildingTileEntry *curtainsTile()
     { return mCurtainsTile; }
 
+    BuildingTileEntry *shuttersTile()
+    { return mShuttersTile; }
+
 private:
     BuildingTileEntry *mCurtainsTile;
+    BuildingTileEntry *mShuttersTile;
 };
 
 class FurnitureObject : public BuildingObject

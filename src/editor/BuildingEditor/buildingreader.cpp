@@ -71,6 +71,7 @@ DECLARE_FAKE_CATEGORY(IWalls)
 DECLARE_FAKE_CATEGORY(EWallTrim)
 DECLARE_FAKE_CATEGORY(IWallTrim)
 DECLARE_FAKE_CATEGORY(Stairs)
+DECLARE_FAKE_CATEGORY(Shutters)
 DECLARE_FAKE_CATEGORY(Windows)
 DECLARE_FAKE_CATEGORY(GrimeFloor)
 DECLARE_FAKE_CATEGORY(GrimeWall)
@@ -95,6 +96,7 @@ public:
         mCatEWallTrim = NEW_FAKE_CATEGORY(EWallTrim);
         mCatIWallTrim = NEW_FAKE_CATEGORY(IWallTrim);
         mCatStairs = NEW_FAKE_CATEGORY(Stairs);
+        mCatShutters = NEW_FAKE_CATEGORY(Shutters);
         mCatWindows = NEW_FAKE_CATEGORY(Windows);
         mCatGrimeFloor = NEW_FAKE_CATEGORY(GrimeFloor);
         mCatGrimeWall = NEW_FAKE_CATEGORY(GrimeWall);
@@ -104,7 +106,8 @@ public:
 
         mCategories << mCatEWalls << mCatIWalls << mCatEWallTrim << mCatIWallTrim
                        << mCatFloors << mCatDoors
-                       << mCatDoorFrames << mCatWindows << mCatCurtains << mCatStairs
+                       << mCatDoorFrames << mCatWindows << mCatCurtains
+                       << mCatShutters << mCatStairs
                        << mCatGrimeFloor << mCatGrimeWall
                        << mCatRoofCaps << mCatRoofSlopes << mCatRoofTops;
 
@@ -220,6 +223,7 @@ public:
     BuildingTileCategory *catDoorFrames() const { return mCatDoorFrames; }
     BuildingTileCategory *catWindows() const { return mCatWindows; }
     BuildingTileCategory *catCurtains() const { return mCatCurtains; }
+    BuildingTileCategory *catShutters() const { return mCatShutters; }
     BuildingTileCategory *catStairs() const { return mCatStairs; }
     BuildingTileCategory *catRoofCaps() const { return mCatRoofCaps; }
     BuildingTileCategory *catRoofSlopes() const { return mCatRoofSlopes; }
@@ -245,6 +249,7 @@ public:
     Fake_IWalls *mCatIWalls;
     Fake_EWallTrim *mCatEWallTrim;
     Fake_IWallTrim *mCatIWallTrim;
+    Fake_Shutters *mCatShutters;
     Fake_Windows *mCatWindows;
     Fake_GrimeFloor *mCatGrimeFloor;
     Fake_GrimeWall *mCatGrimeWall;
@@ -270,6 +275,7 @@ DECLARE_FAKE_GETTILE(EWalls)
 DECLARE_FAKE_GETTILE(IWalls)
 DECLARE_FAKE_GETTILE(EWallTrim)
 DECLARE_FAKE_GETTILE(IWallTrim)
+DECLARE_FAKE_GETTILE(Shutters)
 DECLARE_FAKE_GETTILE(Windows)
 DECLARE_FAKE_GETTILE(GrimeFloor)
 DECLARE_FAKE_GETTILE(GrimeWall)
@@ -841,7 +847,9 @@ BuildingObject *BuildingReaderPrivate::readObject(BuildingFloor *floor)
         object = new Window(floor, x, y, dir);
         object->setTile(getEntry(tile)->asWindow());
         const QString curtains = atts.value(QLatin1String("CurtainsTile")).toString();
-        object->setTile(getEntry(curtains)->asCurtains(), 1);
+        object->setTile(getEntry(curtains)->asCurtains(), Window::TileCurtains);
+        const QString shutters = atts.value(QLatin1String("ShuttersTile")).toString();
+        object->setTile(getEntry(shutters)->asShutters(), Window::TileShutters);
     } else if (type == QLatin1String("furniture")) {
         FurnitureObject *furniture = new FurnitureObject(floor, x, y);
         int index = atts.value(QLatin1String("FurnitureTiles")).toString().toInt();

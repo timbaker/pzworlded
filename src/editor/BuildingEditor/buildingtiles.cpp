@@ -70,6 +70,7 @@ BuildingTilesMgr::BuildingTilesMgr() :
     mCatEWallTrim = new BTC_EWallTrim(QLatin1String("Trim - Exterior Walls"));
     mCatIWallTrim = new BTC_IWallTrim(QLatin1String("Trim - Interior Walls"));
     mCatStairs = new BTC_Stairs(QLatin1String("Stairs"));
+    mCatShutters = new BTC_Shutters(QLatin1String("Shutters"));
     mCatWindows = new BTC_Windows(QLatin1String("Windows"));
     mCatGrimeFloor = new BTC_GrimeFloor(QLatin1String("Grime - Floors"));
     mCatGrimeWall = new BTC_GrimeWall(QLatin1String("Grime - Walls"));
@@ -79,7 +80,7 @@ BuildingTilesMgr::BuildingTilesMgr() :
 
     mCategories << mCatEWalls << mCatIWalls << mCatEWallTrim << mCatIWallTrim
                    << mCatFloors << mCatDoors << mCatDoorFrames << mCatWindows
-                   << mCatCurtains << mCatStairs
+                   << mCatCurtains << mCatShutters << mCatStairs
                    << mCatGrimeFloor << mCatGrimeWall
                    << mCatRoofCaps << mCatRoofSlopes << mCatRoofTops;
 
@@ -95,6 +96,7 @@ BuildingTilesMgr::BuildingTilesMgr() :
     mCatDoorFrames->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_door_frames.png")));
     mCatWindows->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_windows.png")));
     mCatCurtains->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_curtains.png")));
+    mCatShutters->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_shutters.png")));
     mCatStairs->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_stairs.png")));
     mCatGrimeFloor->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_grime_floor.png")));
     mCatGrimeWall->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_grime_wall.png")));
@@ -837,6 +839,11 @@ BuildingTileEntry *BuildingTileEntry::asCurtains()
     return mCategory->asCurtains() ? this : 0;
 }
 
+BuildingTileEntry *BuildingTileEntry::asShutters()
+{
+    return mCategory->asShutters() ? this : 0;
+}
+
 BuildingTileEntry *BuildingTileEntry::asStairs()
 {
     return mCategory->asStairs() ? this : 0;
@@ -883,6 +890,36 @@ int BTC_Curtains::shadowToEnum(int shadowIndex)
 {
     const int map[EnumCount] = {
         West, East, North, South
+    };
+    return map[shadowIndex];
+}
+
+/////
+
+BTC_Shutters::BTC_Shutters(const QString &label) :
+    BuildingTileCategory(QLatin1String("shutters"), label, NorthLeft)
+{
+    mEnumNames += QLatin1String("WestBelow");
+    mEnumNames += QLatin1String("WestAbove");
+    mEnumNames += QLatin1String("NorthLeft");
+    mEnumNames += QLatin1String("NorthRight");
+    Q_ASSERT(mEnumNames.size() == EnumCount);
+}
+
+BuildingTileEntry *BTC_Shutters::createEntryFromSingleTile(const QString &tileName)
+{
+    BuildingTileEntry *entry = new BuildingTileEntry(this);
+    entry->mTiles[WestBelow] = getTile(tileName, 0);
+    entry->mTiles[WestAbove] = getTile(tileName, 1);
+    entry->mTiles[NorthLeft] = getTile(tileName, 2);
+    entry->mTiles[NorthRight] = getTile(tileName, 3);
+    return entry;
+}
+
+int BTC_Shutters::shadowToEnum(int shadowIndex)
+{
+    const int map[EnumCount] = {
+        WestBelow, WestAbove, NorthLeft, NorthRight
     };
     return map[shadowIndex];
 }

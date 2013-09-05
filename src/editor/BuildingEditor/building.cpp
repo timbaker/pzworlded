@@ -32,6 +32,8 @@ Building::Building(int width, int height, BuildingTemplate *btemplate) :
     mHeight(height),
     mTiles(TileCount)
 {
+    Q_ASSERT(TileCount == BuildingTemplate::TileCount);
+
     if (btemplate) {
         mTiles = btemplate->tiles();
         foreach (Room *room, btemplate->rooms())

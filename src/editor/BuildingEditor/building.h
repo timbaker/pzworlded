@@ -42,6 +42,7 @@ public:
         DoorFrame,
         Window,
         Curtains,
+        Shutters,
         Stairs,
         RoofCap,
         RoofSlope,

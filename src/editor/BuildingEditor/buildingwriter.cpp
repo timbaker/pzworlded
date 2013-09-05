@@ -338,6 +338,7 @@ public:
         } else if (Window *window = object->asWindow()) {
             w.writeAttribute(QLatin1String("type"), QLatin1String("window"));
             w.writeAttribute(QLatin1String("CurtainsTile"), entryIndex(window->curtainsTile()));
+            w.writeAttribute(QLatin1String("ShuttersTile"), entryIndex(window->shuttersTile()));
         } else if (object->asStairs())
             w.writeAttribute(QLatin1String("type"), QLatin1String("stairs"));
         else if (FurnitureObject *furniture = object->asFurniture()) {

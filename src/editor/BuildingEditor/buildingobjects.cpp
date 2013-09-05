@@ -1443,6 +1443,7 @@ BuildingObject *Window::clone() const
     Window *clone = new Window(mFloor, mX, mY, mDir);
     clone->mTile = mTile;
     clone->mCurtainsTile = mCurtainsTile;
+    clone->mShuttersTile = mShuttersTile;
     return clone;
 }
 
