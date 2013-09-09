@@ -65,6 +65,7 @@ proc copyFile {SOURCE DEST name {name2 ""}} {
 
 copyFile $BIN $DEST PZWorldEd.exe
 copyFile $BIN $DEST tiled.dll
+copyFile $BIN $DEST zlib1.dll
 
 copyFile $SRC $DEST Blends.txt
 copyFile $SRC $DEST MapBaseXML.txt
