@@ -539,6 +539,8 @@ public:
         // Sloped corners
         Inner1, Inner2, Inner3,
         Outer1, Outer2, Outer3,
+        InnerPt5, InnerOnePt5, InnerTwoPt5,
+        OuterPt5, OuterOnePt5, OuterTwoPt5,
         CornerSW1, CornerSW2, CornerSW3,
         CornerNE1, CornerNE2, CornerNE3,
 

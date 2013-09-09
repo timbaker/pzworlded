@@ -799,8 +799,198 @@ void BuildingFloor::LayoutToSquares()
                 break;
             }
 
+            // Inner corner
+            bool slopeE, slopeS;
+            QRect inner = ro->cornerInner(slopeE, slopeS);
+            if (!inner.isEmpty()) {
+                switch (ro->depth()) {
+                case RoofObject::Point5:
+                    ReplaceRoofCorner(ro, inner.right(), inner.top(), squares, RoofObject::InnerPt5);
+                    break;
+                case RoofObject::One:
+                    ReplaceRoofCorner(ro, inner.right(), inner.top(), squares, RoofObject::Inner1);
+                    break;
+                case RoofObject::OnePoint5:
+                    ReplaceRoofCorner(ro, inner.right()-1, inner.top()+0, squares, RoofObject::InnerOnePt5);
+                    ReplaceRoofCorner(ro, inner.right()-0, inner.top()+1, squares, RoofObject::Inner1);
+                    if (slopeE)
+                        ReplaceRoofCorner(ro, inner.right()-1, inner.top()+1, squares, RoofObject::SlopeOnePt5E);
+                    if (slopeS)
+                        ReplaceRoofCorner(ro, inner.right()-0, inner.top()+0, squares, RoofObject::SlopeOnePt5S);
+                    break;
+                case RoofObject::Two:
+                    ReplaceRoofCorner(ro, inner.right()-1, inner.top()+0, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, inner.right()-0, inner.top()+1, squares, RoofObject::Inner1);
+                    if (slopeE)
+                        ReplaceRoofCorner(ro, inner.right()-1, inner.top()+1, squares, RoofObject::SlopeE2);
+                    if (slopeS)
+                        ReplaceRoofCorner(ro, inner.left()+1, inner.bottom()-1, squares, RoofObject::SlopeS2);
+                    break;
+                case RoofObject::TwoPoint5:
+                    ReplaceRoofCorner(ro, inner.right()-2, inner.top()+0, squares, RoofObject::InnerTwoPt5);
+                    ReplaceRoofCorner(ro, inner.right()-1, inner.top()+1, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, inner.right()-0, inner.top()+2, squares, RoofObject::Inner1);
+                    if (slopeE) {
+                        ReplaceRoofCorner(ro, inner.right()-2, inner.top()+1, squares, RoofObject::SlopeTwoPt5E);
+                        ReplaceRoofCorner(ro, inner.right()-2, inner.top()+2, squares, RoofObject::SlopeTwoPt5E);
+                        ReplaceRoofCorner(ro, inner.right()-1, inner.top()+2, squares, RoofObject::SlopeE2);
+                    }
+                    if (slopeS) {
+                        ReplaceRoofCorner(ro, inner.right()-1, inner.top()+0, squares, RoofObject::SlopeTwoPt5S);
+                        ReplaceRoofCorner(ro, inner.right()-0, inner.top()+0, squares, RoofObject::SlopeTwoPt5S);
+                        ReplaceRoofCorner(ro, inner.right()-0, inner.top()+1, squares, RoofObject::SlopeS2);
+                    }
+                    break;
+                case RoofObject::Three:
+                    ReplaceRoofCorner(ro, inner.right()-2, inner.top(), squares, RoofObject::Inner3);
+                    ReplaceRoofCorner(ro, inner.right()-1, inner.top()+1, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, inner.right()-0, inner.top()+2, squares, RoofObject::Inner1);
+                    if (slopeE) {
+                        ReplaceRoofCorner(ro, inner.right()-2, inner.top()+1, squares, RoofObject::SlopeE3);
+                        ReplaceRoofCorner(ro, inner.right()-2, inner.top()+2, squares, RoofObject::SlopeE3);
+                        ReplaceRoofCorner(ro, inner.right()-1, inner.top()+2, squares, RoofObject::SlopeE2);
+                    }
+                    if (slopeS) {
+                        ReplaceRoofCorner(ro, inner.left()+1, inner.bottom()-2, squares, RoofObject::SlopeS3);
+                        ReplaceRoofCorner(ro, inner.left()+2, inner.bottom()-2, squares, RoofObject::SlopeS3);
+                        ReplaceRoofCorner(ro, inner.left()+2, inner.bottom()-1, squares, RoofObject::SlopeS2);
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            // Outer corner
+            QRect outer = ro->cornerOuter();
+            if (!outer.isEmpty()) {
+                switch (ro->depth()) {
+                case RoofObject::Point5:
+                    ReplaceRoofCorner(ro, r.left(), r.top(), squares, RoofObject::OuterPt5);
+                    break;
+                case RoofObject::One:
+                    ReplaceRoofCorner(ro, r.left(), r.top(), squares, RoofObject::Outer1);
+                    break;
+                case RoofObject::OnePoint5:
+                    ReplaceRoofCorner(ro, r.left(), r.top(), squares, RoofObject::OuterOnePt5);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top()+1, squares, RoofObject::Outer1);
+
+                    ReplaceRoofCorner(ro, r.left(), r.top()+1, squares, RoofObject::SlopeS1);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top(), squares, RoofObject::SlopeE1);
+                    break;
+                case RoofObject::Two:
+                    ReplaceRoofCorner(ro, r.left(), r.top(), squares, RoofObject::Outer2);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top()+1, squares, RoofObject::Outer1);
+
+                    ReplaceRoofCorner(ro, r.left(), r.top()+1, squares, RoofObject::SlopeS1);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top(), squares, RoofObject::SlopeE1);
+                    break;
+                case RoofObject::TwoPoint5:
+                    ReplaceRoofCorner(ro, r.left(), r.top(), squares, RoofObject::OuterTwoPt5);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top()+1, squares, RoofObject::Outer2);
+                    ReplaceRoofCorner(ro, r.left()+2, r.top()+2, squares, RoofObject::Outer1);
+
+                    ReplaceRoofCorner(ro, r.left()+2, r.top(), squares, RoofObject::SlopeE1);
+                    ReplaceRoofCorner(ro, r.left()+2, r.top()+1, squares, RoofObject::SlopeE1);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top(), squares, RoofObject::SlopeE2);
+
+                    ReplaceRoofCorner(ro, r.left(), r.top()+2, squares, RoofObject::SlopeS1);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top()+2, squares, RoofObject::SlopeS1);
+                    ReplaceRoofCorner(ro, r.left(), r.top()+1, squares, RoofObject::SlopeS2);
+                    break;
+                case RoofObject::Three:
+                    ReplaceRoofCorner(ro, r.left(), r.top(), squares, RoofObject::Outer3);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top()+1, squares, RoofObject::Outer2);
+                    ReplaceRoofCorner(ro, r.left()+2, r.top()+2, squares, RoofObject::Outer1);
+
+                    ReplaceRoofCorner(ro, r.left()+2, r.top(), squares, RoofObject::SlopeE1);
+                    ReplaceRoofCorner(ro, r.left()+2, r.top()+1, squares, RoofObject::SlopeE1);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top(), squares, RoofObject::SlopeE2);
+
+                    ReplaceRoofCorner(ro, r.left(), r.top()+2, squares, RoofObject::SlopeS1);
+                    ReplaceRoofCorner(ro, r.left()+1, r.top()+2, squares, RoofObject::SlopeS1);
+                    ReplaceRoofCorner(ro, r.left(), r.top()+1, squares, RoofObject::SlopeS2);
+                    break;
+                default:
+                    break;
+                }
+            }
+
             // Corners
             switch (ro->roofType()) {
+#if 0
+            case RoofObject::DormerE:
+                switch (ro->depth()) {
+                case RoofObject::Point5:
+                    break;
+                case RoofObject::One:
+                    ReplaceRoofCorner(ro, r.left(), r.bottom(), squares, RoofObject::Inner1);
+                    break;
+                case RoofObject::OnePoint5:
+                    break;
+                case RoofObject::Two:
+                    ReplaceRoofCorner(ro, r.left()+0, r.bottom()-1, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, r.left()+1, r.bottom()-0, squares, RoofObject::Inner1);
+
+                    ReplaceRoofCorner(ro, r.left()+1, r.bottom()-1, squares, RoofObject::SlopeS2);
+                    break;
+                case RoofObject::TwoPoint5:
+                    break;
+                case RoofObject::Three:
+                    ReplaceRoofCorner(ro, r.left()+0, r.bottom()-2, squares, RoofObject::Inner3);
+                    ReplaceRoofCorner(ro, r.left()+1, r.bottom()-1, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, r.left()+2, r.bottom()-0, squares, RoofObject::Inner1);
+
+                    ReplaceRoofCorner(ro, r.left()+1, r.bottom()-2, squares, RoofObject::SlopeS3);
+                    ReplaceRoofCorner(ro, r.left()+2, r.bottom()-2, squares, RoofObject::SlopeS3);
+                    ReplaceRoofCorner(ro, r.left()+2, r.bottom()-1, squares, RoofObject::SlopeS2);
+                    break;
+                default:
+                    break;
+                }
+                break;
+            case RoofObject::DormerS:
+                switch (ro->depth()) {
+                case RoofObject::Point5:
+                    ReplaceRoofCorner(ro, r.right(), r.top(), squares, RoofObject::InnerPt5);
+                    break;
+                case RoofObject::One:
+                    ReplaceRoofCorner(ro, r.right(), r.top(), squares, RoofObject::Inner1);
+                    break;
+                case RoofObject::OnePoint5:
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+0, squares, RoofObject::InnerOnePt5);
+                    ReplaceRoofCorner(ro, r.right()-0, r.top()+1, squares, RoofObject::Inner1);
+
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+1, squares, RoofObject::SlopeOnePt5E);
+                    break;
+                case RoofObject::Two:
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+0, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, r.right()-0, r.top()+1, squares, RoofObject::Inner1);
+
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+1, squares, RoofObject::SlopeE2);
+                    break;
+                case RoofObject::TwoPoint5:
+                    ReplaceRoofCorner(ro, r.right()-2, r.top()+0, squares, RoofObject::InnerTwoPt5);
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+1, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, r.right()-0, r.top()+2, squares, RoofObject::Inner1);
+
+                    ReplaceRoofCorner(ro, r.right()-2, r.top()+1, squares, RoofObject::SlopeTwoPt5E);
+                    ReplaceRoofCorner(ro, r.right()-2, r.top()+2, squares, RoofObject::SlopeTwoPt5E);
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+2, squares, RoofObject::SlopeE2);
+                    break;
+                case RoofObject::Three:
+                    ReplaceRoofCorner(ro, r.right()-2, r.top(), squares, RoofObject::Inner3);
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+1, squares, RoofObject::Inner2);
+                    ReplaceRoofCorner(ro, r.right()-0, r.top()+2, squares, RoofObject::Inner1);
+
+                    ReplaceRoofCorner(ro, r.right()-2, r.top()+1, squares, RoofObject::SlopeE3);
+                    ReplaceRoofCorner(ro, r.right()-2, r.top()+2, squares, RoofObject::SlopeE3);
+                    ReplaceRoofCorner(ro, r.right()-1, r.top()+2, squares, RoofObject::SlopeE2);
+                    break;
+                default:
+                    break;
+                }
+                break;
             case RoofObject::CornerInnerNW:
                 switch (ro->depth()) {
                 case RoofObject::Point5:
@@ -836,6 +1026,7 @@ void BuildingFloor::LayoutToSquares()
                     break;
                 }
                 break;
+#endif
             case RoofObject::CornerOuterSW:
                 switch (ro->depth()) {
                 case RoofObject::One:
@@ -884,6 +1075,7 @@ void BuildingFloor::LayoutToSquares()
                     break;
                 }
                 break;
+#if 0
             case RoofObject::CornerOuterSE:
                 switch (ro->depth()) {
                 case RoofObject::Point5:
@@ -919,6 +1111,7 @@ void BuildingFloor::LayoutToSquares()
                     break;
                 }
                 break;
+#endif
             default:
                 break;
             }
@@ -950,6 +1143,7 @@ void BuildingFloor::LayoutToSquares()
             if (ro->isCappedW()) {
                 switch (ro->roofType()) {
                 case RoofObject::PeakWE:
+                case RoofObject::DormerW:
                     switch (ro->depth()) {
                     case RoofObject::Point5:
                         ReplaceRoofCap(ro, r.left(), ro->y(), squares, RoofObject::PeakPt5E);
@@ -998,12 +1192,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallE1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallE1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallE1);
                         ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapFallE2);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallE1);
+                        ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapFallE2);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallE1);
@@ -1024,12 +1221,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseE2);
                         ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.left(), r.top()+1, squares, RoofObject::CapRiseE2);
+                        ReplaceRoofCap(ro, r.left(), r.top()+2, squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseE3);
@@ -1049,6 +1249,7 @@ void BuildingFloor::LayoutToSquares()
             if (ro->isCappedE()) {
                 switch (ro->roofType()) {
                 case RoofObject::PeakWE:
+                case RoofObject::DormerE:
                     switch (ro->depth()) {
                     case RoofObject::Point5:
                         ReplaceRoofCap(ro, r.right()+1, ro->y(), squares, RoofObject::PeakPt5E);
@@ -1097,12 +1298,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapFallE1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapFallE1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapFallE1);
                         ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapFallE2);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapFallE1);
+                        ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapFallE2);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapFallE1);
@@ -1123,12 +1327,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapRiseE2);
                         ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.right()+1, r.top()+1, squares, RoofObject::CapRiseE2);
+                        ReplaceRoofCap(ro, r.right()+1, r.top()+2, squares, RoofObject::CapRiseE1);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.right()+1, r.top(), squares, RoofObject::CapRiseE3);
@@ -1148,6 +1355,7 @@ void BuildingFloor::LayoutToSquares()
             if (ro->isCappedN()) {
                 switch (ro->roofType()) {
                 case RoofObject::PeakNS:
+                case RoofObject::DormerN:
                     switch (ro->depth()) {
                     case RoofObject::Point5:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::PeakPt5S);
@@ -1196,12 +1404,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseS1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseS1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseS1);
                         ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapRiseS2);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseS1);
+                        ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapRiseS2);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapRiseS1);
@@ -1222,12 +1433,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.top(), squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.left()+0, r.top(), squares, RoofObject::CapFallS2);
                         ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.left()+1, r.top(), squares, RoofObject::CapFallS2);
+                        ReplaceRoofCap(ro, r.left()+2, r.top(), squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.left()+0, r.top(), squares, RoofObject::CapFallS3);
@@ -1247,6 +1461,7 @@ void BuildingFloor::LayoutToSquares()
             if (ro->isCappedS()) {
                 switch (ro->roofType()) {
                 case RoofObject::PeakNS:
+                case RoofObject::DormerS:
                     switch (ro->depth()) {
                     case RoofObject::Point5:
                         ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::PeakPt5S);
@@ -1295,12 +1510,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapRiseS1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapRiseS1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapRiseS1);
                         ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapRiseS2);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapRiseS1);
+                        ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapRiseS2);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapRiseS1);
@@ -1321,12 +1539,15 @@ void BuildingFloor::LayoutToSquares()
                         ReplaceRoofCap(ro, r.left(), r.bottom()+1, squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::OnePoint5:
+                        ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::Two:
                         ReplaceRoofCap(ro, r.left()+0, r.bottom()+1, squares, RoofObject::CapFallS2);
                         ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::TwoPoint5:
+                        ReplaceRoofCap(ro, r.left()+1, r.bottom()+1, squares, RoofObject::CapFallS2);
+                        ReplaceRoofCap(ro, r.left()+2, r.bottom()+1, squares, RoofObject::CapFallS1);
                         break;
                     case RoofObject::Three:
                         ReplaceRoofCap(ro, r.left()+0, r.bottom()+1, squares, RoofObject::CapFallS3);

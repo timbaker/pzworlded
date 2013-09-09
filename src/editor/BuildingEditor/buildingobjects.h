@@ -367,6 +367,10 @@ public:
         SlopeS,
         PeakWE,
         PeakNS,
+        DormerW,
+        DormerN,
+        DormerE,
+        DormerS,
         FlatTop,
         CornerInnerSW,
         CornerInnerNW,
@@ -461,7 +465,7 @@ public:
     int height() const
     { return mHeight; }
 
-    void resize(int width, int height);
+    void resize(int width, int height, bool halfDepth);
 
     void depthUp();
     void depthDown();
@@ -476,6 +480,7 @@ public:
     int actualHeight() const;
 
     int slopeThickness() const;
+    void setHalfDepth(bool half) { mHalfDepth = half; }
     bool isHalfDepth() const;
 
     bool isCappedW() const
@@ -511,6 +516,8 @@ public:
         // Corners
         Inner1, Inner2, Inner3,
         Outer1, Outer2, Outer3,
+        InnerPt5, InnerOnePt5, InnerTwoPt5,
+        OuterPt5, OuterOnePt5, OuterTwoPt5,
         CornerSW1, CornerSW2, CornerSW3,
         CornerNE1, CornerNE2, CornerNE3,
 
@@ -536,6 +543,9 @@ public:
     QRect southGap(RoofDepth depth);
     QRect flatTop();
 
+    QRect cornerInner(bool &slopeE, bool &slopeS);
+    QRect cornerOuter();
+
     QString typeToString() const
     { return typeToString(mType); }
 
@@ -557,6 +567,7 @@ private:
     bool mCappedN;
     bool mCappedE;
     bool mCappedS;
+    bool mHalfDepth;
     BuildingTileEntry *mCapTiles;
     BuildingTileEntry *mSlopeTiles;
     BuildingTileEntry *mTopTiles;

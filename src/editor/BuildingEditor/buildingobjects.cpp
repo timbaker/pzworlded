@@ -458,11 +458,12 @@ RoofObject::RoofObject(BuildingFloor *floor, int x, int y, int width, int height
     mCappedN(cappedN),
     mCappedE(cappedE),
     mCappedS(cappedS),
+    mHalfDepth(depth == Point5 || depth == OnePoint5 || depth == TwoPoint5),
     mCapTiles(0),
     mSlopeTiles(0),
     mTopTiles(0)
 {
-    resize(mWidth, mHeight);
+    resize(mWidth, mHeight, mHalfDepth);
 }
 
 QRect RoofObject::bounds() const
@@ -489,6 +490,10 @@ void RoofObject::rotate(bool right)
         case SlopeS: mType = SlopeW; break;
         case PeakWE: mType = PeakNS; break;
         case PeakNS: mType = PeakWE; break;
+        case DormerW: mType = DormerN; break;
+        case DormerN: mType = DormerE; break;
+        case DormerE: mType = DormerS; break;
+        case DormerS: mType = DormerW; break;
         case FlatTop: break;
 
         case CornerInnerSW: mType = CornerInnerNW; break;
@@ -523,6 +528,10 @@ void RoofObject::rotate(bool right)
         case SlopeS: mType = SlopeE; break;
         case PeakWE: mType = PeakNS; break;
         case PeakNS: mType = PeakWE; break;
+        case DormerW: mType = DormerS; break;
+        case DormerN: mType = DormerW; break;
+        case DormerE: mType = DormerN; break;
+        case DormerS: mType = DormerE; break;
         case FlatTop: break;
 
         case CornerInnerSW: mType = CornerInnerSE; break;
@@ -559,6 +568,10 @@ void RoofObject::flip(bool horizontal)
         case SlopeS:  break;
         case PeakWE:  break;
         case PeakNS:  break;
+        case DormerW: mType = DormerE; break;
+        case DormerN: break;
+        case DormerE: mType = DormerW; break;
+        case DormerS: break;
         case FlatTop: break;
 
         case CornerInnerSW: mType = CornerInnerSE; break;
@@ -584,6 +597,10 @@ void RoofObject::flip(bool horizontal)
         case SlopeS: mType = SlopeN; break;
         case PeakWE:  break;
         case PeakNS:  break;
+        case DormerW: break;
+        case DormerN: mType = DormerS; break;
+        case DormerE: break;
+        case DormerS: mType = DormerN; break;
         case FlatTop: break;
 
         case CornerInnerSW: mType = CornerInnerNW; break;
@@ -636,7 +653,8 @@ BuildingTileEntry *RoofObject::tile(int alternate) const
 BuildingObject *RoofObject::clone() const
 {
     RoofObject *clone = new RoofObject(mFloor, mX, mY, mWidth, mHeight, mType, mDepth,
-                                 mCappedW, mCappedN, mCappedE, mCappedS);
+                                       mCappedW, mCappedN, mCappedE, mCappedS);
+    clone->mHalfDepth = mHalfDepth;
     clone->mCapTiles = mCapTiles;
     clone->mSlopeTiles = mSlopeTiles;
     clone->mTopTiles = mTopTiles;
@@ -694,19 +712,21 @@ void RoofObject::setWidth(int width)
         mWidth = qBound(1, width, 3);
         switch (mWidth) {
         case 1:
-            mDepth = One;
+            mDepth = mHalfDepth ? Point5 : One;
             break;
         case 2:
-            mDepth = Two;
+            mDepth = mHalfDepth ? OnePoint5 : Two;
             break;
         case 3:
-            mDepth = Three;
+            mDepth = mHalfDepth ? TwoPoint5 : Three;
             break;
         }
         break;
     case SlopeN:
     case SlopeS:
     case PeakWE:
+    case DormerW:
+    case DormerE:
         mWidth = width;
         break;
     case FlatTop:
@@ -715,6 +735,8 @@ void RoofObject::setWidth(int width)
             mDepth = Zero;
         break;
     case PeakNS:
+    case DormerN:
+    case DormerS:
         mWidth = width; //qBound(1, width, 6);
         switch (mWidth) {
         case 1:
@@ -748,13 +770,13 @@ void RoofObject::setWidth(int width)
         mWidth = qBound(1, width, 3);
         switch (mWidth) {
         case 1:
-            mDepth = One;
+            mDepth = mHalfDepth ? Point5 : One;
             break;
         case 2:
-            mDepth = Two;
+            mDepth = mHalfDepth ? OnePoint5 : Two;
             break;
         case 3:
-            mDepth = Three;
+            mDepth = mHalfDepth ? TwoPoint5 : Three;
             break;
         }
         break;
@@ -775,17 +797,19 @@ void RoofObject::setHeight(int height)
         mHeight = qBound(1, height, 3);
         switch (mHeight) {
         case 1:
-            mDepth = One;
+            mDepth = mHalfDepth ? Point5 : One;
             break;
         case 2:
-            mDepth = Two;
+            mDepth = mHalfDepth ? OnePoint5 : Two;
             break;
         case 3:
-            mDepth = Three;
+            mDepth = mHalfDepth ? TwoPoint5 : Three;
             break;
         }
         break;
     case PeakWE:
+    case DormerW:
+    case DormerE:
         mHeight = height; //qBound(1, height, 6);
         switch (mHeight) {
         case 1:
@@ -807,9 +831,23 @@ void RoofObject::setHeight(int height)
             mDepth = Three;
             break;
         }
+        if (mType == DormerW || mType == DormerE) {
+            switch (mDepth) {
+            case OnePoint5: case Two: mWidth = qMax(mWidth, 2); break;
+            case TwoPoint5: case Three: mWidth = qMax(mWidth, 3); break;
+            }
+        }
         break;
     case PeakNS:
         mHeight = height;
+        break;
+    case DormerN:
+    case DormerS:
+        mHeight = height;
+        switch (mDepth) {
+        case OnePoint5: case Two: mHeight = qMax(mHeight, 2); break;
+        case TwoPoint5: case Three: mHeight = qMax(mHeight, 3); break;
+        }
         break;
     case FlatTop:
         mHeight = height;
@@ -827,13 +865,13 @@ void RoofObject::setHeight(int height)
         mHeight = qBound(1, height, 3);
         switch (mHeight) {
         case 1:
-            mDepth = One;
+            mDepth = mHalfDepth ? Point5 : One;
             break;
         case 2:
-            mDepth = Two;
+            mDepth = mHalfDepth ? OnePoint5 : Two;
             break;
         case 3:
-            mDepth = Three;
+            mDepth = mHalfDepth ? TwoPoint5 : Three;
             break;
         }
         break;
@@ -842,8 +880,9 @@ void RoofObject::setHeight(int height)
     }
 }
 
-void RoofObject::resize(int width, int height)
+void RoofObject::resize(int width, int height, bool halfDepth)
 {
+    mHalfDepth = halfDepth;
     if (isCorner()) {
         height = width = qMax(width, height);
     }
@@ -891,8 +930,9 @@ void RoofObject::depthUp()
     case CornerInnerNE:
     case CornerInnerSE:
         switch (mDepth) {
-        case One: mDepth = Two; break;
-        case Two: mDepth = Three; break;
+        case Point5: mDepth = One; break;
+        case OnePoint5: mDepth = Two; break;
+        case TwoPoint5: mDepth = Three; break;
         default:
             break;
         }
@@ -943,11 +983,11 @@ void RoofObject::depthDown()
     case CornerInnerSE:
         switch (mDepth) {
         case Point5: break;
-        case One: break;
+        case One: mDepth = Point5; break;
         case OnePoint5: break;
-        case Two: mDepth = One; break;
+        case Two: mDepth = OnePoint5; break;
         case TwoPoint5: break;
-        case Three: mDepth = Two; break;
+        case Three: mDepth = TwoPoint5; break;
         default:
             break;
         }
@@ -986,6 +1026,8 @@ bool RoofObject::isDepthMax()
     case CornerInnerNE:
     case CornerInnerSE:
         switch (mDepth) {
+        case One:
+        case Two:
         case Three: return true; ///
         default:
             break;
@@ -1027,7 +1069,9 @@ bool RoofObject::isDepthMin()
     case CornerInnerNE:
     case CornerInnerSE:
         switch (mDepth) {
-        case One: return true; ///
+        case Point5:
+        case OnePoint5:
+        case TwoPoint5: return true; ///
         default:
             break;
         }
@@ -1051,9 +1095,9 @@ int RoofObject::actualHeight() const
 
 int RoofObject::slopeThickness() const
 {
-    if (mType == PeakWE)
+    if (mType == PeakWE || mType == DormerW || mType == DormerE)
         return qCeil(qreal(qMin(mHeight, 6)) / 2);
-    if (mType == PeakNS)
+    if (mType == PeakNS || mType == DormerN || mType == DormerS)
         return qCeil(qreal(qMin(mWidth, 6)) / 2);
 
     return 0;
@@ -1123,6 +1167,8 @@ int RoofObject::getOffset(RoofObject::RoofTile tile) const
     #endif
         BTC_RoofSlopes::Inner1, BTC_RoofSlopes::Inner2, BTC_RoofSlopes::Inner3,
         BTC_RoofSlopes::Outer1, BTC_RoofSlopes::Outer2, BTC_RoofSlopes::Outer3,
+        BTC_RoofSlopes::InnerPt5, BTC_RoofSlopes::InnerOnePt5, BTC_RoofSlopes::InnerTwoPt5,
+        BTC_RoofSlopes::OuterPt5, BTC_RoofSlopes::OuterOnePt5, BTC_RoofSlopes::OuterTwoPt5,
         BTC_RoofSlopes::CornerSW1, BTC_RoofSlopes::CornerSW2, BTC_RoofSlopes::CornerSW3,
         BTC_RoofSlopes::CornerNE1, BTC_RoofSlopes::CornerNE2, BTC_RoofSlopes::CornerNE3,
     };
@@ -1185,6 +1231,16 @@ QRect RoofObject::eastEdge()
         return QRect(r.right() - slopeThickness() + 1, r.top(),
                      slopeThickness(), r.height());
     }
+    if (mType == DormerN) {
+        return QRect(r.right() - slopeThickness() + 1, r.top(),
+                     slopeThickness(), r.height() - slopeThickness());
+    }
+    if (mType == DormerS) {
+        return QRect(r.right() - slopeThickness() + 1,
+                     r.top() + slopeThickness(),
+                     slopeThickness(),
+                     r.height() - slopeThickness());
+    }
     return QRect();
 }
 
@@ -1197,6 +1253,16 @@ QRect RoofObject::southEdge()
     if (mType == PeakWE) {
         return QRect(r.left(), r.bottom() - slopeThickness() + 1,
                      r.width(), slopeThickness());
+    }
+    if (mType == DormerW) {
+        return QRect(r.left(), r.bottom() - slopeThickness() + 1,
+                     r.width() - slopeThickness(), slopeThickness());
+    }
+    if (mType == DormerE) {
+        return QRect(r.left() + slopeThickness(),
+                     r.bottom() - slopeThickness() + 1,
+                     r.width() - slopeThickness(),
+                     slopeThickness());
     }
     return QRect();
 }
@@ -1211,7 +1277,7 @@ QRect RoofObject::westGap(RoofDepth depth)
             || mType == CornerInnerNW) {
         return QRect(r.left(), r.top(), 1, r.height());
     }
-    if (mType == PeakWE && mHeight > 6)
+    if ((mType == PeakWE || mType == DormerW) && mHeight > 6)
         return QRect(r.left(), r.top() + 3, 1, r.height() - 6);
     return QRect();
 }
@@ -1226,7 +1292,7 @@ QRect RoofObject::northGap(RoofDepth depth)
             || mType == CornerInnerNE) {
         return QRect(r.left(), r.top(), r.width(), 1);
     }
-    if (mType == PeakNS && mWidth > 6)
+    if ((mType == PeakNS || mType == DormerN) && mWidth > 6)
         return QRect(r.left() + 3, r.top(), r.width() - 6, 1);
     return QRect();
 }
@@ -1241,7 +1307,7 @@ QRect RoofObject::eastGap(RoofDepth depth)
             || mType == CornerInnerNE) {
         return QRect(r.right() + 1, r.top(), 1, r.height());
     }
-    if (mType == PeakWE && mHeight > 6)
+    if ((mType == PeakWE || mType == DormerE) && mHeight > 6)
         return QRect(r.right() + 1, r.top() + 3, 1, r.height() - 6);
     return QRect();
 }
@@ -1256,7 +1322,7 @@ QRect RoofObject::southGap(RoofDepth depth)
             || mType == CornerInnerSW) {
         return QRect(r.left(), r.bottom() + 1, r.width(), 1);
     }
-    if (mType == PeakNS && mWidth > 6)
+    if ((mType == PeakNS || mType == DormerS) && mWidth > 6)
         return QRect(r.left() + 3, r.bottom() + 1, r.width() - 6, 1);
     return QRect();
 }
@@ -1266,10 +1332,39 @@ QRect RoofObject::flatTop()
     QRect r = bounds();
     if (mType == FlatTop)
         return r;
-    if (mType == PeakWE && mHeight > 6)
+    if ((mType == PeakWE || mType == DormerW || mType == DormerE) && mHeight > 6)
         return QRect(r.left(), r.top() + 3, r.width(), r.height() - 6);
-    if (mType == PeakNS && mWidth > 6)
+    if ((mType == PeakNS || mType == DormerN || mType == DormerS) && mWidth > 6)
         return QRect(r.left() + 3, r.top(), r.width() - 6, r.height());
+    return QRect();
+}
+
+QRect RoofObject::cornerInner(bool &slopeE, bool &slopeS)
+{
+    QRect r = bounds();
+    switch (mType) {
+    case DormerE:
+        slopeE = false, slopeS = true;
+        return QRect(r.left(), r.bottom() - slopeThickness() + 1,
+                     slopeThickness(), slopeThickness());
+    case DormerS:
+        slopeE = true, slopeS = false;
+        return QRect(r.right() - slopeThickness() + 1, r.top(),
+                     slopeThickness(), slopeThickness());
+    case CornerInnerNW:
+        slopeE = slopeS = true;
+        return r;
+    }
+    return QRect();
+}
+
+QRect RoofObject::cornerOuter()
+{
+    QRect r = bounds();
+    switch (mType) {
+    case CornerOuterSE:
+        return r;
+    }
     return QRect();
 }
 
@@ -1283,6 +1378,11 @@ QString RoofObject::typeToString(RoofObject::RoofType type)
 
     case PeakWE: return QLatin1String("PeakWE");
     case PeakNS: return QLatin1String("PeakNS");
+
+    case DormerW: return QLatin1String("DormerW");
+    case DormerN: return QLatin1String("DormerN");
+    case DormerE: return QLatin1String("DormerE");
+    case DormerS: return QLatin1String("DormerS");
 
     case FlatTop: return QLatin1String("FlatTop");
 
@@ -1311,6 +1411,11 @@ RoofObject::RoofType RoofObject::typeFromString(const QString &s)
 
     if (s == QLatin1String("PeakWE")) return PeakWE;
     if (s == QLatin1String("PeakNS")) return PeakNS;
+
+    if (s == QLatin1String("DormerW")) return DormerW;
+    if (s == QLatin1String("DormerN")) return DormerN;
+    if (s == QLatin1String("DormerE")) return DormerE;
+    if (s == QLatin1String("DormerS")) return DormerS;
 
     if (s == QLatin1String("FlatTop")) return FlatTop;
 

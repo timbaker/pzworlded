@@ -1213,6 +1213,12 @@ BTC_RoofSlopes::BTC_RoofSlopes(const QString &label) :
     mEnumNames += QLatin1String("Outer1");
     mEnumNames += QLatin1String("Outer2");
     mEnumNames += QLatin1String("Outer3");
+    mEnumNames += QLatin1String("InnerPt5");
+    mEnumNames += QLatin1String("InnerOnePt5");
+    mEnumNames += QLatin1String("InnerTwoPt5");
+    mEnumNames += QLatin1String("OuterPt5");
+    mEnumNames += QLatin1String("OuterOnePt5");
+    mEnumNames += QLatin1String("OuterTwoPt5");
     mEnumNames += QLatin1String("CornerSW1");
     mEnumNames += QLatin1String("CornerSW2");
     mEnumNames += QLatin1String("CornerSW3");
@@ -1264,6 +1270,7 @@ int BTC_RoofSlopes::shadowToEnum(int shadowIndex)
         SlopeS1, SlopeS2, SlopeS3, SlopeE3, SlopeE2, SlopeE1,
         SlopePt5S, SlopeOnePt5S, SlopeTwoPt5S, SlopeTwoPt5E, SlopeOnePt5E, SlopePt5E,
         Outer1, Outer2, Outer3, Inner1, Inner2, Inner3,
+        OuterPt5, OuterOnePt5, OuterTwoPt5, InnerPt5, InnerOnePt5, InnerTwoPt5,
         CornerSW1, CornerSW2, CornerSW3, CornerNE3, CornerNE2, CornerNE1
     };
     return map[shadowIndex];
