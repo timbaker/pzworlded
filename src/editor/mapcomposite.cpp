@@ -307,8 +307,13 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
         }
     }
 
-    // Overwrite map cells with sub-map cells at this location
+    // Overwrite map cells with sub-map cells at this location.
+    // Chop off sub-map cells that aren't in the root- or adjacent-map's bounds.
+    QRect rootBounds(root->originRecursive(), root->mapInfo()->size());
+    bool inRoot = (rootBounds.size() == QSize(300, 300)) && rootBounds.contains(rootPos);
     foreach (const SubMapLayers& subMapLayer, mPreparedSubMapLayers) {
+        if (!inRoot && !subMapLayer.mSubMap->isAdjacentMap())
+            continue;
         if (!subMapLayer.mBounds.contains(pos))
             continue;
         subMapLayer.mLayerGroup->orderedCellsAt(pos - subMapLayer.mSubMap->origin(),
