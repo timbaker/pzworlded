@@ -992,6 +992,13 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
         layerGroup->setNeedsSynch(true);
     }
 
+    MapComposite *mc = this;
+    while (mc->mParent) {
+        mc->mParent->ensureMaxLevels(mc->levelOffset() + mc->maxLevel());
+        // FIXME: setNeedsSynch() on mc->mParent's layergroups
+        mc = mc->mParent;
+    }
+
     return subMap;
 }
 
