@@ -1844,7 +1844,8 @@ void MainWindow::writeSettings()
         mSettings.setValue(QLatin1String("scale"),
                            QString::number(view->zoomable()->scale()));
 
-        QPointF centerScenePos = view->mapToScene(view->width() / 2, view->height() / 2);
+        QPointF centerScenePos = view->mapToScene(view->viewport()->width() / 2,
+                                                  view->viewport()->height() / 2);
         mSettings.setValue(QLatin1String("scrollX"),
                            QString::number(int(centerScenePos.x())));
         mSettings.setValue(QLatin1String("scrollY"),
