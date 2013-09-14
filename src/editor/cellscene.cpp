@@ -314,7 +314,8 @@ ObjectLabelItem::ObjectLabelItem(ObjectItem *item, QGraphicsItem *parent)
 
 QRectF ObjectLabelItem::boundingRect() const
 {
-    return QGraphicsSimpleTextItem::boundingRect().adjusted(-3, -3, 2, 2);
+    QRectF r = QGraphicsSimpleTextItem::boundingRect().adjusted(-3, -3, 2, 2);
+    return r.translated(-r.center());
 }
 
 QPainterPath ObjectLabelItem::shape() const
@@ -329,13 +330,12 @@ bool ObjectLabelItem::contains(const QPointF &point) const
     return boundingRect().contains(point);
 }
 
-void ObjectLabelItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
-                            QWidget *widget)
+void ObjectLabelItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
+                            QWidget *)
 {
-    QRectF r = QGraphicsSimpleTextItem::boundingRect().adjusted(-3, -3, 2, 2);
+    QRectF r = boundingRect();
     painter->fillRect(r, mBgColor);
-
-    QGraphicsSimpleTextItem::paint(painter, option, widget);
+    painter->drawText(r, Qt::AlignCenter, text());
 }
 
 void ObjectLabelItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
@@ -348,7 +348,6 @@ void ObjectLabelItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     mItem->hoverLeaveEvent(event);
 }
 
-#include <QGraphicsView>
 void ObjectLabelItem::synch()
 {
     if (!Preferences::instance()->showObjectNames()
@@ -357,16 +356,7 @@ void ObjectLabelItem::synch()
     else {
         setVisible(true);
         setText(mItem->object()->name());
-
-        if (scene() && !scene()->views().isEmpty()) {
-            QRectF bounds = QGraphicsSimpleTextItem::boundingRect();
-            QGraphicsView *view = scene()->views().at(0);
-            // item coords -> view coords -> scene coords
-            bounds = deviceTransform(view->viewportTransform()).inverted().mapRect(bounds);
-            bounds = view->mapToScene(bounds.toAlignedRect()).boundingRect();
-            QPointF center = mItem->boundingRect().center();
-            setPos(center - (bounds.center() - bounds.topLeft()));
-        }
+        setPos(mItem->boundingRect().center());
 
         mBgColor = mItem->isMouseOverHighlighted() ? Qt::white : Qt::lightGray;
         mBgColor.setAlphaF(0.75);
