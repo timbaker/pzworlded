@@ -95,16 +95,18 @@ public:
     { return mBmpBlendLayers; }
 
 #ifdef BUILDINGED
-    void setToolTiles(const QVector<QVector<Tiled::Cell> > &tiles,
-                      const QPoint &pos, Tiled::TileLayer *layer)
+    void setToolTiles(const Tiled::TileLayer *stamp,
+                      const QPoint &pos, const QRegion &rgn,
+                      Tiled::TileLayer *layer)
     {
-        mToolTiles = tiles;
-        mToolTilesPos = pos;
-        mToolTileLayer = layer;
+        int index = mLayers.indexOf(layer);
+        mToolLayers[index].mLayer = stamp;
+        mToolLayers[index].mPos = pos;
+        mToolLayers[index].mRegion = rgn;
     }
 
     void clearToolTiles()
-    { mToolTiles.clear(); mToolTileLayer = 0; mToolTilesPos = QPoint(-1, -1); }
+    { mToolLayers.fill(ToolLayer()); }
 
     bool setLayerNonEmpty(const QString &layerName, bool force);
     bool setLayerNonEmpty(Tiled::TileLayer *tl, bool force);
@@ -150,9 +152,14 @@ private:
     Tiled::Cell mNoBlendCell;
 #ifdef BUILDINGED
     QVector<Tiled::TileLayer*> mBlendLayers;
-    QVector<QVector<Tiled::Cell> > mToolTiles;
-    QPoint mToolTilesPos;
-    Tiled::TileLayer *mToolTileLayer;
+    struct ToolLayer
+    {
+        ToolLayer() : mLayer(0), mPos(QPoint()), mRegion(QRegion()) {}
+        const Tiled::TileLayer *mLayer;
+        QPoint mPos;
+        QRegion mRegion;
+    };
+    QVector<ToolLayer> mToolLayers;
     QString mHighlightLayer;
     QVector<bool> mForceNonEmpty;
 #endif // BUILDINGED
