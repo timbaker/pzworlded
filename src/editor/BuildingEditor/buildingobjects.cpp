@@ -835,6 +835,7 @@ void RoofObject::setHeight(int height)
             switch (mDepth) {
             case OnePoint5: case Two: mWidth = qMax(mWidth, 2); break;
             case TwoPoint5: case Three: mWidth = qMax(mWidth, 3); break;
+            default: break;
             }
         }
         break;
@@ -847,6 +848,7 @@ void RoofObject::setHeight(int height)
         switch (mDepth) {
         case OnePoint5: case Two: mHeight = qMax(mHeight, 2); break;
         case TwoPoint5: case Three: mHeight = qMax(mHeight, 3); break;
+        default: break;
         }
         break;
     case FlatTop:
@@ -1354,6 +1356,8 @@ QRect RoofObject::cornerInner(bool &slopeE, bool &slopeS)
     case CornerInnerNW:
         slopeE = slopeS = true;
         return r;
+    default:
+        break;
     }
     return QRect();
 }
@@ -1364,6 +1368,8 @@ QRect RoofObject::cornerOuter()
     switch (mType) {
     case CornerOuterSE:
         return r;
+    default:
+        break;
     }
     return QRect();
 }
