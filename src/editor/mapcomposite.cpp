@@ -135,8 +135,9 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
     mBmpBlendLayers.insert(index, 0);
     mNoBlends.insert(index, 0);
 #ifdef BUILDINGED
-    mBlendLayers.insert(index, 0);
+    mBlendOverLayers.insert(index, 0);
     mToolLayers.insert(index, ToolLayer());
+    mToolNoBlends.insert(index, ToolNoBlend());
     mForceNonEmpty.insert(index, false);
 #endif // BUILDINGED
 #if 1 // ROAD_CRUD
@@ -156,8 +157,9 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
     mBmpBlendLayers.remove(index);
     mNoBlends.remove(index);
 #ifdef BUILDINGED
-    mBlendLayers.remove(index);
+    mBlendOverLayers.remove(index);
     mToolLayers.remove(index);
+    mToolNoBlends.remove(index);
     mForceNonEmpty.remove(index);
 #endif // BUILDINGED
 #ifndef WORLDED
@@ -205,7 +207,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                                          QVector<const Cell *> &cells,
                                          QVector<qreal> &opacities) const
 {
-    static QLatin1String sFloor("0_Floor");
+    static QLatin1String sFloor("0_Floor"); // FIXME: thread safe?
 
     MapComposite *root = mOwner->rootOrAdjacent();
     if (root == mOwner)
@@ -217,60 +219,31 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     const QPoint rootPos = pos + mOwner->originRecursive();
 
     bool cleared = false;
+    const Cell emptyCell;
     for (int index = 0; index < mLayers.size(); index++) {
         if (isLayerEmpty(index))
             continue;
-        TileLayer *tl = mLayers[index];
-        TileLayer *tlBmpBlend = mBmpBlendLayers[index];
-        MapNoBlend *noBlend = mNoBlends[index];
+        const TileLayer *tl = mLayers[index];
+        const QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel - tl->position();
+        if (!tl->contains(subPos))
+            continue;
+        const TileLayer *tlBmpBlend = mBmpBlendLayers[index];
+        const MapNoBlend *noBlend = mNoBlends[index];
 #ifdef BUILDINGED
-        TileLayer *tlBlend = mBlendLayers[index];
+        const TileLayer *tlBlendOver = mBlendOverLayers[index];
         const TileLayer *tlTool = mToolLayers[index].mLayer;
+        const ToolNoBlend &nbTool = mToolNoBlends[index];
+        QPoint nbPos;
+        if (nbTool.mRegion.contains(subPos)) {
+            noBlend = &nbTool.mNoBlend;
+            nbPos = nbTool.mPos;
+        }
 #endif // BUILDINGED
-        QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel - tl->position();
-        if (tl->contains(subPos)) {
 #if 1 // ROAD_CRUD
-            if (tl == mRoadLayer0 || tl == mRoadLayer1) {
-                const Cell *cell = (tl == mRoadLayer0)
-                        ? &mOwner->roadLayer0()->cellAt(subPos)
-                        : &mOwner->roadLayer1()->cellAt(subPos);
-                if (!cell->isEmpty()) {
-                    if (!cleared) {
-                        bool isFloor = !mLevel && !index && (tl->name() == sFloor);
-                        if (isFloor) root->mKeepFloorLayerCount = 0;
-                        cells.resize(root->mKeepFloorLayerCount);
-                        opacities.resize(root->mKeepFloorLayerCount);
-                        cleared = true;
-                    }
-                    cells.append(cell);
-                    opacities.append(mLayerOpacity[index]);
-                    if (mMaxFloorLayer >= index)
-                        mOwner->mKeepFloorLayerCount = cells.size();
-                    continue;
-                }
-            }
-#endif // ROAD_CRUD
-            const Cell *cell = &tl->cellAt(subPos);
-            const Cell emptyCell;
-            if (!mOwner->parent() && !mOwner->showMapTiles())
-                cell = &emptyCell;
-            if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty())
-                if (mOwner->parent() || mOwner->showBMPTiles()) {
-                    if (!noBlend || !noBlend->get(subPos.x(), subPos.y()))
-                        cell = &tlBmpBlend->cellAt(subPos);
-                }
-#ifdef BUILDINGED
-            // Use an empty tool tile if given during erasing.
-            if (tlTool && mToolLayers[index].mRegion.contains(subPos) &&
-                    tlTool->contains(subPos - mToolLayers[index].mPos))
-                cell = &tlTool->cellAt(subPos - mToolLayers[index].mPos);
-            else if (cell->isEmpty() && tlBlend && tlBlend->contains(subPos))
-                cell = &tlBlend->cellAt(subPos);
-#endif // BUILDINGED
-#if 1
-            if (index && suppressRgn.contains(rootPos))
-                cell = &emptyCell;
-#endif
+        if (tl == mRoadLayer0 || tl == mRoadLayer1) {
+            const Cell *cell = (tl == mRoadLayer0)
+                    ? &mOwner->roadLayer0()->cellAt(subPos)
+                    : &mOwner->roadLayer1()->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
                     bool isFloor = !mLevel && !index && (tl->name() == sFloor);
@@ -280,30 +253,65 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                     cleared = true;
                 }
                 cells.append(cell);
-#if 1
                 opacities.append(mLayerOpacity[index]);
+                if (mMaxFloorLayer >= index)
+                    mOwner->mKeepFloorLayerCount = cells.size();
+                continue;
+            }
+        }
+#endif // ROAD_CRUD
+        const Cell *cell = &tl->cellAt(subPos);
+        if (!mOwner->parent() && !mOwner->showMapTiles())
+            cell = &emptyCell;
+        if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty())
+            if (mOwner->parent() || mOwner->showBMPTiles()) {
+                if (!noBlend || !noBlend->get(subPos - nbPos))
+                    cell = &tlBmpBlend->cellAt(subPos);
+            }
+#ifdef BUILDINGED
+        // Use an empty tool tile if given during erasing.
+        if (tlTool && mToolLayers[index].mRegion.contains(subPos) &&
+                tlTool->contains(subPos - mToolLayers[index].mPos))
+            cell = &tlTool->cellAt(subPos - mToolLayers[index].mPos);
+        else if (cell->isEmpty() && tlBlendOver && tlBlendOver->contains(subPos))
+            cell = &tlBlendOver->cellAt(subPos);
+#endif // BUILDINGED
+        if (index && suppressRgn.contains(rootPos))
+            cell = &emptyCell;
+        if (!cell->isEmpty()) {
+            if (!cleared) {
+                bool isFloor = !mLevel && !index && (tl->name() == sFloor);
+                if (isFloor) root->mKeepFloorLayerCount = 0;
+                cells.resize(root->mKeepFloorLayerCount);
+                opacities.resize(root->mKeepFloorLayerCount);
+                cleared = true;
+            }
+            cells.append(cell);
+#if 1
+            opacities.append(mLayerOpacity[index]);
 #else
-                if (mHighlightLayer.isEmpty() || tl->name() == mHighlightLayer)
-                    opacities.append(mLayerOpacity[index]);
-                else
-                    opacities.append(0.25);
-#endif
-                if (mMaxFloorLayer >= index)
-                    mOwner->mKeepFloorLayerCount = cells.size();
-            }
-            if (noBlend && mOwner && tl->name() == mOwner->mNoBlendLayer && noBlend->get(subPos.x(), subPos.y())) {
-                if (!cleared) {
-                    bool isFloor = !mLevel && !index && (tl->name() == sFloor);
-                    if (isFloor) root->mKeepFloorLayerCount = 0;
-                    cells.resize(root->mKeepFloorLayerCount);
-                    opacities.resize(root->mKeepFloorLayerCount);
-                    cleared = true;
-                }
-                cells.append(&mNoBlendCell);
+            if (mHighlightLayer.isEmpty() || tl->name() == mHighlightLayer)
+                opacities.append(mLayerOpacity[index]);
+            else
                 opacities.append(0.25);
-                if (mMaxFloorLayer >= index)
-                    mOwner->mKeepFloorLayerCount = cells.size();
+#endif
+            if (mMaxFloorLayer >= index)
+                mOwner->mKeepFloorLayerCount = cells.size();
+        }
+
+        // Draw the no-blend tile.
+        if (noBlend && tl->name() == mOwner->mNoBlendLayer && noBlend->get(subPos - nbPos)) {
+            if (!cleared) {
+                bool isFloor = !mLevel && !index && (tl->name() == sFloor);
+                if (isFloor) root->mKeepFloorLayerCount = 0;
+                cells.resize(root->mKeepFloorLayerCount);
+                opacities.resize(root->mKeepFloorLayerCount);
+                cleared = true;
             }
+            cells.append(&mNoBlendCell);
+            opacities.append(0.25);
+            if (mMaxFloorLayer >= index)
+                mOwner->mKeepFloorLayerCount = cells.size();
         }
     }
 
@@ -378,7 +386,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
 #endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
             if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty())
-                if (!noBlend || !noBlend->get(subPos.x(), subPos.y()))
+                if (!noBlend || !noBlend->get(subPos))
                     cell = &tlBmpBlend->cellAt(subPos);
             if (!cell->isEmpty()) {
                 if (!cleared) {
@@ -418,9 +426,11 @@ bool CompositeLayerGroup::isLayerEmpty(int index) const
 #ifdef BUILDINGED
     if (mForceNonEmpty[index])
         return false;
-    if (mBlendLayers[index] && !mBlendLayers[index]->isEmpty())
+    if (mBlendOverLayers[index] && !mBlendOverLayers[index]->isEmpty())
         return false;
     if (mToolLayers[index].mLayer && !mToolLayers[index].mRegion.isEmpty())
+        return false;
+    if (!mToolNoBlends[index].mRegion.isEmpty())
         return false;
 #endif // BUILDINGED
 #if 1 // ROAD_CRUD
@@ -450,7 +460,7 @@ void CompositeLayerGroup::synch()
         mDrawMargins = QMargins(0, mOwner->map()->tileHeight(), mOwner->map()->tileWidth(), 0);
         mVisibleSubMapLayers.clear();
 #ifdef BUILDINGED
-        mBlendLayers.fill(0);
+        mBlendOverLayers.fill(0);
 #endif
         mNeedsSynch = false;
         return;
@@ -481,7 +491,7 @@ void CompositeLayerGroup::synch()
 
 #ifdef BUILDINGED
     // Do this before the isLayerEmpty() call below.
-    mBlendLayers.fill(0);
+    mBlendOverLayers.fill(0);
     if (MapComposite *blendOverMap = mOwner->blendOverMap()) {
         if (CompositeLayerGroup *layerGroup = blendOverMap->tileLayersForLevel(mLevel)) {
             for (int i = 0; i < mLayers.size(); i++) {
@@ -490,7 +500,7 @@ void CompositeLayerGroup::synch()
                 for (int j = 0; j < layerGroup->mLayers.size(); j++) {
                     TileLayer *blendLayer = layerGroup->mLayers[j];
                     if (blendLayer->name() == mLayers[i]->name()) {
-                        mBlendLayers[i] = blendLayer;
+                        mBlendOverLayers[i] = blendLayer;
                         if (!blendLayer->isEmpty()) {
                             unionTileRects(r, blendLayer->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
                             maxMargins(m, blendLayer->drawMargins(), m);
@@ -746,7 +756,7 @@ bool CompositeLayerGroup::regionAltered(Tiled::TileLayer *tl)
         return true;
     }
 #ifdef BUILDINGED
-    if (mTileBounds.isEmpty() && mBlendLayers[index] && !mBlendLayers[index]->isEmpty()) {
+    if (mTileBounds.isEmpty() && mBlendOverLayers[index] && !mBlendOverLayers[index]->isEmpty()) {
         setNeedsSynch(true);
         return true;
     }
@@ -1647,11 +1657,13 @@ void MapComposite::mapLoaded(MapInfo *mapInfo)
 
     // Let the scene know it needs to synch.
     if (synch) {
+#if 0
         MapComposite *mc = mParent;
         while (mc) {
             mc->ensureMaxLevels(mLevelOffset + mMaxLevel);
             mc = mc->mParent;
         }
+#endif
         emit needsSynch();
     }
 }

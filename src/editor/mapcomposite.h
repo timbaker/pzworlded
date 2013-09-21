@@ -108,6 +108,19 @@ public:
     void clearToolTiles()
     { mToolLayers.fill(ToolLayer()); }
 
+    void setToolNoBlend(const Tiled::MapNoBlend &noBlend,
+                        const QPoint &pos, const QRegion &rgn,
+                        Tiled::TileLayer *layer)
+    {
+        int index = mLayers.indexOf(layer);
+        mToolNoBlends[index].mNoBlend = noBlend;
+        mToolNoBlends[index].mPos = pos;
+        mToolNoBlends[index].mRegion = rgn;
+    }
+
+    void clearToolNoBlends()
+    { mToolNoBlends.fill(ToolNoBlend()); }
+
     bool setLayerNonEmpty(const QString &layerName, bool force);
     bool setLayerNonEmpty(Tiled::TileLayer *tl, bool force);
 
@@ -151,7 +164,7 @@ private:
     QVector<Tiled::MapNoBlend*> mNoBlends;
     Tiled::Cell mNoBlendCell;
 #ifdef BUILDINGED
-    QVector<Tiled::TileLayer*> mBlendLayers;
+    QVector<Tiled::TileLayer*> mBlendOverLayers;
     struct ToolLayer
     {
         ToolLayer() : mLayer(0), mPos(QPoint()), mRegion(QRegion()) {}
@@ -160,6 +173,14 @@ private:
         QRegion mRegion;
     };
     QVector<ToolLayer> mToolLayers;
+    struct ToolNoBlend
+    {
+        ToolNoBlend() : mNoBlend(Tiled::MapNoBlend(QString(), 1, 1)), mPos(QPoint()), mRegion(QRegion()) {}
+        Tiled::MapNoBlend mNoBlend;
+        QPoint mPos;
+        QRegion mRegion;
+    };
+    QVector<ToolNoBlend> mToolNoBlends;
     QString mHighlightLayer;
     QVector<bool> mForceNonEmpty;
 #endif // BUILDINGED

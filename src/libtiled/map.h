@@ -106,7 +106,10 @@ public:
     int height() const { return mHeight; }
 
     void set(int x, int y, bool noblend) { mBits.setBit(x + y * mWidth, noblend); }
+    void set(const QPoint &p, bool noblend) { set(p.x(), p.y(), noblend); }
+
     bool get(int x, int y) const { return mBits.testBit(x + y * mWidth); }
+    bool get(const QPoint &p) const { return get(p.x(), p.y()); }
 
     void replace(const MapNoBlend *other);
 
