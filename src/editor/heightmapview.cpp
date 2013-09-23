@@ -65,8 +65,17 @@ void HeightMapItem::loadGLTextures()
     QImage t;
     QImage b;
 
-    foreach (Tiled::Tileset *ts, mScene->mapComposite()->map()->tilesets()) {
-        // For a tileset called C:/Tiles/tileset.png, look for a texture called
+    foreach (Tiled::Tileset *ts, mScene->mapComposite()->usedTilesets()) {
+        foreach (Tiled::Tileset *ts2, mTextureID.keys()) {
+            if (ts2->imageSource() == ts->imageSource()) {
+                mTextureID[ts] = mTextureID[ts2];
+                break;
+            }
+        }
+        if (mTextureID.contains(ts))
+            continue;
+
+        // For a tileset image C:/Tiles/tileset.png, look for a texture called
         // C:/Tiles/Textures/tex_tileset.png.
         QFileInfo info(ts->imageSource());
         QString name = info.absolutePath() + QLatin1String("/Textures/tex_") + info.fileName();
@@ -80,7 +89,8 @@ void HeightMapItem::loadGLTextures()
         if ((reader.size().width() / 32 < ts->columnCount()) ||
                 (reader.size().height() / 32 < ts->tileCount() / ts->columnCount())) {
             qDebug() << "Texture image is too small for tileset" << name;
-            continue;
+            if (ts->name() != QLatin1String("walls_exterior_house_01"))
+                continue;
         }
         if (b.load(name)) {
             QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
@@ -105,14 +115,72 @@ void HeightMapItem::loadGLTextures()
     }
 }
 
-QVector3D HeightMapItem::vertexAt(int x, int y)
+struct TextureTile
 {
-    QPointF p = mScene->toScene(x, y);
-    HeightMap *hm = mScene->hm();
-    if (hm->contains(x, y))
-        p.ry() -= hm->heightAt(x, y);
-    return QVector3D(p);
-}
+    TextureTile(int texWidth, int texHeight, int tileWidth, int tileHeight, int texCol, int texRow) :
+        mTexWid(texWidth),
+        mTexHgt(texHeight),
+        mTileWidth(tileWidth),
+        mTileHeight(tileHeight),
+        mTexCol(texCol),
+        mTexRow(texRow)
+    {}
+
+    QVector2D uv(int x, int y)
+    {
+        return QVector2D((mTexCol * mTileWidth + x) / qreal(mTexWid),
+                         1 - (mTexRow * mTileHeight + y) / qreal(mTexHgt));
+    }
+
+    int mTexWid;
+    int mTexHgt;
+    int mTileWidth;
+    int mTileHeight;
+    int mTexCol;
+    int mTexRow;
+};
+
+struct SceneFace
+{
+    SceneFace(HeightMapScene *scene, int mapX, int mapY, int level, int tileWidth, int tileHeight) :
+        mScene(scene),
+        mMapX(mapX),
+        mMapY(mapY),
+        mTileWidth(tileWidth),
+        mTileHeight(tileHeight),
+        mLevel(level)
+    {
+    }
+
+    QVector3D flat(int x, int y, int z)
+    {
+        QPointF p = mScene->toScene(mMapX + x, mMapY + y);
+        HeightMap *hm = mScene->hm();
+        int hmOffset = 0;
+        if (hm->contains(mMapX + x, mMapY + y))
+            hmOffset = -hm->heightAt(mMapX + x, mMapY + y);
+        return QVector3D(p.x(), p.y() - z + hmOffset, 0);
+    }
+
+    QVector3D west(int x, int y, int dx)
+    {
+        QPointF p = mScene->toScene(mMapX + dx / qreal(mTileWidth), mMapY + (1 - x / qreal(mTileWidth)));
+        return QVector3D(p.x(), p.y() - mTileHeight + y - mLevel * 96, 0);
+    }
+
+    QVector3D north(int x, int y, int dy)
+    {
+        QPointF p = mScene->toScene(mMapX + x / qreal(mTileWidth), mMapY + dy / qreal(mTileWidth));
+        return QVector3D(p.x(), p.y() - mTileHeight + y - mLevel * 96, 0);
+    }
+
+    HeightMapScene *mScene;
+    int mMapX;
+    int mMapY;
+    int mTileWidth;
+    int mTileHeight;
+    int mLevel;
+};
 
 class DrawElements
 {
@@ -210,14 +278,15 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     CompositeLayerGroup *lg = mc ? mc->layerGroupForLevel(0) : 0;
 
     if (lg && columns * rows < 100000) {
-
+        foreach (lg, mc->layerGroups()) {
         DrawElements de;
-        float tw = 256.0f, th = 320.0f;
+        float texWid = 256.0f, texHgt = 320.0f;
+        int tw = 32, th = 32;
         int cellX = mScene->document()->cell()->pos().x() * 300;
         int cellY = mScene->document()->cell()->pos().y() * 300;
         static QVector<const Tiled::Cell*> cells(40);
         mc->bmpBlender()->flush(QRect(minX-cellX, minY-cellY, columns, rows));
-//        lg->prepareDrawing();
+        lg->prepareDrawing2();
         /*if (lg->needsSynch()) lg->synch();*/
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < columns; c++) {
@@ -225,20 +294,143 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(minX+c-cellX,minY+r-cellY), cells);
                 foreach (const Tiled::Cell *cell, cells) {
+                    if (cell->tile && cell->tile->tileset()->name() == QLatin1String("walls_exterior_house_01")) {
+                        int tx = 0, ty = 0; // tile col/row
+                        int tw = 32, th = 96; // tile width/height
+                        int texWid = 32, texHgt = 96;
+                        int wallWidth = 0;
+                        TextureTile tt(texWid, texHgt, tw, th, tx, ty);
+                        SceneFace f(mScene, minX+c, minY+r, lg->level(), tw, th);
+                        if (cell->tile->id() == 16) { // west wall
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, 0), tt.uv(tw, 0),
+                                    tt.uv(tw, th), tt.uv(0, th),
+                                    f.west(0, 0, wallWidth), f.west(tw, 0, wallWidth),
+                                    f.west(tw, th, wallWidth), f.west(0, th, wallWidth));
+                        }
+                        if (cell->tile->id() == 17) { // north wall
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, 0), tt.uv(tw, 0),
+                                    tt.uv(tw, th), tt.uv(0, th),
+                                    f.north(0, 0, wallWidth), f.north(tw, 0, wallWidth),
+                                    f.north(tw, th, wallWidth), f.north(0, th, wallWidth));
+                        }
+                        int topHgt = th*0.2, botHgt = th*0.4;
+                        if (cell->tile->id() == 24) { // west window
+                            int side = 6;
+                            // top
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, 0), tt.uv(tw, 0),
+                                    tt.uv(tw, topHgt), tt.uv(0, topHgt),
+                                    f.west(0, 0, wallWidth), f.west(tw, 0, wallWidth),
+                                    f.west(tw, topHgt, wallWidth), f.west(0, topHgt, wallWidth));
+                            // bottom
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, th - botHgt), tt.uv(tw, th - botHgt),
+                                    tt.uv(tw, th), tt.uv(0, th),
+                                    f.west(0, th - botHgt, wallWidth), f.west(tw, th - botHgt, wallWidth),
+                                    f.west(tw, th, wallWidth), f.west(0, th, wallWidth));
+                            // left
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, topHgt), tt.uv(side, topHgt),
+                                    tt.uv(side, th - botHgt), tt.uv(0, th - botHgt),
+                                    f.west(0, topHgt, wallWidth), f.west(side, topHgt, wallWidth),
+                                    f.west(side, th - botHgt, wallWidth), f.west(0, th - botHgt, wallWidth));
+                            // right
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+                                    tt.uv(tw, th - botHgt), tt.uv(tw - side, th - botHgt),
+                                    f.west(tw - side, topHgt, wallWidth), f.west(tw, topHgt, wallWidth),
+                                    f.west(tw, th - botHgt, wallWidth), f.west(tw - side, th - botHgt, wallWidth));
+                        }
+                        if (cell->tile->id() == 26) { // west door
+                            int side = 3;
+                            // top
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, 0), tt.uv(tw, 0),
+                                    tt.uv(tw, topHgt), tt.uv(0, topHgt),
+                                    f.west(0, 0, wallWidth), f.west(tw, 0, wallWidth),
+                                    f.west(tw, topHgt, wallWidth), f.west(0, topHgt, wallWidth));
+                            // left
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, topHgt), tt.uv(side, topHgt),
+                                    tt.uv(side, th), tt.uv(0, th),
+                                    f.west(0, topHgt, wallWidth), f.west(side, topHgt, wallWidth),
+                                    f.west(side, th, wallWidth), f.west(0, th, wallWidth));
+                            // right
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+                                    tt.uv(tw, th), tt.uv(tw - side, th),
+                                    f.west(tw - side, topHgt, wallWidth), f.west(tw, topHgt, wallWidth),
+                                    f.west(tw, th, wallWidth), f.west(tw - side, th, wallWidth));
+                        }
+
+                        if (cell->tile->id() == 25) { // north window
+                            int side = 6;
+                            // top
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, 0), tt.uv(tw, 0),
+                                    tt.uv(tw, topHgt), tt.uv(0, topHgt),
+                                    f.north(0, 0, wallWidth), f.north(tw, 0, wallWidth),
+                                    f.north(tw, topHgt, wallWidth), f.north(0, topHgt, wallWidth));
+                            // bottom
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, th - botHgt), tt.uv(tw, th - botHgt),
+                                    tt.uv(tw, th), tt.uv(0, th),
+                                    f.north(0, th - botHgt, wallWidth), f.north(tw, th - botHgt, wallWidth),
+                                    f.north(tw, th, wallWidth), f.north(0, th, wallWidth));
+                            // left
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, topHgt), tt.uv(side, topHgt),
+                                    tt.uv(side, th - botHgt), tt.uv(0, th - botHgt),
+                                    f.north(0, topHgt, wallWidth), f.north(side, topHgt, wallWidth),
+                                    f.north(side, th - botHgt, wallWidth), f.north(0, th - botHgt, wallWidth));
+                            // right
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+                                    tt.uv(tw, th - botHgt), tt.uv(tw - side, th - botHgt),
+                                    f.north(tw - side, topHgt, wallWidth), f.north(tw, topHgt, wallWidth),
+                                    f.north(tw, th - botHgt, wallWidth), f.north(tw - side, th - botHgt, wallWidth));
+                        }
+                        if (cell->tile->id() == 27) { // north door
+                            int side = 3;
+                            // top
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, 0), tt.uv(tw, 0),
+                                    tt.uv(tw, topHgt), tt.uv(0, topHgt),
+                                    f.north(0, 0, wallWidth), f.north(tw, 0, wallWidth),
+                                    f.north(tw, topHgt, wallWidth), f.north(0, topHgt, wallWidth));
+                            // left
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(0, topHgt), tt.uv(side, topHgt),
+                                    tt.uv(side, th), tt.uv(0, th),
+                                    f.north(0, topHgt, wallWidth), f.north(side, topHgt, wallWidth),
+                                    f.north(side, th, wallWidth), f.north(0, th, wallWidth));
+                            // right
+                            de.add(mTextureID[cell->tile->tileset()],
+                                    tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+                                    tt.uv(tw, th), tt.uv(tw - side, th),
+                                    f.north(tw - side, topHgt, wallWidth), f.north(tw, topHgt, wallWidth),
+                                    f.north(tw, th, wallWidth), f.north(tw - side, th, wallWidth));
+                        }
+                        continue;
+                    }
+
                     if (!cell->tile || !mTextureID.contains(cell->tile->tileset())) continue;
                     int tx = cell->tile->id() % cell->tile->tileset()->columnCount();
                     int ty = cell->tile->id() / cell->tile->tileset()->columnCount();
+                    TextureTile tt(texWid, texHgt, tw, th, tx, ty);
+                    SceneFace f(mScene, minX+c, minY+r, lg->level(), tw, th);
                     de.add(mTextureID[cell->tile->tileset()],
-                           QVector2D((tx*32)/tw, 1-(ty*32.0)/th),
-                           QVector2D(((tx+1)*32)/tw, 1-(ty*32)/th),
-                           QVector2D(((tx+1)*32)/tw, 1-((ty+1)*32.0)/th),
-                           QVector2D((tx*32)/tw, 1-((ty+1)*32.0)/th),
-                           vertexAt(minX+c,minY+r), vertexAt(minX+c+1,minY+r),
-                           vertexAt(minX+c+1,minY+r+1), vertexAt(minX+c,minY+r+1));
+                            tt.uv(0, 0), tt.uv(tw, 0),
+                            tt.uv(tw, th), tt.uv(0, th),
+                            f.flat(0, 0, 0), f.flat(1, 0, 0),
+                            f.flat(1, 1, 0), f.flat(0, 1, 0));
                 }
             }
         }
         de.flush();
+        }
     }
 
     glDisable(GL_TEXTURE_2D);
@@ -538,19 +730,41 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
             SLOT(heightMapDisplayStyleChanged(int)));
 
 
-    MapInfo *mMapInfo = 0;
+    MapInfo *mapInfo = 0;
     if (document()->cell()->mapFilePath().isEmpty())
-        mMapInfo = MapManager::instance()->getEmptyMap();
+        mapInfo = MapManager::instance()->getEmptyMap();
     else {
-        mMapInfo = MapManager::instance()->loadMap(document()->cell()->mapFilePath());
-        if (!mMapInfo) {
-            mMapInfo = MapManager::instance()->getPlaceholderMap(document()->cell()->mapFilePath(), 300, 300);
-        }
+        mapInfo = MapManager::instance()->loadMap(document()->cell()->mapFilePath());
+        if (!mapInfo)
+            mapInfo = MapManager::instance()->getPlaceholderMap(
+                        document()->cell()->mapFilePath(), 300, 300);
     }
-    if (!mMapInfo) {
+    if (!mapInfo)
         return;
+    mMapComposite = new MapComposite(mapInfo, Tiled::Map::LevelIsometric);
+
+    struct SubMapInfo
+    {
+        WorldCellLot *lot;
+        MapInfo *mapInfo;
+    };
+    QList<SubMapInfo> subMapInfo;
+    foreach (WorldCellLot *lot, document()->cell()->lots()) {
+        SubMapInfo sm;
+        sm.lot = lot;
+        sm.mapInfo = MapManager::instance()->loadMap(
+                    lot->mapName(), QString(), true, MapManager::PriorityLow);
+        if (sm.mapInfo)
+            subMapInfo += sm;
     }
-    mMapComposite = new MapComposite(mMapInfo, Tiled::Map::LevelIsometric);
+
+    while (mMapComposite->waitingForMapsToLoad())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    foreach (SubMapInfo sm, subMapInfo) {
+        if (sm.mapInfo->map())
+            mMapComposite->addMap(sm.mapInfo, sm.lot->pos(), sm.lot->level());
+    }
 
     mHeightMapItem = new HeightMapItem(this);
     addItem(mHeightMapItem);

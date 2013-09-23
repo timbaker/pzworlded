@@ -60,8 +60,6 @@ public:
 
 private:
     void loadGLTextures();
-    QVector3D vertexAt(int x, int y);
-    void draw_triangle(const QVector3D &v0, const QVector3D &v1, const QVector3D &v2);
 
 private:
     HeightMapScene *mScene;
