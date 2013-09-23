@@ -136,7 +136,7 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
         int ox = mc->originRecursive().x();
         int oy = mc->originRecursive().y();
         int rootLevel = mc->levelRecursive();
-        for (int level = 0; level < mc->maxLevel(); level++) {
+        for (int level = 0; level <= mc->maxLevel(); level++) {
             QString layerName = QString::fromLatin1("%1_RoomDefs").arg(level);
             int index = mc->map()->indexOfLayer(layerName, Layer::ObjectGroupType);
             if (index >= 0) {
