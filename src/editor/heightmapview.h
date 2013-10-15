@@ -60,6 +60,8 @@ public:
 
 private:
     void loadGLTextures();
+    QImage renderWallTiles(QImage texture);
+    QImage mWalls01;
 
 private:
     HeightMapScene *mScene;

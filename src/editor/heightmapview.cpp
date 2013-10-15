@@ -111,9 +111,14 @@ void HeightMapItem::loadGLTextures()
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
             mTextureID[ts] = texture;
+
+            if (ts->name() == QLatin1String("walls_exterior_house_01"))
+                mWalls01 = t;
         }
     }
 }
+
+namespace {
 
 struct TextureTile
 {
@@ -182,6 +187,51 @@ struct SceneFace
     int mLevel;
 };
 
+struct PBufferFace
+{
+    PBufferFace(QGLPixelBuffer *pbuffer, int col, int row, int tileWidth, int tileHeight) :
+        mPBuffer(pbuffer),
+        mColumn(col),
+        mRow(row),
+        mTileWidth(tileWidth),
+        mTileHeight(tileHeight)
+    {
+    }
+
+    QVector3D flat(int x, int y, int z)
+    {
+        QPointF p = toScene(x, y);
+        return QVector3D(p.x(), p.y() - z, 0);
+    }
+
+    QVector3D west(int x, int y, int dx)
+    {
+        QPointF p = toScene(dx / qreal(mTileWidth), (1 - x / qreal(mTileWidth)));
+        return QVector3D(p.x(), p.y() - mTileHeight + y, 0);
+    }
+
+    QVector3D north(int x, int y, int dy)
+    {
+        QPointF p = toScene(x / qreal(mTileWidth), dy / qreal(mTileWidth));
+        return QVector3D(p.x(), p.y() - mTileHeight + y, 0);
+    }
+
+    QPointF toScene(qreal x, qreal y)
+    {
+        const int tileWidth = 64, tileHeight = 32;
+        const int originX = mColumn * 64 + tileWidth / 2;
+        const int originY = mRow * 128 + 96;
+        return QPointF((x - y) * tileWidth / 2 + originX,
+                       (x + y) * tileHeight / 2 + originY);
+    }
+
+    QGLPixelBuffer *mPBuffer;
+    int mColumn;
+    int mRow;
+    int mTileWidth;
+    int mTileHeight;
+};
+
 class DrawElements
 {
 public:
@@ -199,11 +249,17 @@ public:
     {
         indices << indices.size() << indices.size() + 1 << indices.size() + 2 << indices.size() + 3;
         textureids += textureid;
+        colors += QVector3D(1, 1, 1);
         texcoords << uv1 << uv2 << uv3 << uv4;
         vertices << v1 << v2 << v3 << v4;
 
         if (indices.size() > 1024 * 2)
             flush();
+    }
+
+    void color(float r, float g, float b)
+    {
+        colors.last() = QVector3D(r, g, b);
     }
 
     void flush()
@@ -215,6 +271,7 @@ public:
         glVertexPointer(3, GL_FLOAT, 0, vertices.constData());
         glTexCoordPointer(2, GL_FLOAT, 0, texcoords.constData());
         for (int i = 0; i < textureids.size(); i++) {
+            glColor3f(colors[i].x(), colors[i].y(), colors[i].z());
             glBindTexture(GL_TEXTURE_2D, textureids[i]);
             glDrawElements(GL_QUADS, 4, GL_UNSIGNED_SHORT, indices.constData() + i * 4);
         }
@@ -228,8 +285,242 @@ public:
     QVector<QVector3D> vertices;
     QVector<QVector2D> texcoords;
     QVector<GLuint> textureids;
+    QVector<QVector3D> colors;
 
 };
+
+} // namespace anon
+
+QImage HeightMapItem::renderWallTiles(QImage t)
+{
+    int width = 64 * 4, height = 128 * 2;
+    // Create a pbuffer, has its own OpenGL context
+    const QGLContext *context = QGLContext::currentContext();
+    QGLFormat pbufferFormat = context->format();
+    pbufferFormat.setSampleBuffers(false);
+    QGLPixelBuffer pbuffer(QSize(width, height), pbufferFormat/*, this*/);
+    pbuffer.makeCurrent();
+
+    // guesswork from qpaintengine_opengl.cpp
+    {
+        glViewport(0, 0, width, height);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0, width, height, 0, -999999, 999999);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    }
+
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#if QT_VERSION >= 0x050000
+#else
+    glShadeModel(GL_FLAT);
+#endif
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+#if QT_VERSION >= 0x050000
+#else
+    glClearDepth(1.0f);
+#endif
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    GLuint textureID;
+    {
+        glGenTextures( 1, &textureID );
+        glBindTexture( GL_TEXTURE_2D, textureID );
+        glTexImage2D( GL_TEXTURE_2D, 0, 4, t.width(), t.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, t.bits() );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+    }
+
+    /////
+
+    int tx = 0, ty = 0; // tile col/row
+    int tw = 32, th = 96; // tile width/height
+    int texWid = 32, texHgt = 96;
+    int wallWidth = 3;
+    TextureTile tt(texWid, texHgt, tw, th, tx, ty);
+    DrawElements de;
+    {
+        // west wall
+        PBufferFace f(&pbuffer, 0, 0, tw, th);
+        de.add(textureID,
+               tt.uv(0, 0), tt.uv(tw, 0),
+               tt.uv(tw, th), tt.uv(0, th),
+               f.west(0, 0, wallWidth), f.west(tw, 0, wallWidth),
+               f.west(tw, th, wallWidth), f.west(0, th, wallWidth));
+        de.color(0.8,0.8,0.8);
+    }
+    {
+        // north wall
+        PBufferFace f(&pbuffer, 1, 0, tw, th);
+        de.add(textureID,
+                tt.uv(0, 0), tt.uv(tw, 0),
+                tt.uv(tw, th), tt.uv(0, th),
+                f.north(0, 0, wallWidth), f.north(tw, 0, wallWidth),
+                f.north(tw, th, wallWidth), f.north(0, th, wallWidth));
+    }
+    {
+        // nw corner
+        PBufferFace f(&pbuffer, 2, 0, tw, th);
+        de.add(textureID,
+               tt.uv(0, 0), tt.uv(tw - wallWidth, 0),
+               tt.uv(tw - wallWidth, th), tt.uv(0, th),
+               f.west(0, 0, wallWidth), f.west(tw - wallWidth, 0, wallWidth),
+               f.west(tw - wallWidth, th, wallWidth), f.west(0, th, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        de.add(textureID,
+                tt.uv(wallWidth, 0), tt.uv(tw, 0),
+                tt.uv(tw, th), tt.uv(wallWidth, th),
+                f.north(wallWidth, 0, wallWidth), f.north(tw, 0, wallWidth),
+                f.north(tw, th, wallWidth), f.north(wallWidth, th, wallWidth));
+    }
+    {
+        // se pillar
+        PBufferFace f(&pbuffer, 3, 0, tw, th);
+        de.add(textureID,
+               tt.uv(tw - wallWidth, 0), tt.uv(wallWidth, 0),
+               tt.uv(tw, th), tt.uv(tw - wallWidth, th),
+               f.west(tw - wallWidth, 0, wallWidth), f.west(tw, 0, wallWidth),
+               f.west(tw, th, wallWidth), f.west(tw - wallWidth, th, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        de.add(textureID,
+                tt.uv(0, 0), tt.uv(wallWidth, 0),
+                tt.uv(wallWidth, th), tt.uv(0, th),
+                f.north(0, 0, wallWidth), f.north(wallWidth, 0, wallWidth),
+                f.north(wallWidth, th, wallWidth), f.north(0, th, wallWidth));
+    }
+    int topHgt = th*0.2, botHgt = th*0.4;
+    {
+        // west window
+        PBufferFace f(&pbuffer, 0, 1, tw, th);
+        int side = 6;
+        // top
+        de.add(textureID,
+               tt.uv(0, 0), tt.uv(tw, 0),
+               tt.uv(tw, topHgt), tt.uv(0, topHgt),
+               f.west(0, 0, wallWidth), f.west(tw, 0, wallWidth),
+               f.west(tw, topHgt, wallWidth), f.west(0, topHgt, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        // bottom
+        de.add(textureID,
+               tt.uv(0, th - botHgt), tt.uv(tw, th - botHgt),
+               tt.uv(tw, th), tt.uv(0, th),
+               f.west(0, th - botHgt, wallWidth), f.west(tw, th - botHgt, wallWidth),
+               f.west(tw, th, wallWidth), f.west(0, th, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        // left
+        de.add(textureID,
+               tt.uv(0, topHgt), tt.uv(side, topHgt),
+               tt.uv(side, th - botHgt), tt.uv(0, th - botHgt),
+               f.west(0, topHgt, wallWidth), f.west(side, topHgt, wallWidth),
+               f.west(side, th - botHgt, wallWidth), f.west(0, th - botHgt, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        // right
+        de.add(textureID,
+               tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+               tt.uv(tw, th - botHgt), tt.uv(tw - side, th - botHgt),
+               f.west(tw - side, topHgt, wallWidth), f.west(tw, topHgt, wallWidth),
+               f.west(tw, th - botHgt, wallWidth), f.west(tw - side, th - botHgt, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+    }
+    {
+        PBufferFace f(&pbuffer, 1, 1, tw, th);
+        // north window
+        int side = 6;
+        // top
+        de.add(textureID,
+               tt.uv(0, 0), tt.uv(tw, 0),
+               tt.uv(tw, topHgt), tt.uv(0, topHgt),
+               f.north(0, 0, wallWidth), f.north(tw, 0, wallWidth),
+               f.north(tw, topHgt, wallWidth), f.north(0, topHgt, wallWidth));
+        // bottom
+        de.add(textureID,
+               tt.uv(0, th - botHgt), tt.uv(tw, th - botHgt),
+               tt.uv(tw, th), tt.uv(0, th),
+               f.north(0, th - botHgt, wallWidth), f.north(tw, th - botHgt, wallWidth),
+               f.north(tw, th, wallWidth), f.north(0, th, wallWidth));
+        // left
+        de.add(textureID,
+               tt.uv(0, topHgt), tt.uv(side, topHgt),
+               tt.uv(side, th - botHgt), tt.uv(0, th - botHgt),
+               f.north(0, topHgt, wallWidth), f.north(side, topHgt, wallWidth),
+               f.north(side, th - botHgt, wallWidth), f.north(0, th - botHgt, wallWidth));
+        // right
+        de.add(textureID,
+               tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+               tt.uv(tw, th - botHgt), tt.uv(tw - side, th - botHgt),
+               f.north(tw - side, topHgt, wallWidth), f.north(tw, topHgt, wallWidth),
+               f.north(tw, th - botHgt, wallWidth), f.north(tw - side, th - botHgt, wallWidth));
+    }
+    {
+        PBufferFace f(&pbuffer, 2, 1, tw, th);
+        // west door
+        int side = 3;
+        // top
+        de.add(textureID,
+               tt.uv(0, 0), tt.uv(tw, 0),
+               tt.uv(tw, topHgt), tt.uv(0, topHgt),
+               f.west(0, 0, wallWidth), f.west(tw, 0, wallWidth),
+               f.west(tw, topHgt, wallWidth), f.west(0, topHgt, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        // left
+        de.add(textureID,
+               tt.uv(0, topHgt), tt.uv(side, topHgt),
+               tt.uv(side, th), tt.uv(0, th),
+               f.west(0, topHgt, wallWidth), f.west(side, topHgt, wallWidth),
+               f.west(side, th, wallWidth), f.west(0, th, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+        // right
+        de.add(textureID,
+               tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+               tt.uv(tw, th), tt.uv(tw - side, th),
+               f.west(tw - side, topHgt, wallWidth), f.west(tw, topHgt, wallWidth),
+               f.west(tw, th, wallWidth), f.west(tw - side, th, wallWidth));
+        de.color(0.8f,0.8f,0.8f);
+    }
+    {
+        // north door
+        PBufferFace f(&pbuffer, 3, 1, tw, th);
+        int side = 3;
+        // top
+        de.add(textureID,
+               tt.uv(0, 0), tt.uv(tw, 0),
+               tt.uv(tw, topHgt), tt.uv(0, topHgt),
+               f.north(0, 0, wallWidth), f.north(tw, 0, wallWidth),
+               f.north(tw, topHgt, wallWidth), f.north(0, topHgt, wallWidth));
+        // left
+        de.add(textureID,
+               tt.uv(0, topHgt), tt.uv(side, topHgt),
+               tt.uv(side, th), tt.uv(0, th),
+               f.north(0, topHgt, wallWidth), f.north(side, topHgt, wallWidth),
+               f.north(side, th, wallWidth), f.north(0, th, wallWidth));
+        // right
+        de.add(textureID,
+               tt.uv(tw - side, topHgt), tt.uv(tw, topHgt),
+               tt.uv(tw, th), tt.uv(tw - side, th),
+               f.north(tw - side, topHgt, wallWidth), f.north(tw, topHgt, wallWidth),
+               f.north(tw, th, wallWidth), f.north(tw - side, th, wallWidth));
+    }
+#if 0
+    de.add(textureID, QVector2D(0,0), QVector2D(1,0), QVector2D(1,1), QVector2D(0,1),
+           QVector3D(0,0,0), QVector3D(32,0,0), QVector3D(32,96,0), QVector3D(0,96,0));
+#endif
+    de.flush();
+
+    /////
+
+    QImage img = pbuffer.toImage();
+
+    pbuffer.doneCurrent();
+
+    const_cast<QGLContext*>(context)->makeCurrent();
+
+    return img;
+}
 
 void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
@@ -272,6 +563,11 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
     if (mTextureID.isEmpty()) {
         loadGLTextures();
+
+        {
+            QImage img = renderWallTiles(mWalls01);
+            img.save(qApp->applicationDirPath() + QLatin1String("/pbuffer.png"));
+        }
     }
 
     MapComposite *mc = mScene->mapComposite();
