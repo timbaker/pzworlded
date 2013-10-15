@@ -60,6 +60,8 @@ public:
     QString tilesDirectory() const;
     void setTilesDirectory(const QString &path);
 
+    QString texturesDirectory() const;
+
     bool useOpenGL() const { return mUseOpenGL; }
     void setUseOpenGL(bool useOpenGL);
 
@@ -77,6 +79,9 @@ public:
 
     int heightMapDisplayStyle() const
     { return mHeightMapDisplayStyle; }
+
+    bool useVirtualTilesets() const
+    { return mUseVirtualTilesets; }
 
 signals:
     void snapToGridChanged(bool snapToGrid);
@@ -142,6 +147,7 @@ private:
     bool mShowAdjacentMaps;
     int mHeightMapDisplayStyle;
     bool mHighlightRoomUnderPointer;
+    bool mUseVirtualTilesets;
 
     static Preferences *mInstance;
 };

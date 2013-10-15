@@ -126,7 +126,9 @@ SOURCES += main.cpp\
     propertyenumdialog.cpp \
     writespawnpointsdialog.cpp \
     mapbuildings.cpp \
-    pngbuildingdialog.cpp
+    pngbuildingdialog.cpp \
+    virtualtileset.cpp \
+    texturemanager.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -211,7 +213,9 @@ HEADERS  += mainwindow.h \
     worldproperties.h \
     writespawnpointsdialog.h \
     mapbuildings.h \
-    pngbuildingdialog.h
+    pngbuildingdialog.h \
+    virtualtileset.h \
+    texturemanager.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

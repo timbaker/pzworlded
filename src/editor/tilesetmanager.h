@@ -85,6 +85,7 @@ namespace Internal {
 class FileSystemWatcher;
 
 #ifdef ZOMBOID
+class VirtualTileset;
 struct ZTileLayerNames;
 #endif
 
@@ -190,7 +191,13 @@ public:
     TilesetImageCache *imageCache() const { return mTilesetImageCache; }
 
     void loadTileset(Tileset *tileset, const QString &imageSource);
+    void loadTextureTileset(Tileset *tileset, const QString &imageSource);
     void waitForTilesets(const QList<Tileset *> &tilesets);
+
+    void textureTilesetAdded(Tileset *ts) { mTextureMgrTilesets.insert(ts); }
+    void textureTilesetRemoved(Tileset *ts) { mTextureMgrTilesets.remove(ts); }
+
+    bool useVirtualTilesets() const { return mUseVirtualTilesets; }
 #endif
 
 signals:
@@ -199,12 +206,21 @@ signals:
      */
     void tilesetChanged(Tileset *tileset);
 
+#ifdef ZOMBOID
+    void textureImageLoaded(QImage *image, Tiled::Tileset *tileset);
+#endif
+#ifdef ZOMBOID_TILE_LAYER_NAMES
+    void tileLayerNameChanged(Tile *tile);
+#endif
+
 private slots:
     void fileChanged(const QString &path);
     void fileChangedTimeout();
 
 #ifdef ZOMBOID
     void imageLoaded(QImage *image, Tiled::Tileset *tileset);
+
+    void virtualTilesetChanged(VirtualTileset *vts);
 #endif
 
 private:
@@ -234,6 +250,9 @@ private:
     QVector<InterruptibleThread*> mImageReaderThreads;
     QVector<TilesetImageReaderWorker*> mImageReaderWorkers;
     int mNextThreadForJob;
+
+    QSet<Tileset*> mTextureMgrTilesets;
+    bool mUseVirtualTilesets;
 #endif
 
 #ifdef ZOMBOID_TILE_LAYER_NAMES

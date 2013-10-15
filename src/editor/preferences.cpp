@@ -131,6 +131,9 @@ Preferences::Preferences()
     if (configPath.isEmpty())
         configPath = QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
     mConfigDirectory = configPath;
+
+    // Use the 'use virtual tilesets' setting from TileZed.
+    mUseVirtualTilesets = settings.value(QLatin1String("Interface/UseVirtualTilesets"), false).toBool();
 }
 
 Preferences::~Preferences()
@@ -405,4 +408,9 @@ void Preferences::setTilesDirectory(const QString &path)
     mTilesDirectory = path;
     mSettings->setValue(QLatin1String("TilesDirectory"), path);
     emit tilesDirectoryChanged();
+}
+
+QString Preferences::texturesDirectory() const
+{
+    return QDir(mTilesDirectory).filePath(QLatin1String("Textures"));
 }

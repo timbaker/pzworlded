@@ -56,10 +56,12 @@
 #include "scenetools.h"
 #include "simplefile.h"
 #include "templatesdialog.h"
+#include "texturemanager.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 #include "toolmanager.h"
 #include "undodock.h"
+#include "virtualtileset.h"
 #include "world.h"
 #include "worlddocument.h"
 #include "worldreader.h"
@@ -851,6 +853,31 @@ bool MainWindow::InitConfigFiles()
                               .arg(BuildingTemplates::instance()->errorString()));
         return false;
     }
+
+    new TextureMgr;
+    if (!TextureMgr::instance().readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(TextureMgr::instance().txtName())
+                              .arg(TextureMgr::instance().errorString()));
+        return false;
+    }
+
+    new VirtualTilesetMgr;
+    if (!VirtualTilesetMgr::instance().readTxt()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(VirtualTilesetMgr::instance().txtName())
+                              .arg(VirtualTilesetMgr::instance().errorString()));
+        return false;
+    }
+
+    connect(VirtualTilesetMgr::instancePtr(), SIGNAL(tilesetAdded(VirtualTileset*)),
+            TilesetManager::instance(), SLOT(virtualTilesetChanged(VirtualTileset*)));
+    connect(VirtualTilesetMgr::instancePtr(), SIGNAL(tilesetRemoved(VirtualTileset*)),
+            TilesetManager::instance(), SLOT(virtualTilesetChanged(VirtualTileset*)));
+    connect(VirtualTilesetMgr::instancePtr(), SIGNAL(tilesetChanged(VirtualTileset*)),
+            TilesetManager::instance(), SLOT(virtualTilesetChanged(VirtualTileset*)));
 
     return true;
 }
