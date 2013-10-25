@@ -669,6 +669,7 @@ void WorldScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
 
     if (mActiveTool) {
+        mDoubleClick = false;
         mActiveTool->setEventView(mEventView);
         mActiveTool->mousePressEvent(event);
     }
@@ -695,16 +696,21 @@ void WorldScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     if (mActiveTool) {
         mActiveTool->setEventView(mEventView);
         mActiveTool->mouseReleaseEvent(event);
+
+        if (mDoubleClick) {
+            if (WorldCell *cell = pointToCell(event->scenePos())) {
+                mWorldDoc->editCell(cell->x(), cell->y());
+            }
+        }
     }
 }
 
-void WorldScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
+void WorldScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *)
 {
     if (mActiveTool != WorldCellTool::instance())
         return;
-    if (WorldCell *cell = pointToCell(event->scenePos())) {
-        mWorldDoc->editCell(cell->x(), cell->y());
-    }
+
+    mDoubleClick = true;
 }
 
 void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)

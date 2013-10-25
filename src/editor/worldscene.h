@@ -472,6 +472,7 @@ private:
     QSet<WorldBMPItem*> mSelectedBMPItems;
     WorldBMPItem *mDragBMPItem;
     bool mBMPToolActive;
+    bool mDoubleClick;
 };
 
 #endif // WORLDSCENE_H
