@@ -41,8 +41,8 @@ using namespace Tiled;
 
 PNGBuildingDialog::PNGBuildingDialog(World *world, QWidget *parent) :
     QDialog(parent),
-    mWorld(world),
-    ui(new Ui::PNGBuildingDialog)
+    ui(new Ui::PNGBuildingDialog),
+    mWorld(world)
 {
     ui->setupUi(this);
 

@@ -59,12 +59,12 @@ public:
     int getWorldXMinTiles();
     int getWorldYMinTiles();
 
+    HeightMapFile *mFile;
+
 //    static const int ChunkDiv = 10;
     static const int TilesPerChunk = 50; // Must match HeightMapFile::chunkDim()
     int CellSize; // Columns/Rows of tiles displayed.
     int ChunkGridWidth; // Columns/Rows of chunks displayed.
-
-    HeightMapFile *mFile;
 
     int WorldX;
     int WorldY;

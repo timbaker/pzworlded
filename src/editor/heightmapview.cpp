@@ -1006,6 +1006,14 @@ void HMMiniMapItem::mapImageChanged(MapImage *mapImage)
 
 /////
 
+namespace {
+struct SubMapInfo
+{
+    WorldCellLot *lot;
+    MapInfo *mapInfo;
+};
+}
+
 HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
     BaseGraphicsScene(HeightMapSceneType, parent),
     mDocument(hmDoc),
@@ -1039,11 +1047,6 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
         return;
     mMapComposite = new MapComposite(mapInfo, Tiled::Map::LevelIsometric);
 
-    struct SubMapInfo
-    {
-        WorldCellLot *lot;
-        MapInfo *mapInfo;
-    };
     QList<SubMapInfo> subMapInfo;
     foreach (WorldCellLot *lot, document()->cell()->lots()) {
         SubMapInfo sm;

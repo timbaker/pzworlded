@@ -94,9 +94,9 @@ VirtualTile::VirtualTile(VirtualTileset *vts, int x, int y) :
 VirtualTile::VirtualTile(VirtualTileset *vts, int x, int y, const QString &imageSource,
                          int srcX, int srcY, TileShape *shape) :
     mTileset(vts),
-    mImageSource(imageSource),
     mX(x),
     mY(y),
+    mImageSource(imageSource),
     mSrcX(srcX),
     mSrcY(srcY),
     mShape(shape)
@@ -496,8 +496,6 @@ public:
 
     void flush()
     {
-#if QT_VERSION >= 0x050000
-#else
         glEnableClientState(GL_VERTEX_ARRAY);
         glEnableClientState(GL_TEXTURE_COORD_ARRAY);
         glVertexPointer(3, GL_FLOAT, 0, vertices.constData());
@@ -515,7 +513,6 @@ public:
         glDisableClientState(GL_VERTEX_ARRAY);
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
         clear();
-#endif
     }
 
     QVector<char> counts;
@@ -550,7 +547,7 @@ void VirtualTilesetMgr::initPixelBuffer()
                       0.0, 0.0,   0.0, 0.0 };
     // below is transpose of above matrix (OpenGL works with transposed matrices)
 #endif
-    qreal ratio = width / qreal(height);
+    GLfloat ratio = width / GLfloat(height);
     GLfloat m[16] = { 1.0F,  0.5F * ratio, 0.0F,   0.0F,
                       0.0F,  1.0F * ratio, -0.05F, 0.0F,
                       -1.0F, 0.5F * ratio, 0.0F,   0.0F,
@@ -565,19 +562,13 @@ void VirtualTilesetMgr::initPixelBuffer()
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-#if QT_VERSION >= 0x050000
-#else
     glShadeModel(GL_FLAT);
-#endif
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
     glClearColor(1,1,1,0);
-#if QT_VERSION >= 0x050000
-#else
     glClearDepth(1.0f);
-#endif
 }
 
 uint VirtualTilesetMgr::loadGLTexture(const QString &imageSource, int srcX, int srcY)
@@ -1394,6 +1385,18 @@ TileShapesFile::~TileShapesFile()
 #undef VERSION_LATEST
 #define VERSION_LATEST 1
 
+namespace {
+struct SameAs {
+    SameAs() : shapeName(QString()), lineNumber(-1) {}
+    SameAs(QString shapeName, int lineNumber) :
+        shapeName(shapeName),
+        lineNumber(lineNumber)
+    {}
+    QString shapeName;
+    int lineNumber;
+};
+}
+
 bool TileShapesFile::read(const QString &fileName)
 {
     QFileInfo info(fileName);
@@ -1422,15 +1425,6 @@ bool TileShapesFile::read(const QString &fileName)
     qDeleteAll(mGroups);
     mGroups.clear();
 
-    struct SameAs {
-        SameAs() : shapeName(QString()), lineNumber(-1) {}
-        SameAs(QString shapeName, int lineNumber) :
-            shapeName(shapeName),
-            lineNumber(lineNumber)
-        {}
-        QString shapeName;
-        int lineNumber;
-    };
     QMap<TileShape*,SameAs> sameAsMap;
 
     foreach (SimpleFileBlock block, simple.blocks) {
