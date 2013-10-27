@@ -305,14 +305,15 @@ bool VirtualTilesetMgr::readTxt()
     mShapeGroups = shapesFile.takeGroups();
     setUngroupedGroup();
 
-    VirtualTilesetsFile binFile;
-    if (!binFile.read(fileName)) {
-        mError = binFile.errorString();
-        return false;
+    if (QFileInfo(fileName).exists()) {
+        VirtualTilesetsFile binFile;
+        if (!binFile.read(fileName)) {
+            mError = binFile.errorString();
+            return false;
+        }
+        foreach (VirtualTileset *vts, binFile.takeTilesets())
+            addTileset(vts);
     }
-
-    foreach (VirtualTileset *vts, binFile.takeTilesets())
-        addTileset(vts);
 
     return true;
 }
