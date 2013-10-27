@@ -372,6 +372,14 @@ public:
         DormerE,
         DormerS,
         FlatTop,
+
+        ShallowSlopeW,
+        ShallowSlopeN,
+        ShallowSlopeE,
+        ShallowSlopeS,
+        ShallowPeakWE,
+        ShallowPeakNS,
+
         CornerInnerSW,
         CornerInnerNW,
         CornerInnerNE,
@@ -508,10 +516,12 @@ public:
         SlopePt5S, SlopePt5E,
         SlopeOnePt5S, SlopeOnePt5E,
         SlopeTwoPt5S, SlopeTwoPt5E,
-#if 0
-        FlatTopW1, FlatTopW2, FlatTopW3,
-        FlatTopN1, FlatTopN2, FlatTopN3,
-#endif
+
+        // Shallow sides
+        ShallowSlopeW1, ShallowSlopeW2,
+        ShallowSlopeE1, ShallowSlopeE2,
+        ShallowSlopeN1, ShallowSlopeN2,
+        ShallowSlopeS1, ShallowSlopeS2,
 
         // Corners
         Inner1, Inner2, Inner3,
@@ -528,7 +538,11 @@ public:
         PeakOnePt5S, PeakOnePt5E,
         PeakTwoPt5S, PeakTwoPt5E,
         CapGapS1, CapGapS2, CapGapS3,
-        CapGapE1, CapGapE2, CapGapE3
+        CapGapE1, CapGapE2, CapGapE3,
+
+        // Cap tiles for shallow (garage, trailer, etc) roofs
+        CapShallowRiseS1, CapShallowRiseS2, CapShallowFallS1, CapShallowFallS2,
+        CapShallowRiseE1, CapShallowRiseE2, CapShallowFallE1, CapShallowFallE2
     };
 
     int getOffset(RoofTile getOffset) const;
@@ -537,11 +551,34 @@ public:
     QRect northEdge();
     QRect eastEdge();
     QRect southEdge();
+#if 0
+    QRect northCapRise();
+    QRect northCapFall();
+    QRect southCapRise();
+    QRect southCapFall();
+
     QRect westGap(RoofDepth depth);
     QRect northGap(RoofDepth depth);
     QRect eastGap(RoofDepth depth);
     QRect southGap(RoofDepth depth);
+#endif
     QRect flatTop();
+#if 0
+    QRect shallowWestEdge();
+    QRect shallowEastEdge();
+    QRect shallowNorthEdge();
+    QRect shallowSouthEdge();
+
+    QRect tileRect(RoofTile tile, bool alt);
+#endif
+    QVector<RoofTile> slopeTiles(QRect &b);
+
+    QVector<RoofTile> westCapTiles(QRect &b);
+    QVector<RoofTile> eastCapTiles(QRect &b);
+    QVector<RoofTile> northCapTiles(QRect &b);
+    QVector<RoofTile> southCapTiles(QRect &b);
+
+    QVector<RoofTile> cornerTiles(QRect &b);
 
     QRect cornerInner(bool &slopeE, bool &slopeS);
     QRect cornerOuter();

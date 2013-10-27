@@ -496,6 +496,13 @@ void RoofObject::rotate(bool right)
         case DormerS: mType = DormerW; break;
         case FlatTop: break;
 
+        case ShallowSlopeW: mType = ShallowSlopeN; break;
+        case ShallowSlopeN: mType = ShallowSlopeE; break;
+        case ShallowSlopeE: mType = ShallowSlopeS; break;
+        case ShallowSlopeS: mType = ShallowSlopeW; break;
+        case ShallowPeakWE: mType = ShallowPeakNS; break;
+        case ShallowPeakNS: mType = ShallowPeakWE; break;
+
         case CornerInnerSW: mType = CornerInnerNW; break;
         case CornerInnerNW: mType = CornerInnerNE; break;
         case CornerInnerNE: mType = CornerInnerSE; break;
@@ -533,6 +540,13 @@ void RoofObject::rotate(bool right)
         case DormerE: mType = DormerN; break;
         case DormerS: mType = DormerE; break;
         case FlatTop: break;
+
+        case ShallowSlopeW: mType = ShallowSlopeS; break;
+        case ShallowSlopeN: mType = ShallowSlopeW; break;
+        case ShallowSlopeE: mType = ShallowSlopeN; break;
+        case ShallowSlopeS: mType = ShallowSlopeE; break;
+        case ShallowPeakWE: mType = ShallowPeakNS; break;
+        case ShallowPeakNS: mType = ShallowPeakWE; break;
 
         case CornerInnerSW: mType = CornerInnerSE; break;
         case CornerInnerNW: mType = CornerInnerSW; break;
@@ -574,6 +588,13 @@ void RoofObject::flip(bool horizontal)
         case DormerS: break;
         case FlatTop: break;
 
+        case ShallowSlopeW: mType = ShallowSlopeE; break;
+        case ShallowSlopeN:  break;
+        case ShallowSlopeE: mType = ShallowSlopeW; break;
+        case ShallowSlopeS:  break;
+        case ShallowPeakWE:  break;
+        case ShallowPeakNS:  break;
+
         case CornerInnerSW: mType = CornerInnerSE; break;
         case CornerInnerNW: mType = CornerInnerNE; break;
         case CornerInnerNE: mType = CornerInnerNW; break;
@@ -602,6 +623,13 @@ void RoofObject::flip(bool horizontal)
         case DormerE: break;
         case DormerS: mType = DormerN; break;
         case FlatTop: break;
+
+        case ShallowSlopeW:  break;
+        case ShallowSlopeN: mType = ShallowSlopeS; break;
+        case ShallowSlopeE:  break;
+        case ShallowSlopeS: mType = ShallowSlopeN; break;
+        case ShallowPeakWE:  break;
+        case ShallowPeakNS:  break;
 
         case CornerInnerSW: mType = CornerInnerNW; break;
         case CornerInnerNW: mType = CornerInnerSW; break;
@@ -759,6 +787,27 @@ void RoofObject::setWidth(int width)
             break;
         }
         break;
+
+    case ShallowSlopeW:
+    case ShallowSlopeE:
+        mWidth = qBound(1, width, 2);
+        mDepth = Zero;
+        break;
+    case ShallowSlopeN:
+    case ShallowSlopeS:
+        mWidth = width;
+        mDepth = Zero;
+        break;
+    case ShallowPeakWE:
+        mWidth = width;
+        mDepth = Zero;
+        break;
+    case ShallowPeakNS:
+        if (width < 4) mWidth = 2;
+        else mWidth = 4;
+        mDepth = Zero;
+        break;
+
     case CornerInnerSW:
     case CornerInnerNW:
     case CornerInnerNE:
@@ -856,6 +905,27 @@ void RoofObject::setHeight(int height)
         if (mDepth == InvalidDepth)
             mDepth = Three;
         break;
+
+    case ShallowSlopeW:
+    case ShallowSlopeE:
+        mHeight = height;
+        mDepth = Zero;
+        break;
+    case ShallowSlopeN:
+    case ShallowSlopeS:
+        mHeight = qBound(1, height, 2);
+        mDepth = Zero;
+        break;
+    case ShallowPeakWE:
+        if (height < 4) mHeight = 2;
+        else mHeight = 4;
+        mDepth = Zero;
+        break;
+    case ShallowPeakNS:
+        mHeight = height;
+        mDepth = Zero;
+        break;
+
     case CornerInnerSW:
     case CornerInnerNW:
     case CornerInnerNE:
@@ -1138,6 +1208,10 @@ void RoofObject::setDefaultCaps()
     case SlopeN: mCappedS = false; break;
     case SlopeE: mCappedW = false; break;
     case SlopeS: mCappedN = false; break;
+    case ShallowSlopeW: mCappedE = false; break;
+    case ShallowSlopeN: mCappedS = false; break;
+    case ShallowSlopeE: mCappedW = false; break;
+    case ShallowSlopeS: mCappedN = false; break;
     case CornerInnerSW:
     case CornerInnerNW:
     case CornerInnerNE:
@@ -1163,10 +1237,12 @@ int RoofObject::getOffset(RoofObject::RoofTile tile) const
         BTC_RoofSlopes::SlopePt5S, BTC_RoofSlopes::SlopePt5E,
         BTC_RoofSlopes::SlopeOnePt5S, BTC_RoofSlopes::SlopeOnePt5E,
         BTC_RoofSlopes::SlopeTwoPt5S, BTC_RoofSlopes::SlopeTwoPt5E,
-    #if 0
-        BTC_RoofSlopes::FlatTopW1, BTC_RoofSlopes::FlatTopW2, BTC_RoofSlopes::FlatTopW3,
-        BTC_RoofSlopes::FlatTopN1, BTC_RoofSlopes::FlatTopN2, BTC_RoofSlopes::FlatTopN3,
-    #endif
+
+        BTC_RoofSlopes::ShallowSlopeW1, BTC_RoofSlopes::ShallowSlopeW2,
+        BTC_RoofSlopes::ShallowSlopeE1, BTC_RoofSlopes::ShallowSlopeE2,
+        BTC_RoofSlopes::ShallowSlopeN1, BTC_RoofSlopes::ShallowSlopeN2,
+        BTC_RoofSlopes::ShallowSlopeS1, BTC_RoofSlopes::ShallowSlopeS2,
+
         BTC_RoofSlopes::Inner1, BTC_RoofSlopes::Inner2, BTC_RoofSlopes::Inner3,
         BTC_RoofSlopes::Outer1, BTC_RoofSlopes::Outer2, BTC_RoofSlopes::Outer3,
         BTC_RoofSlopes::InnerPt5, BTC_RoofSlopes::InnerOnePt5, BTC_RoofSlopes::InnerTwoPt5,
@@ -1184,7 +1260,11 @@ int RoofObject::getOffset(RoofObject::RoofTile tile) const
         BTC_RoofCaps::PeakOnePt5S, BTC_RoofCaps::PeakOnePt5E,
         BTC_RoofCaps::PeakTwoPt5S, BTC_RoofCaps::PeakTwoPt5E,
         BTC_RoofCaps::CapGapS1, BTC_RoofCaps::CapGapS2, BTC_RoofCaps::CapGapS3,
-        BTC_RoofCaps::CapGapE1, BTC_RoofCaps::CapGapE2, BTC_RoofCaps::CapGapE3
+        BTC_RoofCaps::CapGapE1, BTC_RoofCaps::CapGapE2, BTC_RoofCaps::CapGapE3,
+        BTC_RoofCaps::CapShallowRiseS1, BTC_RoofCaps::CapShallowRiseS2,
+        BTC_RoofCaps::CapShallowFallS1, BTC_RoofCaps::CapShallowFallS2,
+        BTC_RoofCaps::CapShallowRiseE1, BTC_RoofCaps::CapShallowRiseE2,
+        BTC_RoofCaps::CapShallowFallE1, BTC_RoofCaps::CapShallowFallE2
     };
 
     if (tile >= CapRiseE1) {
@@ -1269,6 +1349,63 @@ QRect RoofObject::southEdge()
     return QRect();
 }
 
+#if 0
+QRect RoofObject::northCapRise()
+{
+    if (!isCappedN())
+        return QRect();
+    QRect r = bounds();
+    switch (mType) {
+    case ShallowSlopeW:
+        return QRect(r.x(), r.top(), r.width(), 1);
+    case ShallowPeakNS:
+        return QRect(r.x(), r.top(), r.width() / 2, 1);
+    }
+    return QRect();
+}
+
+QRect RoofObject::northCapFall()
+{
+    if (!isCappedN())
+        return QRect();
+    QRect r = bounds();
+    switch (mType) {
+    case ShallowSlopeE:
+        return QRect(r.x(), r.top(), r.width(), 1);
+    case ShallowPeakNS:
+        return QRect(r.center().x(), r.top(), r.width() / 2, 1);
+    }
+    return QRect();
+}
+
+QRect RoofObject::southCapRise()
+{
+    if (!isCappedS())
+        return QRect();
+    QRect r = bounds();
+    switch (mType) {
+    case ShallowSlopeW:
+        return QRect(r.x(), r.bottom() + 1, r.width(), 1);
+    case ShallowPeakNS:
+        return QRect(r.x(), r.bottom() + 1, r.width() / 2, 1);
+    }
+    return QRect();
+}
+
+QRect RoofObject::southCapFall()
+{
+    if (!isCappedS())
+        return QRect();
+    QRect r = bounds();
+    switch (mType) {
+    case ShallowSlopeE:
+        return QRect(r.x(), r.bottom() + 1, r.width(), 1);
+    case ShallowPeakNS:
+        return QRect(r.center().x(), r.bottom() + 1, r.width() / 2, 1);
+    }
+    return QRect();
+}
+
 QRect RoofObject::westGap(RoofDepth depth)
 {
     if (depth != mDepth || !mCappedW)
@@ -1328,6 +1465,7 @@ QRect RoofObject::southGap(RoofDepth depth)
         return QRect(r.left() + 3, r.bottom() + 1, r.width() - 6, 1);
     return QRect();
 }
+#endif
 
 QRect RoofObject::flatTop()
 {
@@ -1339,6 +1477,609 @@ QRect RoofObject::flatTop()
     if ((mType == PeakNS || mType == DormerN || mType == DormerS) && mWidth > 6)
         return QRect(r.left() + 3, r.top(), r.width() - 6, r.height());
     return QRect();
+}
+#if 0
+QRect RoofObject::shallowWestEdge()
+{
+    QRect r = bounds();
+    if (mType == ShallowSlopeW)
+        return QRect(r.left(), r.top(),
+                     actualWidth(), r.height());
+    if (mType == ShallowPeakNS) {
+        return QRect(r.left(), r.top(),
+                     r.width() / 2, r.height());
+    }
+    return QRect();
+}
+
+QRect RoofObject::shallowEastEdge()
+{
+    QRect r = bounds();
+    if (mType == ShallowSlopeE)
+        return QRect(r.left(), r.top(),
+                     actualWidth(), r.height());
+    if (mType == ShallowPeakNS) {
+        return QRect(r.left() + r.width() / 2, r.top(),
+                     r.width() / 2, r.height());
+    }
+    return QRect();
+}
+
+QRect RoofObject::shallowNorthEdge()
+{
+    QRect r = bounds();
+    if (mType == ShallowSlopeN)
+        return QRect(r.left(), r.top(),
+                     r.width(), actualHeight());
+    if (mType == ShallowPeakWE) {
+        return QRect(r.left(), r.top(),
+                     r.width(), r.height() / 2);
+    }
+    return QRect();
+}
+
+QRect RoofObject::shallowSouthEdge()
+{
+    QRect r = bounds();
+    if (mType == ShallowSlopeS)
+        return QRect(r.left(), r.top(),
+                     r.width(), actualHeight());
+    if (mType == ShallowPeakWE) {
+        return QRect(r.left(), r.top() + r.height() / 2,
+                     r.width(), r.height() / 2);
+    }
+    return QRect();
+}
+
+QRect RoofObject::tileRect(RoofObject::RoofTile tile, bool alt)
+{
+    QRect r = bounds();
+    switch (tile) {
+    case ShallowSlopeW1: return shallowWestEdge() & QRect(r.x(), r.y(), 1, r.height());
+    case ShallowSlopeW2: return shallowWestEdge() & QRect(r.x() + 1, r.y(), 1, r.height());
+    case ShallowSlopeE1: return shallowEastEdge() & QRect(r.right(), r.y(), 1, r.height());
+    case ShallowSlopeE2: return shallowEastEdge() & QRect(r.right() - 1, r.y(), 1, r.height());
+    case ShallowSlopeN1: return shallowNorthEdge() & QRect(r.x(), r.y(), r.width(), 1);
+    case ShallowSlopeN2: return shallowNorthEdge() & QRect(r.x(), r.y() + 1, r.width(), 1);
+    case ShallowSlopeS1: return shallowSouthEdge() & QRect(r.x(), r.bottom(), r.width(), 1);
+    case ShallowSlopeS2: return shallowSouthEdge() & QRect(r.x(), r.bottom() - 1, r.width(), 1);
+    default:
+        break;
+    }
+    return QRect();
+}
+#endif
+
+QVector<RoofObject::RoofTile> RoofObject::slopeTiles(QRect &b)
+{
+    QRect r = bounds();
+    b = r;
+    QVector<RoofTile> pat, ret;
+
+    switch (mType) {
+    case SlopeE:
+        if (mDepth == Three) pat << SlopeE3 << SlopeE2 << SlopeE1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5E << SlopeE2 << SlopeE1;
+        else if (mDepth == Two) pat << SlopeE2 << SlopeE1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5E << SlopeE1;
+        else if (mDepth == One) pat << SlopeE1;
+        else if (mDepth == Point5) pat << SlopePt5E;
+        for (int y = 0; y < mHeight; y++) ret += pat;
+        break;
+    case SlopeS:
+        if (mDepth == Three) pat << SlopeS3 << SlopeS2 << SlopeS1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5S << SlopeS2 << SlopeS1;
+        else if (mDepth == Two) pat << SlopeS2 << SlopeS1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5S << SlopeS1;
+        else if (mDepth == One) pat << SlopeS1;
+        else if (mDepth == Point5) pat << SlopePt5S;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < mWidth; x++)
+                ret += pat[y];
+        break;
+    case PeakWE:
+        b = QRect(r.left(), r.bottom() + 1 - slopeThickness(), r.width(), slopeThickness());
+        if (mDepth == Three) pat << SlopeS3 << SlopeS2 << SlopeS1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5S << SlopeS2 << SlopeS1;
+        else if (mDepth == Two) pat << SlopeS2 << SlopeS1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5S << SlopeS1;
+        else if (mDepth == One) pat << SlopeS1;
+        else if (mDepth == Point5) pat << SlopePt5S;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < mWidth; x++)
+                ret += pat[y];
+        break;
+    case PeakNS:
+        b = QRect(r.right() + 1 - slopeThickness(), r.top(), slopeThickness(), r.height());
+        if (mDepth == Three) pat << SlopeE3 << SlopeE2 << SlopeE1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5E << SlopeE2 << SlopeE1;
+        else if (mDepth == Two) pat << SlopeE2 << SlopeE1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5E << SlopeE1;
+        else if (mDepth == One) pat << SlopeE1;
+        else if (mDepth == Point5) pat << SlopePt5E;
+        for (int y = 0; y < mHeight; y++) ret += pat;
+        break;
+
+    case DormerW:
+        b = QRect(r.left(), r.bottom() - slopeThickness() + 1,
+                  r.width() - slopeThickness(), slopeThickness());
+        if (mDepth == Three) pat << SlopeS3 << SlopeS2 << SlopeS1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5S << SlopeS2 << SlopeS1;
+        else if (mDepth == Two) pat << SlopeS2 << SlopeS1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5S << SlopeS1;
+        else if (mDepth == One) pat << SlopeS1;
+        else if (mDepth == Point5) pat << SlopePt5S;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < b.width(); x++)
+                ret += pat[y];
+        break;
+     case DormerE:
+        b = QRect(r.left() + slopeThickness(),
+                  r.bottom() - slopeThickness() + 1,
+                  r.width() - slopeThickness(),
+                  slopeThickness());
+        if (mDepth == Three) pat << SlopeS3 << SlopeS2 << SlopeS1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5S << SlopeS2 << SlopeS1;
+        else if (mDepth == Two) pat << SlopeS2 << SlopeS1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5S << SlopeS1;
+        else if (mDepth == One) pat << SlopeS1;
+        else if (mDepth == Point5) pat << SlopePt5S;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < b.width(); x++)
+                ret += pat[y];
+        break;
+    case DormerN:
+        b = QRect(r.right() - slopeThickness() + 1, r.top(),
+                  slopeThickness(), r.height() - slopeThickness());
+        if (mDepth == Three) pat << SlopeE3 << SlopeE2 << SlopeE1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5E << SlopeE2 << SlopeE1;
+        else if (mDepth == Two) pat << SlopeE2 << SlopeE1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5E << SlopeE1;
+        else if (mDepth == One) pat << SlopeE1;
+        else if (mDepth == Point5) pat << SlopePt5E;
+        for (int y = 0; y < b.height(); y++) ret += pat;
+        break;
+    case DormerS:
+        b = QRect(r.right() - slopeThickness() + 1,
+                  r.top() + slopeThickness(),
+                  slopeThickness(),
+                  r.height() - slopeThickness());
+        if (mDepth == Three) pat << SlopeE3 << SlopeE2 << SlopeE1;
+        else if (mDepth == TwoPoint5) pat << SlopeTwoPt5E << SlopeE2 << SlopeE1;
+        else if (mDepth == Two) pat << SlopeE2 << SlopeE1;
+        else if (mDepth == OnePoint5) pat << SlopeOnePt5E << SlopeE1;
+        else if (mDepth == One) pat << SlopeE1;
+        else if (mDepth == Point5) pat << SlopePt5E;
+        for (int y = 0; y < b.height(); y++) ret += pat;
+        break;
+
+    case ShallowSlopeW:
+        pat << ShallowSlopeW1;
+        if (mWidth > 1) pat << ShallowSlopeW2;
+        for (int y = 0; y < mHeight; y++) ret += pat;
+        break;
+    case ShallowSlopeE:
+        if (mWidth > 1) pat << ShallowSlopeE2;
+        pat << ShallowSlopeE1;
+        for (int y = 0; y < mHeight; y++) ret += pat;
+        break;
+    case ShallowPeakNS:
+        pat << ShallowSlopeW1;
+        if (mWidth > 2) pat << ShallowSlopeW2 << ShallowSlopeE2;
+        pat << ShallowSlopeE1;
+        for (int y = 0; y < mHeight; y++) ret += pat;
+        break;
+    case ShallowSlopeN:
+        pat << ShallowSlopeN1;
+        if (mHeight > 1) pat << ShallowSlopeN2;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < mWidth; x++)
+                ret += pat[y];
+        break;
+    case ShallowSlopeS:
+        if (mHeight > 1) pat << ShallowSlopeS2;
+        pat << ShallowSlopeS1;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < mWidth; x++)
+                ret += pat[y];
+        break;
+     case ShallowPeakWE:
+        pat << ShallowSlopeN1;
+        if (mHeight > 2) pat << ShallowSlopeN2 << ShallowSlopeS2;
+        pat << ShallowSlopeS1;
+        for (int y = 0; y < pat.size(); y++)
+            for (int x = 0; x < mWidth; x++)
+                ret += pat[y];
+        break;
+    default:
+        break;
+    }
+    return ret;
+}
+
+QVector<RoofObject::RoofTile> RoofObject::westCapTiles(QRect &b)
+{
+    QRect r = bounds();
+    b = QRect(r.left(), r.top(), 1, r.height());
+    QVector<RoofTile> ret;
+    if (!isCappedW()) return ret;
+
+    switch (mType) {
+    case PeakWE:
+    case DormerW:
+        if (mDepth == Three) {
+            ret << CapFallE1 << CapFallE2 << CapFallE3;
+            for (int y = 0; y < mHeight - 6; y++) ret << CapGapE3;
+            ret << CapRiseE3 << CapRiseE2 << CapRiseE1;
+        } else if (mDepth == TwoPoint5)
+            ret << CapFallE1 << CapFallE2 << PeakTwoPt5E << CapRiseE2 << CapRiseE1;
+        else if (mDepth == Two)
+            ret << CapFallE1 << CapFallE2 << CapRiseE2 << CapRiseE1;
+        else if (mDepth == OnePoint5)
+            ret << CapFallE1 << PeakOnePt5E << CapRiseE1;
+        else if (mDepth == One)
+            ret << CapFallE1 << CapRiseE1;
+        else if (mDepth == Point5)
+            ret << PeakPt5E;
+        break;
+    case SlopeN:
+    case CornerOuterNE:
+    case CornerInnerSE:
+        if (mDepth == Three) {
+            ret << CapFallE1 << CapFallE2 << CapFallE3;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapFallE1 << CapFallE2;
+            b.adjust(0,0,0,-1);
+        } else if (mDepth == Two)
+            ret << CapFallE1 << CapFallE2;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapFallE1;
+            b.adjust(0,0,0,-1);
+        } else if (mDepth == One)
+            ret << CapFallE1;
+        else if (mDepth == Point5) {}
+        break;
+    case SlopeS:
+    case CornerInnerNE:
+    case CornerOuterSE:
+        if (mDepth == Three) {
+            ret << CapRiseE3 << CapRiseE2 << CapRiseE1;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapRiseE2 << CapRiseE1;
+            b.adjust(0,1,0,0);
+        } else if (mDepth == Two)
+            ret << CapRiseE2 << CapRiseE1;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapRiseE1;
+            b.adjust(0,1,0,0);
+        } else if (mDepth == One)
+            ret << CapRiseE1;
+        else if (mDepth == Point5) {}
+        break;
+    case ShallowSlopeN:
+        ret << CapShallowFallE1;
+        if (mHeight > 1) ret << CapShallowFallE2;
+        break;
+    case ShallowSlopeS:
+        if (mHeight > 1) ret << CapShallowRiseE2;
+        ret << CapShallowRiseE1;
+        break;
+    case ShallowPeakWE:
+        ret << CapShallowFallE1;
+        if (mHeight > 2) ret << CapShallowFallE2 << CapShallowRiseE2;
+        ret << CapShallowRiseE1;
+    case FlatTop:
+    case CornerInnerSW:
+    case CornerInnerNW: {
+        RoofTile tile = CapGapE3;
+        if (mDepth == Three) tile = CapGapE3;
+        else if (mDepth == Two) tile = CapGapE2;
+        else if (mDepth == One) tile = CapGapE1;
+        else break;
+        for (int y = 0; y < mHeight; y++) ret << tile;
+        break;
+    }
+    default:
+        break;
+    }
+    return ret;
+}
+
+QVector<RoofObject::RoofTile> RoofObject::eastCapTiles(QRect &b)
+{
+    QRect r = bounds();
+    b = QRect(r.right() + 1, r.top(), 1, r.height());
+    QVector<RoofTile> ret;
+    if (!isCappedE()) return ret;
+
+    switch (mType) {
+    case PeakWE:
+    case DormerE:
+        if (mDepth == Three) {
+            ret << CapFallE1 << CapFallE2 << CapFallE3;
+            for (int y = 0; y < mHeight - 6; y++) ret << CapGapE3;
+            ret << CapRiseE3 << CapRiseE2 << CapRiseE1;
+        } else if (mDepth == TwoPoint5)
+            ret << CapFallE1 << CapFallE2 << PeakTwoPt5E << CapRiseE2 << CapRiseE1;
+        else if (mDepth == Two)
+            ret << CapFallE1 << CapFallE2 << CapRiseE2 << CapRiseE1;
+        else if (mDepth == OnePoint5)
+            ret << CapFallE1 << PeakOnePt5E << CapRiseE1;
+        else if (mDepth == One)
+            ret << CapFallE1 << CapRiseE1;
+        else if (mDepth == Point5)
+            ret << PeakPt5E;
+        break;
+    case SlopeN:
+    case CornerInnerSW:
+    case CornerOuterNW:
+        if (mDepth == Three) {
+            ret << CapFallE1 << CapFallE2 << CapFallE3;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapFallE1 << CapFallE2;
+            b.adjust(0,0,0,-1);
+        } else if (mDepth == Two)
+            ret << CapFallE1 << CapFallE2;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapFallE1;
+            b.adjust(0,0,0,-1);
+        } else if (mDepth == One)
+            ret << CapFallE1;
+        else if (mDepth == Point5) {}
+        break;
+    case SlopeS:
+    case CornerInnerNW:
+    case CornerOuterSW:
+        if (mDepth == Three) {
+            ret << CapRiseE3 << CapRiseE2 << CapRiseE1;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapRiseE2 << CapRiseE1;
+            b.adjust(0,1,0,0);
+        } else if (mDepth == Two)
+            ret << CapRiseE2 << CapRiseE1;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapRiseE1;
+            b.adjust(0,1,0,0);
+        } else if (mDepth == One)
+            ret << CapRiseE1;
+        else if (mDepth == Point5) {}
+        break;
+    case ShallowSlopeN:
+        ret += CapShallowFallE1;
+        if (mHeight > 1) ret += CapShallowFallE2;
+        break;
+    case ShallowSlopeS:
+        if (mHeight > 1) ret += CapShallowRiseE2;
+        ret += CapShallowRiseE1;
+        break;
+    case ShallowPeakWE:
+        ret += CapShallowFallE1;
+        if (mHeight > 2) ret << CapShallowFallE2 << CapShallowRiseE2;
+        ret += CapShallowRiseE1;
+        break;
+    case FlatTop:
+    case CornerInnerSE:
+    case CornerInnerNE: {
+        RoofTile tile = CapGapE3;
+        if (mDepth == Three) tile = CapGapE3;
+        else if (mDepth == Two) tile = CapGapE2;
+        else if (mDepth == One) tile = CapGapE1;
+        else break;
+        for (int y = 0; y < mHeight; y++) ret << tile;
+        break;
+    }
+    default:
+        break;
+    }
+    return ret;
+}
+
+QVector<RoofObject::RoofTile> RoofObject::northCapTiles(QRect &b)
+{
+    QRect r = bounds();
+    b = QRect(r.x(), r.top(), r.width(), 1);
+    QVector<RoofTile> ret;
+    if (!isCappedN()) return ret;
+
+    switch (mType) {
+    case PeakNS:
+    case DormerN:
+        if (mDepth == Three) {
+            ret << CapRiseS1 << CapRiseS2 << CapRiseS3;
+            for (int x = 0; x < mWidth - 6; x++) ret << CapGapS3;
+            ret << CapFallS3 << CapFallS2 << CapFallS1;
+        } else if (mDepth == TwoPoint5)
+            ret << CapRiseS1 << CapRiseS2 << PeakTwoPt5S << CapFallS2 << CapFallS1;
+        else if (mDepth == Two)
+            ret << CapRiseS1 << CapRiseS2 << CapFallS2 << CapFallS1;
+        else if (mDepth == OnePoint5)
+            ret << CapRiseS1 << PeakOnePt5S << CapFallS1;
+        else if (mDepth == One)
+            ret << CapRiseS1 << CapFallS1;
+        else if (mDepth == Point5)
+            ret << PeakPt5S;
+        break;
+    case SlopeW:
+    case CornerInnerSE:
+    case CornerOuterSW:
+        if (mDepth == Three) {
+            ret << CapRiseS1 << CapRiseS2 << CapRiseS3;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapRiseS1 << CapRiseS2;
+            b.adjust(0,0,-1,0);
+        } else if (mDepth == Two)
+            ret << CapRiseS1 << CapRiseS2;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapRiseS1;
+            b.adjust(0,0,-1,0);
+        } else if (mDepth == One)
+            ret << CapRiseS1;
+        else if (mDepth == Point5) {}
+        break;
+    case SlopeE:
+    case CornerInnerSW:
+    case CornerOuterSE:
+        if (mDepth == Three) {
+            ret << CapFallS3 << CapFallS2 << CapFallS1;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapFallS2 << CapFallS1;
+            b.adjust(1,0,0,0);
+        } else if (mDepth == Two)
+            ret << CapFallS2 << CapFallS1;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapFallS1;
+            b.adjust(1,0,0,0);
+        } else if (mDepth == One)
+            ret << CapFallS1;
+        else if (mDepth == Point5) {}
+        break;
+    case ShallowSlopeW:
+        ret += CapShallowRiseS1;
+        if (mWidth > 1) ret += CapShallowRiseS2;
+        break;
+    case ShallowSlopeE:
+        if (mWidth > 1) ret += CapShallowFallS2;
+        ret += CapShallowFallS1;
+        break;
+    case ShallowPeakNS:
+        ret += CapShallowRiseS1;
+        if (mWidth > 2) ret << CapShallowRiseS2 << CapShallowFallS2;
+        ret += CapShallowFallS1;
+        break;
+    case FlatTop:
+    case CornerInnerNW:
+    case CornerInnerNE: {
+        RoofTile tile = CapGapS3;
+        if (mDepth == Three) tile = CapGapS3;
+        else if (mDepth == Two) tile = CapGapS2;
+        else if (mDepth == One) tile = CapGapS1;
+        else break;
+        for (int x = 0; x < mWidth; x++) ret << tile;
+        break;
+    }
+    default:
+        break;
+    }
+    return ret;
+}
+
+QVector<RoofObject::RoofTile> RoofObject::southCapTiles(QRect &b)
+{
+    QRect r = bounds();
+    b = QRect(r.x(), r.bottom() + 1, r.width(), 1);
+    QVector<RoofTile> ret;
+    if (!isCappedS()) return ret;
+
+    switch (mType) {
+    case PeakNS:
+    case DormerS:
+        if (mDepth == Three) {
+            ret << CapRiseS1 << CapRiseS2 << CapRiseS3;
+            for (int x = 0; x < mWidth - 6; x++) ret << CapGapS3;
+            ret << CapFallS3 << CapFallS2 << CapFallS1;
+        } else if (mDepth == TwoPoint5)
+            ret << CapRiseS1 << CapRiseS2 << PeakTwoPt5S << CapFallS2 << CapFallS1;
+        else if (mDepth == Two)
+            ret << CapRiseS1 << CapRiseS2 << CapFallS2 << CapFallS1;
+        else if (mDepth == OnePoint5)
+            ret << CapRiseS1 << PeakOnePt5S << CapFallS1;
+        else if (mDepth == One)
+            ret << CapRiseS1 << CapFallS1;
+        else if (mDepth == Point5)
+            ret << PeakPt5S;
+        break;
+    case SlopeW:
+    case CornerInnerNE:
+    case CornerOuterNW:
+        if (mDepth == Three) {
+            ret << CapRiseS1 << CapRiseS2 << CapRiseS3;
+        } else if (mDepth == TwoPoint5) {
+            ret << CapRiseS1 << CapRiseS2;
+            b.adjust(0,0,-1,0);
+        } else if (mDepth == Two)
+            ret << CapRiseS1 << CapRiseS2;
+        else if (mDepth == OnePoint5) {
+            ret << CapRiseS1;
+            b.adjust(0,0,-1,0);
+        } else if (mDepth == One)
+            ret << CapRiseS1;
+        else if (mDepth == Point5) {}
+        break;
+    case SlopeE:
+    case CornerInnerNW:
+    case CornerOuterNE:
+        if (mDepth == Three) {
+            ret << CapFallS3 << CapFallS2 << CapFallS1;
+        } else if (mDepth == TwoPoint5) {
+            ret << /* ??? << */ CapFallS2 << CapFallS1;
+            b.adjust(1,0,0,0);
+        } else if (mDepth == Two)
+            ret << CapFallS2 << CapFallS1;
+        else if (mDepth == OnePoint5) {
+            ret << /* ??? << */ CapFallS1;
+            b.adjust(1,0,0,0);
+        } else if (mDepth == One)
+            ret << CapFallS1;
+        else if (mDepth == Point5) {}
+        break;
+    case ShallowSlopeW:
+        ret += CapShallowRiseS1;
+        if (mWidth > 1) ret += CapShallowRiseS2;
+        break;
+    case ShallowSlopeE:
+        if (mWidth > 1) ret += CapShallowFallS2;
+        ret += CapShallowFallS1;
+        break;
+    case ShallowPeakNS:
+        ret += CapShallowRiseS1;
+        if (mWidth > 2) ret << CapShallowRiseS2 << CapShallowFallS2;
+        ret += CapShallowFallS1;
+        break;
+    case FlatTop:
+    case CornerInnerSE:
+    case CornerInnerSW: {
+        RoofTile tile = CapGapS3;
+        if (mDepth == Three) tile = CapGapS3;
+        else if (mDepth == Two) tile = CapGapS2;
+        else if (mDepth == One) tile = CapGapS1;
+        else break;
+        for (int x = 0; x < mWidth; x++) ret << tile;
+        break;
+    }
+    default:
+        break;
+    }
+    return ret;
+}
+
+QVector<RoofObject::RoofTile> RoofObject::cornerTiles(QRect &b)
+{
+    QRect r = bounds();
+    b = r;
+    QVector<RoofTile> ret;
+
+    switch (mType) {
+    case CornerInnerSW:
+        break;
+    case CornerInnerNW:
+        break;
+    case CornerInnerNE:
+        break;
+    case CornerInnerSE:
+        break;
+
+    case CornerOuterSW:
+        break;
+    case CornerOuterNW:
+        break;
+    case CornerOuterNE:
+        break;
+    case CornerOuterSE:
+        break;
+    default:
+        break;
+    }
+    return ret;
 }
 
 QRect RoofObject::cornerInner(bool &slopeE, bool &slopeS)
@@ -1392,6 +2133,13 @@ QString RoofObject::typeToString(RoofObject::RoofType type)
 
     case FlatTop: return QLatin1String("FlatTop");
 
+    case ShallowSlopeW: return QLatin1String("ShallowSlopeW");
+    case ShallowSlopeE: return QLatin1String("ShallowSlopeE");
+    case ShallowSlopeN: return QLatin1String("ShallowSlopeN");
+    case ShallowSlopeS: return QLatin1String("ShallowSlopeS");
+    case ShallowPeakWE: return QLatin1String("ShallowPeakWE");
+    case ShallowPeakNS: return QLatin1String("ShallowPeakNS");
+
     case CornerInnerSW: return QLatin1String("CornerInnerSW");
     case CornerInnerNW: return QLatin1String("CornerInnerNW");
     case CornerInnerNE: return QLatin1String("CornerInnerNE");
@@ -1424,6 +2172,14 @@ RoofObject::RoofType RoofObject::typeFromString(const QString &s)
     if (s == QLatin1String("DormerS")) return DormerS;
 
     if (s == QLatin1String("FlatTop")) return FlatTop;
+
+    if (s == QLatin1String("ShallowSlopeW")) return ShallowSlopeW;
+    if (s == QLatin1String("ShallowSlopeN")) return ShallowSlopeN;
+    if (s == QLatin1String("ShallowSlopeE")) return ShallowSlopeE;
+    if (s == QLatin1String("ShallowSlopeS")) return ShallowSlopeS;
+
+    if (s == QLatin1String("ShallowPeakWE")) return ShallowPeakWE;
+    if (s == QLatin1String("ShallowPeakNS")) return ShallowPeakNS;
 
     if (s == QLatin1String("CornerInnerSW")) return CornerInnerSW;
     if (s == QLatin1String("CornerInnerNW")) return CornerInnerNW;

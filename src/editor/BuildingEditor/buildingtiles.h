@@ -507,6 +507,10 @@ public:
         CapGapS1, CapGapS2, CapGapS3,
         CapGapE1, CapGapE2, CapGapE3,
 
+        // Cap tiles for shallow (garage, trailer, etc) roofs
+        CapShallowRiseS1, CapShallowRiseS2, CapShallowFallS1, CapShallowFallS2,
+        CapShallowRiseE1, CapShallowRiseE2, CapShallowFallE1, CapShallowFallE2,
+
         EnumCount
     };
 
@@ -516,7 +520,7 @@ public:
 
     BuildingTileCategory *asRoofCaps() { return this; }
 
-    int shadowCount() { return EnumCount; }
+    int shadowCount() const { return EnumCount + 4; }
     int shadowToEnum(int shadowIndex);
 };
 
@@ -531,11 +535,13 @@ public:
         SlopePt5S, SlopePt5E,
         SlopeOnePt5S, SlopeOnePt5E,
         SlopeTwoPt5S, SlopeTwoPt5E,
-#if 0
-        // Flat rooftops
-        FlatTopW1, FlatTopW2, FlatTopW3,
-        FlatTopN1, FlatTopN2, FlatTopN3,
-#endif
+
+        // Shallow sides
+        ShallowSlopeW1, ShallowSlopeW2,
+        ShallowSlopeE1, ShallowSlopeE2,
+        ShallowSlopeN1, ShallowSlopeN2,
+        ShallowSlopeS1, ShallowSlopeS2,
+
         // Sloped corners
         Inner1, Inner2, Inner3,
         Outer1, Outer2, Outer3,
@@ -553,6 +559,7 @@ public:
 
     BuildingTileCategory *asRoofSlopes() { return this; }
 
+    int shadowCount() const { return EnumCount + 4; }
     int shadowToEnum(int shadowIndex);
 };
 

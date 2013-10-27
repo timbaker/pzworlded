@@ -1135,6 +1135,15 @@ BTC_RoofCaps::BTC_RoofCaps(const QString &label) :
     mEnumNames += QLatin1String("CapGapE2");
     mEnumNames += QLatin1String("CapGapE3");
 
+    mEnumNames += QLatin1String("CapShallowRiseS1");
+    mEnumNames += QLatin1String("CapShallowRiseS2");
+    mEnumNames += QLatin1String("CapShallowFallS1");
+    mEnumNames += QLatin1String("CapShallowFallS2");
+    mEnumNames += QLatin1String("CapShallowRiseE1");
+    mEnumNames += QLatin1String("CapShallowRiseE2");
+    mEnumNames += QLatin1String("CapShallowFallE1");
+    mEnumNames += QLatin1String("CapShallowFallE2");
+
     Q_ASSERT(mEnumNames.size() == EnumCount);
 }
 
@@ -1172,11 +1181,13 @@ BuildingTileEntry *BTC_RoofCaps::createEntryFromSingleTile(const QString &tileNa
 
 int BTC_RoofCaps::shadowToEnum(int shadowIndex)
 {
-    const int map[EnumCount] = {
+    const int map[EnumCount + 4] = {
         CapRiseE1, CapRiseE2, CapRiseE3, CapFallS3, CapFallS2, CapFallS1,
         CapFallE1, CapFallE2, CapFallE3, CapRiseS3, CapRiseS2, CapRiseS1,
         PeakPt5E, PeakOnePt5E, PeakTwoPt5E, PeakTwoPt5S, PeakOnePt5S, PeakPt5S,
-        CapGapE1, CapGapE2, CapGapE3, CapGapS3, CapGapS2, CapGapS1
+        CapGapE1, CapGapE2, CapGapE3, CapGapS3, CapGapS2, CapGapS1,
+        CapShallowRiseE1, CapShallowRiseE2, -1, -1, CapShallowFallS2, CapShallowFallS1,
+        CapShallowFallE1, CapShallowFallE2, -1, -1, CapShallowRiseS2, CapShallowRiseS1,
     };
     return map[shadowIndex];
 }
@@ -1199,14 +1210,16 @@ BTC_RoofSlopes::BTC_RoofSlopes(const QString &label) :
     mEnumNames += QLatin1String("SlopeOnePt5E");
     mEnumNames += QLatin1String("SlopeTwoPt5S");
     mEnumNames += QLatin1String("SlopeTwoPt5E");
-#if 0
-    mEnumNames += QLatin1String("FlatTopW1");
-    mEnumNames += QLatin1String("FlatTopW2");
-    mEnumNames += QLatin1String("FlatTopW3");
-    mEnumNames += QLatin1String("FlatTopN1");
-    mEnumNames += QLatin1String("FlatTopN2");
-    mEnumNames += QLatin1String("FlatTopN3");
-#endif
+
+    mEnumNames += QLatin1String("ShallowSlopeW1");
+    mEnumNames += QLatin1String("ShallowSlopeW2");
+    mEnumNames += QLatin1String("ShallowSlopeE1");
+    mEnumNames += QLatin1String("ShallowSlopeE2");
+    mEnumNames += QLatin1String("ShallowSlopeN1");
+    mEnumNames += QLatin1String("ShallowSlopeN2");
+    mEnumNames += QLatin1String("ShallowSlopeS1");
+    mEnumNames += QLatin1String("ShallowSlopeS2");
+
     mEnumNames += QLatin1String("Inner1");
     mEnumNames += QLatin1String("Inner2");
     mEnumNames += QLatin1String("Inner3");
@@ -1266,12 +1279,14 @@ BuildingTileEntry *BTC_RoofSlopes::createEntryFromSingleTile(const QString &tile
 
 int BTC_RoofSlopes::shadowToEnum(int shadowIndex)
 {
-    const int map[EnumCount] = {
+    const int map[EnumCount + 4] = {
         SlopeS1, SlopeS2, SlopeS3, SlopeE3, SlopeE2, SlopeE1,
         SlopePt5S, SlopeOnePt5S, SlopeTwoPt5S, SlopeTwoPt5E, SlopeOnePt5E, SlopePt5E,
         Outer1, Outer2, Outer3, Inner1, Inner2, Inner3,
         OuterPt5, OuterOnePt5, OuterTwoPt5, InnerPt5, InnerOnePt5, InnerTwoPt5,
-        CornerSW1, CornerSW2, CornerSW3, CornerNE3, CornerNE2, CornerNE1
+        CornerSW1, CornerSW2, CornerSW3, CornerNE3, CornerNE2, CornerNE1,
+        ShallowSlopeW1, ShallowSlopeW2, -1, -1, ShallowSlopeE2, ShallowSlopeE1,
+        ShallowSlopeN1, ShallowSlopeN2, -1, -1, ShallowSlopeS2, ShallowSlopeS1,
     };
     return map[shadowIndex];
 }
@@ -1451,8 +1466,11 @@ int BuildingTileCategory::enumToShadow(int e)
     QVector<int> map(100);
     for (int i = 0; i < enumCount(); i++)
         map[i] = -1;
-    for (int i = 0; i < shadowCount(); i++)
-        map[shadowToEnum(i)] = i;
+    for (int i = 0; i < shadowCount(); i++) {
+        int e = shadowToEnum(i);
+        if (e != -1)
+            map[e] = i;
+    }
     return map[e];
 }
 
