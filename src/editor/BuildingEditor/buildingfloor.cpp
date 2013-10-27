@@ -386,6 +386,19 @@ static void ReplaceRoofCorner(RoofObject *ro, int x, int y,
         squares[p.x()][p.y()].ReplaceRoof(ro->slopeTiles(), offset);
 }
 
+static void ReplaceRoofCorner(RoofObject *ro, const QRect &r,
+                              const QVector<RoofObject::RoofTile> &tiles,
+                              QVector<QVector<BuildingFloor::Square> > &squares)
+{
+    if (tiles.isEmpty()) return;
+    for (int y = r.top(); y <= r.bottom(); y++)
+        for (int x = r.left(); x <= r.right(); x++) {
+            RoofObject::RoofTile tile = tiles.at(x - r.left() + (y - r.top()) * r.width());
+            if (tile != RoofObject::TileCount)
+                ReplaceRoofCorner(ro, x, y, squares, tile);
+        }
+}
+
 static void ReplaceFurniture(int x, int y,
                              QVector<QVector<BuildingFloor::Square> > &squares,
                              BuildingTile *btile,
@@ -849,6 +862,10 @@ void BuildingFloor::LayoutToSquares()
             tiles = ro->southCapTiles(tileRect);
             ReplaceRoofCap(ro, tileRect, tiles, squares);
 
+#if 1
+            tiles = ro->cornerTiles(tileRect);
+            ReplaceRoofCorner(ro, tileRect, tiles, squares);
+#else
             // Inner corner
             bool slopeE, slopeS;
             QRect inner = ro->cornerInner(slopeE, slopeS);
@@ -1019,7 +1036,7 @@ void BuildingFloor::LayoutToSquares()
             default:
                 break;
             }
-#if 0
+
             QRect wg = ro->westGap(RoofObject::Three);
             ReplaceRoofGap(ro, wg, squares, RoofObject::CapGapE3);
 

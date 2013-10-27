@@ -542,7 +542,9 @@ public:
 
         // Cap tiles for shallow (garage, trailer, etc) roofs
         CapShallowRiseS1, CapShallowRiseS2, CapShallowFallS1, CapShallowFallS2,
-        CapShallowRiseE1, CapShallowRiseE2, CapShallowFallE1, CapShallowFallE2
+        CapShallowRiseE1, CapShallowRiseE2, CapShallowFallE1, CapShallowFallE2,
+
+        TileCount
     };
 
     int getOffset(RoofTile getOffset) const;
@@ -579,10 +581,10 @@ public:
     QVector<RoofTile> southCapTiles(QRect &b);
 
     QVector<RoofTile> cornerTiles(QRect &b);
-
+#if 0
     QRect cornerInner(bool &slopeE, bool &slopeS);
     QRect cornerOuter();
-
+#endif
     QString typeToString() const
     { return typeToString(mType); }
 

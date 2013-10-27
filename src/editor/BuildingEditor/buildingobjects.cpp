@@ -2059,9 +2059,77 @@ QVector<RoofObject::RoofTile> RoofObject::cornerTiles(QRect &b)
     QVector<RoofTile> ret;
 
     switch (mType) {
+    case DormerE:
+        b = QRect(r.left(), r.bottom() + 1 - slopeThickness(),
+                  slopeThickness(), slopeThickness());
+        // Same as CornerInnerNW but with no east slope tiles
+        if (mDepth == Three) {
+            ret << Inner3 << SlopeS3 << SlopeS3
+                << TileCount << Inner2 << SlopeS2
+                << TileCount << TileCount << Inner1;
+        } else if (mDepth == TwoPoint5) {
+            ret << InnerTwoPt5 << SlopeTwoPt5S << SlopeTwoPt5S
+                << TileCount << Inner2 << SlopeS2
+                << TileCount << TileCount << Inner1;
+        } else if (mDepth == Two) {
+            ret << Inner2 << SlopeS2
+                << TileCount << Inner1;
+        } else if (mDepth == OnePoint5) {
+            ret << InnerOnePt5 << SlopeOnePt5S
+                << TileCount << Inner1;
+        } else if (mDepth == One) {
+            ret << Inner1;
+        } else if (mDepth == Point5) {
+            ret << InnerPt5;
+        }
+        break;
+    case DormerS:
+        b = QRect(r.right() - slopeThickness() + 1, r.top(),
+                  slopeThickness(), slopeThickness());
+        // Same as CornerInnerNW but with no south slope tiles
+        if (mDepth == Three) {
+            ret << Inner3 << TileCount << TileCount
+                << SlopeE3 << Inner2 << TileCount
+                << SlopeE3 << SlopeE2 << Inner1;
+        } else if (mDepth == TwoPoint5) {
+            ret << InnerTwoPt5 << TileCount << TileCount
+                << SlopeTwoPt5E << Inner2 << TileCount
+                << SlopeTwoPt5E << SlopeE2 << Inner1;
+        } else if (mDepth == Two) {
+            ret << Inner2 << TileCount
+                << SlopeE2 << Inner1;
+        } else if (mDepth == OnePoint5) {
+            ret << InnerOnePt5 << TileCount
+                << SlopeOnePt5E << Inner1;
+        } else if (mDepth == One) {
+            ret << Inner1;
+        } else if (mDepth == Point5) {
+            ret << InnerPt5;
+        }
+        break;
+
     case CornerInnerSW:
         break;
     case CornerInnerNW:
+        if (mDepth == Three) {
+            ret << Inner3 << SlopeS3 << SlopeS3
+                << SlopeE3 << Inner2 << SlopeS2
+                << SlopeE3 << SlopeE2 << Inner1;
+        } else if (mDepth == TwoPoint5) {
+            ret << InnerTwoPt5 << SlopeTwoPt5S << SlopeTwoPt5S
+                << SlopeTwoPt5E << Inner2 << SlopeS2
+                << SlopeTwoPt5E << SlopeE2 << Inner1;
+        } else if (mDepth == Two) {
+            ret << Inner2 << SlopeS2
+                << SlopeE2 << Inner1;
+        } else if (mDepth == OnePoint5) {
+            ret << InnerOnePt5 << SlopeOnePt5S
+                << SlopeOnePt5E << Inner1;
+        } else if (mDepth == One) {
+            ret << Inner1;
+        } else if (mDepth == Point5) {
+            ret << InnerPt5;
+        }
         break;
     case CornerInnerNE:
         break;
@@ -2069,19 +2137,58 @@ QVector<RoofObject::RoofTile> RoofObject::cornerTiles(QRect &b)
         break;
 
     case CornerOuterSW:
+        if (mDepth == Three) {
+            ret << TileCount << TileCount << CornerSW3
+                << TileCount << CornerSW2 << SlopeS2
+                << CornerSW1 << SlopeS1 << SlopeS1;
+        } else if (mDepth == Two) {
+            ret << TileCount << CornerSW2
+                << CornerSW1 << SlopeS1;
+        } else if (mDepth == One) {
+            ret << CornerSW1;
+        }
         break;
     case CornerOuterNW:
         break;
     case CornerOuterNE:
+        if (mDepth == Three) {
+            ret << TileCount << TileCount << CornerNE1
+                << TileCount << CornerNE2 << SlopeE1
+                << CornerNE3 << SlopeE2 << SlopeE1;
+        } else if (mDepth == Two) {
+            ret << TileCount << CornerNE1
+                << CornerNE2 << SlopeE1;
+        } else if (mDepth == One) {
+            ret << CornerNE1;
+        }
         break;
     case CornerOuterSE:
+        if (mDepth == Three) {
+            ret << Outer3 << SlopeE2 << SlopeE1
+                << SlopeS2 << Outer2 << SlopeE1
+                << SlopeS1 << SlopeS1 << Outer1;
+        } else if (mDepth == TwoPoint5) {
+            ret << OuterTwoPt5 << SlopeE2 << SlopeE1
+                << SlopeS2 << Outer2 << SlopeE1
+                << SlopeS1 << SlopeS1 << Outer1;
+        } else if (mDepth == Two) {
+            ret << Outer2 << SlopeE1
+                << SlopeS1 << Outer1;
+        } else if (mDepth == OnePoint5) {
+            ret << OuterOnePt5 << SlopeE1
+                << SlopeS1 << Outer1;
+        } else if (mDepth == One) {
+            ret << Outer1;
+        } else if (mDepth == Point5) {
+            ret << OuterPt5;
+        }
         break;
     default:
         break;
     }
     return ret;
 }
-
+#if 0
 QRect RoofObject::cornerInner(bool &slopeE, bool &slopeS)
 {
     QRect r = bounds();
@@ -2114,6 +2221,7 @@ QRect RoofObject::cornerOuter()
     }
     return QRect();
 }
+#endif
 
 QString RoofObject::typeToString(RoofObject::RoofType type)
 {
