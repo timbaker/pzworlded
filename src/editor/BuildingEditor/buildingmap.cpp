@@ -204,19 +204,17 @@ void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object)
 {
     if (mCursorObjectFloor && (mCursorObjectFloor != floor)) {
         pendingLayoutToSquares.insert(mCursorObjectFloor);
-        if (!pending) {
-            QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-            pending = true;
-        }
+        if (mCursorObjectFloor->floorAbove())
+            pendingLayoutToSquares.insert(mCursorObjectFloor->floorAbove());
+        schedulePending();
         mCursorObjectFloor = 0;
     }
 
     if (mShadowBuilding->setCursorObject(floor, object)) {
         pendingLayoutToSquares.insert(floor);
-        if (!pending) {
-            QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-            pending = true;
-        }
+        if (floor && floor->floorAbove())
+            pendingLayoutToSquares.insert(floor->floorAbove());
+        schedulePending();
         mCursorObjectFloor = object ? floor : 0;
     }
 }
@@ -225,40 +223,32 @@ void BuildingMap::dragObject(BuildingFloor *floor, BuildingObject *object, const
 {
     mShadowBuilding->dragObject(floor, object, offset);
     pendingLayoutToSquares.insert(floor);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    if (floor->floorAbove())
+        pendingLayoutToSquares.insert(floor->floorAbove());
+    schedulePending();
 }
 
 void BuildingMap::resetDrag(BuildingFloor *floor, BuildingObject *object)
 {
     mShadowBuilding->resetDrag(object);
     pendingLayoutToSquares.insert(floor);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    if (floor->floorAbove())
+        pendingLayoutToSquares.insert(floor->floorAbove());
+    schedulePending();
 }
 
 void BuildingMap::changeFloorGrid(BuildingFloor *floor, const QVector<QVector<Room*> > &grid)
 {
     mShadowBuilding->changeFloorGrid(floor, grid);
     pendingLayoutToSquares.insert(floor);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::resetFloorGrid(BuildingFloor *floor)
 {
     mShadowBuilding->resetFloorGrid(floor);
     pendingLayoutToSquares.insert(floor);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::changeUserTiles(BuildingFloor *floor, const QMap<QString,FloorTileGrid*> &tiles)
@@ -267,10 +257,7 @@ void BuildingMap::changeUserTiles(BuildingFloor *floor, const QMap<QString,Floor
     pendingSquaresToTileLayers[floor] |= floor->bounds(1, 1);
     foreach (QString layerName, floor->grimeLayers())
         pendingUserTilesToLayer[floor][layerName] |= floor->bounds(1, 1);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::resetUserTiles(BuildingFloor *floor)
@@ -279,10 +266,7 @@ void BuildingMap::resetUserTiles(BuildingFloor *floor)
     pendingSquaresToTileLayers[floor] |= floor->bounds();
     foreach (QString layerName, floor->grimeLayers())
         pendingUserTilesToLayer[floor][layerName] |= floor->bounds(1, 1);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::suppressTiles(BuildingFloor *floor, const QRegion &rgn)
@@ -304,10 +288,7 @@ void BuildingMap::suppressTiles(BuildingFloor *floor, const QRegion &rgn)
             foreach (QString layerName, floor->grimeLayers())
                 pendingUserTilesToLayer[floor][layerName] |= r;
         }
-        if (!pending) {
-            QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-            pending = true;
-        }
+        schedulePending();
     }
 }
 
@@ -443,19 +424,13 @@ void BuildingMap::buildingRotated()
     // However, no signal is emitted until the buildingRotated signal.
     pendingEraseUserTiles = mBuilding->floors().toSet();
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::buildingResized()
 {
     pendingBuildingResized = true;
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::BuildingToMap()
@@ -685,10 +660,7 @@ void BuildingMap::floorEdited(BuildingFloor *floor)
     mShadowBuilding->floorEdited(floor);
 
     pendingLayoutToSquares.insert(floor);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::floorTilesChanged(BuildingFloor *floor)
@@ -696,10 +668,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor)
     mShadowBuilding->floorTilesChanged(floor);
 
     pendingEraseUserTiles.insert(floor);
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::floorTilesChanged(BuildingFloor *floor, const QString &layerName,
@@ -708,10 +677,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor, const QString &layerNa
     mShadowBuilding->floorTilesChanged(floor, layerName, bounds);
 
     pendingUserTilesToLayer[floor][layerName] |= bounds;
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::objectAdded(BuildingObject *object)
@@ -726,10 +692,7 @@ void BuildingMap::objectAdded(BuildingObject *object)
             pendingLayoutToSquares.insert(floorAbove);
     }
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 
     mShadowBuilding->objectAdded(object);
 }
@@ -746,10 +709,7 @@ void BuildingMap::objectAboutToBeRemoved(BuildingObject *object)
             pendingLayoutToSquares.insert(floorAbove);
     }
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 
     mShadowBuilding->objectAboutToBeRemoved(object);
 }
@@ -771,10 +731,7 @@ void BuildingMap::objectMoved(BuildingObject *object)
             pendingLayoutToSquares.insert(floorAbove);
     }
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 
     mShadowBuilding->objectMoved(object);
 }
@@ -791,10 +748,7 @@ void BuildingMap::objectTileChanged(BuildingObject *object)
             pendingLayoutToSquares.insert(floorAbove);
     }
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 
     mShadowBuilding->objectTileChanged(object);
 }
@@ -829,10 +783,7 @@ void BuildingMap::tilesetAdded(Tileset *tileset)
             pendingUserTilesToLayer[floor][layerName] = floor->bounds(1, 1);
     }
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::tilesetAboutToBeRemoved(Tileset *tileset)
@@ -861,10 +812,7 @@ void BuildingMap::tilesetAboutToBeRemoved(Tileset *tileset)
             pendingUserTilesToLayer[floor][layerName] = floor->bounds(1, 1);
     }
 
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 void BuildingMap::tilesetRemoved(Tileset *tileset)
@@ -988,10 +936,7 @@ void BuildingMap::handlePending()
 void BuildingMap::recreateAllLater()
 {
     pendingRecreateAll = true;
-    if (!pending) {
-        QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
-        pending = true;
-    }
+    schedulePending();
 }
 
 /////

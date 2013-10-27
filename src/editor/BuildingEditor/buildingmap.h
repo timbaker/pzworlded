@@ -205,6 +205,14 @@ private:
     void userTilesToLayer(BuildingFloor *floor, const QString &layerName,
                           const QRect &bounds);
 
+    inline void schedulePending()
+    {
+        if (!pending) {
+            QMetaObject::invokeMethod(this, "handlePending", Qt::QueuedConnection);
+            pending = true;
+        }
+    }
+
 private:
     Building *mBuilding;
     MapComposite *mMapComposite;
