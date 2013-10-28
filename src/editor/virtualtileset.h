@@ -28,7 +28,12 @@
 #include <QVector>
 #include <QVector3D>
 
+#define PIXELBUFFER_FIX
+#ifdef PIXELBUFFER_FIX
+class PixelBuffer;
+#else
 class QGLPixelBuffer;
+#endif
 
 namespace Tiled {
 class Tileset;
@@ -346,7 +351,11 @@ private slots:
 private:
     QMap<QString,VirtualTileset*> mTilesetByName;
     QList<VirtualTileset*> mRemovedTilesets;
+#ifdef PIXELBUFFER_FIX
+    PixelBuffer *mPixelBuffer;
+#else
     QGLPixelBuffer *mPixelBuffer;
+#endif
 
     QMap<QString,TileShape*> mShapeByName;
     QList<TileShapeGroup*> mShapeGroups;

@@ -27,6 +27,10 @@
 #include "tile.h"
 #include "tileset.h"
 
+#ifdef PIXELBUFFER_FIX
+#include "pixelbuffer.h"
+#endif
+
 #include <QDebug>
 #include <QDir>
 #include <QGLPixelBuffer>
@@ -532,8 +536,15 @@ void VirtualTilesetMgr::initPixelBuffer()
     int width = 64, height = 128; // Size of one iso tile
 
     QGLFormat pbufferFormat;
+    pbufferFormat.setAlpha(true);
+    pbufferFormat.setRgba(true);
     pbufferFormat.setSampleBuffers(false);
+#ifdef PIXELBUFFER_FIX
+    mPixelBuffer = new PixelBuffer(QSize(width, height), pbufferFormat);
+#else
     mPixelBuffer = new QGLPixelBuffer(QSize(width, height), pbufferFormat);
+#endif
+    Q_ASSERT(mPixelBuffer->format().alpha() == true);
 
     mPixelBuffer->makeCurrent();
 
@@ -568,7 +579,7 @@ void VirtualTilesetMgr::initPixelBuffer()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    glClearColor(1,1,1,0);
+    glClearColor(0,0,0,0);
     glClearDepth(1.0f);
 }
 
@@ -587,10 +598,21 @@ uint VirtualTilesetMgr::loadGLTexture(const QString &imageSource, int srcX, int 
     if (b.isNull())
         return 0;
 
+#if 1
+    //b = QGLWidget::convertToGLFormat( b );
+    Q_ASSERT(mPixelBuffer->context() == QGLContext::currentContext());
+//    b = b.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    GLuint textureID = mPixelBuffer->context()->bindTexture(b);
+#else
     QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
+#if 1
+    fixedImage.fill(Qt::transparent);
+    QPainter painter(&fixedImage);
+#else
     QPainter painter(&fixedImage);
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.fillRect(fixedImage.rect(), Qt::transparent);
+#endif
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawImage(0, 0, b);
     painter.end();
@@ -600,6 +622,7 @@ uint VirtualTilesetMgr::loadGLTexture(const QString &imageSource, int srcX, int 
     glGenTextures( 1, &textureID );
     glBindTexture( GL_TEXTURE_2D, textureID );
     glTexImage2D( GL_TEXTURE_2D, 0, 4, b.width(), b.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, b.bits() );
+#endif
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
@@ -712,15 +735,20 @@ QImage VirtualTilesetMgr::renderIsoTile(VirtualTile *vtile)
 #endif
     /////
 
+#if 1
+    mPixelBuffer->context()->deleteTexture(textureID);
+#else
     glDeleteTextures(1, &textureID);
+#endif
     mPixelBuffer->doneCurrent();
 
     QImage img = mPixelBuffer->toImage();
+    Q_ASSERT(img.hasAlphaChannel());
 
     if (context)
         const_cast<QGLContext*>(context)->makeCurrent();
 
-    return img;
+    return img.convertToFormat(QImage::Format_ARGB32);
 }
 
 void VirtualTilesetMgr::addShape(TileShape *shape)

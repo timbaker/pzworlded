@@ -128,7 +128,8 @@ SOURCES += main.cpp\
     mapbuildings.cpp \
     pngbuildingdialog.cpp \
     virtualtileset.cpp \
-    texturemanager.cpp
+    texturemanager.cpp \
+    pixelbuffer.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -215,7 +216,8 @@ HEADERS  += mainwindow.h \
     mapbuildings.h \
     pngbuildingdialog.h \
     virtualtileset.h \
-    texturemanager.h
+    texturemanager.h \
+    pixelbuffer.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
