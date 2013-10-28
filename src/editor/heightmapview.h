@@ -32,7 +32,13 @@ class WorldCell;
 class WorldCellLot;
 
 namespace Tiled {
+class Tile;
 class Tileset;
+
+namespace Internal {
+class TextureInfo;
+class VirtualTileset;
+}
 }
 
 class HMMiniMapItem;
@@ -65,7 +71,9 @@ private:
 
 private:
     HeightMapScene *mScene;
-    QMap<Tiled::Tileset*,unsigned int> mTextureID;
+    QMap<Tiled::Tile*,unsigned int> mTextureID;
+    QMap<unsigned int,Tiled::Internal::TextureInfo*> mTextureInfo;
+    QMap<Tiled::Tileset*,Tiled::Internal::VirtualTileset*> mVirtualTileset;
     Tiled::Tileset *mTileset;
     DisplayStyle mDisplayStyle;
 };
