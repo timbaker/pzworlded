@@ -87,6 +87,9 @@ void HeightMapItem::loadGLTextures()
         }
 #endif
         if (b.load(imageSource)) {
+#if 1
+            GLuint textureID = const_cast<QGLContext*>(QGLContext::currentContext())->bindTexture(b);
+#else
             QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
             QPainter painter(&fixedImage);
             painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -101,6 +104,7 @@ void HeightMapItem::loadGLTextures()
             glGenTextures( 1, &textureID );
             glBindTexture( GL_TEXTURE_2D, textureID );
             glTexImage2D( GL_TEXTURE_2D, 0, 4, t.width(), t.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, t.bits() );
+#endif
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
@@ -224,6 +228,9 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
         return;
     }
 
+    MapComposite *mc = mScene->mapComposite();
+    if (!mc) return;
+
     QPointF tl = mScene->toWorld(option->exposedRect.topLeft());
     QPointF tr = mScene->toWorld(option->exposedRect.topRight());
     QPointF br = mScene->toWorld(option->exposedRect.bottomRight());
@@ -237,6 +244,11 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
     int columns = maxX - minX + 1;
     int rows = maxY - minY + 1;
+    if (columns * rows > 100000)
+        return;
+
+    int cellX = mScene->document()->cell()->pos().x() * 300;
+    int cellY = mScene->document()->cell()->pos().y() * 300;
 
     painter->beginNativePainting();
 
@@ -267,12 +279,8 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     scale /= (width / 64.0);
     glScalef(scale, scale, scale);
 
-    {
     QPointF tilePos = mScene->toWorld(option->exposedRect.center());
-    int cellX = mScene->document()->cell()->pos().x() * 300;
-    int cellY = mScene->document()->cell()->pos().y() * 300;
     glTranslatef(-(tilePos.x()-cellX),-(tilePos.y()-cellY),0);
-    }
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -281,81 +289,68 @@ void HeightMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-#if QT_VERSION_XXX >= 0x050000
-#else
     glShadeModel(GL_FLAT);
-#endif
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-#if QT_VERSION_XXX >= 0x050000
-#else
     glClearDepth(1.0f);
-#endif
     glClear(GL_DEPTH_BUFFER_BIT);
 
     if (mTextureID.isEmpty()) {
         loadGLTextures();
     }
 
-    MapComposite *mc = mScene->mapComposite();
-    CompositeLayerGroup *lg = mc ? mc->layerGroupForLevel(0) : 0;
+    static QVector<const Tiled::Cell*> cells(40);
+    HeightMap *hm = mScene->hm();
+    foreach (CompositeLayerGroup *lg, mc->layerGroups()) {
+        static DrawElements de;
+        //        mc->bmpBlender()->flush(QRect(minX-cellX, minY-cellY, columns, rows));
+        lg->prepareDrawing2();
+        /*if (lg->needsSynch()) lg->synch();*/
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < columns; c++) {
+                QPoint tilePos(minX+c-cellX,minY+r-cellY);
+                if (!QRect(0,0,300,300).contains(tilePos)) continue;
+                cells.resize(0);
+                lg->orderedCellsAt2(tilePos, cells);
 
-    if (lg && columns * rows < 100000) {
-        int cellX = mScene->document()->cell()->pos().x() * 300;
-        int cellY = mScene->document()->cell()->pos().y() * 300;
-        static QVector<const Tiled::Cell*> cells(40);
-        HeightMap *hm = mScene->hm();
-        foreach (lg, mc->layerGroups()) {
-            DrawElements de;
-            //        mc->bmpBlender()->flush(QRect(minX-cellX, minY-cellY, columns, rows));
-            lg->prepareDrawing2();
-            /*if (lg->needsSynch()) lg->synch();*/
-            for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < columns; c++) {
-                    QPoint tilePos(minX+c-cellX,minY+r-cellY);
-                    if (!QRect(0,0,300,300).contains(tilePos)) continue;
-                    cells.resize(0);
-                    lg->orderedCellsAt2(tilePos, cells);
+                qreal hmOffset = 0;
+                if (hm->contains(minX + c, minY + r))
+                    hmOffset = hm->heightAt(minX + c, minY + r) / 64.0;
 
-                    qreal hmOffset = 0;
-                    if (hm->contains(minX + c, minY + r))
-                        hmOffset = hm->heightAt(minX + c, minY + r) / 64.0;
-
-                    foreach (const Tiled::Cell *cell, cells) {
-                        if (!cell->tile || !mTextureID.contains(cell->tile)) continue;
-                        GLuint textureID = mTextureID[cell->tile];
-                        Tiled::Internal::TextureInfo *tex = mTextureInfo[textureID];
-                        Tiled::Internal::VirtualTileset *vts = mVirtualTileset[cell->tile->tileset()];
-                        Tiled::Internal::VirtualTile *vtile = vts->tileAt(cell->tile->id());
-                        if (!vtile || !vtile->shape()) continue;
-                        int tw = tex->tileWidth(), th = tex->tileHeight();
-                        float texWid = tex->columnCount() * tw, texHgt = tex->rowCount() * th;
+                foreach (const Tiled::Cell *cell, cells) {
+                    if (!cell->tile || !mTextureID.contains(cell->tile)) continue;
+                    GLuint textureID = mTextureID[cell->tile];
+                    Tiled::Internal::TextureInfo *tex = mTextureInfo[textureID];
+                    Tiled::Internal::VirtualTileset *vts = mVirtualTileset[cell->tile->tileset()];
+                    Tiled::Internal::VirtualTile *vtile = vts->tileAt(cell->tile->id());
+                    if (!vtile || !vtile->shape()) continue;
+                    int tw = tex->tileWidth(), th = tex->tileHeight();
+                    float texWid = tex->columnCount() * tw, texHgt = tex->rowCount() * th;
 
 #define toUV(uv) QVector2D((vtile->srcX() * tw)/qreal(texWid) + uv.x() * tw/qreal(texWid), (vtile->srcY() * th)/qreal(texHgt) + uv.y() * th/qreal(texHgt))
 #define toGL(v) QVector3D(tilePos.x()+v.x(), tilePos.y()+v.y(), hmOffset + lg->level() * 3 + v.z())
-                        foreach (Tiled::Internal::TileShapeFace e, vtile->shape()->mFaces) {
-                            QVector3D color(1, 1, 1);
-                            QVector3D cross = QVector3D::normal(e.mGeom[0], e.mGeom[1], e.mGeom[2]);
-                            if (cross.x() > 0 && cross.y() == 0 /*cross == QVector3D(1, 0, 0)*/)
-                                color = QVector3D(0.8f,0.8f,0.8f);
-                            if (e.mGeom.size() == 4)
-                                de.add(textureID,
-                                       toUV(e.mUV[0]), toUV(e.mUV[1]), toUV(e.mUV[2]), toUV(e.mUV[3]),
-                                        toGL(e.mGeom[0]), toGL(e.mGeom[1]), toGL(e.mGeom[2]), toGL(e.mGeom[3]),
-                                        color);
-                            else if (e.mGeom.size() == 3)
-                                de.add(textureID,
-                                       toUV(e.mUV[0]), toUV(e.mUV[1]), toUV(e.mUV[2]),
-                                        toGL(e.mGeom[0]), toGL(e.mGeom[1]), toGL(e.mGeom[2]),
-                                        color);
+                    foreach (Tiled::Internal::TileShapeFace e, vtile->shape()->mFaces) {
+                        QVector3D color(1, 1, 1);
+                        QVector3D cross = QVector3D::normal(e.mGeom[0], e.mGeom[1], e.mGeom[2]);
+                        if (cross.x() > 0 && cross.y() == 0 /*cross == QVector3D(1, 0, 0)*/)
+                            color = QVector3D(0.8f,0.8f,0.8f);
+                        if (e.mGeom.size() == 4)
+                            de.add(textureID,
+                                   toUV(e.mUV[0]), toUV(e.mUV[1]), toUV(e.mUV[2]), toUV(e.mUV[3]),
+                                    toGL(e.mGeom[0]), toGL(e.mGeom[1]), toGL(e.mGeom[2]), toGL(e.mGeom[3]),
+                                    color);
+                        else if (e.mGeom.size() == 3)
+                            de.add(textureID,
+                                   toUV(e.mUV[0]), toUV(e.mUV[1]), toUV(e.mUV[2]),
+                                    toGL(e.mGeom[0]), toGL(e.mGeom[1]), toGL(e.mGeom[2]),
+                                    color);
 
-                        }
                     }
                 }
             }
-            de.flush();
         }
+        de.flush();
     }
 
     glDisable(GL_TEXTURE_2D);
