@@ -67,15 +67,12 @@ public:
 
 private:
     void loadGLTextures();
-    QImage renderWallTiles(QImage texture);
-    QImage mWalls01;
 
 private:
     HeightMapScene *mScene;
     QMap<Tiled::Tile*,unsigned int> mTextureID;
     QMap<unsigned int,Tiled::Internal::TextureInfo*> mTextureInfo;
     QMap<Tiled::Tileset*,Tiled::Internal::VirtualTileset*> mVirtualTileset;
-    Tiled::Tileset *mTileset;
     DisplayStyle mDisplayStyle;
 };
 
