@@ -1001,14 +1001,6 @@ void HMMiniMapItem::mapImageChanged(MapImage *mapImage)
 
 /////
 
-namespace {
-struct SubMapInfo
-{
-    WorldCellLot *lot;
-    MapInfo *mapInfo;
-};
-}
-
 HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
     BaseGraphicsScene(HeightMapSceneType, parent),
     mDocument(hmDoc),
@@ -1042,23 +1034,15 @@ HeightMapScene::HeightMapScene(HeightMapDocument *hmDoc, QObject *parent) :
         return;
     mMapComposite = new MapComposite(mapInfo, Tiled::Map::LevelIsometric);
 
-    QList<SubMapInfo> subMapInfo;
-    foreach (WorldCellLot *lot, document()->cell()->lots()) {
-        SubMapInfo sm;
-        sm.lot = lot;
-        sm.mapInfo = MapManager::instance()->loadMap(
-                    lot->mapName(), QString(), true, MapManager::PriorityLow);
-        if (sm.mapInfo)
-            subMapInfo += sm;
-    }
+    LotsLoader lotLoader;
+    foreach (WorldCellLot *lot, document()->cell()->lots())
+        lotLoader.loadLot(lot);
 
-    while (mMapComposite->waitingForMapsToLoad())
+    while (mMapComposite->waitingForMapsToLoad() || lotLoader.waitingForMapsToLoad())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    foreach (SubMapInfo sm, subMapInfo) {
-        if (sm.mapInfo->map())
-            mMapComposite->addMap(sm.mapInfo, sm.lot->pos(), sm.lot->level());
-    }
+    foreach (LotsLoader::LoadInfo info, lotLoader.loadedLots())
+        mMapComposite->addMap(info.mMapInfo, info.mLot->pos(), info.mLot->level());
 
     // Do this to ensure all the blender-related textures are loaded
     mMapComposite->bmpBlender()->flush(QRect(0,0,300,300));
@@ -1280,4 +1264,67 @@ void HeightMapView::recenter()
     QPointF worldPos = scene()->toWorld(scenePos.x(), scenePos.y());
 
     scene()->setCenter(worldPos.x(), worldPos.y());
+}
+
+/////
+
+LotsLoader::LotsLoader(QObject *parent) :
+    QObject(parent)
+{
+    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+            SLOT(mapLoaded(MapInfo*)));
+    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+            SLOT(mapFailedToLoad(MapInfo*)));
+}
+
+LotsLoader::~LotsLoader()
+{
+    foreach (LoadInfo info, mLoaded)
+        MapManager::instance()->removeReferenceToMap(info.mMapInfo);
+}
+
+void LotsLoader::loadLot(WorldCellLot *lot)
+{
+    LoadInfo info;
+    info.mLot = lot;
+    info.mMapInfo = MapManager::instance()->loadMap(
+                lot->mapName(), QString(), true, MapManager::PriorityLow);
+    if (info.mMapInfo) {
+        if (info.mMapInfo->isLoading())
+            mLoading += info;
+        else {
+            Q_ASSERT(info.mMapInfo->map() != 0);
+            mLoaded += info;
+            MapManager::instance()->addReferenceToMap(info.mMapInfo);
+            emit lotLoaded(lot, info.mMapInfo);
+        }
+    } else {
+        emit lotFailedToLoad(lot);
+    }
+}
+
+void LotsLoader::mapLoaded(MapInfo *mapInfo)
+{
+    for (int i = 0; i < mLoading.size(); i++) {
+        LoadInfo info = mLoading[i];
+        if (mapInfo == info.mMapInfo) {
+            mLoaded += info;
+            mLoading.takeAt(i);
+            --i;
+            MapManager::instance()->addReferenceToMap(info.mMapInfo);
+            emit lotLoaded(info.mLot, info.mMapInfo);
+        }
+    }
+}
+
+void LotsLoader::mapFailedToLoad(MapInfo *mapInfo)
+{
+    for (int i = 0; i < mLoading.size(); i++) {
+        LoadInfo info = mLoading[i];
+        if (mapInfo == info.mMapInfo) {
+            mLoading.takeAt(i);
+            --i;
+            emit lotFailedToLoad(info.mLot);
+        }
+    }
 }

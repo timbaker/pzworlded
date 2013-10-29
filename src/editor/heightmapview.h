@@ -28,6 +28,7 @@ class HeightMap;
 class HeightMapDocument;
 class MapComposite;
 class MapImage;
+class MapInfo;
 class WorldCell;
 class WorldCellLot;
 
@@ -135,6 +136,40 @@ private:
 };
 
 /////
+
+class LotsLoader : public QObject
+{
+    Q_OBJECT
+public:
+    LotsLoader(QObject *parent = 0);
+    ~LotsLoader();
+
+    void loadLot(WorldCellLot *lot);
+
+    bool waitingForMapsToLoad() const
+    { return !mLoading.isEmpty(); }
+
+    struct LoadInfo
+    {
+        WorldCellLot *mLot;
+        MapInfo *mMapInfo;
+    };
+
+    QList<LoadInfo> loadedLots() const
+    { return mLoaded; }
+
+signals:
+    void lotLoaded(WorldCellLot *lot, MapInfo *mapInfo);
+    void lotFailedToLoad(WorldCellLot *lot);
+
+private slots:
+    void mapLoaded(MapInfo *mapInfo);
+    void mapFailedToLoad(MapInfo *mapInfo);
+
+private:
+    QList<LoadInfo> mLoading;
+    QList<LoadInfo> mLoaded;
+};
 
 class HeightMapScene : public BaseGraphicsScene
 {
