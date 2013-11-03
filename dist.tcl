@@ -3,19 +3,19 @@ if {[llength [info commands console]]} {
     update
 }
 
-set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Qt4_MSVC_64-Release
+set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_1_1_MSVC2012_OpenGL_64bit-Release
 set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
-set QT_BINARY_DIR C:/Programming/Qt/qt-4.8.x-MSVC-2012-64bit-build/bin
-set QT_PLUGINS_DIR C:/Programming/Qt/qt-4.8.x-MSVC-2012-64bit-build/plugins
+set QT_BINARY_DIR C:/Programming/QtSDK/5.1.1/msvc2012_64_opengl/bin
+set QT_PLUGINS_DIR C:/Programming/QtSDK/5.1.1/msvc2012_64_opengl/plugins
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
         32bit {
             puts "dist.tcl: 32-bit"
-            set BIN C:/Programming/Tiled/PZWorldEd/build-msvc-release
-            set QT_BINARY_DIR C:/Programming/Qt/qt-build/bin
-            set QT_PLUGINS_DIR C:/Programming/Qt/qt-build/plugins
+            set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_1_1_MSVC2010_32bit_OpenGL-Release
+            set QT_BINARY_DIR C:/Programming/QtSDK/5.1.1/msvc2010_opengl/bin
+            set QT_PLUGINS_DIR C:/Programming/QtSDK/5.1.1/msvc2010_opengl/plugins
             set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
         }
         64bit {
@@ -73,19 +73,21 @@ copyFile $SRC $DEST Roads.txt
 copyFile $SRC $DEST Rules.txt
 copyFile $SRC $DEST qt.conf
 
-copyFile $QT_BINARY_DIR $DEST QtCore4.dll
-copyFile $QT_BINARY_DIR $DEST QtGui4.dll
-copyFile $QT_BINARY_DIR $DEST QtOpenGL4.dll
-copyFile $QT_BINARY_DIR $DEST QtXml4.dll
+copyFile $QT_BINARY_DIR $DEST Qt5Core.dll
+copyFile $QT_BINARY_DIR $DEST Qt5Gui.dll
+copyFile $QT_BINARY_DIR $DEST Qt5Network.dll
+copyFile $QT_BINARY_DIR $DEST Qt5OpenGL.dll
+copyFile $QT_BINARY_DIR $DEST Qt5Widgets.dll
+copyFile $QT_BINARY_DIR $DEST Qt5Xml.dll
+copyFile $QT_BINARY_DIR $DEST icudt51.dll
+copyFile $QT_BINARY_DIR $DEST icuin51.dll
+copyFile $QT_BINARY_DIR $DEST icuuc51.dll
 
-copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qgif4.dll
-copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qjpeg4.dll
-copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qtiff4.dll
+copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qgif.dll
+copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qjpeg.dll
+copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qtiff.dll
 
-copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qcncodecs4.dll
-copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qjpcodecs4.dll
-copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qkrcodecs4.dll
-copyFile $QT_PLUGINS_DIR $DEST/plugins codecs/qtwcodecs4.dll
+copyFile $QT_PLUGINS_DIR $DEST/plugins platforms/qwindows.dll
 
 proc removeFD {dir name} {
     foreach f [glob -nocomplain -types {d f} -dir $dir $name] {
