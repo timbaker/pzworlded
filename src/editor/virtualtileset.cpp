@@ -334,13 +334,28 @@ bool VirtualTilesetMgr::writeTxt()
 #endif
 
     TileShapesFile shapesFile;
-    (void) shapesFile.write(Preferences::instance()->configPath(QLatin1String("TileShapes.txt")),
-                            tileShapes(), shapeGroups());
+    if (!shapesFile.write(Preferences::instance()->configPath(QLatin1String("TileShapes.txt")),
+                          tileShapes(), shapeGroups())) {
+        mError = shapesFile.errorString();
+        return false;
+    }
 
     QString fileName = Preferences::instance()->tilesDirectory() + QLatin1String("/virtualtilesets.vts");
     VirtualTilesetsFile binFile;
-    return binFile.write(fileName, tilesets());
-
+    if (!binFile.write(fileName, tilesets())) {
+        mError = binFile.errorString();
+        return false;
+    }
+#ifndef WORLDED
+    QString altDir = Preferences::instance()->alternateVTSDir();
+    if (altDir.length()) {
+        fileName = altDir + QLatin1String("/virtualtilesets.vts");
+        if (!binFile.write(fileName, tilesets())) {
+            mError = binFile.errorString() + tr("\nwhile saving copy of virtualtilesets.vts");
+            return false;
+        }
+    }
+#endif
     return true;
 }
 
@@ -531,6 +546,25 @@ public:
 
 } // namespace anon
 
+#define USE_SHADER 0
+#if USE_SHADER
+static const char *vertexShader = "void main() {\n\
+        gl_TexCoord[0] = gl_MultiTexCoord0;\n\
+        gl_Position = ftransform();\n\
+        gl_FrontColor = gl_Color;\n\
+    }\n";
+
+static const char *fragmentShader = "\n\
+        uniform           sampler2D imageTexture; \n\
+        void main() \n\
+        { \n\
+            gl_FragColor = texture2D(imageTexture, gl_TexCoord[0].st); \n\
+            gl_FragColor.rgb = gl_FragColor.rgb * gl_FragColor.a; // premultiply \n\
+            gl_FragColor = gl_FragColor * gl_Color; // apply glColor3f() color \n\
+        }\n";
+static QOpenGLShaderProgram *program = 0;
+#endif
+
 void VirtualTilesetMgr::initPixelBuffer()
 {
     int width = 64, height = 128; // Size of one iso tile
@@ -572,8 +606,10 @@ void VirtualTilesetMgr::initPixelBuffer()
     glLoadIdentity();
 
     glEnable(GL_TEXTURE_2D);
+#if !USE_SHADER
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#endif
     glShadeModel(GL_FLAT);
 
     glEnable(GL_DEPTH_TEST);
@@ -581,6 +617,18 @@ void VirtualTilesetMgr::initPixelBuffer()
 
     glClearColor(0,0,0,0);
     glClearDepth(1.0f);
+
+#if USE_SHADER
+    program = new QOpenGLShaderProgram;
+    program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShader);
+    program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader);
+    program->link();
+    program->bind();
+
+    program->setUniformValue(program->uniformLocation("imageTexture"), GLuint(0));
+#endif
+
+    mPixelBuffer->doneCurrent();
 }
 
 uint VirtualTilesetMgr::loadGLTexture(const QString &imageSource, int srcX, int srcY)
@@ -602,7 +650,9 @@ uint VirtualTilesetMgr::loadGLTexture(const QString &imageSource, int srcX, int 
     //b = QGLWidget::convertToGLFormat( b );
     Q_ASSERT(mPixelBuffer->context() == QGLContext::currentContext());
 //    b = b.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    GLuint textureID = mPixelBuffer->context()->bindTexture(b);
+    GLuint textureID = mPixelBuffer->context()->bindTexture(b, GL_TEXTURE_2D, GL_RGBA,
+                                                            QGLContext::PremultipliedAlphaBindOption |
+                                                            QGLContext::InvertedYBindOption);
 #else
     QImage fixedImage(b.width(), b.height(), QImage::Format_ARGB32);
 #if 1

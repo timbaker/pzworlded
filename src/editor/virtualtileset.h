@@ -306,6 +306,8 @@ public:
     {
         return (index >= 0 && index < mShapeGroups.size()) ? mShapeGroups[index] : 0;
     }
+    int shapeGroupCount() const { return mShapeGroups.size(); }
+    int indexOf(TileShapeGroup *g) { return mShapeGroups.indexOf(g); }
     QStringList shapeGroupLabels() const
     {
         QStringList labels;
