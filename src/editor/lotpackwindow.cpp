@@ -563,7 +563,7 @@ void LotPackView::recenter()
         for (int x = 0; x < cm->Chunks.size(); x++) {
             for (int y = 0; y < cm->Chunks[x].size(); y++) {
                 if (IsoChunk *chunk = cm->Chunks[x][y]) {
-                    if (!mScene->mHeadersExamined.contains(chunk->lotheader)) {
+                    if (chunk->lotheader && !mScene->mHeadersExamined.contains(chunk->lotheader)) {
                         mScene->mHeadersExamined += chunk->lotheader;
                         foreach (QString tileName, chunk->lotheader->tilesUsed) {
                             if (!mScene->mTileByName.contains(tileName)) {

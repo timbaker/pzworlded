@@ -70,6 +70,7 @@ void IsoGridSquare::setRoomID(int roomID)
 /////
 
 IsoChunk::IsoChunk(IsoCell *cell) :
+    lotheader(0),
     wx(0),
     wy(0),
     Cell(cell)
@@ -347,6 +348,10 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
     wY = qFloor(fwy);
 
     QString filenameheader = QString::fromLatin1("%1/%2_%3.lotheader").arg(directory).arg(wX).arg(wY);
+    if (!InfoHeaders.contains(filenameheader)) {
+        info = 0;
+        return; // chunk not found on disk
+    }
     Q_ASSERT(InfoHeaders.contains(filenameheader));
     info = InfoHeaders[filenameheader];
 
@@ -586,8 +591,8 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
     WX *= IsoChunkMap::ChunksPerWidth;
     WY *= IsoChunkMap::ChunksPerWidth;
 
-      /* try */
-    {
+
+    if (lot->info) { /* try */
         for (int x = WX + sx; x < WX + sx + IsoChunkMap::ChunksPerWidth; ++x) {
             for (int y = WY + sy; y < WY + sy + IsoChunkMap::ChunksPerWidth; ++y) {
                 bool bDoIt = true;
@@ -686,23 +691,26 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
             }
         }
     }
-#if 0
+#if 1
+    else {
+#else
       catch (Exception ex)
       {
           System.out.println("Failed to load chunk, blocking out area");
           ex.printStackTrace();
-          for (int x = WX + sx; x < WX + sx + IsoChunkMap.ChunksPerWidth; ++x) {
-              for (int y = WY + sy; y < WY + sy + IsoChunkMap.ChunksPerWidth; ++y) {
-                  for (int z = sz; z < sz + lot.info.levels; ++z)
+#endif
+          for (int x = WX + sx; x < WX + sx + IsoChunkMap::ChunksPerWidth; ++x) {
+              for (int y = WY + sy; y < WY + sy + IsoChunkMap::ChunksPerWidth; ++y) {
+                  for (int z = sz; z < sz + IsoChunkMap::MaxLevels; ++z)
                   {
-                      ch.setSquare(x - WX, y - WY, z, null);
+                      ch->setSquare(x - WX, y - WY, z, 0);
 
-                      setCacheGridSquare(x, y, z, null);
+                      setCacheGridSquare(x, y, z, 0);
                   }
               }
           }
+          return;
       }
-#endif
 
       if (bForLater)
           return;
