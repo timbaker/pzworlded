@@ -33,6 +33,7 @@
 #include "heightmaptools.h"
 #include "heightmapview.h"
 #include "layersdock.h"
+#include "lootwindow.h"
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
 #include "lotpackwindow.h"
@@ -286,6 +287,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
+    connect(ui->actionLootInspector, SIGNAL(triggered()), SLOT(lootInspector()));
     connect(ui->actionEditHeightMap, SIGNAL(triggered()), SLOT(heightMapEditor()));
     connect(ui->actionHMMesh, SIGNAL(toggled(bool)), SLOT(setHeightMapAsMesh(bool)));
     connect(ui->actionHMFlat, SIGNAL(toggled(bool)), SLOT(setHeightMapAsFlat(bool)));
@@ -1056,6 +1058,22 @@ void MainWindow::BuildingsToPNG()
         worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
     PNGBuildingDialog d(worldDoc->world(), this);
     d.exec();
+}
+
+void MainWindow::lootInspector()
+{
+    bool exists = LootWindow::hasInstance();
+    if (!exists)
+        new LootWindow(this);
+
+    LootWindow::instance().show();
+    LootWindow::instance().activateWindow();
+    LootWindow::instance().raise();
+
+    if (!exists) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        LootWindow::instance().setDocument(mCurrentDocument);
+    }
 }
 
 void MainWindow::heightMapEditor()

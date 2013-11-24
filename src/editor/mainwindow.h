@@ -144,6 +144,8 @@ public slots:
 
     void BuildingsToPNG();
 
+    void lootInspector();
+
     void heightMapEditor();
     void setHeightMapAsMesh(bool mesh);
     void setHeightMapAsFlat(bool flat);

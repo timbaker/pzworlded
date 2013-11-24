@@ -1,6 +1,7 @@
 include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
 include(../qtlockedfile/qtlockedfile.pri)
+include(../lua/lua.pri)
 
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
@@ -129,7 +130,9 @@ SOURCES += main.cpp\
     pngbuildingdialog.cpp \
     virtualtileset.cpp \
     texturemanager.cpp \
-    pixelbuffer.cpp
+    pixelbuffer.cpp \
+    tiledeffile.cpp \
+    lootwindow.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -217,7 +220,9 @@ HEADERS  += mainwindow.h \
     pngbuildingdialog.h \
     virtualtileset.h \
     texturemanager.h \
-    pixelbuffer.h
+    pixelbuffer.h \
+    tiledeffile.h \
+    lootwindow.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -239,7 +244,8 @@ FORMS    += mainwindow.ui \
     spawntooldialog.ui \
     propertyenumdialog.ui \
     writespawnpointsdialog.ui \
-    pngbuildingdialog.ui
+    pngbuildingdialog.ui \
+    lootwindow.ui
 
 OTHER_FILES +=
 

@@ -41,6 +41,11 @@ public:
         delete mInstance;
     }
 
+    static bool hasInstance()
+    {
+        return mInstance != 0;
+    }
+
     Singleton()
     {
         Q_ASSERT(!mInstance);

@@ -2062,6 +2062,10 @@ void CellScene::handlePendingUpdates()
     if (mPendingFlags & ZOrder)
         setGraphicsSceneZOrder();
 
+    // Hack -- Let LootWindow know it should update
+    if (mPendingFlags & Synch)
+        emit mapContentsChanged();
+
     mPendingFlags = None;
     mPendingGroupItems.clear();
     mPendingActive = false;

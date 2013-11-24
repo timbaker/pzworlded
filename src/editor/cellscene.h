@@ -467,6 +467,9 @@ protected:
     bool shouldObjectItemBeVisible(ObjectItem *item);
 
     typedef Tiled::Tileset Tileset;
+signals:
+    void mapContentsChanged();
+
 public slots:
     void tilesetChanged(Tileset *tileset);
 
