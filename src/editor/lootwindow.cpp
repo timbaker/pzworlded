@@ -39,6 +39,20 @@ using namespace Tiled;
 
 SINGLETON_IMPL(LootWindow)
 
+extern "C" {
+
+// see luaconf.h
+// these are where print() calls go
+void luai_writestring(const char *s, int len)
+{
+}
+
+void luai_writeline()
+{
+}
+
+} // extern "C"
+
 LootWindow::LootWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::LootWindow),

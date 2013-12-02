@@ -1,4 +1,4 @@
-include($$top_srcdir/tiled.pri)
+include($$top_srcdir/PZWorldEd.pri)
 
 TEMPLATE = lib
 CONFIG += static
