@@ -26,6 +26,8 @@ class BMPToTMXImages;
 class HeightMap;
 class MapComposite;
 class MapInfo;
+class PropertyHolder;
+class PropertyList;
 class Road;
 class World;
 class WorldDocument;
@@ -338,6 +340,7 @@ private:
     bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
     bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup,
                             int levelOffset, const QPoint &offset);
+    void resolveProperties(PropertyHolder *ph, PropertyList &result);
 
 private:
     Q_DISABLE_COPY(LotFilesManager)

@@ -550,6 +550,26 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     }
 
 #if 0
+    out << qint32(cell->objects().size());
+    foreach (WorldCellObject *o, cell->objects()) {
+        SaveString(out, o->name());
+        SaveString(out, o->type()->name());
+        out << qint32(o->x());
+        out << qint32(o->y());
+        out << qint32(o->level());
+        out << qint32(o->width());
+        out << qint32(o->height());
+        PropertyList properties;
+        resolveProperties(o, properties);
+        out << qint32(properties.size());
+        foreach (Property *p, properties) {
+            SaveString(out, p->mDefinition->mName);
+            SaveString(out, p->mValue);
+        }
+    }
+#endif
+
+#if 0
     out << qint32(ZoneList.count());
     foreach (LotFile::Zone *zone, ZoneList) {
         SaveString(out, zone->name);
@@ -836,6 +856,16 @@ bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
         }
     }
     return true;
+}
+
+void LotFilesManager::resolveProperties(PropertyHolder *ph, PropertyList &result)
+{
+    foreach (PropertyTemplate *pt, ph->templates())
+        resolveProperties(pt, result);
+    foreach (Property *p, ph->properties()) {
+        result.removeAll(p->mDefinition);
+        result += p;
+    }
 }
 
 /////
