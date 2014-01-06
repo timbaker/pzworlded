@@ -89,6 +89,7 @@ public:
     int h;
     int floor;
     QString name;
+    QString buildingName;
     Room *room;
 };
 

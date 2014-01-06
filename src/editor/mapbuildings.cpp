@@ -18,12 +18,14 @@
 #include "mapbuildings.h"
 
 #include "mapcomposite.h"
+#include "mapmanager.h"
 
 #include "map.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 
 #include <qmath.h>
+#include <QFileInfo>
 
 using namespace Tiled;
 
@@ -148,12 +150,14 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
                     int h = qCeil(mapObject->y() + mapObject->height()) - y;
                     x += mc->orientAdjustTiles().x() * level;
                     y += mc->orientAdjustTiles().y() * level;
-                    mRoomRectsByLevel[level + rootLevel] +=
+                    MapBuildingsNS::RoomRect *rr =
                             new MapBuildingsNS::RoomRect(
                                 mapObject->name(),
                                 x + ox, y + oy,
                                 level + rootLevel,
                                 w, h);
+                    rr->buildingName = QFileInfo(mc->mapInfo()->path()).fileName();
+                    mRoomRectsByLevel[level + rootLevel] += rr;
                 }
             }
         }

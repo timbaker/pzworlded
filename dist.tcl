@@ -3,14 +3,10 @@ if {[llength [info commands console]]} {
     update
 }
 
-set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_1_1_MSVC2012_OpenGL_64bit-Release
-set SRC C:/Programming/Tiled/PZWorldEd/PZWorldEd
-set QT_DIR C:/Programming/QtSDK/5.1.1/msvc2012_64_opengl
+set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Qt_5_2_0_MSVC_2012_64bit-Release
+set SRC C:/Programming/PZWorldEd/pzworlded
+set QT_DIR C:/Programming/QtSDK/5.2.0/msvc2012_64_opengl
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
-
-# Qt 5.2.0 release candidate
-set QT_DIR C:/Programming/Qt/qt5-build-msvc2012-x86_64/qtbase
-set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Qt_5_2_0_MSVC2012_OpenGL_64bit-Release
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
@@ -19,10 +15,6 @@ if {$argc > 0} {
             set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_1_1_MSVC2010_32bit_OpenGL-Release
             set QT_DIR C:/Programming/QtSDK/5.1.1/msvc2010_opengl
             set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
-
-            # Qt 5.2.0 release candidate
-            set QT_DIR C:/Programming/Qt/qt5-build-msvc2012-x86/qtbase
-            set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Qt_5_2_0_MSVC2012_OpenGL_32bit-Release
         }
         64bit {
             puts "dist.tcl: 64-bit"
@@ -88,7 +80,7 @@ copyFile $QT_BINARY_DIR $DEST Qt5Network.dll
 copyFile $QT_BINARY_DIR $DEST Qt5OpenGL.dll
 copyFile $QT_BINARY_DIR $DEST Qt5Widgets.dll
 copyFile $QT_BINARY_DIR $DEST Qt5Xml.dll
-if {[string first 5.1.1 $QT_BINARY_DIR] > 0} {
+if {[file exists $QT_BINARY_DIR/icudt51.dll]} {
 copyFile $QT_BINARY_DIR $DEST icudt51.dll
 copyFile $QT_BINARY_DIR $DEST icuin51.dll
 copyFile $QT_BINARY_DIR $DEST icuuc51.dll
@@ -117,4 +109,5 @@ removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} .pzeditor
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} lots
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} *.bak
 removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} EnableDeveloperFeatures.txt
+removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} Qt*4.dll
 }

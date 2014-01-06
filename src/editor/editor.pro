@@ -19,6 +19,10 @@ win32 {
 DEFINES += QT_NO_CAST_FROM_ASCII \
     QT_NO_CAST_TO_ASCII
 
+# Release with debug info
+msvc:QMAKE_CXXFLAGS_RELEASE += /Zi
+msvc:QMAKE_LFLAGS_RELEASE += /DEBUG /OPT:REF /OPT:ICF
+
 macx {
     QMAKE_LIBDIR_FLAGS += -L$$OUT_PWD/../../bin/PZWorldEd.app/Contents/Frameworks
     LIBS += -framework Foundation
@@ -132,7 +136,8 @@ SOURCES += main.cpp\
     texturemanager.cpp \
     pixelbuffer.cpp \
     tiledeffile.cpp \
-    lootwindow.cpp
+    lootwindow.cpp \
+    sceneoverlay.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -222,7 +227,8 @@ HEADERS  += mainwindow.h \
     texturemanager.h \
     pixelbuffer.h \
     tiledeffile.h \
-    lootwindow.h
+    lootwindow.h \
+    sceneoverlay.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

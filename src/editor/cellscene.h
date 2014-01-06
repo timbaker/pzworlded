@@ -20,6 +20,8 @@
 
 #include "basegraphicsscene.h"
 
+#include "sceneoverlay.h"
+
 #include "map.h"
 
 #include <QGraphicsItem>
@@ -39,6 +41,7 @@ class MapInfo;
 class ObjectItem;
 class ResizeHandle;
 class Road;
+class SceneOverlay;
 class SubMap;
 class World;
 class WorldCell;
@@ -430,6 +433,7 @@ public:
 
     void setHighlightRoomPosition(const QPoint &tilePos);
     QRegion getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn);
+    QString roomNameAt(const QPointF &scenePos);
 
     void keyPressEvent(QKeyEvent *event);
 
@@ -587,6 +591,9 @@ private:
     QList<CompositeLayerGroupItem*> mPendingGroupItems;
 
     BaseCellSceneTool *mActiveTool;
+
+    CellSceneOverlays mOverlays;
+    friend class CellSceneOverlays;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

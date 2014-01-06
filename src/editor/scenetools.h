@@ -39,8 +39,9 @@ class BaseGraphicsView;
 class CellRoadItem;
 class CellScene;
 class DnDItem;
-class ObjectItem;
+class LightSwitchOverlay;
 class MapComposite;
+class ObjectItem;
 class Road;
 class SpawnPointItem;
 class SubMapItem;
@@ -320,6 +321,7 @@ private:
     };
 
     SubMapItem *topmostItemAt(const QPointF &scenePos);
+    LightSwitchOverlay *topmostSwitchAt(const QPointF &scenePos);
 
     Mode mMode;
     bool mMousePressed;

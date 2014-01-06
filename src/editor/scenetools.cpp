@@ -825,6 +825,27 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
     }
 
     QMenu menu;
+    QIcon lightIcon(QLatin1String(":/images/idea.png"));
+    QAction *lightbulbRoomAction = 0;
+    QString roomName;
+    if (LightSwitchOverlay *overlay = topmostSwitchAt(scenePos)) {
+        roomName = overlay->mRoomName;
+    } else
+        roomName = mScene->roomNameAt(scenePos);
+    if (roomName.length()) {
+        if (LightbulbsMgr::instance().rooms().contains(roomName))
+            lightbulbRoomAction = menu.addAction(lightIcon,
+                                                 tr("Show lights in rooms called %1").arg(roomName));
+        else
+            lightbulbRoomAction = menu.addAction(lightIcon,
+                                                 tr("Hide lights in rooms called %1").arg(roomName));
+    }
+    QAction *lightbulbMapAction = 0;
+    QString mapName = QFileInfo(item->subMap()->mapInfo()->path()).fileName();
+    if (LightbulbsMgr::instance().maps().contains(mapName))
+        lightbulbMapAction = menu.addAction(lightIcon, tr("Show lights in %1").arg(mapName));
+    else
+        lightbulbMapAction = menu.addAction(lightIcon, tr("Hide lights in %1").arg(mapName));
     QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
     QAction *removeAction = menu.addAction(removeIcon, tr("Remove Lot"));
     menu.addSeparator();
@@ -832,6 +853,11 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
     QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
 
     QAction *action = menu.exec(screenPos);
+    if (action == 0) return;
+    if (action == lightbulbRoomAction)
+        LightbulbsMgr::instance().toggleRoom(roomName);
+    if (action == lightbulbMapAction)
+        LightbulbsMgr::instance().toggleMap(mapName);
     if (action == removeAction) {
         int lotIndex = mScene->cell()->indexOf(item->lot());
         mScene->worldDocument()->removeCellLot(mScene->cell(), lotIndex);
@@ -847,6 +873,15 @@ SubMapItem *SubMapTool::topmostItemAt(const QPointF &scenePos)
     foreach (QGraphicsItem *item, mScene->items(scenePos)) {
         if (SubMapItem *subMapItem = dynamic_cast<SubMapItem*>(item))
             return subMapItem;
+    }
+    return 0;
+}
+
+LightSwitchOverlay *SubMapTool::topmostSwitchAt(const QPointF &scenePos)
+{
+    foreach (QGraphicsItem *item, mScene->items(scenePos)) {
+        if (LightSwitchOverlay *switchItem = dynamic_cast<LightSwitchOverlay*>(item))
+            return switchItem;
     }
     return 0;
 }

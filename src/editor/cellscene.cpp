@@ -1123,6 +1123,7 @@ CellScene::CellScene(QObject *parent)
     , mPendingActive(false)
     , mPendingDefer(true)
     , mActiveTool(0)
+    , mOverlays(this)
 {
     setBackgroundBrush(Qt::darkGray);
 
@@ -1454,12 +1455,26 @@ QRegion CellScene::getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn)
     if (mMapBuildingsInvalid) {
         mMapBuildings->calculate(mMapComposite);
         mMapBuildingsInvalid = false;
+        mOverlays.update();
     }
     if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel())) {
         roomRgn = room->region();
         return room->building->region();
     }
     return QRegion();
+}
+
+QString CellScene::roomNameAt(const QPointF &scenePos)
+{
+    if (mMapBuildingsInvalid) {
+        mMapBuildings->calculate(mMapComposite);
+        mMapBuildingsInvalid = false;
+        mOverlays.update();
+    }
+    QPoint tilePos = mRenderer->pixelToTileCoordsInt(scenePos, document()->currentLevel());
+    if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel()))
+        return room->name;
+    return QString();
 }
 
 void CellScene::keyPressEvent(QKeyEvent *event)
@@ -2157,6 +2172,8 @@ void CellScene::mapCompositeNeedsSynch()
 
 void CellScene::updateCurrentLevelHighlight()
 {
+    mOverlays.updateCurrentLevelHighlight();
+
     int currentLevel = mDocument->currentLevel();
     if (!mHighlightCurrentLevel) {
         mDarkRectangle->setVisible(false);
