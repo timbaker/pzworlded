@@ -137,7 +137,8 @@ SOURCES += main.cpp\
     pixelbuffer.cpp \
     tiledeffile.cpp \
     lootwindow.cpp \
-    sceneoverlay.cpp
+    sceneoverlay.cpp \
+    writeworldobjectsdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -228,7 +229,8 @@ HEADERS  += mainwindow.h \
     pixelbuffer.h \
     tiledeffile.h \
     lootwindow.h \
-    sceneoverlay.h
+    sceneoverlay.h \
+    writeworldobjectsdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -251,7 +253,8 @@ FORMS    += mainwindow.ui \
     propertyenumdialog.ui \
     writespawnpointsdialog.ui \
     pngbuildingdialog.ui \
-    lootwindow.ui
+    lootwindow.ui \
+    writeworldobjectsdialog.ui
 
 OTHER_FILES +=
 

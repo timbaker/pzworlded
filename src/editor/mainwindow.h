@@ -95,7 +95,8 @@ public slots:
     void closeFile();
     void closeAllFiles();
 
-    void LUAObjectDump();
+    void WriteSpawnPoints();
+    void WriteWorldObjects();
 
     void updateWindowTitle();
 

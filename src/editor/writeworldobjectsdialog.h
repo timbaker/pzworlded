@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2014, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -15,31 +15,33 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LUAWRITER_H
-#define LUAWRITER_H
+#ifndef WRITEWORLDOBJECTSDIALOG_H
+#define WRITEWORLDOBJECTSDIALOG_H
 
-#include <QString>
+#include <QDialog>
 
-class LuaWriterPrivate;
-class World;
+class WorldDocument;
 
-class QIODevice;
+namespace Ui {
+class WriteWorldObjectsDialog;
+}
 
-class LuaWriter
+class WriteWorldObjectsDialog : public QDialog
 {
-public:
-    LuaWriter();
-    ~LuaWriter();
+    Q_OBJECT
 
-    bool writeWorld(World *world, const QString &filePath);
-    bool writeSpawnPoints(World *world, const QString &filePath);
-    bool writeWorldObjects(World *world, const QString &filePath);
-    QString errorString() const;
+public:
+    explicit WriteWorldObjectsDialog(WorldDocument *worldDoc, QWidget *parent = 0);
+    ~WriteWorldObjectsDialog();
+
+private slots:
+    void browse();
+    void accept();
 
 private:
-    void writeWorld(World *world, QIODevice *device, const QString &absDirPath);
-
-    LuaWriterPrivate *d;
+    Ui::WriteWorldObjectsDialog *ui;
+    WorldDocument *mDocument;
+    QString mFileName;
 };
 
-#endif // LUAWRITER_H
+#endif // WRITEWORLDOBJECTSDIALOG_H

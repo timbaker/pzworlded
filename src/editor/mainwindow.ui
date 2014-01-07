@@ -259,6 +259,7 @@
     <addaction name="menuBMP_To_TMX"/>
     <addaction name="menuGenerate_Lots"/>
     <addaction name="actionLUAObjectDump"/>
+    <addaction name="actionWriteObjects"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -816,6 +817,11 @@
   <action name="actionLootInspector">
    <property name="text">
     <string>Loot Inspector</string>
+   </property>
+  </action>
+  <action name="actionWriteObjects">
+   <property name="text">
+    <string>Write Objects to Lua...</string>
    </property>
   </action>
  </widget>

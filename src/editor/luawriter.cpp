@@ -155,7 +155,7 @@ public:
             break;
         }
         if (!unquoted)
-            key = QString::fromUtf8("\"[%1]\"").arg(QString::fromUtf8(_key)).toUtf8();
+            key = QString::fromUtf8("[\"%1\"]").arg(QString::fromUtf8(_key)).toUtf8();
 #endif
         if (value == QLatin1String("true")
                 || value == QLatin1String("false")
@@ -248,8 +248,8 @@ public:
         QMap<QString,WorldCellObjectList> spawnByProfession;
         PropertyDef *pd = mWorld->propertyDefinition(QLatin1String("Professions"));
 
-        for (int y = 0; y < mWorld->width(); y++) {
-            for (int x = 0; x < mWorld->height(); x++) {
+        for (int y = 0; y < mWorld->height(); y++) {
+            for (int x = 0; x < mWorld->width(); x++) {
                 WorldCell *cell = mWorld->cellAt(x, y);
                 foreach (WorldCellObject *obj, cell->objects()) {
                     if (obj->isSpawnPoint()) {
@@ -302,6 +302,52 @@ public:
         w.writeEndDocument();
     }
 
+    void writeWorldObjects(World *world, QIODevice *device)
+    {
+        mWorld = world;
+
+        LuaTableWriter w(device);
+        this->w = &w;
+
+        w.writeStartDocument();
+        w.writeStartTable("objects");
+
+        QPoint origin = mWorld->getGenerateLotsSettings().worldOrigin;
+
+        for (int y = 0; y < mWorld->height(); y++) {
+            for (int x = 0; x < mWorld->width(); x++) {
+                WorldCell *cell = mWorld->cellAt(x, y);
+                foreach (WorldCellObject *obj, cell->objects()) {
+                    w.writeStartTable();
+                    w.setSuppressNewlines(true);
+                    w.writeKeyAndValue("name", obj->name());
+                    w.writeKeyAndValue("type", obj->type()->name());
+                    w.writeKeyAndValue("x", (obj->cell()->x() + origin.x()) * 300 + obj->x());
+                    w.writeKeyAndValue("y", (obj->cell()->y() + origin.y()) * 300 + obj->y());
+                    w.writeKeyAndValue("z", obj->level());
+                    w.writeKeyAndValue("width", obj->width());
+                    w.writeKeyAndValue("height", obj->height());
+                    PropertyList properties;
+                    resolveProperties(obj, properties);
+                    if (properties.size()) {
+                        w.setSuppressNewlines(false);
+                        w.writeStartTable("properties");
+                        foreach (Property *p, properties) {
+                            writePropertyKeyAndValue(p->mDefinition->mName.toUtf8(), p->mValue);
+                        }
+                        w.writeEndTable();
+                    }
+                    w.writeEndTable();
+                    w.setSuppressNewlines(false);
+                }
+            }
+        }
+
+        w.writeEndTable();
+
+        w.writeEndDocument();
+    }
+
     QString mError;
     World *mWorld;
     LuaTableWriter *w;
@@ -347,6 +393,22 @@ bool LuaWriter::writeSpawnPoints(World *world, const QString &filePath)
         return false;
 
     d->writeSpawnPoints(world, &file);
+
+    if (file.error() != QFile::NoError) {
+        d->mError = file.errorString();
+        return false;
+    }
+
+    return true;
+}
+
+bool LuaWriter::writeWorldObjects(World *world, const QString &filePath)
+{
+    QFile file(filePath);
+    if (!d->openFile(&file))
+        return false;
+
+    d->writeWorldObjects(world, &file);
 
     if (file.error() != QFile::NoError) {
         d->mError = file.errorString();

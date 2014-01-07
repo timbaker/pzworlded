@@ -373,6 +373,10 @@ public:
         w.writeAttribute(QLatin1String("path"),
                          relativeFileName(settings.spawnPointsFile));
         w.writeEndElement();
+        w.writeStartElement(QLatin1String("worldObjectsFile"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(settings.worldObjectsFile));
+        w.writeEndElement();
         w.writeEndElement();
     }
 

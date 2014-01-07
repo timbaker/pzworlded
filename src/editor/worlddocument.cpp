@@ -238,6 +238,17 @@ bool WorldDocument::save(const QString &filePath, QString &error)
         }
     }
 
+    luaFileName = world()->getLuaSettings().worldObjectsFile;
+    if (!luaFileName.isEmpty()) {
+        LuaWriter writer;
+        if (!writer.writeWorldObjects(world(), luaFileName)) {
+            QMessageBox::warning(MainWindow::instance(), tr("Error saving objects"),
+                                 tr("An error occurred saving the LUA objects file.\n%1\n\n%2")
+                                 .arg(writer.errorString())
+                                 .arg(QDir::toNativeSeparators(luaFileName)));
+        }
+    }
+
 #if 0
     {
         QFileInfo fi(filePath);

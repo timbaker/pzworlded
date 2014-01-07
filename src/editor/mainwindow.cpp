@@ -70,6 +70,7 @@
 #include "worldview.h"
 #include "worldwriter.h"
 #include "writespawnpointsdialog.h"
+#include "writeworldobjectsdialog.h"
 #include "zoomable.h"
 
 #include "layer.h"
@@ -238,7 +239,8 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(BMPToTMXAll()));
     connect(ui->actionBMPToTMXSelected, SIGNAL(triggered()),
             SLOT(BMPToTMXSelected()));
-    connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(LUAObjectDump()));
+    connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(WriteSpawnPoints()));
+    connect(ui->actionWriteObjects, SIGNAL(triggered()), SLOT(WriteWorldObjects()));
     connect(ui->actionFromToAll, SIGNAL(triggered()),
             SLOT(FromToAll()));
     connect(ui->actionFromToSelected, SIGNAL(triggered()),
@@ -1336,13 +1338,23 @@ void MainWindow::closeAllFiles()
         docman()->closeAllDocuments();
 }
 
-void MainWindow::LUAObjectDump()
+void MainWindow::WriteSpawnPoints()
 {
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
     if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
         worldDoc = cellDoc->worldDocument();
 
     WriteSpawnPointsDialog d(worldDoc, this);
+    d.exec();
+}
+
+void MainWindow::WriteWorldObjects()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+
+    WriteWorldObjectsDialog d(worldDoc, this);
     d.exec();
 }
 
@@ -1982,6 +1994,7 @@ void MainWindow::updateActions()
                                            worldDoc->selectedCellCount());
 
     ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
+    ui->actionWriteObjects->setEnabled(worldDoc != 0);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

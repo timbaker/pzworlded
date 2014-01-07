@@ -148,7 +148,7 @@ void CreateObjectTool::deleteInstance()
 CreateObjectTool::CreateObjectTool()
     : BaseCellSceneTool(QLatin1String("Create Object"),
                         QIcon(QLatin1String(":/images/24x24/insert-object.png")),
-                        QKeySequence())
+                        QKeySequence(QLatin1String("O")))
     , mItem(0)
 {
 }
@@ -274,7 +274,7 @@ void SelectMoveObjectTool::deleteInstance()
 SelectMoveObjectTool::SelectMoveObjectTool()
     : BaseCellSceneTool(QLatin1String("Select and Move Objects"),
                         QIcon(QLatin1String(":/images/22x22/tool-select-objects.png")),
-                        QKeySequence())
+                        QKeySequence(QLatin1String("S")))
     , mMode(NoMode)
     , mMousePressed(false)
     , mClickedItem(0)

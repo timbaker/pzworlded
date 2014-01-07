@@ -529,6 +529,10 @@ private:
                 QString path = xml.attributes().value(QLatin1String("path")).toString();
                 settings.spawnPointsFile = resolveReference(path, mPath);
                 xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("worldObjectsFile")) {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.worldObjectsFile = resolveReference(path, mPath);
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }
