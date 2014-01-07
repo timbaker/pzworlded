@@ -511,11 +511,15 @@ ObjectItem *SelectMoveObjectTool::topmostItemAt(const QPointF &scenePos)
     foreach (QGraphicsItem *item, mScene->items(scenePos,
                                                 Qt::IntersectsItemShape,
                                                 Qt::DescendingOrder, xform)) {
-        if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item))
-            return objectItem;
+        if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item)) {
+            if (!objectItem->isAdjacent())
+                return objectItem;
+        }
 
-        if (ObjectLabelItem *labelItem = dynamic_cast<ObjectLabelItem*>(item))
-            return labelItem->objectItem();
+        if (ObjectLabelItem *labelItem = dynamic_cast<ObjectLabelItem*>(item)) {
+            if (!labelItem->objectItem()->isAdjacent())
+                return labelItem->objectItem();
+        }
     }
     return 0;
 }
@@ -1156,8 +1160,10 @@ void SpawnPointTool::showContextMenu(const QPointF &scenePos, const QPoint &scre
 SpawnPointItem *SpawnPointTool::topmostItemAt(const QPointF &scenePos)
 {
     foreach (QGraphicsItem *item, mScene->items(scenePos)) {
-        if (SpawnPointItem *subMapItem = dynamic_cast<SpawnPointItem*>(item))
-            return subMapItem;
+        if (SpawnPointItem *spawnPtItem = dynamic_cast<SpawnPointItem*>(item)) {
+            if (!spawnPtItem->isAdjacent())
+                return spawnPtItem;
+        }
     }
     return 0;
 }

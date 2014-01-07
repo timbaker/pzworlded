@@ -123,6 +123,9 @@ public:
     virtual bool isSpawnPoint() const { return false; }
     virtual bool hoverToolCurrent() const;
 
+    void setAdjacent(bool adjacent) { mAdjacent = adjacent; }
+    bool isAdjacent() { return mAdjacent; }
+
 protected:
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
@@ -134,6 +137,7 @@ protected:
     QSizeF mResizeDelta;
     ResizeHandle *mResizeHandle;
     ObjectLabelItem *mLabel;
+    bool mAdjacent;
 };
 
 class SpawnPointItem : public ObjectItem
@@ -351,6 +355,10 @@ public:
     WorldCell *cell() const
     { return mCell; }
 
+    ObjectItem *itemForObject(WorldCellObject *obj);
+
+    void removeItems();
+
 private slots:
     void cellMapFileChanged(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
@@ -360,8 +368,19 @@ private slots:
     void cellLotMoved(WorldCellLot *lot);
     void lotLevelChanged(WorldCellLot *lot);
 
+    void cellObjectAdded(WorldCell *cell, int index);
+    void cellObjectAboutToBeRemoved(WorldCell *cell, int index);
+    void cellObjectMoved(WorldCellObject *obj);
+    void cellObjectResized(WorldCellObject *obj);
+    void objectLevelChanged(WorldCellObject *obj);
+    void objectXXXXChanged(WorldCellObject *obj);
+    void cellObjectGroupChanged(WorldCellObject *obj);
+    void cellObjectReordered(WorldCellObject *obj);
+
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
+
+    void sceneRectChanged();
 
     // FIXME: world resizing
 
@@ -369,6 +388,7 @@ private:
     void loadMap();
     bool alreadyLoading(WorldCellLot *lot);
     QRectF lotSceneBounds(WorldCellLot *lot);
+    void setZOrder();
 
     struct LoadingSubMap {
         LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
@@ -385,6 +405,8 @@ private:
     MapComposite *mMapComposite;
     MapInfo *mMapInfo;
     QMap<WorldCellLot*,MapComposite*> mLotToMC;
+    QGraphicsItem *mObjectItemParent;
+    QList<ObjectItem*> mObjectItems;
 };
 
 class CellScene : public BaseGraphicsScene

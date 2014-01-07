@@ -59,6 +59,7 @@ class CellSceneOverlays : public QObject
 public:
     CellSceneOverlays(CellScene *scene);
     void updateCurrentLevelHighlight();
+    void removeOverlays();
 
 public slots:
     void update();

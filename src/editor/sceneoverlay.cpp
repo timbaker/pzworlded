@@ -211,6 +211,12 @@ void CellSceneOverlays::updateCurrentLevelHighlight()
     }
 }
 
+void CellSceneOverlays::removeOverlays()
+{
+    qDeleteAll(mOverlays);
+    mOverlays.clear();
+}
+
 /////
 
 #include "preferences.h"

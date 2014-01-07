@@ -59,7 +59,7 @@ void WriteSpawnPointsDialog::browse()
 
 void WriteSpawnPointsDialog::accept()
 {
-    LuaSettings settings;
+    LuaSettings settings = mDocument->world()->getLuaSettings();
     settings.spawnPointsFile = mSpawnPointsFileName;
     if (settings != mDocument->world()->getLuaSettings())
         mDocument->changeLuaSettings(settings);

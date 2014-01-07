@@ -524,6 +524,7 @@ ObjectItem::ObjectItem(WorldCellObject *obj, CellScene *scene, QGraphicsItem *pa
     , mResizeDelta(0, 0)
     , mResizeHandle(new ResizeHandle(this, scene))
     , mLabel(new ObjectLabelItem(this, this))
+    , mAdjacent(false)
 {
     setAcceptHoverEvents(true);
     mBoundingRect = ::boundingRect(mRenderer, QRectF(mObject->pos(), mObject->size()),
@@ -713,7 +714,9 @@ void SpawnPointItem::paint(QPainter *painter,
 {
     ObjectItem::paint(painter, option, widget);
 
-    painter->setPen(QPen(Qt::black));
+    QPen pen(Qt::black);
+    pen.setCosmetic(true);
+    painter->setPen(pen);
     QColor color = mObject->group()->color();
     color.setAlpha(200);
 
@@ -1494,11 +1497,16 @@ void CellScene::loadMap()
         removeItem(mGridItem);
         removeItem(mMapBordersItem);
 
-        clearScene();
-        setSceneRect(QRectF());
+        mOverlays.removeOverlays();
 
+        foreach (AdjacentMap *am, mAdjacentMaps)
+            am->removeItems();
         qDeleteAll(mAdjacentMaps);
         mAdjacentMaps.clear();
+
+        clearScene();
+
+        setSceneRect(QRectF());
 
         delete mMapComposite;
         delete mRenderer;
@@ -2526,8 +2534,11 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     mScene(scene),
     mCell(cell),
     mMapComposite(0),
-    mMapInfo(0)
+    mMapInfo(0),
+    mObjectItemParent(new QGraphicsItemGroup)
 {
+    mScene->addItem(mObjectItemParent);
+
     connect(worldDocument(), SIGNAL(cellMapFileChanged(WorldCell*)),
             SLOT(cellMapFileChanged(WorldCell*)));
     connect(worldDocument(), SIGNAL(cellContentsChanged(WorldCell*)),
@@ -2541,6 +2552,20 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
             SLOT(cellLotMoved(WorldCellLot*)));
     connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)),
             SLOT(lotLevelChanged(WorldCellLot*)));
+
+    connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
+    connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
+    connect(worldDocument(), SIGNAL(cellObjectMoved(WorldCellObject*)), SLOT(cellObjectMoved(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectResized(WorldCellObject*)), SLOT(cellObjectResized(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
+            SLOT(cellObjectGroupChanged(WorldCellObject*)));
+    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
+            SLOT(cellObjectReordered(WorldCellObject*)));
+
+    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged()));
 
     connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)));
@@ -2557,6 +2582,22 @@ AdjacentMap::~AdjacentMap()
 WorldDocument *AdjacentMap::worldDocument() const
 {
     return mScene->worldDocument();
+}
+
+ObjectItem *AdjacentMap::itemForObject(WorldCellObject *obj)
+{
+    foreach (ObjectItem *item, mObjectItems) {
+        if (item->object() == obj)
+            return item;
+    }
+    return 0;
+}
+
+void AdjacentMap::removeItems()
+{
+    delete mObjectItemParent;
+    mObjectItemParent = 0;
+    mObjectItems.clear(); // deleted with parent
 }
 
 void AdjacentMap::cellMapFileChanged(WorldCell *_cell)
@@ -2636,6 +2677,98 @@ void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
     }
 }
 
+void AdjacentMap::cellObjectAdded(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    WorldCellObject *obj = cell->objects().at(index);
+    ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, scene(), mObjectItemParent)
+                                           : new ObjectItem(obj, scene(), mObjectItemParent);
+    item->setAdjacent(true);
+//    mScene->addItem(item);
+    item->synchWithObject(); // update label coords
+    mObjectItems.insert(index, item);
+
+    setZOrder();
+}
+
+void AdjacentMap::cellObjectAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    WorldCellObject *obj = cell->objects().at(index);
+    if (ObjectItem *item = itemForObject(obj)) {
+        mObjectItems.removeAll(item);
+        mScene->removeItem(item);
+        delete item;
+
+        setZOrder();
+    }
+}
+
+void AdjacentMap::cellObjectMoved(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+
+    if (ObjectItem *item = itemForObject(obj))
+        item->synchWithObject();
+}
+
+void AdjacentMap::cellObjectResized(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+
+    if (ObjectItem *item = itemForObject(obj))
+        item->synchWithObject();
+}
+
+void AdjacentMap::objectLevelChanged(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+
+    if (ObjectItem *item = itemForObject(obj)) {
+        item->synchWithObject();
+        setZOrder();
+    }
+}
+
+void AdjacentMap::objectXXXXChanged(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+
+    if (ObjectItem *item = itemForObject(obj)) {
+        if (item->isSpawnPoint() != obj->isSpawnPoint()) {
+            cellObjectAboutToBeRemoved(obj->cell(), obj->index());
+            cellObjectAdded(obj->cell(), obj->index());
+            item = itemForObject(obj);
+        }
+        item->synchWithObject();
+    }
+}
+
+void AdjacentMap::cellObjectGroupChanged(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+    setZOrder();
+    // Redraw for change in group color
+    if (ObjectItem *item = itemForObject(obj))
+        item->update();
+}
+
+void AdjacentMap::cellObjectReordered(WorldCellObject *obj)
+{
+    if (obj->cell() != cell())
+        return;
+    setZOrder();
+}
+
 void AdjacentMap::mapLoaded(MapInfo *mapInfo)
 {
     if (mapInfo == mMapInfo) {
@@ -2654,6 +2787,21 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
                     mapLoaded(subMapInfo);
             }
         }
+
+        qDeleteAll(mObjectItems);
+        mObjectItems.clear();
+        foreach (WorldCellObject *obj, cell()->objects()) {
+            ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, scene(), mObjectItemParent)
+                                                   : new ObjectItem(obj, scene(), mObjectItemParent);
+            item->setAdjacent(true);
+//            scene()->addItem(item);
+            item->synchWithObject(); // for ObjectLabelItem
+            mObjectItems += item;
+            mMapComposite->ensureMaxLevels(obj->level());
+        }
+        setZOrder();
+
+        sceneRectChanged();
     }
 
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
@@ -2695,6 +2843,18 @@ void AdjacentMap::mapFailedToLoad(MapInfo *mapInfo)
     }
 }
 
+void AdjacentMap::sceneRectChanged()
+{
+    int x = cell()->x() - scene()->cell()->x();
+    int y = cell()->y() - scene()->cell()->y();
+    QRectF r = scene()->renderer()->boundingRect(QRect(x * 300, y * 300, 300, 300));
+    QPointF offset((x - y) * (300 * 64 / 2), (x + y) * (300 * 32 / 2));
+    mObjectItemParent->setPos(offset);
+
+    foreach (ObjectItem *item, mObjectItems)
+        item->synchWithObject();
+}
+
 void AdjacentMap::loadMap()
 {
     if (cell()->mapFilePath().isEmpty()) {
@@ -2724,4 +2884,21 @@ QRectF AdjacentMap::lotSceneBounds(WorldCellLot *lot)
     Q_ASSERT(mLotToMC.contains(lot));
     if (!mLotToMC.contains(lot)) return QRectF();
     return mLotToMC[lot]->boundingRect(scene()->renderer());
+}
+
+void AdjacentMap::setZOrder()
+{
+    int z = scene()->mapComposite()->maxLevel() + 1;
+    mObjectItemParent->setZValue(z);
+
+    const ObjectGroupList &groups = cell()->world()->objectGroups();
+    int objectIndex = 0;
+    foreach (ObjectItem *item, mObjectItems) {
+        WorldCellObject *obj = item->object();
+        int groupIndex = groups.indexOf(obj->group());
+        item->setZValue(0
+                        + groups.size() * mObjectItems.size() * obj->level()
+                        + groupIndex * mObjectItems.size()
+                        + objectIndex++);
+    }
 }
