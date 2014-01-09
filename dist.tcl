@@ -12,9 +12,9 @@ if {$argc > 0} {
     switch -- [lindex $argv 0] {
         32bit {
             puts "dist.tcl: 32-bit"
-            set BIN C:/Programming/Tiled/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_1_1_MSVC2010_32bit_OpenGL-Release
-            set QT_DIR C:/Programming/QtSDK/5.1.1/msvc2010_opengl
-            set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
+            set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Qt_5_2_0_MSVC_2010_32bit-Release
+            set QT_DIR C:/Programming/QtSDK/5.2.0/msvc2010_opengl
+            set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed32\WorldEd}
         }
         64bit {
             puts "dist.tcl: 64-bit"
