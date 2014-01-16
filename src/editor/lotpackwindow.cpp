@@ -756,14 +756,15 @@ void LotPackWindow::closeWorld()
     }
 }
 
+#include <QScrollBar>
 void LotPackWindow::saveScreenshot()
 {
 	//Uses Qpixmap::grabWidget function to create a pixmap and paints the QGraphicsView inside it. 
 	QPixmap pixMap = QPixmap::grabWidget(mView);
-	char buf[256];
-	sprintf(buf, "screenshot_%i_%i.png", mView->mTilePos.x(), mView->mTilePos.y());
-	QString fileName = QString::fromUtf8(buf);
-	pixMap.save(fileName);
+	int x = mView->horizontalScrollBar()->value();
+	int y = mView->verticalScrollBar()->value();
+	qreal scale = mView->zoomable()->scale() * 100;
+	pixMap.save(tr("screenshot_%1_%2_%3\%" ".png").arg(x).arg(y).arg(scale));
 }
 
 void LotPackWindow::zoomIn()
