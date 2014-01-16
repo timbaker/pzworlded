@@ -163,6 +163,7 @@ public:
     void scrollContentsBy(int dx, int dy);
 
     bool viewportEvent(QEvent *event);
+    QPoint mTilePos;
 
 signals:
     void tilePositionChanged(const QPoint &tilePos);
@@ -174,7 +175,6 @@ private:
     LotPackScene *mScene;
     IsoWorld *mWorld;
     LotPackMiniMapItem *mMiniMapItem;
-    QPoint mTilePos;
     bool mRecenterScheduled;
 };
 
@@ -200,6 +200,7 @@ private slots:
     void zoomOut();
     void zoomNormal();
     void updateZoom();
+    void saveScreenshot();
 
     void tilePositionChanged(const QPoint &tilePos);
 

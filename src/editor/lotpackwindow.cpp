@@ -608,6 +608,7 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     keys = QKeySequence::keyBindings(QKeySequence::ZoomOut);
     keys += QKeySequence(tr("-"));
     ui->actionZoomOut->setShortcuts(keys);
+    ui->actionSaveScreenshot->setShortcut(QKeySequence(tr("F12")));
 
     mView->zoomable()->connectToComboBox(ui->scaleCombo);
     connect(mView->zoomable(), SIGNAL(scaleChanged(qreal)), SLOT(updateZoom()));
@@ -618,6 +619,8 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+
+    connect(ui->actionSaveScreenshot, SIGNAL(triggered()), SLOT(saveScreenshot()));
 
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)),
             prefs, SLOT(setShowMiniMap(bool)));
@@ -751,6 +754,16 @@ void LotPackWindow::closeWorld()
         delete mWorld;
         mWorld = 0;
     }
+}
+
+void LotPackWindow::saveScreenshot()
+{
+	//Uses Qpixmap::grabWidget function to create a pixmap and paints the QGraphicsView inside it. 
+	QPixmap pixMap = QPixmap::grabWidget(mView);
+	char buf[256];
+	sprintf(buf, "screenshot_%i_%i.png", mView->mTilePos.x(), mView->mTilePos.y());
+	QString fileName = QString::fromUtf8(buf);
+	pixMap.save(fileName);
 }
 
 void LotPackWindow::zoomIn()
