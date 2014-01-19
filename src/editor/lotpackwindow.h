@@ -201,6 +201,7 @@ private slots:
     void zoomNormal();
     void updateZoom();
     void saveScreenshot();
+    void startMapping();
 
     void tilePositionChanged(const QPoint &tilePos);
 
@@ -208,6 +209,10 @@ private:
     Ui::LotPackWindow *ui;
     LotPackView *mView;
     IsoWorld *mWorld;
+		int curMappingCellX;
+		int curMappingCellY;
+		int curOffsetX;
+		int curOffsetY;
 };
 
 #endif // LOTPACKWINDOW_H

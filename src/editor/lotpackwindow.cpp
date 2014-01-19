@@ -621,6 +621,7 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
 
     connect(ui->actionSaveScreenshot, SIGNAL(triggered()), SLOT(saveScreenshot()));
+    connect(ui->actionStartMapping, SIGNAL(triggered()), SLOT(startMapping()));
 
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)),
             prefs, SLOT(setShowMiniMap(bool)));
@@ -765,6 +766,65 @@ void LotPackWindow::saveScreenshot()
 	int y = mView->verticalScrollBar()->value();
 	qreal scale = mView->zoomable()->scale() * 100;
 	pixMap.save(tr("screenshot_%1_%2_%3\%" ".png").arg(x).arg(y).arg(scale));
+}
+
+int XToScreen(int x, int y, int z){
+	Q_UNUSED(z);
+
+	int SX = 0;
+
+	SX += x * 32;
+	SX -= y * 32;
+	SX += 249600;
+
+	return SX;
+}
+
+int YToScreen(int x, int y, int oz, int sz){
+	int SY = 0.0F;                  
+
+	SY += y * 16.0F;            
+	SY += x * 16.0F;            
+	SY += (oz - sz) * 96.0F;
+
+	return SY;                        
+}
+
+void LotPackWindow::startMapping()
+{
+//	const int tileWidth = 64;
+//	const int tileHeight = 32;
+	QScrollBar *sx = mView->horizontalScrollBar();
+	QScrollBar *sy = mView->verticalScrollBar();
+	sx->hide();
+	sy->hide();
+
+	// TODO DO SETUP!
+	int startCellX = 35 * 300;
+	int startCellY = 32 * 300;
+	int numCellX = 1;
+	int numCellY = 1;
+	int curTileX = 0;
+	int curTileY = 0;
+
+	for (int ox=0; ox < 300 * numCellX; ox += qFloor(mView->width()*0.6/64)){
+		for (int oy=0; oy < 300 * numCellY; oy += qFloor(mView->height()*0.6/32)){
+			// curOffsetX x curOffsetY will put the top end of the cell into the
+			// top-left corner of the view
+			curTileX = XToScreen(startCellX + ox, startCellY + oy, 0) - mView->width()/2;
+			curTileY = YToScreen(startCellX + ox, startCellY + oy, 0, 0) - mView->height()/2;
+
+			sx->setValue(curTileX);
+			sy->setValue(curTileY);
+
+			repaint();
+			update();
+			qApp->processEvents();
+
+			saveScreenshot();
+		}
+	}
+	exit(0);
 }
 
 void LotPackWindow::zoomIn()
