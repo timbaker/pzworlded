@@ -19,6 +19,7 @@
 
 #include "bmptotmx.h"
 #include "lotfilesmanager.h"
+#include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "progress.h"
@@ -31,6 +32,7 @@
 
 #include <qmath.h>
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QPainter>
 
 using namespace Tiled;
@@ -42,6 +44,7 @@ TMXToBMP::TMXToBMP(QObject *parent) :
 {
 }
 
+#include "threads.h"
 bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mode)
 {
     mWorldDoc = worldDoc;
@@ -56,15 +59,16 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
 
     PROGRESS progress(QLatin1String("Setting up images"));
 
-//    foreach (WorldBMP *bmp, world->bmps()) {
-//        BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(), bmp->pos());
-//        if (!images) {
-//            goto errorExit;
-//        }
-//        mImages += images;
-//    }
+    foreach (WorldBMP *bmp, world->bmps()) {
+        BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(), bmp->pos());
+        if (!images) {
+            goto errorExit;
+        }
+        mImages += images;
+    }
 
     if (mode == GenerateSelected) {
+#if 0
         // Merge the selected map BMP data with existing images
         if (mDoMain) {
             if (QFileInfo(settings.mainFile).exists()) {
@@ -88,6 +92,7 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
                 mImageVeg = QImage(world->size() * 300, QImage::Format_ARGB32);
             }
         }
+#endif
         if (mDoBldg) {
             if (QFileInfo(settings.buildingsFile).exists()) {
                 mImageBldg = QImage(settings.buildingsFile);
@@ -97,19 +102,25 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
                 }
             } else {
                 mImageBldg = QImage(world->size() * 300, QImage::Format_ARGB32);
+                mImageBldg.fill(Qt::transparent);
             }
         }
     } else {
+        // Don't bother loading the existing image since it will be replaced.
+#if 0
         if (mDoMain)
             mImageMain = QImage(world->size() * 300, QImage::Format_ARGB32);
         if (mDoVeg)
             mImageVeg = QImage(world->size() * 300, QImage::Format_ARGB32);
-        if (mDoBldg)
+#endif
+        if (mDoBldg) {
             mImageBldg = QImage(world->size() * 300, QImage::Format_ARGB32);
+            mImageBldg.fill(Qt::transparent);
+        }
     }
 
-    if ((mDoMain && mImageMain.isNull()) ||
-            (mDoVeg && mImageVeg.isNull()) ||
+    if (/*(mDoMain && mImageMain.isNull()) ||
+            (mDoVeg && mImageVeg.isNull()) ||*/
             (mDoBldg && mImageBldg.isNull())) {
         mError = tr("Failed to create images.  There might not be enough memory.\nTry closing any open cell documents or restart the application.");
         goto errorExit;
@@ -124,6 +135,8 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
     }
 
     progress.update(QLatin1String("Reading maps"));
+
+    mModifiedImages.clear();
 
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
@@ -140,6 +153,24 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
 
     MapManager::instance()->purgeUnreferencedMaps();
 
+#if 1
+    foreach (BMPToTMXImages *images, mImages) {
+        if (!mModifiedImages.contains(images))
+            continue;
+        QFileInfo info(images->mPath);
+        if (mDoMain) {
+            progress.update(QLatin1String("Saving ") + info.fileName());
+            images->mBmp.save(images->mPath);
+//            Sleep::sleep(2);
+        }
+        if (mDoVeg) {
+            progress.update(QLatin1String("Saving ") + info.baseName() + QLatin1String("_veg.") + info.suffix());
+            images->mBmpVeg.save(info.absolutePath() + QLatin1String("/") + info.baseName() + QLatin1String("_veg.") + info.suffix());
+//            Sleep::sleep(2);
+        }
+    }
+
+#else
     if (mDoMain) {
         progress.update(QLatin1String("Saving main image"));
         mImageMain.save(settings.mainFile);
@@ -148,22 +179,31 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
         progress.update(QLatin1String("Saving vegetation image"));
         mImageVeg.save(settings.vegetationFile);
     }
+#endif
     if (mDoBldg) {
         progress.update(QLatin1String("Saving buildings image"));
         mImageBldg.save(settings.buildingsFile);
+//        Sleep::sleep(2);
     }
 
-    mImageMain = QImage();
-    mImageVeg = QImage();
+    qDeleteAll(mImages);
+    mImages.clear();
     if (mDoBldg) {
         mBldgPainter.end();
         mImageBldg = QImage();
     }
+
+    // While displaying this, the MapManager's FileSystemWatcher might see some
+    // changed .tmx files, which results in the PROGRESS dialog being displayed.
+    // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
+    QMessageBox::information(MainWindow::instance(),
+                             tr("TMP To BMP"), tr("Finished!"));
+
     return true;
 
 errorExit:
-    mImageMain = QImage();
-    mImageVeg = QImage();
+    qDeleteAll(mImages);
+    mImages.clear();
     if (mDoBldg) {
         mBldgPainter.end();
         mImageBldg = QImage();
@@ -171,17 +211,40 @@ errorExit:
     return false;
 }
 
+bool TMXToBMP::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
+{
+    // Get the top-most BMP covering the cell
+    int n = 0;
+    bmpIndex = -1;
+    foreach (WorldBMP *bmp, cell->world()->bmps()) {
+        if (bmp->bounds().contains(cell->pos()))
+            bmpIndex = n;
+        n++;
+    }
+    if (bmpIndex == -1)
+        return false;
+
+    return true;
+}
+
 bool TMXToBMP::generateCell(WorldCell *cell)
 {
+    int bmpIndex;
+    if (!shouldGenerateCell(cell, bmpIndex))
+        return true;
+    BMPToTMXImages *images = mImages[bmpIndex];
+
     if (cell->mapFilePath().isEmpty()) {
         if (mDoMain) {
-            QPainter painter(&mImageMain);
+            QPainter painter(&images->mBmp);
             painter.fillRect(cell->x() * 300, cell->y() * 300, 300, 300, Qt::black);
+            mModifiedImages.insert(images);
         }
         if (mDoVeg) {
-            QPainter painter(&mImageVeg);
+            QPainter painter(&images->mBmpVeg);
             painter.setCompositionMode(QPainter::CompositionMode_Source);
             painter.fillRect(cell->x() * 300, cell->y() * 300, 300, 300, Qt::transparent);
+            mModifiedImages.insert(images);
         }
         if (mDoBldg) {
             mBldgPainter.fillRect(cell->x() * 300, cell->y() * 300, 300, 300, Qt::transparent);
@@ -202,19 +265,22 @@ bool TMXToBMP::generateCell(WorldCell *cell)
     QRgb transparent = qRgba(0, 0, 0, 0);
 
     if (mDoMain) {
-        QPainter painter(&mImageMain);
-        painter.drawImage(cell->x() * 300, cell->y() * 300, mapInfo->map()->bmpMain().image());
+        QPainter painter(&images->mBmp);
+        painter.drawImage((cell->pos() - images->mBounds.topLeft()) * 300, mapInfo->map()->bmpMain().image());
+        mModifiedImages.insert(images);
     }
 
     if (mDoVeg) {
-        QPainter painter(&mImageVeg);
-        painter.drawImage(cell->x() * 300, cell->y() * 300, mapInfo->map()->bmpVeg().image());
+        QPainter painter(&images->mBmpVeg);
+        QPoint p = (cell->pos() - images->mBounds.topLeft()) * 300;
+        painter.drawImage(p, mapInfo->map()->bmpVeg().image());
         for (int y = 0; y < 300; y++) {
             for (int x = 0; x < 300; x++) {
-                if (mImageVeg.pixel(cell->x() * 300 + x, cell->y() * 300 + y) == black)
-                    mImageVeg.setPixel(cell->x() * 300 + x, cell->y() * 300 + y, transparent);
+                if (images->mBmpVeg.pixel(p + QPoint(x, y)) == black)
+                    images->mBmpVeg.setPixel(p + QPoint(x, y), transparent);
             }
         }
+        mModifiedImages.insert(images);
     }
 
     bool ok = true;

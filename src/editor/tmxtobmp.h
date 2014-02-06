@@ -23,9 +23,12 @@
 #include <QImage>
 #include <QObject>
 #include <QPainter>
+#include <QSet>
 
+class BMPToTMXImages;
 class MapComposite;
 class MapInfo;
+class WorldBMP;
 class WorldCell;
 class WorldDocument;
 
@@ -49,6 +52,7 @@ public:
     QString errorString() const { return mError; }
 
 private:
+    bool shouldGenerateCell(WorldCell *cell, int &bmpIndex);
     bool generateCell(WorldCell *cell);
     bool doBuildings(WorldCell *cell, MapInfo *mapInfo);
     bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
@@ -56,8 +60,8 @@ private:
 
 private:
     WorldDocument *mWorldDoc;
-    QImage mImageMain;
-    QImage mImageVeg;
+    QList<BMPToTMXImages*> mImages;
+    QSet<BMPToTMXImages*> mModifiedImages;
     QImage mImageBldg;
     bool mDoMain;
     bool mDoVeg;

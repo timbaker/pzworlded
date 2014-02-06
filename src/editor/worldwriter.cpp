@@ -360,19 +360,11 @@ public:
         w.writeStartElement(QLatin1String("TMXToBMP"));
 
         w.writeStartElement(QLatin1String("mainImage"));
-        path.clear();
-        if (!settings.mainFile.isEmpty())
-            path = relativeFileName(settings.mainFile);
-        w.writeAttribute(QLatin1String("path"), path);
         w.writeAttribute(QLatin1String("generate"),
                          QLatin1String(settings.doMain ? "true" : "false"));
         w.writeEndElement();
 
         w.writeStartElement(QLatin1String("vegetationImage"));
-        path.clear();
-        if (!settings.vegetationFile.isEmpty())
-            path = relativeFileName(settings.vegetationFile);
-        w.writeAttribute(QLatin1String("path"), path);
         w.writeAttribute(QLatin1String("generate"),
                          QLatin1String(settings.doVegetation ? "true" : "false"));
         w.writeEndElement();

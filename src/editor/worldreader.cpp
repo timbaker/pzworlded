@@ -505,14 +505,10 @@ private:
 
         while (xml.readNextStartElement()) {
             if (xml.name() == QLatin1String("mainImage")) {
-                QString path = xml.attributes().value(QLatin1String("path")).toString();
-                settings.mainFile = resolveReference(path, mPath);
                 QString value = xml.attributes().value(QLatin1String("generate")).toString();
                 settings.doMain = value == QLatin1String("true");
                 xml.skipCurrentElement();
             } else if (xml.name() == QLatin1String("vegetationImage")) {
-                QString path = xml.attributes().value(QLatin1String("path")).toString();
-                settings.vegetationFile = resolveReference(path, mPath);
                 QString value = xml.attributes().value(QLatin1String("generate")).toString();
                 settings.doVegetation = value == QLatin1String("true");
                 xml.skipCurrentElement();

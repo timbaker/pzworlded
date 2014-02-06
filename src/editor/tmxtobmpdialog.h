@@ -18,8 +18,6 @@ public:
     ~TMXToBMPDialog();
 
 private slots:
-    void mainBrowse();
-    void vegetationBrowse();
     void buildingBrowse();
     void accept();
     void apply();
@@ -31,8 +29,6 @@ private:
 private:
     Ui::TMXToBMPDialog *ui;
     WorldDocument *mWorldDoc;
-    QString mMainFile;
-    QString mVegFile;
     QString mBldgFile;
 };
 

@@ -91,8 +91,6 @@ public:
 class TMXToBMPSettings
 {
 public:
-    QString mainFile;
-    QString vegetationFile;
     QString buildingsFile;
     bool doMain;
     bool doVegetation;
@@ -107,9 +105,7 @@ public:
 
     bool operator == (const TMXToBMPSettings &other)
     {
-        return mainFile == other.mainFile &&
-                vegetationFile == other.vegetationFile &&
-                buildingsFile == other.buildingsFile &&
+        return buildingsFile == other.buildingsFile &&
                 doMain == other.doMain &&
                 doVegetation == other.doVegetation &&
                 doBuildings == other.doBuildings;
