@@ -42,6 +42,11 @@ BMPToTMXConfirmDialog::~BMPToTMXConfirmDialog()
     delete ui;
 }
 
+void BMPToTMXConfirmDialog::updateExisting()
+{
+    ui->label->setText(tr("The files in the list below already exist.\nThe pixels in the maps will be replaced by pixels from the BMP images."));
+}
+
 // C:/
 //   Foo/
 //     Bar/

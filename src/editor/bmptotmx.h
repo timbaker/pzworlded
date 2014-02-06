@@ -84,6 +84,7 @@ private:
     void AddRule(Tiled::BmpRule *rule);
 
     bool WriteMap(WorldCell *cell, int bmpIndex);
+    bool UpdateMap(WorldCell *cell, int bmpIndex);
 
     Tiled::Tile *getTileFromTileName(const QString &tileName);
 

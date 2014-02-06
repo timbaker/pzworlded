@@ -32,6 +32,7 @@
 #include "world.h"
 
 #include "map.h"
+#include "mapreader.h"
 #include "mapwriter.h"
 #include "objectgroup.h"
 #include "tile.h"
@@ -45,8 +46,9 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QMessageBox>
-#include <QUndoStack>
+#include <QPainter>
 #include <QStringList>
+#include <QUndoStack>
 #include <QXmlStreamWriter>
 
 using namespace Tiled;
@@ -101,25 +103,32 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     // FIXME: I don't need to load the tileset images, I just need the imageSource() paths.
     TileMetaInfoMgr::instance()->loadTilesets();
 
+    const BMPToTMXSettings &settings = world->getBMPToTMXSettings();
+
     // Figure out which files will be overwritten and give the user a chance to
     // cancel.
     QStringList fileNames;
     int bmpIndex;
     if (mode == GenerateSelected) {
-        foreach (WorldCell *cell, mWorldDoc->selectedCells())
+        foreach (WorldCell *cell, mWorldDoc->selectedCells()) {
             if (shouldGenerateCell(cell, bmpIndex)) {
                 QString fileName = tmxNameForCell(cell, world->bmps().at(bmpIndex));
+                if (settings.updateExisting)
+                    fileName = cell->mapFilePath();
                 if (QFileInfo(fileName).exists()) {
                     Q_ASSERT(!fileNames.contains(fileName));
                     fileNames += fileName;
                 }
             }
+        }
     } else {
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 WorldCell *cell = world->cellAt(x, y);
                 if (shouldGenerateCell(cell, bmpIndex)) {
                     QString fileName = tmxNameForCell(cell, world->bmps().at(bmpIndex));
+                    if (settings.updateExisting)
+                        fileName = cell->mapFilePath();
                     if (QFileInfo(fileName).exists()) {
                         Q_ASSERT(!fileNames.contains(fileName));
                         fileNames += fileName;
@@ -130,6 +139,8 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     }
     if (!fileNames.isEmpty()) {
         BMPToTMXConfirmDialog dialog(fileNames, MainWindow::instance());
+        if (settings.updateExisting)
+            dialog.updateExisting();
         if (dialog.exec() != QDialog::Accepted)
             return true;
     }
@@ -208,6 +219,12 @@ bool BMPToTMX::generateCell(WorldCell *cell)
     int bmpIndex;
     if (!shouldGenerateCell(cell, bmpIndex))
         return true;
+
+    if (mWorldDoc->world()->getBMPToTMXSettings().updateExisting) {
+        PROGRESS progress(tr("Updating TMX files (%1,%2)")
+                          .arg(cell->x()).arg(cell->y()));
+        return UpdateMap(cell, bmpIndex);
+    }
 
     PROGRESS progress(tr("Generating TMX files (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
@@ -640,7 +657,9 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         blends += new BmpBlend(blend);
     map.rbmpSettings()->setBlends(blends);
 
-    const BMPToTMXSettings &settings = mWorldDoc->world()->getBMPToTMXSettings();
+    BMPToTMXSettings settings = mWorldDoc->world()->getBMPToTMXSettings();
+    settings.copyPixels = true; // obsolete
+    settings.compress = true; // obsolete
 
     if (bmpIndex != -1) {
         MapBmp &rbmpMain = map.rbmpMain();
@@ -721,6 +740,69 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         mError = writer.errorString();
         return false;
     }
+    return true;
+}
+
+namespace {
+class BMPToTMX_MapReader : public MapReader
+{
+protected:
+    /**
+     * Overridden to make sure the resolved reference is canonical.
+     */
+    QString resolveReference(const QString &reference, const QString &mapPath)
+    {
+        QString resolved = MapReader::resolveReference(reference, mapPath);
+        QString canonical = QFileInfo(resolved).canonicalFilePath();
+
+        // Make sure that we're not returning an empty string when the file is
+        // not found.
+        return canonical.isEmpty() ? resolved : canonical;
+    }
+};
+}
+
+bool BMPToTMX::UpdateMap(WorldCell *cell, int bmpIndex)
+{
+    QString filePath = cell->mapFilePath();
+    if (filePath.isEmpty() || !QFileInfo(filePath).exists())
+        return true;
+
+    BMPToTMX_MapReader reader;
+    Map *map = reader.readMap(filePath);
+    if (!map) {
+        mError = reader.errorString();
+        return false;
+    }
+
+    MapBmp &rbmpMain = map->rbmpMain();
+    MapBmp &rbmpVeg = map->rbmpVeg();
+
+    BMPToTMXImages *images = mImages[bmpIndex];
+    QImage bmp = images->mBmp;
+    QImage bmpVeg = images->mBmpVeg;
+
+    int ix = (cell->x() - images->mBounds.x()) * 300;
+    int iy = (cell->y() - images->mBounds.y()) * 300;
+    QPainter painter(&rbmpMain.rimage());
+    painter.drawImage(0, 0, bmp, ix, iy, 300, 300);
+    painter.end();
+    QPainter painter2(&rbmpVeg.rimage());
+    painter2.drawImage(0, 0, bmpVeg, ix, iy, 300, 300);
+    painter2.end();
+
+    MapWriter writer;
+    MapWriter::LayerDataFormat format = MapWriter::CSV;
+//    if (mWorldDoc->world()->getBMPToTMXSettings().compress)
+        format = MapWriter::Base64Zlib;
+    writer.setLayerDataFormat(format);
+    writer.setDtdEnabled(false);
+    if (!writer.writeMap(map, filePath)) {
+        delete map;
+        mError = writer.errorString();
+        return false;
+    }
+    delete map;
     return true;
 }
 

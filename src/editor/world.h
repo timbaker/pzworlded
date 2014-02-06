@@ -60,12 +60,14 @@ public:
     bool warnUnknownColors;
     bool compress;
     bool copyPixels;
+    bool updateExisting;
 
     BMPToTMXSettings() :
         assignMapsToWorld(false),
         warnUnknownColors(true),
         compress(true),
-        copyPixels(true)
+        copyPixels(true),
+        updateExisting(false)
     {
     }
 
@@ -78,7 +80,8 @@ public:
                 assignMapsToWorld == other.assignMapsToWorld &&
                 warnUnknownColors == other.warnUnknownColors &&
                 compress == other.compress &&
-                copyPixels == other.copyPixels;
+                copyPixels == other.copyPixels &&
+                updateExisting == other.updateExisting;
     }
 
     bool operator != (const BMPToTMXSettings &other)

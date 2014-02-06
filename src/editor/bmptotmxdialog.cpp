@@ -87,8 +87,10 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
 
     ui->assignMapCheckBox->setChecked(settings.assignMapsToWorld);
     ui->warnUnknownColors->setChecked(settings.warnUnknownColors);
-    ui->compress->setChecked(settings.compress);
-    ui->copyPixels->setChecked(settings.copyPixels);
+//    ui->compress->setChecked(settings.compress);
+//    ui->copyPixels->setChecked(settings.copyPixels);
+    ui->replaceExisting->setChecked(!settings.updateExisting);
+    ui->updateExisting->setChecked(settings.updateExisting);
 
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
             SLOT(apply()));
@@ -144,24 +146,7 @@ void BMPToTMXDialog::accept()
     if (!validate())
         return;
 
-    if (QFileInfo(mRulesFile) == QFileInfo(BMPToTMX::instance()->defaultRulesFile()))
-        mRulesFile.clear();
-    if (QFileInfo(mBlendsFile) == QFileInfo(BMPToTMX::instance()->defaultBlendsFile()))
-        mBlendsFile.clear();
-    if (QFileInfo(mMapBaseFile) == QFileInfo(BMPToTMX::instance()->defaultMapBaseXMLFile()))
-        mMapBaseFile.clear();
-
-    BMPToTMXSettings settings;
-    settings.exportDir = mExportDir;
-    settings.rulesFile = mRulesFile;
-    settings.blendsFile = mBlendsFile;
-    settings.mapbaseFile = mMapBaseFile;
-    settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
-    settings.warnUnknownColors = ui->warnUnknownColors->isChecked();
-    settings.compress = ui->compress->isChecked();
-    settings.copyPixels = ui->copyPixels->isChecked();
-    if (settings != mWorldDoc->world()->getBMPToTMXSettings())
-        mWorldDoc->changeBMPToTMXSettings(settings);
+    toSettings();
 
     QDialog::accept();
 }
@@ -171,23 +156,7 @@ void BMPToTMXDialog::apply()
     if (!validate())
         return;
 
-    if (QFileInfo(mRulesFile) == QFileInfo(BMPToTMX::instance()->defaultRulesFile()))
-        mRulesFile.clear();
-    if (QFileInfo(mBlendsFile) == QFileInfo(BMPToTMX::instance()->defaultBlendsFile()))
-        mBlendsFile.clear();
-    if (QFileInfo(mMapBaseFile) == QFileInfo(BMPToTMX::instance()->defaultMapBaseXMLFile()))
-        mMapBaseFile.clear();
-
-    BMPToTMXSettings settings;
-    settings.exportDir = mExportDir;
-    settings.rulesFile = mRulesFile;
-    settings.blendsFile = mBlendsFile;
-    settings.mapbaseFile = mMapBaseFile;
-    settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
-    settings.warnUnknownColors = ui->warnUnknownColors->isChecked();
-    settings.compress = ui->compress->isChecked();
-    if (settings != mWorldDoc->world()->getBMPToTMXSettings())
-        mWorldDoc->changeBMPToTMXSettings(settings);
+    toSettings();
 
     QDialog::reject();
 }
@@ -223,4 +192,27 @@ bool BMPToTMXDialog::validate()
     }
 
     return true;
+}
+
+void BMPToTMXDialog::toSettings()
+{
+    if (QFileInfo(mRulesFile) == QFileInfo(BMPToTMX::instance()->defaultRulesFile()))
+        mRulesFile.clear();
+    if (QFileInfo(mBlendsFile) == QFileInfo(BMPToTMX::instance()->defaultBlendsFile()))
+        mBlendsFile.clear();
+    if (QFileInfo(mMapBaseFile) == QFileInfo(BMPToTMX::instance()->defaultMapBaseXMLFile()))
+        mMapBaseFile.clear();
+
+    BMPToTMXSettings settings;
+    settings.exportDir = mExportDir;
+    settings.rulesFile = mRulesFile;
+    settings.blendsFile = mBlendsFile;
+    settings.mapbaseFile = mMapBaseFile;
+    settings.assignMapsToWorld = ui->assignMapCheckBox->isChecked();
+    settings.warnUnknownColors = ui->warnUnknownColors->isChecked();
+//    settings.compress = ui->compress->isChecked();
+//    settings.copyPixels = ui->copyPixels->isChecked();
+    settings.updateExisting = ui->updateExisting->isChecked();
+    if (settings != mWorldDoc->world()->getBMPToTMXSettings())
+        mWorldDoc->changeBMPToTMXSettings(settings);
 }

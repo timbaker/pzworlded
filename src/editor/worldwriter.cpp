@@ -343,6 +343,11 @@ public:
                          QLatin1String(settings.copyPixels ? "true" : "false"));
         w.writeEndElement();
 
+        w.writeStartElement(QLatin1String("update-existing"));
+        w.writeAttribute(QLatin1String("checked"),
+                         QLatin1String(settings.updateExisting ? "true" : "false"));
+        w.writeEndElement();
+
         w.writeEndElement(); // </BMPToTMX>
     }
 

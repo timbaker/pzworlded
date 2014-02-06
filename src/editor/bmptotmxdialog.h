@@ -44,6 +44,7 @@ private slots:
 
 private:
     bool validate();
+    void toSettings();
 
 private:
     Ui::BMPToTMXDialog *ui;

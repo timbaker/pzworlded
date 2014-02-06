@@ -486,6 +486,10 @@ private:
                 QString value = xml.attributes().value(QLatin1String("checked")).toString();
                 settings.copyPixels = value == QLatin1String("true");
                 xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("update-existing")) {
+                QString value = xml.attributes().value(QLatin1String("checked")).toString();
+                settings.updateExisting = value == QLatin1String("true");
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }

@@ -35,6 +35,8 @@ public:
     explicit BMPToTMXConfirmDialog(const QStringList &fileNames, QWidget *parent = 0);
     ~BMPToTMXConfirmDialog();
 
+    void updateExisting();
+
 private:
     QTreeWidgetItem *itemForDirectory(const QString &path);
     
