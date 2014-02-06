@@ -39,6 +39,7 @@ class PropertyEnum;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
+class TMXToBMPSettings;
 class TrafficLines;
 class World;
 class WorldBMP;
@@ -123,6 +124,7 @@ public:
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
     BMPToTMXSettings changeBMPToTMXSettings(const BMPToTMXSettings &settings);
+    TMXToBMPSettings changeTMXToBMPSettings(const TMXToBMPSettings &settings);
     GenerateLotsSettings changeGenerateLotsSettings(const GenerateLotsSettings &settings);
     LuaSettings changeLuaSettings(const LuaSettings &settings);
 
@@ -381,6 +383,7 @@ public:
     void setPropertyValue(PropertyHolder *ph, Property *p, const QString &value);
 
     void changeBMPToTMXSettings(const BMPToTMXSettings &settings);
+    void changeTMXToBMPSettings(const TMXToBMPSettings &settings);
     void changeGenerateLotsSettings(const GenerateLotsSettings &settings);
     void changeLuaSettings(const LuaSettings &settings);
 

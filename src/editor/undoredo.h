@@ -36,6 +36,7 @@ class PropertyEnum;
 class PropertyHolder;
 class PropertyTemplate;
 class Road;
+class TMXToBMPSettings;
 class TrafficLines;
 class WorldBMP;
 class WorldCell;
@@ -961,6 +962,24 @@ private:
 
     WorldDocument *mDocument;
     BMPToTMXSettings *mSettings;
+};
+
+/////
+
+class ChangeTMXToBMPSettings : public QUndoCommand
+{
+public:
+    ChangeTMXToBMPSettings(WorldDocument *doc, const TMXToBMPSettings &settings);
+    ~ChangeTMXToBMPSettings();
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    TMXToBMPSettings *mSettings;
 };
 
 /////

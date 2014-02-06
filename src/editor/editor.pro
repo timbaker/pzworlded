@@ -138,7 +138,9 @@ SOURCES += main.cpp\
     tiledeffile.cpp \
     lootwindow.cpp \
     sceneoverlay.cpp \
-    writeworldobjectsdialog.cpp
+    writeworldobjectsdialog.cpp \
+    tmxtobmp.cpp \
+    tmxtobmpdialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -230,7 +232,9 @@ HEADERS  += mainwindow.h \
     tiledeffile.h \
     lootwindow.h \
     sceneoverlay.h \
-    writeworldobjectsdialog.h
+    writeworldobjectsdialog.h \
+    tmxtobmp.h \
+    tmxtobmpdialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -254,7 +258,8 @@ FORMS    += mainwindow.ui \
     writespawnpointsdialog.ui \
     pngbuildingdialog.ui \
     lootwindow.ui \
-    writeworldobjectsdialog.ui
+    writeworldobjectsdialog.ui \
+    tmxtobmpdialog.ui
 
 OTHER_FILES +=
 

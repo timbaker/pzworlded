@@ -60,6 +60,8 @@
 #include "texturemanager.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
+#include "tmxtobmp.h"
+#include "tmxtobmpdialog.h"
 #include "toolmanager.h"
 #include "undodock.h"
 #include "virtualtileset.h"
@@ -239,6 +241,10 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(BMPToTMXAll()));
     connect(ui->actionBMPToTMXSelected, SIGNAL(triggered()),
             SLOT(BMPToTMXSelected()));
+    connect(ui->actionTMXToBMPAll, SIGNAL(triggered()),
+            SLOT(TMXToBMPAll()));
+    connect(ui->actionTMXToBMPSelected, SIGNAL(triggered()),
+            SLOT(TMXToBMPSelected()));
     connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(WriteSpawnPoints()));
     connect(ui->actionWriteObjects, SIGNAL(triggered()), SLOT(WriteWorldObjects()));
     connect(ui->actionFromToAll, SIGNAL(triggered()),
@@ -1453,6 +1459,33 @@ void MainWindow::BMPToTMXSelected()
     _BMPToTMX(this, mCurrentDocument, BMPToTMX::GenerateSelected);
 }
 
+static void _TMXToBMP(MainWindow *mainWin, Document *doc,
+                      TMXToBMP::GenerateMode mode)
+{
+    WorldDocument *worldDoc = doc->asWorldDocument();
+    if (!worldDoc)
+        return;
+    if (!TMXToBMP::hasInstance())
+        new TMXToBMP();
+
+    TMXToBMPDialog dialog(worldDoc, mainWin);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    if (!TMXToBMP::instance().generateWorld(worldDoc, mode)) {
+        QMessageBox::warning(mainWin, mainWin->tr("TMX To BMP Failed!"),
+                             TMXToBMP::instance().errorString());
+    }
+}
+void MainWindow::TMXToBMPAll()
+{
+    _TMXToBMP(this, mCurrentDocument, TMXToBMP::GenerateAll);
+}
+
+void MainWindow::TMXToBMPSelected()
+{
+    _TMXToBMP(this, mCurrentDocument, TMXToBMP::GenerateSelected);
+}
+
 void MainWindow::resizeWorld()
 {
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
@@ -1991,6 +2024,11 @@ void MainWindow::updateActions()
     ui->menuBMP_To_TMX->setEnabled(worldDoc != 0);
     ui->actionBMPToTMXAll->setEnabled(worldDoc != 0);
     ui->actionBMPToTMXSelected->setEnabled(worldDoc &&
+                                           worldDoc->selectedCellCount());
+
+    ui->menuTMX_To_BMP->setEnabled(worldDoc != 0);
+    ui->actionTMXToBMPAll->setEnabled(worldDoc != 0);
+    ui->actionTMXToBMPSelected->setEnabled(worldDoc &&
                                            worldDoc->selectedCellCount());
 
     ui->actionLUAObjectDump->setEnabled(worldDoc != 0);

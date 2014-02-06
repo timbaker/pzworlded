@@ -110,6 +110,8 @@ private:
                 readCell();
             else if (xml.name() == QLatin1String("BMPToTMX"))
                 readBMPToTMX();
+            else if (xml.name() == QLatin1String("TMXToBMP"))
+                readTMXToBMP();
             else if (xml.name() == QLatin1String("GenerateLots"))
                 readGenerateLots();
             else if (xml.name() == QLatin1String("LuaSettings"))
@@ -489,6 +491,38 @@ private:
         }
 
         mWorld->setBMPToTMXSettings(settings);
+    }
+
+    void readTMXToBMP()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("TMXToBMP"));
+
+        TMXToBMPSettings settings;
+
+        while (xml.readNextStartElement()) {
+            if (xml.name() == QLatin1String("mainImage")) {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.mainFile = resolveReference(path, mPath);
+                QString value = xml.attributes().value(QLatin1String("generate")).toString();
+                settings.doMain = value == QLatin1String("true");
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("vegetationImage")) {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.vegetationFile = resolveReference(path, mPath);
+                QString value = xml.attributes().value(QLatin1String("generate")).toString();
+                settings.doVegetation = value == QLatin1String("true");
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("buildingsImage")) {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.buildingsFile = resolveReference(path, mPath);
+                QString value = xml.attributes().value(QLatin1String("generate")).toString();
+                settings.doBuildings = value == QLatin1String("true");
+                xml.skipCurrentElement();
+            } else
+                readUnknownElement();
+        }
+
+        mWorld->setTMXToBMPSettings(settings);
     }
 
     void readGenerateLots()

@@ -855,6 +855,11 @@ void WorldDocument::changeBMPToTMXSettings(const BMPToTMXSettings &settings)
     undoStack()->push(new ChangeBMPToTMXSettings(this, settings));
 }
 
+void WorldDocument::changeTMXToBMPSettings(const TMXToBMPSettings &settings)
+{
+    undoStack()->push(new ChangeTMXToBMPSettings(this, settings));
+}
+
 void WorldDocument::changeGenerateLotsSettings(const GenerateLotsSettings &settings)
 {
     undoStack()->push(new ChangeGenerateLotsSettings(this, settings));
@@ -1455,6 +1460,13 @@ BMPToTMXSettings WorldDocumentUndoRedo::changeBMPToTMXSettings(const BMPToTMXSet
 {
     BMPToTMXSettings old = mWorld->getBMPToTMXSettings();
     mWorld->setBMPToTMXSettings(settings);
+    return old;
+}
+
+TMXToBMPSettings WorldDocumentUndoRedo::changeTMXToBMPSettings(const TMXToBMPSettings &settings)
+{
+    TMXToBMPSettings old = mWorld->getTMXToBMPSettings();
+    mWorld->setTMXToBMPSettings(settings);
     return old;
 }
 

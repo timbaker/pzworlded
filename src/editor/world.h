@@ -85,6 +85,37 @@ public:
     { return !operator==(other); }
 };
 
+class TMXToBMPSettings
+{
+public:
+    QString mainFile;
+    QString vegetationFile;
+    QString buildingsFile;
+    bool doMain;
+    bool doVegetation;
+    bool doBuildings;
+
+    TMXToBMPSettings() :
+        doMain(true),
+        doVegetation(true),
+        doBuildings(false)
+    {
+    }
+
+    bool operator == (const TMXToBMPSettings &other)
+    {
+        return mainFile == other.mainFile &&
+                vegetationFile == other.vegetationFile &&
+                buildingsFile == other.buildingsFile &&
+                doMain == other.doMain &&
+                doVegetation == other.doVegetation &&
+                doBuildings == other.doBuildings;
+    }
+
+    bool operator != (const TMXToBMPSettings &other)
+    { return !operator==(other); }
+};
+
 class GenerateLotsSettings
 {
 public:
@@ -251,6 +282,12 @@ public:
     const BMPToTMXSettings &getBMPToTMXSettings() const
     { return mBMPToTMXSettings; }
 
+    void setTMXToBMPSettings(const TMXToBMPSettings &settings)
+    { mTMXToBMPSettings = settings; }
+
+    const TMXToBMPSettings &getTMXToBMPSettings() const
+    { return mTMXToBMPSettings; }
+
     void setGenerateLotsSettings(const GenerateLotsSettings &settings)
     { mGenerateLotsSettings = settings; }
 
@@ -285,6 +322,7 @@ private:
     RoadList mRoads;
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
+    TMXToBMPSettings mTMXToBMPSettings;
     GenerateLotsSettings mGenerateLotsSettings;
     LuaSettings mLuaSettings;
     QString mHeightMapFileName;
