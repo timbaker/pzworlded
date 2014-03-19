@@ -758,14 +758,34 @@ void LotPackWindow::closeWorld()
 }
 
 #include <QScrollBar>
-void LotPackWindow::saveScreenshot()
+#include "unistd.h"
+void LotPackWindow::saveScreenshot(){
+	saveScreenshot(tr("."));
+}
+
+void LotPackWindow::saveScreenshot(const QString &path)
 {
-	//Uses Qpixmap::grabWidget function to create a pixmap and paints the QGraphicsView inside it. 
-	QPixmap pixMap = QPixmap::grabWidget(mView);
+	QPixmap pixMap = mView->grab(QRect(1, 1, mView->width()-15, mView->height()-15));
 	int x = mView->horizontalScrollBar()->value();
 	int y = mView->verticalScrollBar()->value();
-	qreal scale = mView->zoomable()->scale() * 100;
-	pixMap.save(tr("screenshot_%1_%2_%3\%" ".png").arg(x).arg(y).arg(scale));
+
+	QString filename = tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y);
+	QFileInfo recentInfo(filename);
+	if (recentInfo.exists()){
+		qDebug() << filename << "exists already. Skipping.";
+		return;
+	}
+	qDebug() << tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y);
+	pixMap.save(tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y), "PNG", 0);
+	/*
+	SaveScreenshot *t = new SaveScreenshot();
+	t->pixMap = mView->grab();
+	t->pixMap.detach();
+	t->x = mView->horizontalScrollBar()->value();
+	t->y = mView->verticalScrollBar()->value();
+	connect(t, &SaveScreenshot::finished, t, &QObject::deleteLater);
+	t->start();
+	*/
 }
 
 int XToScreen(int x, int y, int z){
@@ -775,7 +795,8 @@ int XToScreen(int x, int y, int z){
 
 	SX += x * 32;
 	SX -= y * 32;
-	SX += 249600;
+	SX += 249600; // This is for the main map
+	// SX += 17853 / 2; // This is for a 1x1 cell map at 0x0
 
 	return SX;
 }
@@ -796,32 +817,65 @@ void LotPackWindow::startMapping()
 //	const int tileHeight = 32;
 	QScrollBar *sx = mView->horizontalScrollBar();
 	QScrollBar *sy = mView->verticalScrollBar();
-	sx->hide();
-	sy->hide();
 
 	// TODO DO SETUP!
-	int startCellX = 35 * 300;
-	int startCellY = 32 * 300;
-	int numCellX = 1;
-	int numCellY = 1;
+	int startCellX = 42 * 300;
+	int startCellY = 25 * 300;
+	int numCellX = 3;
+	int numCellY = 44 - 25 + 1;
+	// top: 25_25
+	// left: 25_44
+	// bottom: 44_44
+	// right: 44_25
+
+	qDebug() << "X:" << sx->minimum() << "<" << sx->maximum();
+	qDebug() << "Y:" << sy->minimum() << "<" << sy->maximum();
+
+	//int stepX = qFloor(mView->width()*0.6/64);
+	//int stepY = qFloor(mView->height()*0.6/32);
+	int stepX = qFloor((mView->width()-16)*0.5/64);
+	int stepY = qFloor((mView->height()-16)/32);
+
+	// Make sure that we get the entire cell, last screenshot _on_ the border
+	while (300 % stepX > 0)
+		stepX--;
+	while (300 % stepY > 0)
+		stepY--;
+
+	qDebug() << "stepX:" << stepX;
+	qDebug() << "stepY:" << stepY;
+
+	bool skip=false;
+	int skipUntilX = 306298;
+	int skipUntilY = 325847;
 	int curTileX = 0;
 	int curTileY = 0;
 
-	for (int ox=0; ox < 300 * numCellX; ox += qFloor(mView->width()*0.6/64)){
-		for (int oy=0; oy < 300 * numCellY; oy += qFloor(mView->height()*0.6/32)){
+	for (int ox=0; ox <= 300 * numCellX; ox += stepX){
+		for (int oy=0; oy <= 300 * numCellY; oy += stepY){
+			qDebug() << "Mapping" << ox << "x" << oy;
 			// curOffsetX x curOffsetY will put the top end of the cell into the
 			// top-left corner of the view
 			curTileX = XToScreen(startCellX + ox, startCellY + oy, 0) - mView->width()/2;
 			curTileY = YToScreen(startCellX + ox, startCellY + oy, 0, 0) - mView->height()/2;
 
-			sx->setValue(curTileX);
-			sy->setValue(curTileY);
+			qDebug() << "Coordinates:" << curTileX << "x" << curTileY;
+			if (curTileX == skipUntilX && curTileY == skipUntilY)
+				skip = false;
 
-			repaint();
-			update();
-			qApp->processEvents();
+			if (!skip){
+				sx->setValue(curTileX);
+				sy->setValue(curTileY);
 
-			saveScreenshot();
+				repaint();
+				update();
+				qApp->processEvents();
+
+				int y1 = qFloor((startCellY+oy)/300) - 25;
+				y1 -= y1 % 3;
+				y1 += 25;
+				saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+2));
+			}
 		}
 	}
 	exit(0);

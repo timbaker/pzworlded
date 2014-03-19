@@ -26,6 +26,8 @@
 #include "tilelayer.h"
 #include "ztilelayergroup.h"
 
+#include "savescreenshot.h"
+
 #include <QGraphicsItem>
 
 class IsoWorld;
@@ -201,6 +203,7 @@ private slots:
     void zoomNormal();
     void updateZoom();
     void saveScreenshot();
+    void saveScreenshot(const QString &path);
     void startMapping();
 
     void tilePositionChanged(const QPoint &tilePos);
