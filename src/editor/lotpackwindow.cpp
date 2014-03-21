@@ -430,7 +430,7 @@ LotPackView::LotPackView(QWidget *parent) :
     factors << 0.12 << 0.25 << 0.33 << 0.5 << 0.75 << 1.0 << 1.5 << 2.0;
     zoomable()->setZoomFactors(factors);
 
-    zoomable()->setScale(0.25);
+    zoomable()->setScale(1.0);
 
 }
 
@@ -765,9 +765,11 @@ void LotPackWindow::saveScreenshot(){
 
 void LotPackWindow::saveScreenshot(const QString &path)
 {
+	QScrollBar *sx = mView->horizontalScrollBar();
+	QScrollBar *sy = mView->verticalScrollBar();
 	QPixmap pixMap = mView->grab(QRect(1, 1, mView->width()-15, mView->height()-15));
-	int x = mView->horizontalScrollBar()->value();
-	int y = mView->verticalScrollBar()->value();
+	int x = sx->value();
+	int y = sy->value();
 
 	QString filename = tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y);
 	QFileInfo recentInfo(filename);
@@ -775,17 +777,8 @@ void LotPackWindow::saveScreenshot(const QString &path)
 		qDebug() << filename << "exists already. Skipping.";
 		return;
 	}
-	qDebug() << tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y);
-	pixMap.save(tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y), "PNG", 0);
-	/*
-	SaveScreenshot *t = new SaveScreenshot();
-	t->pixMap = mView->grab();
-	t->pixMap.detach();
-	t->x = mView->horizontalScrollBar()->value();
-	t->y = mView->verticalScrollBar()->value();
-	connect(t, &SaveScreenshot::finished, t, &QObject::deleteLater);
-	t->start();
-	*/
+	qDebug() << filename;
+	pixMap.save(filename);
 }
 
 int XToScreen(int x, int y, int z){
@@ -796,6 +789,9 @@ int XToScreen(int x, int y, int z){
 	SX += x * 32;
 	SX -= y * 32;
 	SX += 249600; // This is for the main map
+	/* X: 57600 <= 57600 <= 497853 
+	 * Y: 211200 <= 211200 <= 431340 
+	 */
 	// SX += 17853 / 2; // This is for a 1x1 cell map at 0x0
 
 	return SX;
@@ -818,11 +814,10 @@ void LotPackWindow::startMapping()
 	QScrollBar *sx = mView->horizontalScrollBar();
 	QScrollBar *sy = mView->verticalScrollBar();
 
-	// TODO DO SETUP!
-	int startCellX = 42 * 300;
-	int startCellY = 25 * 300;
-	int numCellX = 3;
-	int numCellY = 44 - 25 + 1;
+	int startCellX = ui->cellStartX->value() * 300;
+	int startCellY = ui->cellStartY->value() * 300;
+	int numCellX = ui->numCellX->value();
+	int numCellY = ui->numCellY->value();
 	// top: 25_25
 	// left: 25_44
 	// bottom: 44_44
@@ -845,11 +840,14 @@ void LotPackWindow::startMapping()
 	qDebug() << "stepX:" << stepX;
 	qDebug() << "stepY:" << stepY;
 
-	bool skip=false;
-	int skipUntilX = 306298;
-	int skipUntilY = 325847;
+	//bool skip=false;
+	//int skipUntilX = 306298;
+	//int skipUntilY = 325847;
 	int curTileX = 0;
 	int curTileY = 0;
+	float numShots = (300 * numCellX / stepX) * (300 * numCellY / stepY);
+	float doneShots = 0;
+	char bufShots[256];
 
 	for (int ox=0; ox <= 300 * numCellX; ox += stepX){
 		for (int oy=0; oy <= 300 * numCellY; oy += stepY){
@@ -860,10 +858,10 @@ void LotPackWindow::startMapping()
 			curTileY = YToScreen(startCellX + ox, startCellY + oy, 0, 0) - mView->height()/2;
 
 			qDebug() << "Coordinates:" << curTileX << "x" << curTileY;
-			if (curTileX == skipUntilX && curTileY == skipUntilY)
-				skip = false;
+			//if (curTileX == skipUntilX && curTileY == skipUntilY)
+				//skip = false;
 
-			if (!skip){
+			//if (!skip){
 				sx->setValue(curTileX);
 				sy->setValue(curTileY);
 
@@ -875,10 +873,11 @@ void LotPackWindow::startMapping()
 				y1 -= y1 % 3;
 				y1 += 25;
 				saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+2));
-			}
+				sprintf(bufShots, "%.2f", (++doneShots/numShots)*100);
+				ui->mappingStatus->setText(tr(bufShots));
+			//}
 		}
 	}
-	exit(0);
 }
 
 void LotPackWindow::zoomIn()
@@ -910,7 +909,9 @@ void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
     if (mWorld->tileBounds().contains(tilePos)) {
         int x = qFloor(tilePos.x() / 300.0);
         int y = qFloor(tilePos.y() / 300.0);
-        ui->coords->setText(tr("Cell %1,%2").arg(x).arg(y));
+				int tx = qFloor(tilePos.x() % 300);
+				int ty = qFloor(tilePos.y() % 300);
+        ui->coords->setText(tr("Cell %1,%2 Tile %3,%4").arg(x).arg(y).arg(tx).arg(ty));
     } else
         ui->coords->setText(QString());
 }
