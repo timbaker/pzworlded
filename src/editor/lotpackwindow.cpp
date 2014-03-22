@@ -789,8 +789,8 @@ int XToScreen(int x, int y, int z){
 	SX += x * 32;
 	SX -= y * 32;
 	SX += 249600; // This is for the main map
-	/* X: 57600 <= 57600 <= 497853 
-	 * Y: 211200 <= 211200 <= 431340 
+	/* X: 57600 <= 57600 <= 497853
+	 * Y: 211200 <= 211200 <= 431340
 	 */
 	// SX += 17853 / 2; // This is for a 1x1 cell map at 0x0
 
@@ -798,13 +798,13 @@ int XToScreen(int x, int y, int z){
 }
 
 int YToScreen(int x, int y, int oz, int sz){
-	int SY = 0.0F;                  
+	int SY = 0.0F;
 
-	SY += y * 16.0F;            
-	SY += x * 16.0F;            
+	SY += y * 16.0F;
+	SY += x * 16.0F;
 	SY += (oz - sz) * 96.0F;
 
-	return SY;                        
+	return SY;
 }
 
 void LotPackWindow::startMapping()
@@ -828,7 +828,7 @@ void LotPackWindow::startMapping()
 
 	//int stepX = qFloor(mView->width()*0.6/64);
 	//int stepY = qFloor(mView->height()*0.6/32);
-	int stepX = qFloor((mView->width()-16)*0.5/64);
+	int stepX = qFloor((mView->width()-16)/64);
 	int stepY = qFloor((mView->height()-16)/32);
 
 	// Make sure that we get the entire cell, last screenshot _on_ the border
@@ -845,10 +845,14 @@ void LotPackWindow::startMapping()
 	//int skipUntilY = 325847;
 	int curTileX = 0;
 	int curTileY = 0;
-	float numShots = (300 * numCellX / stepX) * (300 * numCellY / stepY);
+	float numShots = qCeil(301 * numCellX / stepX) * qCeil(301 * numCellY / stepY);
 	float doneShots = 0;
 	char bufShots[256];
+	time_t startTime;
+	time_t nowTime;
+	time_t ETA;
 
+	startTime = time(NULL);
 	for (int ox=0; ox <= 300 * numCellX; ox += stepX){
 		for (int oy=0; oy <= 300 * numCellY; oy += stepY){
 			qDebug() << "Mapping" << ox << "x" << oy;
@@ -872,12 +876,21 @@ void LotPackWindow::startMapping()
 				int y1 = qFloor((startCellY+oy)/300) - 25;
 				y1 -= y1 % 3;
 				y1 += 25;
-				saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+2));
-				sprintf(bufShots, "%.2f", (++doneShots/numShots)*100);
+				saveScreenshot();
+				//saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+2));
+				nowTime = time(NULL);
+
+				ETA = nowTime - startTime; // elapsed
+				ETA = ETA*100 / doneShots; // 100*time per screenshot
+				ETA = ETA * numShots; //
+				ETA = ETA - (nowTime - startTime)*100; //  100 * ETA
+
+				sprintf(bufShots, "Mapping: %.2f%% ETA: %.2fs", (++doneShots/numShots)*100, ETA / 100.0f);
 				ui->mappingStatus->setText(tr(bufShots));
 			//}
 		}
 	}
+	ui->mappingStatus->setText(tr("Mapping finished!"));
 }
 
 void LotPackWindow::zoomIn()
