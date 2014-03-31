@@ -192,6 +192,7 @@ void IsoWorldGridItem::paint(QPainter *painter,
                              QWidget *)
 {
 #if 1
+# if 0
     QColor gridColor(Qt::black);
 //    gridColor.setAlpha(128);
 
@@ -215,6 +216,7 @@ void IsoWorldGridItem::paint(QPainter *painter,
         const QPointF end = mScene->renderer()->tileToPixelCoords(x * 300, endY * 300, 0);
         painter->drawLine(start, end);
     }
+# endif
 #else
     const int tileWidth = 64;
     const int tileHeight = 32;
@@ -430,7 +432,7 @@ LotPackView::LotPackView(QWidget *parent) :
     factors << 0.12 << 0.25 << 0.33 << 0.5 << 0.75 << 1.0 << 1.5 << 2.0;
     zoomable()->setZoomFactors(factors);
 
-    zoomable()->setScale(0.25);
+    zoomable()->setScale(1.0);
 
 }
 
@@ -608,6 +610,7 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     keys = QKeySequence::keyBindings(QKeySequence::ZoomOut);
     keys += QKeySequence(tr("-"));
     ui->actionZoomOut->setShortcuts(keys);
+    ui->actionSaveScreenshot->setShortcut(QKeySequence(tr("F12")));
 
     mView->zoomable()->connectToComboBox(ui->scaleCombo);
     connect(mView->zoomable(), SIGNAL(scaleChanged(qreal)), SLOT(updateZoom()));
@@ -618,6 +621,9 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
     connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
     connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+
+    connect(ui->actionSaveScreenshot, SIGNAL(triggered()), SLOT(saveScreenshot()));
+    connect(ui->actionStartMapping, SIGNAL(triggered()), SLOT(startMapping()));
 
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)),
             prefs, SLOT(setShowMiniMap(bool)));
@@ -753,6 +759,153 @@ void LotPackWindow::closeWorld()
     }
 }
 
+#include <QScrollBar>
+#include "unistd.h"
+void LotPackWindow::saveScreenshot(){
+	QScrollBar *sx = mView->horizontalScrollBar();
+	QScrollBar *sy = mView->verticalScrollBar();
+	qDebug() << "X:" << sx->minimum() << "<" << sx->maximum();
+	qDebug() << "Y:" << sy->minimum() << "<" << sy->maximum();
+	saveScreenshot(tr("."));
+}
+
+void LotPackWindow::saveScreenshot(const QString &path)
+{
+	QScrollBar *sx = mView->horizontalScrollBar();
+	QScrollBar *sy = mView->verticalScrollBar();
+	QPixmap pixMap = mView->grab(QRect(1, 1, mView->width()-15, mView->height()-15));
+	int x = sx->value();
+	int y = sy->value();
+
+	QString filename = tr("%1/screenshot_%2_%3" ".png").arg(path).arg(x).arg(y);
+	QFileInfo recentInfo(filename);
+	if (recentInfo.exists()){
+		qDebug() << filename << "exists already. Skipping.";
+		return;
+	}
+	qDebug() << filename;
+	pixMap.save(filename);
+}
+
+int XToScreen(int x, int y, int z){
+	Q_UNUSED(z);
+
+	int SX = 0;
+
+	SX += x * 32;
+	SX -= y * 32;
+	SX += 249600; // This is for the main map
+	/* X: 57600 <= 57600 <= 497853
+	 * Y: 211200 <= 211200 <= 431340
+	 */
+	// SX += 17853 / 2; // This is for a 1x1 cell map at 0x0
+
+	return SX;
+}
+
+int YToScreen(int x, int y, int oz, int sz){
+	int SY = 0.0F;
+
+	SY += y * 16.0F;
+	SY += x * 16.0F;
+	SY += (oz - sz) * 96.0F;
+
+	return SY;
+}
+
+void LotPackWindow::startMapping()
+{
+//	const int tileWidth = 64;
+//	const int tileHeight = 32;
+	QScrollBar *sx = mView->horizontalScrollBar();
+	QScrollBar *sy = mView->verticalScrollBar();
+
+	int startCellX = ui->cellStartX->value() * 300;
+	int startCellY = ui->cellStartY->value() * 300;
+	int numCellX = ui->numCellX->value();
+	int numCellY = ui->numCellY->value();
+	// top: 25_25
+	// left: 25_44
+	// bottom: 44_44
+	// right: 44_25
+
+	qDebug() << "X:" << sx->minimum() << "<" << sx->maximum();
+	qDebug() << "Y:" << sy->minimum() << "<" << sy->maximum();
+
+	//int stepX = qFloor(mView->width()*0.6/64);
+	//int stepY = qFloor(mView->height()*0.6/32);
+	int stepX = qFloor((mView->width()-16)/64);
+	int stepY = qFloor((mView->height()-16)/32);
+
+	// Make sure that we get the entire cell, last screenshot _on_ the border
+	while (300 % stepX > 0)
+		stepX--;
+	while (300 % stepY > 0)
+		stepY--;
+
+	qDebug() << "stepX:" << stepX;
+	qDebug() << "stepY:" << stepY;
+
+	//bool skip=false;
+	//int skipUntilX = 306298;
+	//int skipUntilY = 325847;
+	int curTileX = 0;
+	int curTileY = 0;
+	float numShots = ((300 * numCellX / stepX) + 1) * ((300 * numCellY / stepY) + 1);
+	float doneShots = 0;
+	char bufShots[256];
+	time_t startTime;
+	time_t nowTime;
+	time_t ETA;
+
+	startTime = time(NULL);
+	for (int ox=0; ox <= 300 * numCellX; ox += stepX){
+		for (int oy=0; oy <= 300 * numCellY; oy += stepY){
+			qDebug() << "Mapping" << ox << "x" << oy;
+			// curOffsetX x curOffsetY will put the top end of the cell into the
+			// top-left corner of the view
+			QPointF p = mView->scene()->renderer()->tileToPixelCoords(startCellX + ox, startCellY + oy, 0);
+			//curTileX = XToScreen(startCellX + ox, startCellY + oy, 0) - mView->width()/2;
+			//curTileY = YToScreen(startCellX + ox, startCellY + oy, 0, 0) - mView->height()/2;
+			curTileX = p.x() - mView->width()/2;
+			curTileY = p.y() - mView->height()/2;
+
+			qDebug() << "Coordinates:" << curTileX << "x" << curTileY;
+			//if (curTileX == skipUntilX && curTileY == skipUntilY)
+				//skip = false;
+
+			//if (!skip){
+				sx->setValue(curTileX);
+				sy->setValue(curTileY);
+
+				repaint();
+				update();
+				qApp->processEvents();
+
+				//int y1 = qFloor((startCellY+oy)/300) - 25;
+				//y1 -= y1 % 5;
+				//y1 += 25;
+				int x1 = qFloor((startCellX+ox)/300);
+				int y1 = qFloor((startCellY+oy)/300);
+				//saveScreenshot();
+				//saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+4));
+				saveScreenshot(tr("cell%1" "x" "%2").arg(x1).arg(y1));
+				nowTime = time(NULL);
+
+				++doneShots;
+				ETA = nowTime - startTime; // elapsed
+				ETA = (100*ETA) / doneShots; // time per screenshot
+				ETA = ETA * numShots; //
+				ETA = ETA - (100*(nowTime - startTime)); //  ETA
+
+				sprintf(bufShots, "Mapping: %.2f%% ETA: %.2fs", (doneShots/numShots)*100, ETA / 100.0f);
+				ui->mappingStatus->setText(tr(bufShots));
+			//}
+		}
+	}
+	ui->mappingStatus->setText(tr("Mapping finished!"));
+}
+
 void LotPackWindow::zoomIn()
 {
     mView->zoomable()->zoomIn();
@@ -782,7 +935,9 @@ void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
     if (mWorld->tileBounds().contains(tilePos)) {
         int x = qFloor(tilePos.x() / 300.0);
         int y = qFloor(tilePos.y() / 300.0);
-        ui->coords->setText(tr("Cell %1,%2").arg(x).arg(y));
+				int tx = qFloor(tilePos.x() % 300);
+				int ty = qFloor(tilePos.y() % 300);
+        ui->coords->setText(tr("Cell %1,%2 Tile %3,%4").arg(x).arg(y).arg(tx).arg(ty));
     } else
         ui->coords->setText(QString());
 }

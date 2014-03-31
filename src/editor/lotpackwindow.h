@@ -26,6 +26,8 @@
 #include "tilelayer.h"
 #include "ztilelayergroup.h"
 
+#include "savescreenshot.h"
+
 #include <QGraphicsItem>
 
 class IsoWorld;
@@ -163,6 +165,7 @@ public:
     void scrollContentsBy(int dx, int dy);
 
     bool viewportEvent(QEvent *event);
+    QPoint mTilePos;
 
 signals:
     void tilePositionChanged(const QPoint &tilePos);
@@ -174,7 +177,6 @@ private:
     LotPackScene *mScene;
     IsoWorld *mWorld;
     LotPackMiniMapItem *mMiniMapItem;
-    QPoint mTilePos;
     bool mRecenterScheduled;
 };
 
@@ -200,6 +202,9 @@ private slots:
     void zoomOut();
     void zoomNormal();
     void updateZoom();
+    void saveScreenshot();
+    void saveScreenshot(const QString &path);
+    void startMapping();
 
     void tilePositionChanged(const QPoint &tilePos);
 
@@ -207,6 +212,10 @@ private:
     Ui::LotPackWindow *ui;
     LotPackView *mView;
     IsoWorld *mWorld;
+		int curMappingCellX;
+		int curMappingCellY;
+		int curOffsetX;
+		int curOffsetY;
 };
 
 #endif // LOTPACKWINDOW_H

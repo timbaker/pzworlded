@@ -1,2 +1,9 @@
 *.pro.user
-
+*.cache
+*.o
+bin
+lib
+Makefile*
+.moc
+.rcc
+.uic

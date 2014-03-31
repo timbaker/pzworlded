@@ -47,6 +47,7 @@ RCC_DIR = .rcc
 OBJECTS_DIR = .obj
 
 SOURCES += main.cpp\
+    savescreenshot.cpp \
         mainwindow.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -143,6 +144,7 @@ SOURCES += main.cpp\
     tmxtobmpdialog.cpp
 
 HEADERS  += mainwindow.h \
+		savescreenshot.h \
     worldview.h \
     worldscene.h \
     world.h \

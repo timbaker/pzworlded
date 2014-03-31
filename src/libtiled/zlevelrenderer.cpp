@@ -611,12 +611,18 @@ void ZLevelRenderer::drawImageLayer(QPainter *painter,
     painter->drawPixmap(paintOrigin, img);
 }
 
+#include <QDebug>
+
 QPointF ZLevelRenderer::pixelToTileCoords(qreal x, qreal y, int level) const
 {
     const int tileWidth = map()->tileWidth();
     const int tileHeight = map()->tileHeight();
     const qreal ratio = (qreal) tileWidth / tileHeight;
 
+		/*qDebug() << "tilewidth:" << tileWidth << "tileheight: " << tileHeight << "height:" << map()->height();
+		qDebug() << "map()->cellsPerLevel().y():" << map()->cellsPerLevel().y();
+		qDebug() << "maxLevel() - level:" << maxLevel() << "-" << level;
+		qDebug() << "x:" << x << "y:" << y;*/
     x -= map()->height() * tileWidth / 2;
 #ifdef ZOMBOID
     y -= map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
