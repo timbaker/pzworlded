@@ -192,6 +192,7 @@ void IsoWorldGridItem::paint(QPainter *painter,
                              QWidget *)
 {
 #if 1
+# if 0
     QColor gridColor(Qt::black);
 //    gridColor.setAlpha(128);
 
@@ -215,6 +216,7 @@ void IsoWorldGridItem::paint(QPainter *painter,
         const QPointF end = mScene->renderer()->tileToPixelCoords(x * 300, endY * 300, 0);
         painter->drawLine(start, end);
     }
+# endif
 #else
     const int tileWidth = 64;
     const int tileHeight = 32;
@@ -760,6 +762,10 @@ void LotPackWindow::closeWorld()
 #include <QScrollBar>
 #include "unistd.h"
 void LotPackWindow::saveScreenshot(){
+	QScrollBar *sx = mView->horizontalScrollBar();
+	QScrollBar *sy = mView->verticalScrollBar();
+	qDebug() << "X:" << sx->minimum() << "<" << sx->maximum();
+	qDebug() << "Y:" << sy->minimum() << "<" << sy->maximum();
 	saveScreenshot(tr("."));
 }
 
@@ -845,7 +851,7 @@ void LotPackWindow::startMapping()
 	//int skipUntilY = 325847;
 	int curTileX = 0;
 	int curTileY = 0;
-	float numShots = qCeil(301 * numCellX / stepX) * qCeil(301 * numCellY / stepY);
+	float numShots = ((300 * numCellX / stepX) + 1) * ((300 * numCellY / stepY) + 1);
 	float doneShots = 0;
 	char bufShots[256];
 	time_t startTime;
@@ -858,8 +864,11 @@ void LotPackWindow::startMapping()
 			qDebug() << "Mapping" << ox << "x" << oy;
 			// curOffsetX x curOffsetY will put the top end of the cell into the
 			// top-left corner of the view
-			curTileX = XToScreen(startCellX + ox, startCellY + oy, 0) - mView->width()/2;
-			curTileY = YToScreen(startCellX + ox, startCellY + oy, 0, 0) - mView->height()/2;
+			QPointF p = mView->scene()->renderer()->tileToPixelCoords(startCellX + ox, startCellY + oy, 0);
+			//curTileX = XToScreen(startCellX + ox, startCellY + oy, 0) - mView->width()/2;
+			//curTileY = YToScreen(startCellX + ox, startCellY + oy, 0, 0) - mView->height()/2;
+			curTileX = p.x() - mView->width()/2;
+			curTileY = p.y() - mView->height()/2;
 
 			qDebug() << "Coordinates:" << curTileX << "x" << curTileY;
 			//if (curTileX == skipUntilX && curTileY == skipUntilY)
@@ -873,19 +882,23 @@ void LotPackWindow::startMapping()
 				update();
 				qApp->processEvents();
 
-				int y1 = qFloor((startCellY+oy)/300) - 25;
-				y1 -= y1 % 3;
-				y1 += 25;
-				saveScreenshot();
-				//saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+2));
+				//int y1 = qFloor((startCellY+oy)/300) - 25;
+				//y1 -= y1 % 5;
+				//y1 += 25;
+				int x1 = qFloor((startCellX+ox)/300);
+				int y1 = qFloor((startCellY+oy)/300);
+				//saveScreenshot();
+				//saveScreenshot(tr("cell%1" "x" "%2" "-" "%3").arg(qFloor((startCellX+ox)/300)).arg(y1).arg(y1+4));
+				saveScreenshot(tr("cell%1" "x" "%2").arg(x1).arg(y1));
 				nowTime = time(NULL);
 
+				++doneShots;
 				ETA = nowTime - startTime; // elapsed
-				ETA = ETA*100 / doneShots; // 100*time per screenshot
+				ETA = (100*ETA) / doneShots; // time per screenshot
 				ETA = ETA * numShots; //
-				ETA = ETA - (nowTime - startTime)*100; //  100 * ETA
+				ETA = ETA - (100*(nowTime - startTime)); //  ETA
 
-				sprintf(bufShots, "Mapping: %.2f%% ETA: %.2fs", (++doneShots/numShots)*100, ETA / 100.0f);
+				sprintf(bufShots, "Mapping: %.2f%% ETA: %.2fs", (doneShots/numShots)*100, ETA / 100.0f);
 				ui->mappingStatus->setText(tr(bufShots));
 			//}
 		}
