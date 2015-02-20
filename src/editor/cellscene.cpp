@@ -1482,9 +1482,11 @@ QString CellScene::roomNameAt(const QPointF &scenePos)
 
 void CellScene::keyPressEvent(QKeyEvent *event)
 {
-    mActiveTool->keyPressEvent(event);
-    if (event->isAccepted())
-        return;
+    if (mActiveTool != 0) {
+        mActiveTool->keyPressEvent(event);
+        if (event->isAccepted())
+            return;
+    }
     QGraphicsScene::keyPressEvent(event);
 }
 

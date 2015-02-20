@@ -157,7 +157,7 @@ QString MapManager::pathForMap(const QString &mapName, const QString &relativeTo
 
     return QString();
 }
-
+#if 0
 class EditorMapReader : public MapReader
 {
 protected:
@@ -174,7 +174,7 @@ protected:
         return canonical.isEmpty() ? resolved : canonical;
     }
 };
-
+#endif
 MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
                              bool asynch, LoadPriority priority)
 {

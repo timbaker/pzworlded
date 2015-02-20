@@ -590,6 +590,7 @@ BuildingTile *BuildingReaderPrivate::readFurnitureTile(FurnitureTile *ftile, QPo
     if (x < 0 || y < 0) {
         xml.raiseError(tr("invalid furniture tile coordinates (%1,%2)")
                        .arg(x).arg(y));
+        return 0;
     }
     pos.setX(x);
     pos.setY(y);

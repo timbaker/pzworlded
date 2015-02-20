@@ -1601,11 +1601,11 @@ void BuildingFloor::LayoutToSquares()
 
             sq.ReplaceWallTrim();
             if (sq.mEntryEnum[Square::SectionWall] == BTC_Walls::SouthEast) {
-                if (squares[x][y-1].mWallW.trim) {
+                if (y > 0 && squares[x][y-1].mWallW.trim) {
                     // SouthEast corner or south end of north-south wall
                     sq.mEntries[Square::SectionWallTrim] = squares[x][y-1].mWallW.trim;
                     sq.mEntryEnum[Square::SectionWallTrim] = BTC_Walls::SouthEast;
-                } else if (squares[x-1][y].mWallN.trim) {
+                } else if (x > 0 && squares[x-1][y].mWallN.trim) {
                     // East end of west-east wall
                     sq.mEntries[Square::SectionWallTrim] = squares[x-1][y].mWallN.trim;
                     sq.mEntryEnum[Square::SectionWallTrim] = BTC_Walls::SouthEast;
