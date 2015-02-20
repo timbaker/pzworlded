@@ -46,6 +46,12 @@ Building::Building(int width, int height, BuildingTemplate *btemplate) :
     }
 }
 
+Building::~Building()
+{
+    qDeleteAll(mFloors);
+    qDeleteAll(mRooms);
+}
+
 BuildingFloor *Building::floor(int index)
 {
     if (index >= 0 && index < mFloors.size())

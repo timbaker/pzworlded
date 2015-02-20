@@ -1089,6 +1089,8 @@ ShadowBuilding::ShadowBuilding(const Building *building) :
 ShadowBuilding::~ShadowBuilding()
 {
     qDeleteAll(mModifiers);
+    while (mShadowBuilding->roomCount())
+        mShadowBuilding->removeRoom(0);
     delete mShadowBuilding;
 }
 

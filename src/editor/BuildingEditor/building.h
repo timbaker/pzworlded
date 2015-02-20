@@ -52,6 +52,7 @@ public:
     };
 
     Building(int width, int height, BuildingTemplate *btemplate = 0);
+    ~Building();
 
     int width() const { return mWidth; }
     int height() const { return mHeight; }

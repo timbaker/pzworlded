@@ -34,6 +34,7 @@
 #include "qtlockedfile.h"
 using namespace SharedTools;
 
+#include "BuildingEditor/building.h"
 #include "BuildingEditor/buildingreader.h"
 #include "BuildingEditor/buildingmap.h"
 #include "BuildingEditor/buildingobjects.h"
@@ -735,6 +736,8 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     BuildingMap bmap(building);
     Map *map = bmap.mergedMap();
     bmap.addRoomDefObjects(map);
+
+    delete building;
 
     QSet<Tileset*> usedTilesets = map->usedTilesets();
     usedTilesets.remove(TilesetManager::instance()->missingTileset());
