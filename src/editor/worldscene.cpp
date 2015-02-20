@@ -1317,6 +1317,10 @@ void WorldCoordItem::paint(QPainter *painter,
     const QFontMetrics fm = painter->fontMetrics();
     int lineHeight = fm.lineSpacing();
 
+    QPen pen = painter->pen();
+    pen.setCosmetic(true);
+    painter->setPen(pen);
+
     QPoint worldOrigin = mScene->world()->getGenerateLotsSettings().worldOrigin;
 
     for (int y = startY; y <= endY; ++y) {
