@@ -782,7 +782,7 @@ void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
     if (mWorld->tileBounds().contains(tilePos)) {
         int x = qFloor(tilePos.x() / 300.0);
         int y = qFloor(tilePos.y() / 300.0);
-        ui->coords->setText(tr("Cell %1,%2").arg(x).arg(y));
+        ui->coords->setText(tr("Cell %1,%2 World %3,%4").arg(x).arg(y).arg(tilePos.x()).arg(tilePos.y()));
     } else
         ui->coords->setText(QString());
 }
