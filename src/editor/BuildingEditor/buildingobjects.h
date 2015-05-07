@@ -120,6 +120,8 @@ public:
     virtual bool affectsFloorAbove() const { return false; }
 
     virtual BuildingObject *clone() const = 0;
+    virtual bool sameAs(BuildingObject *other) = 0;
+    virtual bool sameTilesAs(BuildingObject *other);
 
     virtual QPolygonF calcShape() const = 0;
 
@@ -149,6 +151,7 @@ public:
     }
 
     BuildingObject *clone() const;
+    bool sameAs(BuildingObject *other);
 
     QPolygonF calcShape() const;
 
@@ -195,6 +198,7 @@ public:
     bool affectsFloorAbove() const { return true; }
 
     BuildingObject *clone() const;
+    bool sameAs(BuildingObject *other);
 
     QPolygonF calcShape() const;
 
@@ -248,6 +252,7 @@ public:
                     BuildingEditor::BuildingFloor *floor = 0) const;
 
     BuildingObject *clone() const;
+    bool sameAs(BuildingObject *other);
 
     QPolygonF calcShape() const;
 
@@ -306,6 +311,7 @@ public:
     }
 
     BuildingObject *clone() const;
+    bool sameAs(BuildingObject *other);
 
     QPolygonF calcShape() const;
 
@@ -341,6 +347,7 @@ public:
     virtual QSet<BuildingTile*> buildingTiles() const;
 
     BuildingObject *clone() const;
+    bool sameAs(BuildingObject *other);
 
     QPolygonF calcShape() const;
 
@@ -435,6 +442,7 @@ public:
     bool affectsFloorAbove() const { return true; }
 
     BuildingObject *clone() const;
+    bool sameAs(BuildingObject *other);
 
     QPolygonF calcShape() const;
 

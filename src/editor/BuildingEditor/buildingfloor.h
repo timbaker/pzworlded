@@ -36,6 +36,7 @@ class Door;
 class FloorType;
 class FurnitureObject;
 class FurnitureTile;
+class RoofObject;
 class Room;
 class Stairs;
 class Window;
@@ -113,12 +114,12 @@ public:
             SectionWallTrim2,
             SectionRoofCap,
             SectionRoofCap2,
-            SectionWallOverlay,
-            SectionWallOverlay2,
+            SectionWallOverlay, // West, North walls
+            SectionWallOverlay2, // West, North walls
             SectionWallGrime,
             SectionWallGrime2,
-            SectionWallFurniture,
-            SectionWallFurniture2,
+            SectionWallFurniture, // West, North walls
+            SectionWallFurniture2, // West, North walls
             SectionFrame,
             SectionDoor,
             SectionWindow,
@@ -128,6 +129,10 @@ public:
             SectionFurniture3,
             SectionFurniture4,
             SectionCurtains2, // East, South windows
+            SectionWallFurniture3, // East, South walls
+            SectionWallFurniture4, // East, South walls
+            SectionWallOverlay3, // East, South walls
+            SectionWallOverlay4, // East, South walls
             SectionRoof,
             SectionRoof2,
             SectionRoofTop,
@@ -319,6 +324,8 @@ private:
     QMap<QString,FloorTileGrid*> mGrimeGrid;
     QMap<QString,qreal> mLayerOpacity;
     QMap<QString,bool> mLayerVisibility;
+    QList<RoofObject*> mFlatRoofsWithDepthThree;
+    QList<Stairs*> mStairs;
 };
 
 } // namespace BuildingEditor

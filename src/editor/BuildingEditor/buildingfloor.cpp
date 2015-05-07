@@ -674,6 +674,9 @@ void BuildingFloor::LayoutToSquares()
         }
     }
 
+    mFlatRoofsWithDepthThree.clear();
+    mStairs.clear();
+
     foreach (BuildingObject *object, mObjects) {
         int x = object->x();
         int y = object->y();
@@ -698,6 +701,7 @@ void BuildingFloor::LayoutToSquares()
                                      Square::SectionFurniture,
                                      Square::SectionFurniture4);
             }
+            mStairs += stairs;
         }
         if (FurnitureObject *fo = object->asFurniture()) {
             FurnitureTile *ftile = fo->furnitureTile()->resolved();
@@ -723,13 +727,13 @@ void BuildingFloor::LayoutToSquares()
                     }
                     case FurnitureTiles::LayerWallOverlay:
                         ReplaceFurniture(x + j, y + i, squares, ftile->tile(j, i),
-                                         Square::SectionWallOverlay,
-                                         Square::SectionWallOverlay2);
+                                         (ftile->isW() || ftile->isN()) ? Square::SectionWallOverlay : Square::SectionWallOverlay3,
+                                         (ftile->isW() || ftile->isN()) ? Square::SectionWallOverlay2 : Square::SectionWallOverlay4);
                         break;
                     case FurnitureTiles::LayerWallFurniture:
                         ReplaceFurniture(x + j, y + i, squares, ftile->tile(j, i),
-                                         Square::SectionWallFurniture,
-                                         Square::SectionWallFurniture2);
+                                         (ftile->isW() || ftile->isN()) ? Square::SectionWallFurniture : Square::SectionWallFurniture3,
+                                         (ftile->isW() || ftile->isN()) ? Square::SectionWallFurniture2 : Square::SectionWallFurniture4);
                         break;
                     case FurnitureTiles::LayerFrames: {
                         int dx = 0, dy = 0;
@@ -1060,6 +1064,8 @@ void BuildingFloor::LayoutToSquares()
             // floor above.
             if (ro->depth() != RoofObject::Three)
                 ReplaceRoofTop(ro, ro->flatTop(), squares);
+            else if (!ro->flatTop().isEmpty())
+                mFlatRoofsWithDepthThree += ro;
 #if 0
             // West cap
             if (ro->isCappedW()) {
@@ -1562,35 +1568,28 @@ void BuildingFloor::LayoutToSquares()
         }
     }
 
-    // Place flat roof tops above roofs on the floor below
     if (BuildingFloor *floorBelow = this->floorBelow()) {
-        foreach (BuildingObject *object, floorBelow->objects()) {
-            if (RoofObject *ro = object->asRoof()) {
-                if (ro->depth() == RoofObject::Three)
-                    ReplaceRoofTop(ro, ro->flatTop(), squares);
-            }
+        // Place flat roof tops above roofs on the floor below
+        foreach (RoofObject *ro, floorBelow->mFlatRoofsWithDepthThree) {
+            ReplaceRoofTop(ro, ro->flatTop(), squares);
         }
-    }
 
-    // Nuke floors that have stairs on the floor below.
-    if (BuildingFloor *floorBelow = this->floorBelow()) {
-        foreach (BuildingObject *object, floorBelow->objects()) {
-            if (Stairs *stairs = object->asStairs()) {
-                int x = stairs->x(), y = stairs->y();
-                if (stairs->isW()) {
-                    if (x + 1 < 0 || x + 3 >= width() || y < 0 || y >= height())
-                        continue;
-                    squares[x+1][y].ReplaceFloor(0, 0);
-                    squares[x+2][y].ReplaceFloor(0, 0);
-                    squares[x+3][y].ReplaceFloor(0, 0);
-                }
-                if (stairs->isN()) {
-                    if (x < 0 || x >= width() || y + 1 < 0 || y + 3 >= height())
-                        continue;
-                    squares[x][y+1].ReplaceFloor(0, 0);
-                    squares[x][y+2].ReplaceFloor(0, 0);
-                    squares[x][y+3].ReplaceFloor(0, 0);
-                }
+        // Nuke floors that have stairs on the floor below.
+        foreach (Stairs *stairs, floorBelow->mStairs) {
+            int x = stairs->x(), y = stairs->y();
+            if (stairs->isW()) {
+                if (x + 1 < 0 || x + 3 >= width() || y < 0 || y >= height())
+                    continue;
+                squares[x+1][y].ReplaceFloor(0, 0);
+                squares[x+2][y].ReplaceFloor(0, 0);
+                squares[x+3][y].ReplaceFloor(0, 0);
+            }
+            if (stairs->isN()) {
+                if (x < 0 || x >= width() || y + 1 < 0 || y + 3 >= height())
+                    continue;
+                squares[x][y+1].ReplaceFloor(0, 0);
+                squares[x][y+2].ReplaceFloor(0, 0);
+                squares[x][y+3].ReplaceFloor(0, 0);
             }
         }
     }

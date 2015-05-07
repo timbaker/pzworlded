@@ -110,6 +110,18 @@ void BuildingObject::flip(bool horizontal)
     }
 }
 
+bool BuildingObject::sameTilesAs(BuildingObject *other)
+{
+    QList<BuildingTileEntry*> tiles1 = this->tiles();
+    QList<BuildingTileEntry*> tiles2 = other->tiles();
+    if (tiles1.size() != tiles2.size())
+        return false;
+    for (int i = 0; i < tiles1.size(); i++)
+        if (!tiles1[i]->equals(tiles2[i]))
+            return false;
+    return true;
+}
+
 int BuildingObject::index()
 {
     return mFloor->indexOf(this);
@@ -123,6 +135,16 @@ BuildingObject *Door::clone() const
     clone->mTile = mTile;
     clone->mFrameTile = mFrameTile;
     return clone;
+}
+
+bool Door::sameAs(BuildingObject *other)
+{
+    if (Door *o = other->asDoor()) {
+        return mDir == o->mDir && pos() == o->pos() &&
+                (!mFloor || !o->mFloor || mFloor->level() == o->mFloor->level()) &&
+                sameTilesAs(other);
+    }
+    return false;
 }
 
 QPolygonF Door::calcShape() const
@@ -182,6 +204,16 @@ BuildingObject *Stairs::clone() const
     Stairs *clone = new Stairs(mFloor, mX, mY, mDir);
     clone->mTile = mTile;
     return clone;
+}
+
+bool Stairs::sameAs(BuildingObject *other)
+{
+    if (Stairs *o = other->asStairs()) {
+        return mDir == o->mDir && pos() == o->pos() &&
+                (!mFloor || !o->mFloor || mFloor->level() == o->mFloor->level()) &&
+                sameTilesAs(other);
+    }
+    return false;
 }
 
 QPolygonF Stairs::calcShape() const
@@ -348,6 +380,17 @@ BuildingObject *FurnitureObject::clone() const
     FurnitureObject *clone = new FurnitureObject(mFloor, mX, mY);
     clone->mFurnitureTile = mFurnitureTile;
     return clone;
+}
+
+bool FurnitureObject::sameAs(BuildingObject *other)
+{
+    if (FurnitureObject *o = other->asFurniture()) {
+        return pos() == o->pos() &&
+                (!mFloor || !o->mFloor || mFloor->level() == o->mFloor->level()) &&
+                (mFurnitureTile == o->mFurnitureTile ||
+                mFurnitureTile->equals(o->mFurnitureTile));
+    }
+    return false;
 }
 
 QPolygonF FurnitureObject::calcShape() const
@@ -687,6 +730,20 @@ BuildingObject *RoofObject::clone() const
     clone->mSlopeTiles = mSlopeTiles;
     clone->mTopTiles = mTopTiles;
     return clone;
+}
+
+bool RoofObject::sameAs(BuildingObject *other)
+{
+    if (RoofObject *o = other->asRoof()) {
+        return bounds() == o->bounds() &&
+                (!mFloor || !o->mFloor || mFloor->level() == o->mFloor->level()) &&
+                mHalfDepth == o->mHalfDepth &&
+                mCapTiles->equals(o->mCapTiles) &&
+                mSlopeTiles->equals(o->mSlopeTiles) &&
+                mTopTiles->equals(o->mTopTiles);
+    }
+    return false;
+
 }
 
 QPolygonF RoofObject::calcShape() const
@@ -2402,6 +2459,17 @@ BuildingObject *WallObject::clone() const
     return clone;
 }
 
+bool WallObject::sameAs(BuildingObject *other)
+{
+    if (WallObject *o = other->asWall()) {
+        return mDir == o->mDir && pos() == o->pos() &&
+                mLength == o->mLength &&
+                (!mFloor || !o->mFloor || mFloor->level() == o->mFloor->level()) &&
+                sameTilesAs(other);
+    }
+    return false;
+}
+
 QPolygonF WallObject::calcShape() const
 {
     if (isN())
@@ -2420,6 +2488,16 @@ BuildingObject *Window::clone() const
     clone->mCurtainsTile = mCurtainsTile;
     clone->mShuttersTile = mShuttersTile;
     return clone;
+}
+
+bool Window::sameAs(BuildingObject *other)
+{
+    if (Window *o = other->asWindow()) {
+        return mDir == o->mDir && pos() == o->pos() &&
+                (!mFloor || !o->mFloor || mFloor->level() == o->mFloor->level()) &&
+                sameTilesAs(other);
+    }
+    return false;
 }
 
 QPolygonF Window::calcShape() const
