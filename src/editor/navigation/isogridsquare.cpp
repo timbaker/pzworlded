@@ -1,6 +1,5 @@
 #include "isogridsquare.h"
 
-#include "chunkedges.h"
 #include "isochunk.h"
 
 #include "tile.h"

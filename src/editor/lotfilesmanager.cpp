@@ -33,7 +33,6 @@
 #include "worlddocument.h"
 
 #include "navigation/chunkdatafile.h"
-#include "navigation/navigationfile.h"
 
 #include "tile.h"
 #include "tileset.h"
@@ -270,24 +269,6 @@ if (false)
     if (!generateHeader(cell, mapComposite))
         return false;
 
-    if (false) {
-        foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
-            lg->prepareDrawing2();
-        }
-        Navigate::NavigationFile navFile;
-        navFile.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], mWorldDoc->world()->getGenerateLotsSettings());
-        return true;
-    }
-
-    if (true) {
-        foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
-            lg->prepareDrawing2();
-        }
-        Navigate::ChunkDataFile file;
-        file.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], mWorldDoc->world()->getGenerateLotsSettings());
-        return true;
-    }
-
     MaxLevel = 15;
 
     int mapWidth = mapInfo->width();
@@ -371,6 +352,9 @@ if (false)
         out << qint64(PositionMap[m]);
 
     file.close();
+
+    Navigate::ChunkDataFile cdf;
+    cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
 
     return true;
 }
