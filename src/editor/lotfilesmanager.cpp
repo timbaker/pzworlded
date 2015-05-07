@@ -32,6 +32,9 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include "navigation/chunkdatafile.h"
+#include "navigation/navigationfile.h"
+
 #include "tile.h"
 #include "tileset.h"
 
@@ -255,6 +258,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 #endif
 
     // Check for missing tilesets.
+if (false)
     foreach (MapComposite *mc, mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
             mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
@@ -265,6 +269,24 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     if (!generateHeader(cell, mapComposite))
         return false;
+
+    if (false) {
+        foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+            lg->prepareDrawing2();
+        }
+        Navigate::NavigationFile navFile;
+        navFile.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], mWorldDoc->world()->getGenerateLotsSettings());
+        return true;
+    }
+
+    if (true) {
+        foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+            lg->prepareDrawing2();
+        }
+        Navigate::ChunkDataFile file;
+        file.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], mWorldDoc->world()->getGenerateLotsSettings());
+        return true;
+    }
 
     MaxLevel = 15;
 

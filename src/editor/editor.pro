@@ -140,7 +140,12 @@ SOURCES += main.cpp\
     sceneoverlay.cpp \
     writeworldobjectsdialog.cpp \
     tmxtobmp.cpp \
-    tmxtobmpdialog.cpp
+    tmxtobmpdialog.cpp \
+    navigation/chunkedges.cpp \
+    navigation/isochunk.cpp \
+    navigation/isogridsquare.cpp \
+    navigation/navigationfile.cpp \
+    navigation/chunkdatafile.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -234,7 +239,12 @@ HEADERS  += mainwindow.h \
     sceneoverlay.h \
     writeworldobjectsdialog.h \
     tmxtobmp.h \
-    tmxtobmpdialog.h
+    tmxtobmpdialog.h \
+    navigation/chunkedges.h \
+    navigation/isochunk.h \
+    navigation/isogridsquare.h \
+    navigation/navigationfile.h \
+    navigation/chunkdatafile.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
