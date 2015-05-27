@@ -449,13 +449,19 @@ static void ReplaceWindow(Window *window, QVector<QVector<BuildingFloor::Square>
 
         if (squares[x][y].mExterior) {
             if (window->isN()) {
+                if (x > 0)
+                    squares[x-1][y].ReplaceShutters(window, true);
                 squares[x][y].ReplaceShutters(window, true);
+                squares[x][y].ReplaceShutters(window, false);
                 if (x < bounds.right())
                     squares[x + 1][y].ReplaceShutters(window, false);
             } else {
-                if (y < bounds.bottom())
-                    squares[x][y + 1].ReplaceShutters(window, true);
+                if (y > 0)
+                    squares[x][y - 1].ReplaceShutters(window, true);
+                squares[x][y].ReplaceShutters(window, true);
                 squares[x][y].ReplaceShutters(window, false);
+                if (y < bounds.bottom())
+                    squares[x][y + 1].ReplaceShutters(window, false);
             }
         } else {
 
@@ -2125,12 +2131,13 @@ void BuildingFloor::Square::ReplaceShutters(Window *window, bool first)
         return;
 
     if (mExterior) {
-        if (window->isN())
+        if (window->isN()) {
             ReplaceFurniture(window->shuttersTile()->tile(first ? BTC_Shutters::NorthLeft : BTC_Shutters::NorthRight),
                              SectionWallFurniture, SectionWallFurniture2);
-        else
-            ReplaceFurniture(window->shuttersTile()->tile(first ? BTC_Shutters::WestBelow : BTC_Shutters::WestAbove),
+        } else {
+            ReplaceFurniture(window->shuttersTile()->tile(first ? BTC_Shutters::WestAbove : BTC_Shutters::WestBelow),
                              SectionWallFurniture, SectionWallFurniture2);
+        }
     } else {
 
     }
