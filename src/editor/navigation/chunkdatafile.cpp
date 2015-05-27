@@ -14,14 +14,13 @@ using namespace Navigate;
 
 ChunkDataFile::ChunkDataFile()
 {
-    if (IsoGridSquare::mTileDefFile.tilesets().isEmpty())
-        IsoGridSquare::mTileDefFile.read(QLatin1String("D:/pz/zomboid/workdir/media/newtiledefinitions.tiles"));
 }
 
 void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects, const GenerateLotsSettings &settings)
 {
+
     QString lotsDirectory = settings.exportDir;
-    QFile file(lotsDirectory + QLatin1Char('/') + QString::fromLatin1("chunkdata_%1_%2.bin")
+    QFile file(lotsDirectory + QString::fromLatin1("/chunkdata_%1_%2.bin")
                .arg(settings.worldOrigin.x() + cellX).arg(settings.worldOrigin.y() + cellY));
     if (!file.open(QIODevice::WriteOnly)) {
         return;
@@ -37,17 +36,21 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
     int BIT_WALLN = 1 << 1;
     int BIT_WALLW = 1 << 2;
     int BIT_WATER = 1 << 3;
+    int BIT_ROOM = 1 << 4;
 
     int EMPTY_CHUNK = 0;
     int SOLID_CHUNK = 1;
     int REGULAR_CHUNK = 2;
+    int WATER_CHUNK = 3;
+    int ROOM_CHUNK = 4;
+
 
     quint8 *bitsArray = new quint8[IsoChunk::WIDTH * IsoChunk::WIDTH];
 
     for (int yy = 0; yy < 30; yy++) {
         for (int xx = 0; xx < 30; xx++) {
             IsoChunk *chunk = new IsoChunk(xx, yy, mapComposite, roomRects);
-            int empty = 0, solid = 0;
+            int empty = 0, solid = 0, water = 0, room = 0;
             for (int y = 0; y < IsoChunk::WIDTH; y++) {
                 for (int x = 0; x < IsoChunk::WIDTH; x++) {
                     IsoGridSquare *sq = chunk->getGridSquare(x, y, 0);
@@ -60,17 +63,27 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
                         bits |= BIT_WALLW;
                     if (sq->isWater())
                         bits |= BIT_WATER;
+                    if (sq->isRoom())
+                        bits |= BIT_ROOM;
                     bitsArray[x + y * IsoChunk::WIDTH] = bits;
                     if (bits == 0)
                         empty++;
-                    else if (bits & BIT_SOLID)
+                    else if (bits == BIT_SOLID)
                         solid++;
+                    else if (bits == BIT_WATER)
+                        water++;
+                    else if (bits == BIT_ROOM)
+                        room++;
                 }
             }
             if (empty == IsoChunk::WIDTH * IsoChunk::WIDTH)
                 out << quint8(EMPTY_CHUNK);
             else if (solid == IsoChunk::WIDTH * IsoChunk::WIDTH)
                 out << quint8(SOLID_CHUNK);
+            else if (water == IsoChunk::WIDTH * IsoChunk::WIDTH)
+                out << quint8(WATER_CHUNK);
+            else if (room == IsoChunk::WIDTH * IsoChunk::WIDTH)
+                out << quint8(ROOM_CHUNK);
             else {
                 out << quint8(REGULAR_CHUNK);
                 for (int i = 0; i < IsoChunk::WIDTH * IsoChunk::WIDTH; i++)

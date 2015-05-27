@@ -5,6 +5,8 @@
 
 #include <QStringList>
 
+class GenerateLotsSettings;
+
 namespace Navigate {
 
 class IsoChunk;
@@ -18,6 +20,7 @@ public:
     bool isBlockedWest();
     bool isBlockedNorth();
     bool isWater();
+    bool isRoom();
 
     int getX() { return x; }
     int getY() { return y; }
@@ -35,7 +38,8 @@ public:
     bool mWater;
     bool mRoom;
 
-    static TileDefFile mTileDefFile;
+    static QList<TileDefFile*> mTileDefFiles;
+    static bool loadTileDefFiles(const GenerateLotsSettings &settings, QString &error);
 };
 
 } // namespace Navigate

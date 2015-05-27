@@ -20,6 +20,7 @@ public:
 private slots:
     void exportBrowse();
     void spawnBrowse();
+    void tileDefBrowse();
     void accept();
     void apply();
 
@@ -31,6 +32,7 @@ private:
     WorldDocument *mWorldDoc;
     QString mExportDir;
     QString mZombieSpawnMap;
+    QString mTileDefFolder;
 };
 
 #endif // GENERATELOTSDIALOG_H

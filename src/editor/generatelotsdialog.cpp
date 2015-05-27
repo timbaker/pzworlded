@@ -31,6 +31,11 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
     connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
 
+    // TileDef folder
+    mTileDefFolder = settings.tileDefFolder;
+    ui->tiledefEdit->setText(QDir::toNativeSeparators(mTileDefFolder));
+    connect(ui->tiledefBrowse, SIGNAL(clicked()), SLOT(tileDefBrowse()));
+
     // World origin
     ui->xOrigin->setValue(settings.worldOrigin.x());
     ui->yOrigin->setValue(settings.worldOrigin.y());
@@ -75,6 +80,16 @@ void GenerateLotsDialog::spawnBrowse()
     }
 }
 
+void GenerateLotsDialog::tileDefBrowse()
+{
+    QString f = QFileDialog::getExistingDirectory(this, tr("Choose the .tiles Folder"),
+        ui->tiledefEdit->text());
+    if (!f.isEmpty()) {
+        mTileDefFolder = f;
+        ui->tiledefEdit->setText(QDir::toNativeSeparators(mTileDefFolder));
+    }
+}
+
 void GenerateLotsDialog::accept()
 {
     if (!validate())
@@ -83,6 +98,7 @@ void GenerateLotsDialog::accept()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
+    settings.tileDefFolder = mTileDefFolder;
     settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
@@ -98,6 +114,7 @@ void GenerateLotsDialog::apply()
     GenerateLotsSettings settings;
     settings.exportDir = mExportDir;
     settings.zombieSpawnMap = mZombieSpawnMap;
+    settings.tileDefFolder = mTileDefFolder;
     settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
@@ -117,6 +134,13 @@ bool GenerateLotsDialog::validate()
     if (mZombieSpawnMap.isEmpty() || !info.exists()) {
         QMessageBox::warning(this, tr("It's no good, Jim!"),
                              tr("Please choose a Zombie Spawn Map image file."));
+        return false;
+    }
+    QDir dir2(mTileDefFolder);
+    if (mTileDefFolder.isEmpty() || !dir2.exists() ||
+            !QFileInfo(mTileDefFolder + QLatin1String("/newtiledefinitions.tiles")).exists()) {
+        QMessageBox::warning(this, tr("It's no good, Jim!"),
+                             tr("Please choose the directory containing newtiledefinitions.tiles."));
         return false;
     }
 

@@ -1,16 +1,18 @@
 #include "isogridsquare.h"
 
 #include "isochunk.h"
+#include "world.h"
 
 #include "tile.h"
 #include "tileset.h"
 #include "tilelayer.h"
 
 #include <QDebug>
+#include <QDir>
 
 using namespace Navigate;
 
-TileDefFile IsoGridSquare::mTileDefFile;
+QList<TileDefFile*> IsoGridSquare::mTileDefFiles;
 
 IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
     x(x),
@@ -48,7 +50,12 @@ IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
     QString windowN(QLatin1String("windowN"));
 
     foreach (const Tiled::Cell *cell, cells) {
-        TileDefTileset *tdts = mTileDefFile.tileset(cell->tile->tileset()->name());
+        TileDefTileset *tdts = NULL;
+        foreach (TileDefFile *tdefFile, mTileDefFiles) {
+            tdts = tdefFile->tileset(cell->tile->tileset()->name());
+            if (tdts != NULL)
+                break;
+        }
         if (tdts != NULL) {
             TileDefTile *tdt = tdts->tile(cell->tile->id() % tdts->mColumns, cell->tile->id() / tdts->mColumns);
             if (tdt == NULL)
@@ -78,7 +85,7 @@ IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
 
 bool IsoGridSquare::isSolid()
 {
-    return mSolid || mRoom;
+    return mSolid;
 }
 
 bool IsoGridSquare::isBlockedWest()
@@ -94,4 +101,31 @@ bool IsoGridSquare::isBlockedNorth()
 bool IsoGridSquare::isWater()
 {
     return mWater;
+}
+
+bool IsoGridSquare::isRoom()
+{
+    return mRoom;
+}
+
+bool IsoGridSquare::loadTileDefFiles(const GenerateLotsSettings &settings, QString &error)
+{
+    qDeleteAll(mTileDefFiles);
+    mTileDefFiles.clear();
+
+    QDir dir(settings.tileDefFolder);
+    QStringList filters(QLatin1String("*.tiles"));
+    QStringList files = dir.entryList(filters, QDir::Files, QDir::Name);
+    foreach (QString fileName, files) {
+        if (fileName.endsWith(QLatin1String("_4.tiles")))
+            continue;
+        TileDefFile *tdefFile = new TileDefFile();
+        if (!tdefFile->read(dir.filePath(fileName))) {
+            error = tdefFile->errorString();
+            return false;
+        }
+        qDebug() << "read " << fileName;
+        mTileDefFiles += tdefFile;
+    }
+    return true;
 }

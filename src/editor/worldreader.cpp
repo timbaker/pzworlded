@@ -540,6 +540,10 @@ private:
                 QString path = xml.attributes().value(QLatin1String("path")).toString();
                 settings.zombieSpawnMap = resolveReference(path, mPath);
                 xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("TileDefFolder")) {
+                QString path = xml.attributes().value(QLatin1String("path")).toString();
+                settings.tileDefFolder = resolveReference(path, mPath);
+                xml.skipCurrentElement();
             } else if (xml.name() == QLatin1String("worldOrigin")) {
                 QPoint pos;
                 if (readPoint(QLatin1String("origin"), pos))

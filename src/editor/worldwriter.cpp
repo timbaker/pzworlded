@@ -394,6 +394,10 @@ public:
         w.writeAttribute(QLatin1String("path"),
                          relativeFileName(settings.zombieSpawnMap));
         w.writeEndElement();
+        w.writeStartElement(QLatin1String("TileDefFolder"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(settings.tileDefFolder));
+        w.writeEndElement();
         w.writeStartElement(QLatin1String("worldOrigin"));
         writePoint(w, QLatin1String("origin"), settings.worldOrigin);
         w.writeEndElement();

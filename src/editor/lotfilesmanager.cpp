@@ -33,6 +33,7 @@
 #include "worlddocument.h"
 
 #include "navigation/chunkdatafile.h"
+#include "navigation/isogridsquare.h"
 
 #include "tile.h"
 #include "tileset.h"
@@ -96,6 +97,10 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
     if (ZombieSpawnMap.isNull()) {
         mError = tr("Couldn't read the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
+        return false;
+    }
+
+    if (!Navigate::IsoGridSquare::loadTileDefFiles(lotSettings, mError)) {
         return false;
     }
 
@@ -256,8 +261,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
 #endif
 
+    bool chunkDataOnly = false;
+
     // Check for missing tilesets.
-if (false)
+    if (!chunkDataOnly)
     foreach (MapComposite *mc, mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
             mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
@@ -268,6 +275,16 @@ if (false)
 
     if (!generateHeader(cell, mapComposite))
         return false;
+
+    if (chunkDataOnly) {
+        foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+            lg->prepareDrawing2();
+        }
+        const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+        Navigate::ChunkDataFile cdf;
+        cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
+        return true;
+    }
 
     MaxLevel = 15;
 
