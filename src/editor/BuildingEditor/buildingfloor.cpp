@@ -271,7 +271,12 @@ void BuildingFloor::insertObject(int index, BuildingObject *object)
 
 BuildingObject *BuildingFloor::removeObject(int index)
 {
-    return mObjects.takeAt(index);
+    BuildingObject *object = mObjects.takeAt(index);
+    if (RoofObject *ro = object->asRoof())
+        mFlatRoofsWithDepthThree.removeAll(ro);
+    if (Stairs *stairs = object->asStairs())
+        mStairs.removeAll(stairs);
+    return object;
 }
 
 BuildingObject *BuildingFloor::objectAt(int x, int y)
