@@ -264,6 +264,9 @@ public:
 
     bool isLoaded() const
     { return mLoaded; }
+
+    bool loadImage2x(const QImage &image);
+    QList<Tile*> mTiles2x;
 #endif
 
 private:

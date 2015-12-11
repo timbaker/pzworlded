@@ -158,9 +158,10 @@ void CellMiniMapItem::updateCellImage()
     if (!mCell->mapFilePath().isEmpty()) {
         mMapImage = MapImageManager::instance()->getMapImage(mCell->mapFilePath());
         if (mMapImage) {
-            QPointF offset = mMapImage->tileToImageCoords(0, 0) / mMapImage->scale();
+            qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
+            QPointF offset = mMapImage->tileToImageCoords(0, 0) / mMapImage->scale() * tileScale;
             mMapImageBounds = QRectF(mScene->renderer()->tileToPixelCoords(0.0, 0.0) - offset,
-                                     mMapImage->image().size() / mMapImage->scale());
+                                     mMapImage->image().size() / mMapImage->scale() * tileScale);
         }
     }
 }
@@ -170,9 +171,10 @@ void CellMiniMapItem::updateLotImage(int index)
     WorldCellLot *lot = mCell->lots().at(index);
     MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
     if (mapImage) {
-        QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale();
+        qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mapImage->tileSize().width();
+        QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale() * tileScale;
         QRectF bounds = QRectF(mScene->renderer()->tileToPixelCoords(lot->x(), lot->y(), lot->level()) - offset,
-                               mapImage->image().size() / mapImage->scale());
+                               mapImage->image().size() / mapImage->scale() * tileScale);
         mLotImages[index].mBounds = bounds;
         mLotImages[index].mMapImage = mapImage;
     } else {
@@ -1046,8 +1048,9 @@ void DnDItem::setTilePosition(QPoint tilePos)
 {
     mPositionInMap = tilePos;
 
-    QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale());
-    QRectF bounds = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale(),
+    qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
+    QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
+    QRectF bounds = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale,
                            scaledImageSize);
     bounds.translate(mRenderer->tileToPixelCoords(mPositionInMap, mLevel));
     if (bounds != mBoundingRect) {
@@ -1060,8 +1063,9 @@ void DnDItem::setHotSpot(const QPoint &pos)
 {
     // Position the item so that the top-left corner of the hotspot tile is at the item's origin
     mHotSpot = pos;
-    QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale());
-    mBoundingRect = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale(), scaledImageSize);
+    qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
+    QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
+    mBoundingRect = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale, scaledImageSize);
 }
 
 QPoint DnDItem::dropPosition()
@@ -2849,8 +2853,8 @@ void AdjacentMap::sceneRectChanged()
 {
     int x = cell()->x() - scene()->cell()->x();
     int y = cell()->y() - scene()->cell()->y();
-    QRectF r = scene()->renderer()->boundingRect(QRect(x * 300, y * 300, 300, 300));
-    QPointF offset((x - y) * (300 * 64 / 2), (x + y) * (300 * 32 / 2));
+    QRectF r = scene()->renderer()->boundingRect(QRect(0, 0, 1, 1));
+    QPointF offset((x - y) * (300 * r.width() / 2), (x + y) * (300 * r.height() / 2));
     mObjectItemParent->setPos(offset);
 
     foreach (ObjectItem *item, mObjectItems)

@@ -261,10 +261,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
 #endif
 
-    bool chunkDataOnly = false;
 
     // Check for missing tilesets.
-    if (!chunkDataOnly)
     foreach (MapComposite *mc, mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
             mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
@@ -276,6 +274,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     if (!generateHeader(cell, mapComposite))
         return false;
 
+    bool chunkDataOnly = false;
     if (chunkDataOnly) {
         foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
             lg->prepareDrawing2();

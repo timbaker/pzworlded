@@ -57,6 +57,7 @@ public:
         : mAbortDrawing(0)
         , mMap(map)
         , mMaxLevel(0)
+        , m2x(false)
     {}
 #else
     MapRenderer(const Map *map) : mMap(map) {}
@@ -194,6 +195,17 @@ public:
         polygon << QPointF(tileToPixelCoords(rect.bottomLeft(), level));
         return polygon;
     }
+
+    void set2x(bool is2x)
+    {
+        m2x = is2x;
+    }
+
+    bool is2x() const
+    {
+        return m2x;
+    }
+
 #endif
 
     QPolygonF tileToPixelCoords(const QPolygonF &polygon, int level = 0) const
@@ -247,6 +259,7 @@ private:
     const Map *mMap;
 #ifdef ZOMBOID
     int mMaxLevel;
+    bool m2x;
 #endif
 };
 

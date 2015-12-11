@@ -49,21 +49,23 @@ public:
 
     typedef Tiled::Tileset Tileset;
 signals:
-    void imageLoaded(QImage *image, Tiled::Tileset *tileset);
+    void imageLoaded(QImage *image, QImage *image2x, Tiled::Tileset *tileset);
 
 public slots:
     void work();
-    void addJob(Tileset *tileset);
+    void addJob(Tileset *tileset, const QString &imageSource2x);
 
 private:
     class Job {
     public:
-        Job(Tiled::Tileset *tileset) :
-            tileset(tileset)
+        Job(Tiled::Tileset *tileset, const QString &imageSource2x) :
+            tileset(tileset),
+            imageSource2x(imageSource2x)
         {
         }
 
         Tiled::Tileset *tileset;
+        QString imageSource2x;
     };
     QList<Job> mJobs;
 
@@ -218,7 +220,7 @@ private slots:
     void fileChangedTimeout();
 
 #ifdef ZOMBOID
-    void imageLoaded(QImage *image, Tiled::Tileset *tileset);
+    void imageLoaded(QImage *image, QImage *image2x, Tiled::Tileset *tileset);
 
     void virtualTilesetChanged(VirtualTileset *vts);
 #endif

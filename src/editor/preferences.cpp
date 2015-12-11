@@ -122,6 +122,7 @@ Preferences::Preferences()
         tilesDirectory.clear();
     mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
                                        tilesDirectory).toString();
+    mTiles2xDirectory = mSettings->value(QLatin1String("Tiles2xDirectory")).toString();
 
     mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
 
@@ -407,6 +408,18 @@ void Preferences::setTilesDirectory(const QString &path)
         return;
     mTilesDirectory = path;
     mSettings->setValue(QLatin1String("TilesDirectory"), path);
+    emit tilesDirectoryChanged();
+}
+
+QString Preferences::tiles2xDirectory() const
+{
+    return mTiles2xDirectory;
+}
+
+void Preferences::setTiles2xDirectory(const QString &path)
+{
+    mTiles2xDirectory = path;
+    mSettings->setValue(QLatin1String("Tiles2xDirectory"), mTiles2xDirectory);
     emit tilesDirectoryChanged();
 }
 

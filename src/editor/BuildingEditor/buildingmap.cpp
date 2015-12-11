@@ -132,7 +132,15 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                         test = tlBlend->cellAt(tx, ty).tile; // building tile
                     if (test) {
                         QRect imageBox(QPoint(), test->image().size());
-                        QPoint p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, 128));
+                        QPoint p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, test->height()));
+                        // Handle double-size tiles
+                        if (tileBox.width() == test->width() * 2) {
+                            p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, test->height() * 2));
+                            p.rx() /= 2;
+                            p.ry() /= 2;
+                        } else if (tileBox.width() == test->width() / 2) {
+
+                        }
                         // Hit test a small box around the cursor?
                         QRect box(p - QPoint(0, 0), p + QPoint(0, 0));
                         for (int px = box.left(); px <= box.right(); px++) {

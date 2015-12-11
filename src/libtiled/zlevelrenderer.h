@@ -37,7 +37,7 @@ namespace Tiled {
 class TILEDSHARED_EXPORT ZLevelRenderer : public MapRenderer
 {
 public:
-    ZLevelRenderer(const Map *map) : MapRenderer(map) {}
+    ZLevelRenderer(const Map *map) : MapRenderer(map) { set2x(true); }
 
     QSize mapSize() const;
 

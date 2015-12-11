@@ -36,6 +36,7 @@ public:
 
 private slots:
     void browseTilesDirectory();
+    void browseTiles2xDirectory();
 
     void gridColorChanged(const QColor &gridColor);
 
@@ -45,6 +46,7 @@ private:
     Ui::PreferencesDialog *ui;
     WorldDocument *mWorldDoc;
     QString mTilesDirectory;
+    QString mTiles2xDirectory;
     QColor mGridColor;
 };
 

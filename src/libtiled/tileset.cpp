@@ -37,6 +37,7 @@ using namespace Tiled;
 Tileset::~Tileset()
 {
     qDeleteAll(mTiles);
+    qDeleteAll(mTiles2x);
 }
 
 Tile *Tileset::tileAt(int id) const
@@ -151,6 +152,22 @@ bool Tileset::loadFromCache(Tileset *cached)
         ++tileNum;
     }
 
+    oldTilesetSize = mTiles2x.size();
+    for (tileNum = 0; tileNum < cached->mTiles2x.size(); ++tileNum) {
+        Tile *tile = cached->mTiles2x.at(tileNum);
+        if (tileNum < oldTilesetSize)
+            mTiles2x.at(tileNum)->setImage(tile->image());
+        else
+            mTiles2x += new Tile(tile->image(), tileNum, this);
+    }
+    for (; tileNum < oldTilesetSize; tileNum++) {
+        mTiles2x.removeLast();
+//        Tile *tile = mTiles2x.at(tileNum);
+//        QImage tileImage = QImage(tile->width(), tile->height(), QImage::Format_RGB16);
+//        tileImage.fill(Qt::white);
+//        tile->setImage(tileImage);
+    }
+
     mImageWidth = cached->imageWidth();
     mImageHeight = cached->imageHeight();
     mColumnCount = columnCountForWidth(mImageWidth);
@@ -199,6 +216,58 @@ bool Tileset::loadFromNothing(const QSize &imageSize, const QString &fileName)
 //    mLoaded = true;
     return true;
 }
+
+bool Tileset::loadImage2x(const QImage &image)
+{
+    Q_ASSERT(mTileWidth > 0 && mTileHeight > 0);
+
+    if (image.isNull())
+        return false;
+
+    const int mTileWidth = this->mTileWidth * 2;
+    const int mTileHeight = this->mTileHeight * 2;
+
+    const int stopWidth = image.width() - mTileWidth;
+    const int stopHeight = image.height() - mTileHeight;
+
+    QImage image2 = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+
+    int oldTilesetSize = mTiles2x.size();
+    int tileNum = 0;
+    for (int y = mMargin; y <= stopHeight; y += mTileHeight + mTileSpacing) {
+        for (int x = mMargin; x <= stopWidth; x += mTileWidth + mTileSpacing) {
+            QImage tileImage = image2.copy(x, y, mTileWidth, mTileHeight);
+
+            if (mTransparentColor.isValid()) {
+                for (int x = 0; x < mTileWidth; x++) {
+                    for (int y = 0; y < mTileHeight; y++) {
+                        if (tileImage.pixel(x, y) == mTransparentColor.rgba())
+                            tileImage.setPixel(x, y, qRgba(0,0,0,0));
+                    }
+                }
+            }
+
+            if (tileNum < oldTilesetSize) {
+                mTiles2x.at(tileNum)->setImage(tileImage);
+            } else {
+                mTiles2x.append(new Tile(tileImage, tileNum, this));
+            }
+            ++tileNum;
+        }
+    }
+
+    // Blank out any remaining tiles to avoid confusion
+
+    while (tileNum < oldTilesetSize) {
+        mTiles2x.removeLast();
+//        QImage tileImage = QImage(mTileWidth, mTileHeight, QImage::Format_RGB16);
+//        tileImage.fill(Qt::white);
+//        mTiles2x.at(tileNum)->setImage(tileImage);
+        ++tileNum;
+    }
+
+    return true;
+}
 #endif // ZOMBOID
 
 Tileset *Tileset::findSimilarTileset(const QList<Tileset*> &tilesets) const
@@ -232,6 +301,10 @@ Tileset *Tileset::clone() const
         clone->mTiles[i]->mergeProperties(mTiles[i]->properties());
     }
 
+    for (int i = 0; i < clone->mTiles2x.size(); i++) {
+        clone->mTiles2x[i] = new Tile(mTiles2x[i]->image(), i, clone);
+    }
+
     return clone;
 }
 
@@ -255,6 +328,12 @@ Tileset *TilesetImageCache::addTileset(Tileset *ts)
     for (int tileNum = 0; tileNum < ts->tileCount(); ++tileNum) {
         Tile *tile = ts->tileAt(tileNum);
         cached->mTiles.append(new Tile(tile->image(), tileNum, cached));
+    }
+
+    cached->mTiles2x.reserve(ts->mTiles2x.size());
+    for (int tileNum = 0; tileNum < ts->mTiles2x.size(); ++tileNum) {
+        Tile *tile = ts->mTiles2x.at(tileNum);
+        cached->mTiles2x += new Tile(tile->image(), tileNum, cached);
     }
 
     mTilesets.append(cached);

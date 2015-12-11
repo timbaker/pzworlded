@@ -80,6 +80,8 @@ public:
     qreal scale;
     QList<MapInfo*> sources;
     bool missingTilesets;
+    QSize mapSize;
+    QSize tileSize;
 };
 
 #include <QMetaType>
@@ -121,7 +123,7 @@ private:
 class MapImage
 {
 public:
-    MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, MapInfo *mapInfo);
+    MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize, MapInfo *mapInfo);
 
     void setImage(const QImage &image) { mImage = image; }
     QImage image() const {return mImage; }
@@ -140,7 +142,7 @@ public:
     QPointF tileToImageCoords(const QPoint &pos)
     { return tileToImageCoords(pos.x(), pos.y()); }
 
-    void mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds);
+    void mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize);
 
     void setSources(const QList<MapInfo*> &sources)
     { mSources = sources; }
@@ -153,6 +155,9 @@ public:
 
     bool isMissingTilesets() const { return mMissingTilesets; }
 
+    QSize tileSize() const
+    { return mTileSize; }
+
     bool isLoaded() const { return mLoaded; }
 
 private:
@@ -162,6 +167,8 @@ private:
     qreal mScale;
     QList<MapInfo*> mSources;
     bool mMissingTilesets;
+    QSize mMapSize;
+    QSize mTileSize;
     bool mLoaded;
 
     friend class MapImageManager;
@@ -196,6 +203,8 @@ protected:
         bool valid;
         QStringList sources;
         bool missingTilesets;
+        QSize mapSize;
+        QSize tileSize;
         QSize size;
 
         bool threadLoad;

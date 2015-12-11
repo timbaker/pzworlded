@@ -38,6 +38,11 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
     connect(ui->browseTilesDirectory, SIGNAL(clicked()),
             SLOT(browseTilesDirectory()));
 
+    mTiles2xDirectory = prefs->tiles2xDirectory();
+    ui->tiles2xDirectory->setText(QDir::toNativeSeparators(mTiles2xDirectory));
+    connect(ui->browseTiles2xDirectory, SIGNAL(clicked()),
+            SLOT(browseTiles2xDirectory()));
+
     QString configPath = prefs->configPath();
     ui->configDirectory->setText(QDir::toNativeSeparators(configPath));
 
@@ -61,6 +66,16 @@ void PreferencesDialog::browseTilesDirectory()
     }
 }
 
+void PreferencesDialog::browseTiles2xDirectory()
+{
+    QString f = QFileDialog::getExistingDirectory(this, tr("Tiles 2x Directory"),
+                                                  ui->tiles2xDirectory->text());
+    if (!f.isEmpty()) {
+        mTiles2xDirectory = f;
+        ui->tiles2xDirectory->setText(QDir::toNativeSeparators(f));
+    }
+}
+
 void PreferencesDialog::gridColorChanged(const QColor &gridColor)
 {
     mGridColor = gridColor;
@@ -69,7 +84,7 @@ void PreferencesDialog::gridColorChanged(const QColor &gridColor)
 void PreferencesDialog::accept()
 {
     Preferences *prefs = Preferences::instance();
-    Tiled::TileMetaInfoMgr::instance()->changeTilesDirectory(mTilesDirectory);
+    Tiled::TileMetaInfoMgr::instance()->changeTilesDirectory(mTilesDirectory, mTiles2xDirectory);
     prefs->setUseOpenGL(ui->openGL->isChecked());
     prefs->setWorldThumbnails(ui->thumbnails->isChecked());
     prefs->setGridColor(mGridColor);

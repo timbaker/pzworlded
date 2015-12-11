@@ -48,6 +48,8 @@ IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
     QString water(QLatin1String("water"));
     QString windowW(QLatin1String("windowW"));
     QString windowN(QLatin1String("windowN"));
+    QString WindowW(QLatin1String("WindowW"));
+    QString WindowN(QLatin1String("WindowN"));
 
     foreach (const Tiled::Cell *cell, cells) {
         TileDefTileset *tdts = NULL;
@@ -61,9 +63,9 @@ IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
             if (tdt == NULL)
                 continue;
             foreach (QString key, tdt->mProperties.keys()) {
-                if (key == WallW || key == wallNW || key == WallWTrans || key == WallNWTrans || key == doorFrW || key == DoorWallW || key == windowW)
+                if (key == WallW || key == wallNW || key == WallWTrans || key == WallNWTrans || key == doorFrW || key == DoorWallW || key == windowW || key == WindowW)
                     mBlockedWest = true;
-                if (key == WallN || key == wallNW || key == WallNTrans || key == WallNWTrans || key == doorFrN || key == DoorWallN || key == windowN)
+                if (key == WallN || key == wallNW || key == WallNTrans || key == WallNWTrans || key == doorFrN || key == DoorWallN || key == windowN || key == WindowN)
                     mBlockedNorth = true;
                 if (key == solid || key == solidtrans)
                     mSolid = true;

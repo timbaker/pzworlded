@@ -155,7 +155,8 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
                                        data.levelZeroBounds.width(),
                                        data.levelZeroBounds.height(), 1, 1);
         MapImage *mapImage = new MapImage(data.image, data.scale,
-                                          data.levelZeroBounds, mapInfo);
+                                          data.levelZeroBounds, data.mapSize, data.tileSize,
+                                          mapInfo);
         mapImage->mLoaded = true;
         mMapImages[keyName] = mapImage;
         return mapImage;
@@ -176,7 +177,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
     if (data.threadLoad || data.threadRender)
         paintDummyImage(data, mapInfo);
-    MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
+    MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, data.mapSize, data.tileSize, mapInfo);
     mapImage->mMissingTilesets = data.missingTilesets;
     mapImage->mLoaded = !(data.threadLoad || data.threadRender);
 
@@ -284,8 +285,10 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
 
     QRectF sceneRect = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
     QSize mapSize = sceneRect.size().toSize();
-    if (mapSize.isEmpty())
+    if (mapSize.isEmpty()) {
+        delete renderer;
         return ImageData();
+    }
 
     qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
     mapSize *= scale;
@@ -296,7 +299,10 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     data.scale = scale;
     data.levelZeroBounds = sceneRect;
     data.sources += mapInfo->path();
+    data.mapSize = map->size();
+    data.tileSize = renderer->boundingRect(QRect(0, 0, 1, 1)).size();
     data.valid = true;
+    delete renderer;
     return data;
 }
 
@@ -307,7 +313,7 @@ void MapImageManager::paintDummyImage(ImageData &data, MapInfo *mapInfo)
 //        data.image.setColorTable(QVector<QRgb>() << qRgb(255,255,255));
     QPainter p(&data.image);
     QPolygonF poly;
-    MapImage mapImage(data.image, data.scale, data.levelZeroBounds, mapInfo);
+    MapImage mapImage(data.image, data.scale, data.levelZeroBounds, data.mapSize, data.tileSize, mapInfo);
     poly += mapImage.tileToImageCoords(0, 0);
     poly += mapImage.tileToImageCoords(mapInfo->width(), 0);
     poly += mapImage.tileToImageCoords(mapInfo->width(), mapInfo->height());
@@ -402,7 +408,7 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
 #endif // WORLDED
 
 #define IMAGE_DATA_MAGIC 0xB15B00B5
-#define IMAGE_DATA_VERSION 3
+#define IMAGE_DATA_VERSION 4
 
 MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &imageDataFileInfo)
 {
@@ -439,6 +445,13 @@ MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &image
 
     in >> data.missingTilesets;
 
+    qint32 wid, hgt;
+    in >> wid >> hgt;
+    data.mapSize = QSize(wid, hgt);
+
+    in >> wid >> hgt;
+    data.tileSize = QSize(wid, hgt);
+
     // TODO: sanity-check the values
     data.valid = true;
 
@@ -462,6 +475,8 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     foreach (QString source, data.sources)
         out << source;
     out << data.missingTilesets;
+    out << (qint32)data.mapSize.width() << (qint32)data.mapSize.height();
+    out << (qint32)data.tileSize.width() << (qint32)data.tileSize.height();
 }
 
 void MapImageManager::mapAboutToChange(MapInfo *mapInfo)
@@ -514,7 +529,8 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
                 ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
                 paintDummyImage(data, mapInfo);
                 mapImage->mapFileChanged(data.image, data.scale,
-                                         data.levelZeroBounds);
+                                         data.levelZeroBounds,
+                                         data.mapSize, data.tileSize);
                 mapImage->mSources.clear();
                 mapImage->mSources += mapImage->mapInfo();
                 mapImage->mLoaded = false;
@@ -572,6 +588,8 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
     mapImage->mScale = imgData.scale;
     mapImage->mMissingTilesets = imgData.missingTilesets;
     mapImage->mSources = imgData.sources;
+    mapImage->mMapSize = imgData.mapSize;
+    mapImage->mTileSize = imgData.tileSize;
     mapImage->mLoaded = true;
 
     ImageData data;
@@ -581,6 +599,8 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
     foreach (MapInfo *mapInfo, mapImage->sources())
         data.sources += mapInfo->path();
     data.missingTilesets = mapImage->isMissingTilesets();
+    data.mapSize = imgData.mapSize;
+    data.tileSize = imgData.tileSize;
 
     QFileInfo imageInfo = imageFileInfo(mapImage->mapInfo()->path());
     QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
@@ -781,21 +801,23 @@ void MapImageManager::processDeferrals()
 
 ///// ///// ///// ///// /////
 
-MapImage::MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, MapInfo *mapInfo)
+MapImage::MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize, MapInfo *mapInfo)
     : mImage(image)
     , mInfo(mapInfo)
     , mLevelZeroBounds(levelZeroBounds)
     , mScale(scale)
     , mMissingTilesets(false)
+    , mMapSize(mapSize)
+    , mTileSize(tileSize)
     , mLoaded(false)
 {
 }
 
 QPointF MapImage::tileToPixelCoords(qreal x, qreal y)
 {
-    const int tileWidth = mInfo->tileWidth();
-    const int tileHeight = mInfo->tileHeight();
-    const int originX = mInfo->height() * tileWidth / 2;
+    const int tileWidth = mTileSize.width();
+    const int tileHeight = mTileSize.height();
+    const int originX = mMapSize.height() * tileWidth / 2;
 
     return QPointF((x - y) * tileWidth / 2 + originX,
                    (x + y) * tileHeight / 2);
@@ -803,10 +825,10 @@ QPointF MapImage::tileToPixelCoords(qreal x, qreal y)
 
 QRectF MapImage::tileBoundingRect(const QRect &rect)
 {
-    const int tileWidth = mInfo->tileWidth();
-    const int tileHeight = mInfo->tileHeight();
+    const int tileWidth = mTileSize.width();
+    const int tileHeight = mTileSize.height();
 
-    const int originX = mInfo->height() * tileWidth / 2;
+    const int originX = mMapSize.height() * tileWidth / 2;
     const QPoint pos((rect.x() - (rect.y() + rect.height()))
                      * tileWidth / 2 + originX,
                      (rect.x() + rect.y()) * tileHeight / 2);
@@ -820,8 +842,7 @@ QRectF MapImage::tileBoundingRect(const QRect &rect)
 
 QRectF MapImage::bounds()
 {
-    int mapWidth = mInfo->width(), mapHeight = mInfo->height();
-    return tileBoundingRect(QRect(0,0,mapWidth,mapHeight));
+    return tileBoundingRect(QRect(QPoint(), mMapSize));
 }
 
 qreal MapImage::scale()
@@ -836,11 +857,13 @@ QPointF MapImage::tileToImageCoords(qreal x, qreal y)
     return pos * scale();
 }
 
-void MapImage::mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds)
+void MapImage::mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize)
 {
     mImage = image;
     mScale = scale;
     mLevelZeroBounds = levelZeroBounds;
+    mMapSize = mapSize;
+    mTileSize = tileSize;
 }
 
 /////
@@ -1063,6 +1086,9 @@ MapImageData MapImageRenderWorker::generateMapImage(MapComposite *mapComposite)
             break;
         }
     }
+
+    data.mapSize = map->size();
+    data.tileSize = renderer->boundingRect(QRect(0, 0, 1, 1)).size();
 
     painter.end();
     delete renderer;

@@ -60,6 +60,9 @@ public:
     QString tilesDirectory() const;
     void setTilesDirectory(const QString &path);
 
+    QString tiles2xDirectory() const;
+    void setTiles2xDirectory(const QString &path);
+
     QString texturesDirectory() const;
 
     bool useOpenGL() const { return mUseOpenGL; }
@@ -143,6 +146,7 @@ private:
     QString mConfigDirectory;
     QString mMapsDirectory;
     QString mTilesDirectory;
+    QString mTiles2xDirectory;
     QString mOpenFileDirectory;
     bool mShowAdjacentMaps;
     int mHeightMapDisplayStyle;
