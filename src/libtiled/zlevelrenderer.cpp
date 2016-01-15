@@ -261,10 +261,6 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                     QImage img = cell.tile->image();
                     const QPoint offset = cell.tile->tileset()->tileOffset();
 
-                    if (is2x() && cell.tile->tileset()->mTiles2x.size() > cell.tile->id()) {
-                        img = cell.tile->tileset()->mTiles2x.at(cell.tile->id())->image();
-                    }
-
                     qreal m11 = 1;      // Horizontal scaling factor
                     qreal m12 = 0;      // Vertical shearing factor
                     qreal m21 = 0;      // Horizontal shearing factor
@@ -423,10 +419,6 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                     if (!cell->isEmpty()) {
                         QImage img = cell->tile->image();
                         const QPoint offset = cell->tile->tileset()->tileOffset();
-
-                        if (is2x() && cell->tile->tileset()->mTiles2x.size() > cell->tile->id()) {
-                            img = cell->tile->tileset()->mTiles2x.at(cell->tile->id())->image();
-                        }
 
                         qreal m11 = 1;      // Horizontal scaling factor
                         qreal m12 = 0;      // Vertical shearing factor

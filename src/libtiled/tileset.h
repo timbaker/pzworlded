@@ -265,8 +265,10 @@ public:
     bool isLoaded() const
     { return mLoaded; }
 
-    bool loadImage2x(const QImage &image);
-    QList<Tile*> mTiles2x;
+    void setImageSource2x(const QString &source)
+    { mImageSource2x = source; }
+
+    const QString &imageSource2x() const { return mImageSource2x; }
 #endif
 
 private:
@@ -286,6 +288,7 @@ private:
 #ifdef ZOMBOID
     bool mMissing;
     bool mLoaded;
+    QString mImageSource2x;
 #endif
 };
 
