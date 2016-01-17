@@ -766,6 +766,7 @@ void MainWindow::openLastFiles()
         QString key = QString::number(i); // openFiles/N/...
         if (!mSettings.childGroups().contains(key))
             continue;
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         mSettings.beginGroup(key);
         QString path = mSettings.value(QLatin1String("file")).toString();
 
@@ -823,6 +824,15 @@ bool MainWindow::InitConfigFiles()
 {
     // Refresh the ui before blocking while loading tilesets etc
     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    // Make sure the user has chosen the Tiles directory.
+    QString tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
+    if (tilesDirectory.isEmpty() || !QDir(tilesDirectory).exists()) {
+        preferencesDialog();
+        tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
+        if (tilesDirectory.isEmpty() || !QDir(tilesDirectory).exists())
+            return false;
+    }
 
     if (!TileMetaInfoMgr::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),

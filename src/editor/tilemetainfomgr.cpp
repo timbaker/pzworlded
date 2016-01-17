@@ -147,17 +147,6 @@ QString TileMetaInfoMgr::txtPath()
 
 bool TileMetaInfoMgr::readTxt()
 {
-#ifdef WORLDED
-    // Make sure the user has chosen the Tiles directory.
-    QString tilesDirectory = this->tilesDirectory();
-    QDir dir(tilesDirectory);
-    if (tilesDirectory.isEmpty() || !dir.exists()) {
-        mError = tr("The Tiles directory specified in the preferences doesn't exist!\n%1")
-                .arg(tilesDirectory);
-        return false;
-    }
-#endif
-
     QFileInfo info(txtPath());
     if (!info.exists()) {
         mError = tr("The %1 file doesn't exist.").arg(txtName());
