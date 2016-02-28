@@ -670,6 +670,17 @@ void MapWriterPrivate::writeBmpImage(QXmlStreamWriter &w,
     if (colors.isEmpty())
         return;
 
+    struct ColorCompare {
+        bool operator()(const QRgb& a, const QRgb& b) const {
+            if (qRed(a) < qRed(b)) return true;
+            if (qRed(a) > qRed(b)) return false;
+            if (qGreen(a) < qGreen(b)) return true;
+            if (qGreen(a) > qGreen(b)) return false;
+            return qBlue(a) < qBlue(b);
+        }
+    };
+    qSort(colors.begin(), colors.end(), ColorCompare());
+
     w.writeStartElement(QLatin1String("bmp-image"));
     w.writeAttribute(QLatin1String("index"), QString::number(index));
     w.writeAttribute(QLatin1String("seed"), QString::number(bmp.rands().seed()));

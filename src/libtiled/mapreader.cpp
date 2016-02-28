@@ -396,6 +396,11 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
 
 #ifdef ZOMBOID
 #if 1
+    // The tileset image is not read yet.  Just quickly create each Tile with
+    // an all-white pixmap.
+    const int height = atts.value(QLatin1String("height")).toString().toInt();
+    tileset->loadFromNothing(QSize(width, height), source);
+#elif 0
     QImageReader reader(source);
     if (reader.size().isValid() && tileset->loadFromNothing(reader.size(), source)) {
         // The tileset image is not read yet.  Just quickly create each Tile with
