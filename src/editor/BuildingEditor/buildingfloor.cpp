@@ -2275,6 +2275,83 @@ void BuildingFloor::Square::ReplaceFloorGrime(BuildingTileEntry *grimeTile)
     }
 }
 
+#include "filesystemwatcher.h"
+#include "tiledeffile.h"
+#include "tilemetainfomgr.h"
+#include <QDebug>
+#include <QFileInfo>
+
+#if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
+// Hmmmm.  libtiled.dll defines the Properties class as so:
+// class TILEDSHARED_EXPORT Properties : public QMap<QString,QString>
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QMap<QString, QString>;
+#endif
+
+namespace Tiled {
+namespace Internal {
+
+TileDefWatcher::TileDefWatcher() :
+    mWatcher(new FileSystemWatcher(this)),
+    mTileDefFile(new TileDefFile()),
+    tileDefFileChecked(false),
+    watching(false)
+{
+    connect(mWatcher, SIGNAL(fileChanged(QString)), SLOT(fileChanged(QString)));
+}
+
+
+void TileDefWatcher::check()
+{
+    if (!tileDefFileChecked) {
+        QFileInfo fileInfo(TileMetaInfoMgr::instance()->tilesDirectory() + QString::fromLatin1("/newtiledefinitions.tiles"));
+        if (fileInfo.exists()) {
+            qDebug() << "TileDefWatcher read " << fileInfo.absoluteFilePath();
+            mTileDefFile->read(fileInfo.absoluteFilePath());
+            if (!watching) {
+                mWatcher->addPath(fileInfo.canonicalFilePath());
+                watching = true;
+            }
+        }
+        tileDefFileChecked = true;
+    }
+}
+
+void TileDefWatcher::fileChanged(const QString &path)
+{
+    qDebug() << "TileDefWatcher.fileChanged() " << path;
+    tileDefFileChecked = false;
+    //        removePath(path);
+    //        addPath(path);
+}
+
+} // namespace Internal
+} // namespace Tiled
+
+static Tiled::Internal::TileDefWatcher *tileDefWatcher = 0;
+
+static bool tileHasBakedInGrime(BuildingTile *btile)
+{
+    if (btile == 0)
+        return false;
+
+    if (tileDefWatcher == 0)
+        tileDefWatcher = new Tiled::Internal::TileDefWatcher();
+    tileDefWatcher->check();
+
+    if (TileDefTileset *tdts = tileDefWatcher->mTileDefFile->tileset(btile->mTilesetName)) {
+        if (TileDefTile *tdt = tdts->tileAt(btile->mIndex)) {
+            if (tdt->mProperties.contains(QString::fromLatin1("HasGrime"))) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 void BuildingFloor::Square::ReplaceWallGrime(BuildingTileEntry *grimeTile)
 {
     if (!grimeTile || grimeTile->isNone())
@@ -2290,7 +2367,7 @@ void BuildingFloor::Square::ReplaceWallGrime(BuildingTileEntry *grimeTile)
 
     int grimeEnumW = -1, grimeEnumN = -1;
 
-    if (wallTile1) {
+    if (wallTile1 && !tileHasBakedInGrime(wallTile1->tile(mEntryEnum[SectionWall]))) {
         switch (mEntryEnum[SectionWall]) {
         case BTC_Walls::West: grimeEnumW = BTC_GrimeWall::West; break;
         case BTC_Walls::WestDoor: grimeEnumW = BTC_GrimeWall::WestDoor; break;
@@ -2303,7 +2380,7 @@ void BuildingFloor::Square::ReplaceWallGrime(BuildingTileEntry *grimeTile)
         }
     }
 
-    if (wallTile2) {
+    if (wallTile2 && !tileHasBakedInGrime(wallTile2->tile(mEntryEnum[SectionWall2]))) {
         switch (mEntryEnum[SectionWall2]) {
         case BTC_Walls::West: grimeEnumW = BTC_GrimeWall::West; break;
         case BTC_Walls::WestDoor: grimeEnumW = BTC_GrimeWall::WestDoor; break;

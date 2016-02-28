@@ -246,6 +246,13 @@ TileDefTileset::~TileDefTileset()
     qDeleteAll(mTiles);
 }
 
+TileDefTile *TileDefTileset::tileAt(int index)
+{
+    if (index >= 0 && index < mTiles.size())
+        return mTiles.at(index);
+    return 0;
+}
+
 void TileDefTileset::resize(int columns, int rows)
 {
     if (columns == mColumns && rows == mRows)
