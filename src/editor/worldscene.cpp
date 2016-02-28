@@ -998,7 +998,8 @@ void BaseCellItem::worldResized()
 void BaseCellItem::calcMapImageBounds()
 {
     if (mMapImage) {
-        QSizeF gridSize = mapSize(300, 300, 64, 32);
+        int SCL = 2;
+        QSizeF gridSize = mapSize(300, 300, 64 * SCL, 32 * SCL);
         QSizeF unscaledMapSize = mMapImage->bounds().size();
         const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
         int scaledImageWidth = GRID_WIDTH * scaleMapToCell;
@@ -1019,7 +1020,8 @@ void BaseCellItem::calcLotImageBounds(int index)
     if (!mapImage)
         return;
 
-    QSizeF gridSize = mapSize(300, 300, 64, 32);
+    int SCL = 2;
+    QSizeF gridSize = mapSize(300, 300, 64 * SCL, 32 * SCL);
     QSizeF unscaledMapSize = mapImage->bounds().size();
     const qreal scaleMapToCell = unscaledMapSize.width() / gridSize.width();
     int scaledImageWidth = GRID_WIDTH * scaleMapToCell;
