@@ -43,13 +43,32 @@ class TILEDSHARED_EXPORT Tile : public Object
 public:
 #ifdef ZOMBOID
     Tile(const QImage &image, int id, Tileset *tileset):
+        mId(id),
+        mTileset(tileset)
+    {
+        setImage(image);
+    }
+
+    Tile(const Tile *tile, int id, Tileset *tileset):
+        mId(id),
+        mTileset(tileset)
+    {
+        setImage(tile);
+    }
+
+    Tile(int width, int height, int id, Tileset *tileset):
+        mId(id),
+        mTileset(tileset)
+    {
+        setEmptyImage(width, height);
+    }
 #else
     Tile(const QPixmap &image, int id, Tileset *tileset):
-#endif
         mId(id),
         mTileset(tileset),
         mImage(image)
     {}
+#endif
 
     /**
      * Returns ID of this tile within its tileset.
@@ -70,7 +89,33 @@ public:
     /**
      * Sets the image of this tile.
      */
-    void setImage(const QImage &image) { mImage = image; }
+    void setImage(const QImage &image);
+    void setImage(const Tile *tile);
+    void setEmptyImage(int width, int height);
+
+    /**
+     * Returns the width of this tile.
+     */
+    int width() const { return mImageSize.width(); }
+
+    /**
+     * Returns the height of this tile.
+     */
+    int height() const { return mImageSize.height(); }
+
+    /**
+     * Returns the size of this tile.
+     */
+    QSize size() const { return mImageSize; }
+
+    QPoint offset() const { return mImageOffset; }
+
+    QMargins drawMargins(float scale);
+    QImage finalImage(int width, int height);
+
+private:
+    bool isRowTransparent(const QImage &image, int row);
+    bool isColumnTransparent(const QImage &image, int col);
 #else
     /**
      * Returns the image of this tile.
@@ -81,7 +126,6 @@ public:
      * Sets the image of this tile.
      */
     void setImage(const QPixmap &image) { mImage = image; }
-#endif
 
     /**
      * Returns the width of this tile.
@@ -97,12 +141,15 @@ public:
      * Returns the size of this tile.
      */
     QSize size() const { return mImage.size(); }
+#endif
 
 private:
     int mId;
     Tileset *mTileset;
 #ifdef ZOMBOID
     QImage mImage;
+    QPoint mImageOffset;
+    QSize mImageSize;
 #else
     QPixmap mImage;
 #endif

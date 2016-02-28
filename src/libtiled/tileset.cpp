@@ -110,9 +110,7 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
     // Blank out any remaining tiles to avoid confusion
     while (tileNum < oldTilesetSize) {
 #ifdef ZOMBOID
-        QImage tileImage = QImage(mTileWidth, mTileHeight, QImage::Format_RGB16);
-        tileImage.fill(Qt::white);
-        mTiles.at(tileNum)->setImage(tileImage);
+        mTiles.at(tileNum)->setEmptyImage(mTileWidth, mTileHeight);
 #else
         QPixmap tilePixmap = QPixmap(mTileWidth, mTileHeight);
         tilePixmap.fill();
@@ -139,24 +137,28 @@ bool Tileset::loadFromCache(Tileset *cached)
     Q_ASSERT(mMargin == cached->margin());
     Q_ASSERT(mTransparentColor == cached->transparentColor());
 
+    int mTileWidth = this->mTileWidth;
+    int mTileHeight = this->mTileHeight;
+    if (!cached->mImageSource2x.isEmpty()) {
+        mTileWidth *= 2;
+        mTileHeight *= 2;
+    }
+
     int oldTilesetSize = mTiles.size();
     int tileNum = 0;
 
     for (; tileNum < cached->tileCount(); ++tileNum) {
-        QImage tileImage = cached->tileAt(tileNum)->image();
-
+        Tile *tile = cached->tileAt(tileNum);
         if (tileNum < oldTilesetSize) {
-            mTiles.at(tileNum)->setImage(tileImage);
+            mTiles.at(tileNum)->setImage(tile);
         } else {
-            mTiles.append(new Tile(tileImage, tileNum, this));
+            mTiles.append(new Tile(tile, tileNum, this));
         }
     }
 
     // Blank out any remaining tiles to avoid confusion
     while (tileNum < oldTilesetSize) {
-        QImage tileImage = QImage(mTileWidth, mTileHeight, QImage::Format_RGB16);
-        tileImage.fill(Qt::white);
-        mTiles.at(tileNum)->setImage(tileImage);
+        mTiles.at(tileNum)->setEmptyImage(mTileWidth, mTileHeight);
         ++tileNum;
     }
 
@@ -182,15 +184,12 @@ bool Tileset::loadFromNothing(const QSize &imageSize, const QString &fileName)
     int oldTilesetSize = mTiles.size();
     int tileNum = 0;
 
-    QImage tileImage = QImage(mTileWidth, mTileHeight, QImage::Format_RGB16);
-    tileImage.fill(Qt::white);
-
     for (int y = mMargin; y <= stopHeight; y += mTileHeight + mTileSpacing) {
         for (int x = mMargin; x <= stopWidth; x += mTileWidth + mTileSpacing) {
             if (tileNum < oldTilesetSize) {
-                mTiles.at(tileNum)->setImage(tileImage);
+                mTiles.at(tileNum)->setEmptyImage(mTileWidth, mTileHeight);
             } else {
-                mTiles.append(new Tile(tileImage, tileNum, this));
+                mTiles.append(new Tile(mTileWidth, mTileHeight, tileNum, this));
             }
             ++tileNum;
         }
@@ -198,7 +197,7 @@ bool Tileset::loadFromNothing(const QSize &imageSize, const QString &fileName)
 
     // Blank out any remaining tiles to avoid confusion
     while (tileNum < oldTilesetSize) {
-        mTiles.at(tileNum)->setImage(tileImage);
+        mTiles.at(tileNum)->setEmptyImage(mTileWidth, mTileHeight);
         ++tileNum;
     }
 

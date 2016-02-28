@@ -37,7 +37,8 @@ SOURCES += compression.cpp \
     tileset.cpp \
     gidmapper.cpp \
     zlevelrenderer.cpp \
-    ztilelayergroup.cpp
+    ztilelayergroup.cpp \
+    tile.cpp
 HEADERS += compression.h \
     imagelayer.h \
     isometricrenderer.h \

@@ -259,14 +259,14 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                 const Cell &cell = layer->cellAt(columnItr);
                 if (!cell.isEmpty()) {
                     QImage img = cell.tile->image();
-                    const QPoint offset = cell.tile->tileset()->tileOffset();
+                    const QPoint offset = cell.tile->tileset()->tileOffset() + cell.tile->offset();
 
                     qreal m11 = 1;      // Horizontal scaling factor
                     qreal m12 = 0;      // Vertical shearing factor
                     qreal m21 = 0;      // Horizontal shearing factor
                     qreal m22 = 1;      // Vertical scaling factor
                     qreal dx = offset.x() + x;
-                    qreal dy = offset.y() + y - img.height();
+                    qreal dy = offset.y() + y - cell.tile->height();
 
                     if (cell.flippedAntiDiagonally) {
                         // Use shearing to swap the X/Y axis
@@ -291,15 +291,16 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                                                          : img.height();
                     }
 
-                    if (tileWidth == img.width() * 2) {
+                    if (tileWidth == cell.tile->width() * 2) {
                         m11 *= 2.0f;
                         m22 *= 2.0f;
-                        dy -= img.height();
-                    } else if (tileWidth == img.width() / 2) {
+                        dx += cell.tile->offset().x();
+                        dy -= cell.tile->height() - cell.tile->offset().y();
+                    } else if (tileWidth == cell.tile->width() / 2) {
                         float scale = 0.5f;
                         m11 *= scale;
                         m22 *= scale;
-                        dy += img.height() / 2;
+                        dy += cell.tile->height() / 2;
                     }
 
                     const QTransform transform(m11, m12, m21, m22, dx, dy);
@@ -418,14 +419,14 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                     const Cell *cell = cells[i];
                     if (!cell->isEmpty()) {
                         QImage img = cell->tile->image();
-                        const QPoint offset = cell->tile->tileset()->tileOffset();
+                        const QPoint offset = cell->tile->tileset()->tileOffset() + cell->tile->offset();
 
                         qreal m11 = 1;      // Horizontal scaling factor
                         qreal m12 = 0;      // Vertical shearing factor
                         qreal m21 = 0;      // Horizontal shearing factor
                         qreal m22 = 1;      // Vertical scaling factor
                         qreal dx = offset.x() + x;
-                        qreal dy = offset.y() + y - img.height();
+                        qreal dy = offset.y() + y - cell->tile->height();
 
                         if (cell->flippedAntiDiagonally) {
                             // Use shearing to swap the X/Y axis
@@ -450,18 +451,19 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                                                              : img.height();
                         }
 
-                        if (tileWidth == img.width() * 2) {
+                        if (tileWidth == cell->tile->width() * 2) {
                             m11 *= 2.0f;
                             m22 *= 2.0f;
-                            dy -= img.height();
-                        } else if (tileWidth == img.width() / 2) {
+                            dx += cell->tile->offset().x();
+                            dy -= cell->tile->height() - cell->tile->offset().y();
+                        } else if (tileWidth == cell->tile->width() / 2) {
                             float scale = 0.5f;
                             m11 *= scale;
                             m22 *= scale;
 //                            dx += (tileWidth - img.width() * scale) / 2;
 //                            dy += (cell->tile->tileset()->tileHeight() - img.height() * scale);
 //                            dy -= (tileHeight - tileHeight * scale) / 2;
-                            dy += img.height() / 2;
+                            dy += cell->tile->height() / 2;
                         }
 
                         const QTransform transform(m11, m12, m21, m22, dx, dy);
