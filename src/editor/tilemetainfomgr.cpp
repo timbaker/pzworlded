@@ -228,7 +228,7 @@ bool TileMetaInfoMgr::readTxt()
                 tileset->loadFromNothing(QSize(width, height), tilesetFileName);
                 Tile *missingTile = TilesetManager::instance()->missingTile();
                 for (int i = 0; i < tileset->tileCount(); i++)
-                    tileset->tileAt(i)->setImage(missingTile->image());
+                    tileset->tileAt(i)->setImage(missingTile);
                 tileset->setMissing(true);
             }
             addTileset(tileset);

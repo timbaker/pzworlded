@@ -443,19 +443,29 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
             changeTilesetSource(tileset, imageSource, false);
             tileset->setImageSource2x(imageSource2x);
             cached = mTilesetImageCache->addTileset(tileset);
+#if QT_POINTER_SIZE == 8
             QMetaObject::invokeMethod(mImageReaderWorkers[mNextThreadForJob],
                                       "addJob", Qt::QueuedConnection,
                                       Q_ARG(Tileset*,cached));
             mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderWorkers.size();
+#else
+            QImage *image = new QImage(tileset->imageSource2x());
+            imageLoaded(image, cached);
+#endif
         } else if (QImageReader(imageSource).size().isValid()) {
             qDebug() << "2x NO " << imageSource;
             changeTilesetSource(tileset, imageSource, false);
             tileset->setImageSource2x(QString());
             cached = mTilesetImageCache->addTileset(tileset);
+#if QT_POINTER_SIZE == 8
             QMetaObject::invokeMethod(mImageReaderWorkers[mNextThreadForJob],
                                       "addJob", Qt::QueuedConnection,
                                       Q_ARG(Tileset*,cached));
             mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderWorkers.size();
+#else
+            QImage *image = new QImage(tileset->imageSource());
+            imageLoaded(image, cached);
+#endif
         } else {
             if (tileset->tileHeight() == mMissingTile->height() && tileset->tileWidth() == mMissingTile->width()) {
                 for (int i = 0; i < tileset->tileCount(); i++)

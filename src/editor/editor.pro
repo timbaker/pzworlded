@@ -6,6 +6,10 @@ include(../lua/lua.pri)
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
 
+QMAKE_CFLAGS_RELEASE += -Zi
+QMAKE_CXXFLAGS_RELEASE += -Zi
+QMAKE_LFLAGS_RELEASE += /DEBUG /OPT:REF
+
 TARGET = PZWorldEd
 TEMPLATE = app
 target.path = $${PREFIX}/bin
