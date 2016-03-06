@@ -268,7 +268,7 @@ void TilesetManager::fileChangedTimeout()
             } else {
                 if (tileset->tileHeight() == mMissingTile->width() && tileset->tileWidth() == mMissingTile->height()) {
                     for (int i = 0; i < tileset->tileCount(); i++)
-                        tileset->tileAt(i)->setImage(mMissingTile->image());
+                        tileset->tileAt(i)->setImage(mMissingTile);
                 }
                 tileset->setMissing(true);
             }
@@ -469,7 +469,7 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
         } else {
             if (tileset->tileHeight() == mMissingTile->height() && tileset->tileWidth() == mMissingTile->width()) {
                 for (int i = 0; i < tileset->tileCount(); i++)
-                    tileset->tileAt(i)->setImage(mMissingTile->image());
+                    tileset->tileAt(i)->setImage(mMissingTile);
             }
             changeTilesetSource(tileset, imageSource, true);
             tileset->setImageSource2x(QString());

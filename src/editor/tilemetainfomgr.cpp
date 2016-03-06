@@ -82,7 +82,7 @@ void TileMetaInfoMgr::changeTilesDirectory(const QString &path, const QString &p
             // There was a valid image in the old directory, but not in the new one.
             Tile *missingTile = TilesetManager::instance()->missingTile();
             for (int i = 0; i < ts->tileCount(); i++)
-                ts->tileAt(i)->setImage(missingTile->image());
+                ts->tileAt(i)->setImage(missingTile);
             TilesetManager::instance()->changeTilesetSource(ts, relativePath, true);
         }
     }

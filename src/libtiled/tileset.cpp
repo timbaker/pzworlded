@@ -242,7 +242,7 @@ Tileset *Tileset::clone() const
     Tileset *clone = new Tileset(*this);
 
     for (int i = 0; i < clone->mTiles.size(); i++) {
-        clone->mTiles[i] = new Tile(mTiles[i]->image(), i, clone);
+        clone->mTiles[i] = new Tile(mTiles[i], i, clone);
         clone->mTiles[i]->mergeProperties(mTiles[i]->properties());
     }
 
@@ -269,7 +269,7 @@ Tileset *TilesetImageCache::addTileset(Tileset *ts)
 
     for (int tileNum = 0; tileNum < ts->tileCount(); ++tileNum) {
         Tile *tile = ts->tileAt(tileNum);
-        cached->mTiles.append(new Tile(tile->image(), tileNum, cached));
+        cached->mTiles.append(new Tile(tile, tileNum, cached));
     }
 
     mTilesets.append(cached);
