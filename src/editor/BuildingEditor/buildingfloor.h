@@ -159,17 +159,18 @@ public:
 
         struct WallInfo {
             WallInfo() :
-                entry(0), trim(0), furniture(0)
+                entry(0), trim(0), furniture(0), furnitureBldgTile(0)
             {}
             BuildingTileEntry *entry;
             BuildingTileEntry *trim;
             FurnitureTile *furniture;
+            BuildingTile *furnitureBldgTile;
         } mWallN, mWallW;
 
         void SetWallN(BuildingTileEntry *tile);
         void SetWallW(BuildingTileEntry *tile);
-        void SetWallN(FurnitureTile *ftile);
-        void SetWallW(FurnitureTile *ftile);
+        void SetWallN(FurnitureTile *ftile, BuildingTile *btile);
+        void SetWallW(FurnitureTile *ftile, BuildingTile *btile);
         void SetWallTrimN(BuildingTileEntry *tile);
         void SetWallTrimW(BuildingTileEntry *tile);
 

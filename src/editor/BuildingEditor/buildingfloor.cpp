@@ -604,9 +604,9 @@ void BuildingFloor::LayoutToSquares()
                         if (bounds(1, 1).contains(sx, sy)) {
                             Square &sq = squares[sx][sy];
                             if (killW)
-                                sq.SetWallW(fo->furnitureTile());
+                                sq.SetWallW(fo->furnitureTile(), ftile->tile(j, i));
                             if (killN)
-                                sq.SetWallN(fo->furnitureTile());
+                                sq.SetWallN(fo->furnitureTile(), ftile->tile(j, i));
                         }
                     }
                 }
@@ -1962,24 +1962,28 @@ void BuildingFloor::Square::SetWallN(BuildingTileEntry *tile)
 {
     mWallN.entry = tile;
     mWallN.furniture = 0;
+    mWallN.furnitureBldgTile = 0;
 }
 
 void BuildingFloor::Square::SetWallW(BuildingTileEntry *tile)
 {
     mWallW.entry = tile;
     mWallW.furniture = 0;
+    mWallW.furnitureBldgTile = 0;
 }
 
-void BuildingFloor::Square::SetWallN(FurnitureTile *ftile)
+void BuildingFloor::Square::SetWallN(FurnitureTile *ftile, BuildingTile *btile)
 {
     mWallN.entry = 0;
     mWallN.furniture = ftile;
+    mWallN.furnitureBldgTile = btile;
 }
 
-void BuildingFloor::Square::SetWallW(FurnitureTile *ftile)
+void BuildingFloor::Square::SetWallW(FurnitureTile *ftile, BuildingTile *btile)
 {
     mWallW.entry = 0;
     mWallW.furniture = ftile;
+    mWallW.furnitureBldgTile = btile;
 }
 
 void BuildingFloor::Square::SetWallTrimN(BuildingTileEntry *tile)
@@ -2394,9 +2398,9 @@ void BuildingFloor::Square::ReplaceWallGrime(BuildingTileEntry *grimeTile)
     }
 
     // Handle furniture in Walls layer
-    if (mWallW.furniture && mWallW.furniture->resolved()->allowGrime())
+    if (mWallW.furnitureBldgTile && mWallW.furniture->resolved()->allowGrime() && !tileHasBakedInGrime(mWallW.furnitureBldgTile))
         grimeEnumW = BTC_GrimeWall::West;
-    if (mWallN.furniture && mWallN.furniture->resolved()->allowGrime())
+    if (mWallN.furnitureBldgTile && mWallN.furniture->resolved()->allowGrime() && !tileHasBakedInGrime(mWallN.furnitureBldgTile))
         grimeEnumN = BTC_GrimeWall::North;
 
     // Handle 2 different wall tiles due to a possible mix of regular walls,
