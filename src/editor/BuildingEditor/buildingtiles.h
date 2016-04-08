@@ -633,6 +633,14 @@ public:
         NorthWindow,
         WestDoor,
         NorthDoor,
+        WestTrim,
+        NorthTrim,
+        NorthWestTrim,
+        SouthEastTrim,
+        WestDoubleLeft,
+        WestDoubleRight,
+        NorthDoubleLeft,
+        NorthDoubleRight,
         EnumCount
     };
 
@@ -645,7 +653,7 @@ public:
 
     BuildingTileCategory *asGrimeWall() { return this; }
 
-    int shadowCount() const { return 8; }
+    int shadowCount() const { return 16; }
     int shadowToEnum(int shadowIndex);
 };
 

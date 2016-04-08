@@ -190,7 +190,7 @@ public:
         void ReplaceRoofCap(BuildingTileEntry *tile, int offset = 0);
         void ReplaceRoofTop(BuildingTileEntry *tile, int offset);
         void ReplaceFloorGrime(BuildingTileEntry *grimeTile);
-        void ReplaceWallGrime(BuildingTileEntry *grimeTile);
+        void ReplaceWallGrime(BuildingTileEntry *grimeTile, const QString &userTileWalls, const QString &userTileWalls2);
         void ReplaceWallTrim();
 
         int getWallOffset();

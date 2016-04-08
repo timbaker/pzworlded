@@ -131,7 +131,11 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                     if (!test)
                         test = tlBlend->cellAt(tx, ty).tile; // building tile
                     if (test) {
-                        QRect imageBox(QPoint(), test->image().size());
+                        Tile *realTile = test;
+                        if (test->image().isNull()) {
+                            test = TilesetManager::instance()->missingTile();
+                        }
+                        QRect imageBox(test->offset(), test->image().size());
                         QPoint p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, test->height()));
                         // Handle double-size tiles
                         if (tileBox.width() == test->width() * 2) {
@@ -146,9 +150,9 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                         for (int px = box.left(); px <= box.right(); px++) {
                             for (int py = box.top(); py <= box.bottom(); py++) {
                                 if (imageBox.contains(px, py)) {
-                                    QRgb pixel = test->image().pixel(px, py);
+                                    QRgb pixel = test->image().pixel(px - imageBox.x(), py - imageBox.y());
                                     if (qAlpha(pixel) > 0)
-                                        tile = test;
+                                        tile = realTile;
                                 }
                             }
                         }

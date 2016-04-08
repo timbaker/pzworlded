@@ -1381,6 +1381,14 @@ BTC_GrimeWall::BTC_GrimeWall(const QString &label) :
     mEnumNames += QLatin1String("NorthWindow");
     mEnumNames += QLatin1String("WestDoor");
     mEnumNames += QLatin1String("NorthDoor");
+    mEnumNames += QLatin1String("WestTrim");
+    mEnumNames += QLatin1String("NorthTrim");
+    mEnumNames += QLatin1String("NorthWestTrim");
+    mEnumNames += QLatin1String("SouthEastTrim");
+    mEnumNames += QLatin1String("WestDoubleLeft");
+    mEnumNames += QLatin1String("WestDoubleRight");
+    mEnumNames += QLatin1String("NorthDoubleLeft");
+    mEnumNames += QLatin1String("NorthDoubleRight");
     Q_ASSERT(mEnumNames.size() == EnumCount);
 }
 
@@ -1400,9 +1408,11 @@ BuildingTileEntry *BTC_GrimeWall::createEntryFromSingleTile(const QString &tileN
 
 int BTC_GrimeWall::shadowToEnum(int shadowIndex)
 {
-    const int map[8] = {
+    const int map[16] = {
         West, North, NorthWest, SouthEast,
-        WestWindow, NorthWindow, WestDoor, NorthDoor
+        WestWindow, NorthWindow, WestDoor, NorthDoor,
+        WestTrim, NorthTrim, NorthWestTrim, SouthEastTrim,
+        WestDoubleLeft, WestDoubleRight, NorthDoubleLeft, NorthDoubleRight
     };
     return map[shadowIndex];
 }
