@@ -29,9 +29,6 @@
 #include "documentmanager.h"
 #include "generatelotsdialog.h"
 #include "gotodialog.h"
-#include "heightmapdocument.h"
-#include "heightmaptools.h"
-#include "heightmapview.h"
 #include "layersdock.h"
 #include "lootwindow.h"
 #include "lotsdock.h"
@@ -57,14 +54,12 @@
 #include "scenetools.h"
 #include "simplefile.h"
 #include "templatesdialog.h"
-#include "texturemanager.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 #include "tmxtobmp.h"
 #include "tmxtobmpdialog.h"
 #include "toolmanager.h"
 #include "undodock.h"
-#include "virtualtileset.h"
 #include "world.h"
 #include "worlddocument.h"
 #include "worldreader.h"
@@ -222,9 +217,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
-    ui->actionHMMesh->setChecked(prefs->heightMapDisplayStyle() == 0);
-    ui->actionHMFlat->setChecked(prefs->heightMapDisplayStyle() == 1);
-
     connect(ui->actionNew, SIGNAL(triggered()), SLOT(newWorld()));
     connect(ui->actionOpen, SIGNAL(triggered()), SLOT(openFile()));
     connect(ui->actionEditCell, SIGNAL(triggered()), SLOT(editCell()));
@@ -296,9 +288,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionLootInspector, SIGNAL(triggered()), SLOT(lootInspector()));
-    connect(ui->actionEditHeightMap, SIGNAL(triggered()), SLOT(heightMapEditor()));
-    connect(ui->actionHMMesh, SIGNAL(toggled(bool)), SLOT(setHeightMapAsMesh(bool)));
-    connect(ui->actionHMFlat, SIGNAL(toggled(bool)), SLOT(setHeightMapAsFlat(bool)));
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -325,10 +314,6 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
-#endif
-#if 0 // see enableDeveloperFeatures
-    toolManager->addSeparator();
-    toolManager->registerTool(HeightMapTool::instance());
 #endif
     addToolBar(toolManager->toolBar());
 
@@ -519,19 +504,6 @@ void MainWindow::documentAdded(Document *doc)
         } else
             view->centerOn(scene->cellToPixelCoords(0, 0));
     }
-    if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
-        HeightMapView *view = new HeightMapView(this);
-        HeightMapScene *scene = new HeightMapScene(hmDoc, view);
-        view->setScene(scene);
-        doc->setView(view);
-
-        int pos = docman()->documents().indexOf(doc);
-        ui->documentTabWidget->insertTab(pos, view,
-            tr("HeightMap %1,%2").arg(hmDoc->cell()->x()).arg(hmDoc->cell()->y()));
-        ui->documentTabWidget->setTabToolTip(pos, doc->fileName());
-
-        view->centerOn(scene->toScene(hmDoc->cell()->pos() * 300 + QPoint(300/2, 300/2)));
-    }
 }
 
 void MainWindow::documentAboutToClose(int index, Document *doc)
@@ -598,13 +570,6 @@ void MainWindow::currentDocumentChanged(Document *doc)
 #endif
             connect(worldDoc, SIGNAL(selectedBMPsChanged()),
                     SLOT(updateActions()));
-        }
-
-        if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
-            connect(hmDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
-                    SLOT(setStatusBarCoords(int,int)));
-            connect(hmDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
-                    SLOT(generateLotSettingsChanged()));
         }
 
         mLotsDock->setDocument(doc);
@@ -874,31 +839,6 @@ bool MainWindow::InitConfigFiles()
         return false;
     }
 
-    new TextureMgr;
-    if (!TextureMgr::instance().readTxt()) {
-        QMessageBox::critical(this, tr("It's no good, Jim!"),
-                              tr("Error while reading %1\n%2")
-                              .arg(TextureMgr::instance().txtName())
-                              .arg(TextureMgr::instance().errorString()));
-        return false;
-    }
-
-    new VirtualTilesetMgr;
-    if (!VirtualTilesetMgr::instance().readTxt()) {
-        QMessageBox::critical(this, tr("It's no good, Jim!"),
-                              tr("Error while reading %1\n%2")
-                              .arg(VirtualTilesetMgr::instance().txtName())
-                              .arg(VirtualTilesetMgr::instance().errorString()));
-        return false;
-    }
-
-    connect(VirtualTilesetMgr::instancePtr(), SIGNAL(tilesetAdded(VirtualTileset*)),
-            TilesetManager::instance(), SLOT(virtualTilesetChanged(VirtualTileset*)));
-    connect(VirtualTilesetMgr::instancePtr(), SIGNAL(tilesetRemoved(VirtualTileset*)),
-            TilesetManager::instance(), SLOT(virtualTilesetChanged(VirtualTileset*)));
-    connect(VirtualTilesetMgr::instancePtr(), SIGNAL(tilesetChanged(VirtualTileset*)),
-            TilesetManager::instance(), SLOT(virtualTilesetChanged(VirtualTileset*)));
-
     return true;
 }
 
@@ -910,9 +850,6 @@ void MainWindow::setStatusBarCoords(int x, int y)
         if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
             cell = cellDoc->cell();
             worldDoc = cellDoc->worldDocument();
-        } else if (HeightMapDocument *hmDoc = mCurrentDocument->asHeightMapDocument()) {
-            cell = hmDoc->cell();
-            worldDoc = hmDoc->worldDocument();
         }
         if (cell) {
             ui->coordinatesLabel->setText(QString::fromLatin1("Cell x,y=%1,%2")
@@ -1094,31 +1031,6 @@ void MainWindow::lootInspector()
     }
 }
 
-void MainWindow::heightMapEditor()
-{
-    if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument()) {
-        foreach (WorldCell *cell, worldDoc->selectedCells()) {
-            worldDoc->editHeightMap(cell);
-        }
-    }
-}
-
-void MainWindow::setHeightMapAsMesh(bool mesh)
-{
-    Preferences *prefs = Preferences::instance();
-    prefs->setHeightMapDisplayStyle(mesh ? 0 : 1);
-    ui->actionHMMesh->setChecked(prefs->heightMapDisplayStyle() == 0);
-    ui->actionHMFlat->setChecked(prefs->heightMapDisplayStyle() == 1);
-}
-
-void MainWindow::setHeightMapAsFlat(bool flat)
-{
-    Preferences *prefs = Preferences::instance();
-    prefs->setHeightMapDisplayStyle(flat ? 1 : 0);
-    ui->actionHMMesh->setChecked(prefs->heightMapDisplayStyle() == 0);
-    ui->actionHMFlat->setChecked(prefs->heightMapDisplayStyle() == 1);
-}
-
 #include "mapwriter.h"
 #include <QScopedPointer>
 void MainWindow::FromToAux(bool selectedOnly)
@@ -1279,12 +1191,9 @@ void MainWindow::enableDeveloperFeatures()
     QString sourcePath = QCoreApplication::applicationDirPath()
             + QLatin1Char('/') + QLatin1String("EnableDeveloperFeatures.txt");
     if (QFileInfo(sourcePath).exists()) {
-        ToolManager::instance()->addSeparator();
-        ToolManager::instance()->registerTool(HeightMapTool::instance());
+
     } else {
         ui->menuTools->menuAction()->setVisible(false);
-        ui->menuHeightMap->menuAction()->setVisible(false);
-        ui->actionEditHeightMap->setVisible(false);
 //        ui->actionLotPackViewer->setVisible(false);
     }
 }
@@ -1294,8 +1203,6 @@ WorldDocument *MainWindow::currentWorldDocument()
     if (mCurrentDocument) {
         if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
             return cellDoc->worldDocument();
-        if (HeightMapDocument *hmDoc = mCurrentDocument->asHeightMapDocument())
-            return hmDoc->worldDocument();
         return mCurrentDocument->asWorldDocument();
     }
     return 0;
@@ -1427,13 +1334,9 @@ void MainWindow::generateLotSettingsChanged()
     int pos = 0;
     foreach (Document *doc, docman()->documents()) {
         CellDocument *cellDoc = doc->asCellDocument();
-        HeightMapDocument *hmDoc = doc->asHeightMapDocument();
         if (cellDoc && cellDoc->worldDocument() == worldDoc) {
             QPoint cellPos = cellDoc->cell()->displayPos();
             ui->documentTabWidget->setTabText(pos, tr("Cell %1,%2").arg(cellPos.x()).arg(cellPos.y()));
-        } else if (hmDoc && hmDoc->worldDocument() == worldDoc) {
-            QPoint cellPos = hmDoc->cell()->displayPos();
-            ui->documentTabWidget->setTabText(pos, tr("HeightMap %1,%2").arg(cellPos.x()).arg(cellPos.y()));
         }
         ++pos;
     }
@@ -1935,7 +1838,6 @@ void MainWindow::writeSettings()
 
     int i = 0;
     foreach (Document *doc, docman()->documents()) {
-        if (doc->isHeightMapDocument()) continue;
         mSettings.beginGroup(QString::number(i)); // openFiles/N/...
 
         mSettings.setValue(QLatin1String("file"), doc->fileName());
@@ -1996,15 +1898,10 @@ bool MainWindow::saveFile(const QString &fileName)
     WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
     if (!worldDoc && mCurrentDocument->isCellDocument())
         worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
-    if (!worldDoc && mCurrentDocument->isHeightMapDocument())
-        worldDoc = mCurrentDocument->asHeightMapDocument()->worldDocument();
     int pos = 0;
     foreach (Document *doc, docman()->documents()) {
         CellDocument *cellDoc = doc->asCellDocument();
-        HeightMapDocument *hmDoc = doc->asHeightMapDocument();
-        if ((doc == worldDoc) ||
-                (cellDoc && cellDoc->worldDocument() == worldDoc) ||
-                (hmDoc && hmDoc->worldDocument() == worldDoc)) {
+        if ((doc == worldDoc) || (cellDoc && cellDoc->worldDocument() == worldDoc)) {
             ui->documentTabWidget->setTabToolTip(pos, fileName);
         }
         ++pos;
@@ -2056,7 +1953,6 @@ void MainWindow::updateActions()
     ui->actionRemoveBMP->setEnabled(worldDoc && worldDoc->selectedBMPCount());
 
     ui->actionEditCell->setEnabled(false);
-    ui->actionEditHeightMap->setEnabled(false);
     ui->actionGoToXY->setEnabled(hasDoc);
     ui->actionResizeWorld->setEnabled(worldDoc);
     ui->actionObjectTypes->setEnabled(hasDoc);
@@ -2095,7 +1991,6 @@ void MainWindow::updateActions()
         WorldCell *cell = worldDoc->selectedCellCount() ? worldDoc->selectedCells().first() : 0;
         if (cell) {
             ui->actionEditCell->setEnabled(true);
-            ui->actionEditHeightMap->setEnabled(true);
             ui->actionClearCell->setEnabled(true);
             ui->actionClearMapOnly->setEnabled(true);
             ui->currentCellLabel->setText(tr("Current cell: %1,%2").arg(cell->displayPos().x()).arg(cell->displayPos().y()));

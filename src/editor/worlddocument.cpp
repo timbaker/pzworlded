@@ -20,10 +20,6 @@
 #include "bmptotmx.h"
 #include "celldocument.h"
 #include "documentmanager.h"
-#include "heightmap.h"
-#include "heightmapdocument.h"
-#include "heightmapfile.h"
-#include "heightmapundoredo.h"
 #include "luawriter.h"
 #include "mainwindow.h"
 #include "undoredo.h"
@@ -42,13 +38,9 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     : Document(WorldDocType)
     , mWorld(world)
     , mFileName(fileName)
-    , mHMFile(0)
     , mUndoRedo(this)
 {
     mUndoStack = new QUndoStack(this);
-
-    if (!mWorld->hmFileName().isEmpty())
-        openHeightMap();
 
     // Forward all the signals from mUndoRedo to this object's signals
 
@@ -190,16 +182,10 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(propertyEnumChanged(PropertyEnum*)));
     connect(&mUndoRedo, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
             SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)));
-
-    connect(&mUndoRedo, SIGNAL(heightMapPainted(QRegion)),
-            SIGNAL(heightMapPainted(QRegion)));
-    connect(&mUndoRedo, SIGNAL(heightMapFileNameChanged()),
-            SIGNAL(heightMapFileNameChanged()));
 }
 
 WorldDocument::~WorldDocument()
 {
-    delete mHMFile;
     delete mUndoStack; // before mWorld is deleted
     delete mWorld;
 }
@@ -219,11 +205,6 @@ bool WorldDocument::save(const QString &filePath, QString &error)
     WorldWriter writer;
     if (!writer.writeWorld(mWorld, filePath)) {
         error = writer.errorString();
-        return false;
-    }
-
-    if (hmFile() && !hmFile()->save()) {
-        error = hmFile()->errorString();
         return false;
     }
 
@@ -356,26 +337,6 @@ void WorldDocument::removeBMPFromSelection(WorldBMP *bmp)
     }
 }
 
-bool WorldDocument::openHeightMap()
-{
-    QFileInfo info(world()->hmFileName());
-    if (!info.exists())
-        return false;
-
-    if (!mHMFile) {
-        mHMFile = new HeightMapFile;
-        if (!mHMFile->open(world()->hmFileName())) {
-            QMessageBox::warning(MainWindow::instance(), tr("Failed to open heightmap file"),
-                                 mHMFile->errorString());
-            delete mHMFile;
-            mHMFile = 0;
-            return false;
-        }
-    }
-
-    return true;
-}
-
 void WorldDocument::editCell(WorldCell *cell)
 {
     editCell(cell->x(), cell->y());
@@ -391,44 +352,6 @@ void WorldDocument::editCell(int x, int y)
     }
     CellDocument *cellDoc = new CellDocument(this, cell);
     docman->addDocument(cellDoc);
-}
-
-void WorldDocument::editHeightMap(WorldCell *cell)
-{
-    DocumentManager *docman = DocumentManager::instance();
-    if (HeightMapDocument *hmDoc = docman->findHMDocument(cell)) {
-        docman->setCurrentDocument(hmDoc);
-        return;
-    }
-
-    if (world()->hmFileName().isEmpty()) {
-        QString defaultName = tr("untitled.whm");
-        if (!fileName().isEmpty())
-            defaultName = QFileInfo(fileName()).baseName() + QLatin1String(".whm");
-        QString f = QFileDialog::getSaveFileName(MainWindow::instance(),
-                                                 tr("Save HeightMap As"),
-                                                 defaultName, tr("WorldEd HeightMap (*.whm)"));
-        if (f.isEmpty())
-            return;
-
-        setHeightMapFileName(f); // undo/redo
-    }
-
-    QFileInfo info(world()->hmFileName());
-    if (!info.exists()) {
-        HeightMapFile hmFile;
-        if (!hmFile.create(world()->hmFileName(), world()->width() * 300, world()->height() * 300)) {
-            QMessageBox::warning(MainWindow::instance(), tr("Failed to create heightmap file"),
-                                 hmFile.errorString());
-            return;
-        }
-    }
-
-    if (!openHeightMap())
-        return;
-
-    HeightMapDocument *hmDoc = new HeightMapDocument(this, cell);
-    docman->addDocument(hmDoc);
 }
 
 void WorldDocument::resizeWorld(const QSize &newSize)
@@ -971,16 +894,6 @@ void WorldDocument::renamePropertyEnumChoice(PropertyEnum *pe, int index, const 
     undoStack()->push(new RenamePropertyEnumChoice(this, pe, index, name));
 
     undoStack()->endMacro();
-}
-
-void WorldDocument::setHeightMapFileName(const QString &fileName)
-{
-    undoStack()->push(new SetHeightMapFileName(this, fileName));
-}
-
-void WorldDocument::paintHeightMap(const HeightMapRegion &region, bool mergeable)
-{
-    undoStack()->push(new PaintHeightMap(this, region, mergeable));
 }
 
 void WorldDocument::emitCellMapFileAboutToChange(WorldCell *cell)
@@ -1556,27 +1469,4 @@ QString WorldDocumentUndoRedo::renamePropertyEnumChoice(PropertyEnum *pe, int in
     pe->setValues(choices);
     emit propertyEnumChoicesChanged(pe);
     return old;
-}
-
-QString WorldDocumentUndoRedo::setHeightMapFileName(const QString &fileName)
-{
-    QString old = mWorld->hmFileName();
-    mWorld->setHeightMapFileName(fileName);
-    emit heightMapFileNameChanged();
-    return old;
-}
-
-void WorldDocumentUndoRedo::paintHeightMap(const HeightMapRegion &region)
-{
-    HeightMap hm(mWorldDoc->hmFile(), 2);
-    foreach (QRect r, region.mRegion.rects()) {
-        for (int y = r.top(); y <= r.bottom(); y++) {
-            for (int x = r.left(); x <= r.right(); x++) {
-                hm.setCenter(x, y); /////
-                hm.setHeightAt(x, y, region.heightAt(x, y));
-            }
-        }
-    }
-
-    emit heightMapPainted(region.mRegion);
 }

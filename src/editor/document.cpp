@@ -18,7 +18,6 @@
 #include "document.h"
 
 #include "celldocument.h"
-#include "heightmapdocument.h"
 #include "worlddocument.h"
 
 #include <QUndoStack>
@@ -39,11 +38,6 @@ CellDocument *Document::asCellDocument()
 WorldDocument *Document::asWorldDocument()
 {
     return isWorldDocument() ? static_cast<WorldDocument*>(this) : NULL;
-}
-
-HeightMapDocument *Document::asHeightMapDocument()
-{
-    return isHeightMapDocument() ? static_cast<HeightMapDocument*>(this) : NULL;
 }
 
 bool Document::isModified() const

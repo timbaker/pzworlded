@@ -20,7 +20,6 @@
 #include "celldocument.h"
 #include "cellscene.h"
 #include "document.h"
-#include "heightmapdocument.h"
 #include "mapmanager.h"
 #include "worlddocument.h"
 
@@ -68,24 +67,6 @@ void DocumentManager::addDocument(Document *doc)
                 insertAt = n + 1;
             else if (CellDocument *cd2 = walk->asCellDocument()) {
                 if (cd2->worldDocument() == worldDoc)
-                    insertAt = n + 1;
-            }
-            ++n;
-        }
-        Q_ASSERT(insertAt > 0);
-    }
-
-    // Put HeightMapDocument after all CellDocuments for assocated WorldDocument.
-    if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
-        WorldDocument *worldDoc = hmDoc->worldDocument();
-        insertAt = -1;
-        int n = 0;
-        foreach (Document *walk, mDocuments) {
-            if (walk == worldDoc || (walk->asCellDocument()
-                                     && walk->asCellDocument()->worldDocument() == worldDoc))
-                insertAt = n + 1;
-            else if (HeightMapDocument *hmDoc2 = walk->asHeightMapDocument()) {
-                if (hmDoc2->worldDocument() == worldDoc)
                     insertAt = n + 1;
             }
             ++n;
@@ -172,17 +153,6 @@ CellDocument *DocumentManager::findDocument(WorldCell *cell)
         if (CellDocument *cellDoc = doc->asCellDocument()) {
             if (cellDoc->cell() == cell)
                 return cellDoc;
-        }
-    }
-    return 0;
-}
-
-HeightMapDocument *DocumentManager::findHMDocument(WorldCell *cell)
-{
-    foreach (Document *doc, mDocuments) {
-        if (HeightMapDocument *hmDoc = doc->asHeightMapDocument()) {
-            if (hmDoc->cell() == cell)
-                return hmDoc;
         }
     }
     return 0;

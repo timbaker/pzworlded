@@ -315,7 +315,6 @@
      <string>World</string>
     </property>
     <addaction name="actionEditCell"/>
-    <addaction name="actionEditHeightMap"/>
     <addaction name="actionGoToXY"/>
     <addaction name="actionResizeWorld"/>
     <addaction name="separator"/>
@@ -358,25 +357,11 @@
     <addaction name="actionBuildingsToPNG"/>
     <addaction name="actionLootInspector"/>
    </widget>
-   <widget class="QMenu" name="menuHeightMap">
-    <property name="title">
-     <string>HeightMap</string>
-    </property>
-    <widget class="QMenu" name="menuDisplay_Style">
-     <property name="title">
-      <string>Display Style</string>
-     </property>
-     <addaction name="actionHMMesh"/>
-     <addaction name="actionHMFlat"/>
-    </widget>
-    <addaction name="menuDisplay_Style"/>
-   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
-   <addaction name="menuHeightMap"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
@@ -763,16 +748,6 @@
   <action name="actionFromToSelected">
    <property name="text">
     <string>Selected Cells Only...</string>
-   </property>
-  </action>
-  <action name="actionHeightMap">
-   <property name="text">
-    <string>HeightMap Editor</string>
-   </property>
-  </action>
-  <action name="actionEditHeightMap">
-   <property name="text">
-    <string>Edit HeightMap</string>
    </property>
   </action>
   <action name="actionHMMesh">

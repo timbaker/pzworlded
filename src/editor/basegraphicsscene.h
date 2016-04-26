@@ -23,7 +23,6 @@
 class AbstractTool;
 class BaseGraphicsView;
 class CellScene;
-class HeightMapScene;
 class LotPackScene;
 class WorldScene;
 
@@ -33,8 +32,7 @@ public:
     enum SceneType {
         CellSceneType,
         WorldSceneType,
-        LotPackSceneType,
-        HeightMapSceneType
+        LotPackSceneType
     };
 
     explicit BaseGraphicsScene(SceneType type, QObject *parent = 0);
@@ -45,7 +43,6 @@ public:
     bool isWorldScene() const { return mType == WorldSceneType; }
     bool isCellScene() const { return mType == CellSceneType; }
     bool isLotPackScene() const { return mType == LotPackSceneType; }
-    bool isHeightMapScene() const { return mType == HeightMapSceneType; }
 
     virtual void viewTransformChanged(BaseGraphicsView *view)
     {
@@ -55,7 +52,6 @@ public:
     WorldScene *asWorldScene();
     CellScene *asCellScene();
     LotPackScene *asLotPackScene();
-    HeightMapScene *asHeightMapScene();
 
     void clearScene();
 

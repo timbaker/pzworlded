@@ -74,7 +74,6 @@
         <file>images/22x22/road-tool-select.png</file>
         <file>images/22x22/bmp-tool-select.png</file>
         <file>images/missing-tile.png</file>
-        <file>images/22x22/heightmap-paint.png</file>
         <file>images/22x22/tool-spawn-point.png</file>
         <file>images/idea.png</file>
     </qresource>

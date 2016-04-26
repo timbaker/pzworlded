@@ -80,12 +80,6 @@ public:
     bool showAdjacentMaps() const { return mShowAdjacentMaps; }
     void setShowAdjacentMaps(bool show);
 
-    int heightMapDisplayStyle() const
-    { return mHeightMapDisplayStyle; }
-
-    bool useVirtualTilesets() const
-    { return mUseVirtualTilesets; }
-
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
@@ -108,7 +102,6 @@ signals:
     void mapsDirectoryChanged();
     void tilesDirectoryChanged();
     void showAdjacentMapsChanged(bool show);
-    void heightMapDisplayStyleChanged(int style);
     void highlightRoomUnderPointerChanged(bool highlight);
 
 public slots:
@@ -123,7 +116,6 @@ public slots:
     void setShowBMPs(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void setHighlightRoomUnderPointer(bool highlight);
-    void setHeightMapDisplayStyle(int style);
 
 private:
     Preferences();
@@ -149,9 +141,7 @@ private:
     QString mTiles2xDirectory;
     QString mOpenFileDirectory;
     bool mShowAdjacentMaps;
-    int mHeightMapDisplayStyle;
     bool mHighlightRoomUnderPointer;
-    bool mUseVirtualTilesets;
 
     static Preferences *mInstance;
 };

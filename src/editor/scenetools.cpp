@@ -22,7 +22,6 @@
 #include "celldocument.h"
 #include "cellscene.h"
 #include "clipboard.h"
-#include "heightmaptools.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mainwindow.h"
@@ -88,11 +87,6 @@ BaseWorldSceneTool *AbstractTool::asWorldTool()
 BaseCellSceneTool *AbstractTool::asCellTool()
 {
     return isCellTool() ? static_cast<BaseCellSceneTool*>(this) : 0;
-}
-
-BaseHeightMapTool *AbstractTool::asHeightMapTool()
-{
-    return isHeightMapTool() ? static_cast<BaseHeightMapTool*>(this) : 0;
 }
 
 /////

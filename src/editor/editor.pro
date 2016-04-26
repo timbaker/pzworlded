@@ -124,21 +124,12 @@ SOURCES += main.cpp\
     chunkmap.cpp \
     fromtodialog.cpp \
     unknowncolorsdialog.cpp \
-    heightmapview.cpp \
-    heightmaptools.cpp \
-    heightmapdocument.cpp \
-    heightmap.cpp \
-    heightmapfile.cpp \
-    heightmapundoredo.cpp \
     gotodialog.cpp \
     spawntooldialog.cpp \
     propertyenumdialog.cpp \
     writespawnpointsdialog.cpp \
     mapbuildings.cpp \
     pngbuildingdialog.cpp \
-    virtualtileset.cpp \
-    texturemanager.cpp \
-    pixelbuffer.cpp \
     tiledeffile.cpp \
     lootwindow.cpp \
     sceneoverlay.cpp \
@@ -220,12 +211,6 @@ HEADERS  += mainwindow.h \
     chunkmap.h \
     fromtodialog.h \
     unknowncolorsdialog.h \
-    heightmapview.h \
-    heightmaptools.h \
-    heightmapdocument.h \
-    heightmap.h \
-    heightmapfile.h \
-    heightmapundoredo.h \
     gotodialog.h \
     spawntooldialog.h \
     propertyenumdialog.h \
@@ -233,9 +218,6 @@ HEADERS  += mainwindow.h \
     writespawnpointsdialog.h \
     mapbuildings.h \
     pngbuildingdialog.h \
-    virtualtileset.h \
-    texturemanager.h \
-    pixelbuffer.h \
     tiledeffile.h \
     lootwindow.h \
     sceneoverlay.h \

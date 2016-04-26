@@ -118,8 +118,6 @@ private:
                 readLuaSettings();
             else if (xml.name() == QLatin1String("bmp"))
                 readBMP();
-            else if (xml.name() == QLatin1String("heightmap"))
-                readHeightMap();
             else
                 readUnknownElement();
         }
@@ -594,18 +592,6 @@ private:
         // No check wanted/needed on BMP coordinates
         WorldBMP *bmp = new WorldBMP(mWorld, x, y, width, height, path);
         mWorld->insertBmp(mWorld->bmps().count(), bmp);
-
-        xml.skipCurrentElement();
-    }
-
-    void readHeightMap()
-    {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("heightmap"));
-
-        const QXmlStreamAttributes atts = xml.attributes();
-        QString path = atts.value(QLatin1String("file")).toString();
-        path = resolveReference(path, mPath);
-        mWorld->setHeightMapFileName(path);
 
         xml.skipCurrentElement();
     }

@@ -77,8 +77,6 @@ public:
         writeGenerateLots(w);
         writeLuaSettings(w);
 
-        writeHeightMap(w);
-
         foreach (WorldBMP *bmp, world->bmps())
             writeBMP(w, bmp);
 
@@ -430,15 +428,6 @@ public:
         w.writeAttribute(QLatin1String("width"), QString::number(bmp->width()));
         w.writeAttribute(QLatin1String("height"), QString::number(bmp->height()));
 
-        w.writeEndElement();
-    }
-
-    void writeHeightMap(QXmlStreamWriter &w)
-    {
-        if (mWorld->hmFileName().isEmpty())
-            return;
-        w.writeStartElement(QLatin1String("heightmap"));
-        w.writeAttribute(QLatin1String("file"), relativeFileName(mWorld->hmFileName()));
         w.writeEndElement();
     }
 

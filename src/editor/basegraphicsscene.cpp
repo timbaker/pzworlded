@@ -18,7 +18,6 @@
 #include "basegraphicsscene.h"
 
 #include "cellscene.h"
-#include "heightmapview.h"
 #include "toolmanager.h"
 #include "worldscene.h"
 
@@ -37,11 +36,6 @@ WorldScene *BaseGraphicsScene::asWorldScene()
 CellScene *BaseGraphicsScene::asCellScene()
 {
     return isCellScene() ? static_cast<CellScene*>(this) : 0;
-}
-
-HeightMapScene *BaseGraphicsScene::asHeightMapScene()
-{
-    return isHeightMapScene() ? static_cast<HeightMapScene*>(this) : 0;
 }
 
 void BaseGraphicsScene::clearScene()

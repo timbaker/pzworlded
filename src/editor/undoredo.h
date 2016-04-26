@@ -56,8 +56,7 @@ enum UndoCommands {
     UndoCmd_ChangeRoadCoords,
     UndoCmd_ChangeRoadWidth,
     UndoCmd_ChangeRoadTile,
-    UndoCmd_ChangeRoadLines,
-    UndoCmd_PaintHeightMap
+    UndoCmd_ChangeRoadLines
 };
 
 class SetCellMainMap : public QUndoCommand

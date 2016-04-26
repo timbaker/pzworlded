@@ -30,8 +30,6 @@
 class BMPToTMXSettings;
 class GenerateLotsSettings;
 class LuaSettings;
-class HeightMapFile;
-class HeightMapRegion;
 class ObjectType;
 class Property;
 class PropertyDef;
@@ -139,9 +137,6 @@ public:
     QString removePropertyEnumChoice(PropertyEnum *pe, int index);
     QString renamePropertyEnumChoice(PropertyEnum *pe, int index, const QString &name);
 
-    QString setHeightMapFileName(const QString &fileName);
-    void paintHeightMap(const HeightMapRegion &region);
-
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
     void propertyDefinitionAboutToBeRemoved(int index);
@@ -222,9 +217,6 @@ signals:
     void propertyEnumChanged(PropertyEnum *pe);
     void propertyEnumChoicesChanged(PropertyEnum *pe);
 
-    void heightMapFileNameChanged();
-    void heightMapPainted(const QRegion &region);
-
 private:
     WorldDocument *mWorldDoc;
     World *mWorld;
@@ -269,10 +261,6 @@ public:
 
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
-
-    void editHeightMap(WorldCell *cell);
-    HeightMapFile *hmFile() const
-    { return mHMFile; }
 
     void resizeWorld(const QSize &newSize);
 
@@ -400,9 +388,6 @@ public:
     void removePropertyEnumChoice(PropertyEnum *pe, int index);
     void renamePropertyEnumChoice(PropertyEnum *pe, int index, const QString &name);
 
-    void setHeightMapFileName(const QString &fileName);
-    void paintHeightMap(const HeightMapRegion &region, bool mergeable);
-
     void emitCellMapFileAboutToChange(WorldCell *cell);
     void emitCellMapFileChanged(WorldCell *cell);
 
@@ -419,8 +404,6 @@ private:
 
     void removeRoadFromSelection(Road *road);
     void removeBMPFromSelection(WorldBMP *bmp);
-
-    bool openHeightMap();
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
@@ -508,9 +491,6 @@ signals:
     void propertyEnumChanged(PropertyEnum *pe);
     void propertyEnumChoicesChanged(PropertyEnum *pe);
 
-    void heightMapFileNameChanged();
-    void heightMapPainted(const QRegion &region);
-
 private:
     World *mWorld;
     QList<WorldCell*> mSelectedCells;
@@ -519,8 +499,6 @@ private:
     QList<Road*> mSelectedRoads;
     QList<WorldBMP*> mSelectedBMPs;
     QString mFileName;
-
-    HeightMapFile *mHMFile;
 
     friend class WorldDocumentUndoRedo;
     WorldDocumentUndoRedo mUndoRedo;

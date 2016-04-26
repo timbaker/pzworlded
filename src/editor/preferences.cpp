@@ -94,9 +94,6 @@ Preferences::Preferences()
     mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
     mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
     mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
-    QString hmStyle = mSettings->value(QLatin1String("HeightMapDisplayStyle"),
-                                       QLatin1String("mesh")).toString();
-    mHeightMapDisplayStyle = (hmStyle == QLatin1String("mesh")) ? 0 : 1;
     mSettings->endGroup();
 
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
@@ -132,9 +129,6 @@ Preferences::Preferences()
     if (configPath.isEmpty())
         configPath = QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
     mConfigDirectory = configPath;
-
-    // Use the 'use virtual tilesets' setting from TileZed.
-    mUseVirtualTilesets = settings.value(QLatin1String("Interface/UseVirtualTilesets"), false).toBool();
 }
 
 Preferences::~Preferences()
@@ -370,18 +364,6 @@ void Preferences::setHighlightRoomUnderPointer(bool highlight)
                         mHighlightRoomUnderPointer);
     emit highlightRoomUnderPointerChanged(mHighlightRoomUnderPointer);
 }
-
-void Preferences::setHeightMapDisplayStyle(int style)
-{
-    if (style == mHeightMapDisplayStyle)
-        return;
-
-    mHeightMapDisplayStyle = style;
-    mSettings->setValue(QLatin1String("Interface/HeightMapDisplayStyle"),
-                        QLatin1String(style ? "flat" : "mesh"));
-    emit heightMapDisplayStyleChanged(mHeightMapDisplayStyle);
-}
-
 
 void Preferences::setMapsDirectory(const QString &path)
 {

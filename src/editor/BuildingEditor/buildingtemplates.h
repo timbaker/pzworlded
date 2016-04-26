@@ -20,6 +20,7 @@
 
 #include <QList>
 #include <QMap>
+#include <QObject>
 #include <QPair>
 #include <QString>
 #include <QStringList>
