@@ -395,51 +395,10 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
     mGidMapper.setTilesetWidth(tileset, width);
 
 #ifdef ZOMBOID
-#if 1
     // The tileset image is not read yet.  Just quickly create each Tile with
     // an all-white pixmap.
     const int height = atts.value(QLatin1String("height")).toString().toInt();
     tileset->loadFromNothing(QSize(width, height), source);
-#elif 0
-    QImageReader reader(source);
-    if (reader.size().isValid() && tileset->loadFromNothing(reader.size(), source)) {
-        // The tileset image is not read yet.  Just quickly create each Tile with
-        // an all-white pixmap.
-    } else {
-        const int height = atts.value(QLatin1String("height")).toString().toInt();
-        QImage image(width, height, QImage::Format_ARGB32);
-        image.fill(Qt::red);
-        tileset->loadFromImage(image, source);
-        tileset->setMissing(true);
-    }
-#else
-    if (p->tilesetImageCache()) {
-        Tileset *cached = p->tilesetImageCache()->findMatch(tileset, source);
-        if (!cached || !tileset->loadFromCache(cached)) {
-            const QImage tilesetImage = p->readExternalImage(source);
-            if (tileset->loadFromImage(tilesetImage, source))
-                p->tilesetImageCache()->addTileset(tileset);
-            else {
-                const int height = atts.value(QLatin1String("height")).toString().toInt();
-                QImage image(width, height, QImage::Format_ARGB32);
-                image.fill(Qt::red);
-                tileset->loadFromImage(image, source);
-                tileset->setMissing(true);
-            }
-        }
-        xml.skipCurrentElement();
-        return;
-    } else {
-        const QImage tilesetImage = p->readExternalImage(source);
-        if (!tileset->loadFromImage(tilesetImage, source)) {
-            const int height = atts.value(QLatin1String("height")).toString().toInt();
-            QImage image(width, height, QImage::Format_ARGB32);
-            image.fill(Qt::red);
-            tileset->loadFromImage(image, source);
-            tileset->setMissing(true);
-        }
-    }
-#endif
 #else
     const QImage tilesetImage = p->readExternalImage(source);
     if (!tileset->loadFromImage(tilesetImage, source))

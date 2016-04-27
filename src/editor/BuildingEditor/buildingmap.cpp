@@ -684,6 +684,11 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor)
     mShadowBuilding->floorTilesChanged(floor);
 
     pendingEraseUserTiles.insert(floor);
+
+    // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
+//    if (tiles.contains(QLatin1Literal("Walls")) || tiles.contains(QLatin1Literal("Walls2")))
+        pendingLayoutToSquares.insert(floor);
+
     schedulePending();
 }
 
@@ -693,6 +698,11 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor, const QString &layerNa
     mShadowBuilding->floorTilesChanged(floor, layerName, bounds);
 
     pendingUserTilesToLayer[floor][layerName] |= bounds;
+
+    // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
+    if (layerName == QLatin1Literal("Walls") || layerName == QLatin1Literal("Walls2"))
+        pendingLayoutToSquares.insert(floor);
+
     schedulePending();
 }
 

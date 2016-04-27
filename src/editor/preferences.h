@@ -61,7 +61,6 @@ public:
     void setTilesDirectory(const QString &path);
 
     QString tiles2xDirectory() const;
-    void setTiles2xDirectory(const QString &path);
 
     QString texturesDirectory() const;
 
@@ -138,7 +137,6 @@ private:
     QString mConfigDirectory;
     QString mMapsDirectory;
     QString mTilesDirectory;
-    QString mTiles2xDirectory;
     QString mOpenFileDirectory;
     bool mShowAdjacentMaps;
     bool mHighlightRoomUnderPointer;

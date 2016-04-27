@@ -54,11 +54,10 @@ void TileMetaInfoMgr::deleteInstance()
   * Any tilesets that were already found relative to the old directory
   * are searched for again relative to the new directory.
   */
-void TileMetaInfoMgr::changeTilesDirectory(const QString &path, const QString &path2x)
+void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
 {
     QDir tilesDir(tilesDirectory());
-    Preferences::instance()->setTilesDirectory(path);
-    Preferences::instance()->setTiles2xDirectory(path2x); // must be done before loading tilesets, see TilesetManager.resolveImageSource
+    Preferences::instance()->setTilesDirectory(path); // must be done before loading tilesets, see TilesetManager.resolveImageSource
     foreach (Tileset *ts, tilesets()) {
         if (ts->isMissing())
             continue; // keep the relative path

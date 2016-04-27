@@ -3,17 +3,17 @@ if {[llength [info commands console]]} {
     update
 }
 
-set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_2_1_MSVC2012_OpenGL_64bit-Release
+set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_5_0_MSVC2013_64bit-Release
 set SRC C:/Programming/PZWorldEd/pzworlded
-set QT_DIR C:/Programming/QtSDK2015/5.2.1/msvc2012_64_opengl
+set QT_DIR C:/Programming/QtSDK2015/5.5/msvc2013_64
 set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
         32bit {
             puts "dist.tcl: 32-bit"
-            set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_2_1_MSVC2010_32bit_OpenGL-Release
-            set QT_DIR C:/Programming/QtSDK2015/5.2.1/msvc2010_opengl
+            set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_5_0_MSVC2013_32bit-Release
+            set QT_DIR C:/Programming/QtSDK2015/5.5/msvc2013
             set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed32\WorldEd}
         }
         64bit {

@@ -1823,7 +1823,7 @@ bool MainWindow::confirmAllSave()
 
 void MainWindow::writeSettings()
 {
-    mSettings.beginGroup(QLatin1String("mainwindow"));
+    mSettings.beginGroup(QLatin1String("MainWindow"));
     mSettings.setValue(QLatin1String("geometry"), saveGeometry());
     mSettings.setValue(QLatin1String("state"), saveState());
     mSettings.endGroup();
@@ -1869,7 +1869,7 @@ void MainWindow::writeSettings()
 
 void MainWindow::readSettings()
 {
-    mSettings.beginGroup(QLatin1String("mainwindow"));
+    mSettings.beginGroup(QLatin1String("MainWindow"));
     QByteArray geom = mSettings.value(QLatin1String("geometry")).toByteArray();
     if (!geom.isEmpty())
         restoreGeometry(geom);

@@ -102,7 +102,7 @@ Preferences::Preferences()
 
     // Set the default location of the Tiles Directory to the same value set
     // in TileZed's Tilesets Dialog.
-    QSettings settings(QLatin1String("mapeditor.org"), QLatin1String("Tiled"));
+    QSettings settings(QLatin1String("TheIndieStone"), QLatin1String("TileZed"));
     QString KEY_TILES_DIR = QLatin1String("Tilesets/TilesDirectory");
     QString tilesDirectory = settings.value(KEY_TILES_DIR).toString();
 
@@ -119,7 +119,6 @@ Preferences::Preferences()
         tilesDirectory.clear();
     mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
                                        tilesDirectory).toString();
-    mTiles2xDirectory = mSettings->value(QLatin1String("Tiles2xDirectory")).toString();
 
     mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
 
@@ -395,14 +394,9 @@ void Preferences::setTilesDirectory(const QString &path)
 
 QString Preferences::tiles2xDirectory() const
 {
-    return mTiles2xDirectory;
-}
-
-void Preferences::setTiles2xDirectory(const QString &path)
-{
-    mTiles2xDirectory = path;
-    mSettings->setValue(QLatin1String("Tiles2xDirectory"), mTiles2xDirectory);
-    emit tilesDirectoryChanged();
+    if (mTilesDirectory.isEmpty())
+        return QString();
+    return mTilesDirectory + QLatin1Char('/') + QLatin1String("2x");
 }
 
 QString Preferences::texturesDirectory() const
