@@ -3,18 +3,18 @@ if {[llength [info commands console]]} {
     update
 }
 
-set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_5_0_MSVC2013_64bit-Release
+set BIN C:/Programming/PZWorldEd/dist64
 set SRC C:/Programming/PZWorldEd/pzworlded
 set QT_DIR C:/Programming/QtSDK2015/5.5/msvc2013_64
-set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed\WorldEd}
+set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd}
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
         32bit {
             puts "dist.tcl: 32-bit"
-            set BIN C:/Programming/PZWorldEd/build-PZWorldEd-Desktop_Qt_5_5_0_MSVC2013_32bit-Release
+            set BIN C:/Programming/PZWorldEd/dist32
             set QT_DIR C:/Programming/QtSDK2015/5.5/msvc2013
-            set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\TileZed32\WorldEd}
+            set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd32}
         }
         64bit {
             puts "dist.tcl: 64-bit"
@@ -80,10 +80,10 @@ copyFile $QT_BINARY_DIR $DEST Qt5Network.dll
 copyFile $QT_BINARY_DIR $DEST Qt5OpenGL.dll
 copyFile $QT_BINARY_DIR $DEST Qt5Widgets.dll
 copyFile $QT_BINARY_DIR $DEST Qt5Xml.dll
-if {[file exists $QT_BINARY_DIR/icudt51.dll]} {
-copyFile $QT_BINARY_DIR $DEST icudt51.dll
-copyFile $QT_BINARY_DIR $DEST icuin51.dll
-copyFile $QT_BINARY_DIR $DEST icuuc51.dll
+if {[file exists $QT_BINARY_DIR/icudt54.dll]} {
+copyFile $QT_BINARY_DIR $DEST icudt54.dll
+copyFile $QT_BINARY_DIR $DEST icuin54.dll
+copyFile $QT_BINARY_DIR $DEST icuuc54.dll
 }
 
 copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qgif.dll
