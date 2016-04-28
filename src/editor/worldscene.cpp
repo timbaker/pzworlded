@@ -1501,18 +1501,6 @@ WorldBMPItem::WorldBMPItem(WorldScene *scene, WorldBMP *bmp)
 
     // I chopped up the image to make OpenGL happy (no 6000x3000 textures), but
     // performance is way better without OpenGL, probably due to pixel format.
-    if (mMapImage) {
-        int columns = (mMapImage->image().width() + 511) / 512;
-        int rows = (mMapImage->image().height() + 511) / 512;
-        mSubImages.resize(columns * rows);
-        QRect r(QPoint(), mMapImage->image().size());
-        for (int x = 0; x < columns; x++) {
-            for (int y = 0; y < rows; y++) {
-                QRect subr = QRect(x * 512, y * 512, 512, 512) & r;
-                mSubImages[x + y * columns] = mMapImage->image().copy(subr);
-            }
-        }
-    }
 
     setToolTip(QDir::toNativeSeparators(bmp->filePath()));
 
@@ -1536,12 +1524,12 @@ void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 {
     if (mMapImage) {
 #if 1
-        int columns = (mMapImage->image().width() + 511) / 512;
-        int rows = (mMapImage->image().height() + 511) / 512;
-        qreal scale = mMapImageBounds.width() / qreal(mMapImage->image().width());
+        int columns = mMapImage->subImageColumns();
+        int rows = mMapImage->subImageRows();
+        qreal scale = mMapImageBounds.width() / qreal(mMapImage->imageWidth());
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
-                QImage &img = mSubImages[x + y * columns];
+                const QImage &img = mMapImage->subImages()[x + y * columns];
                 int imgw = img.width(), imgh = img.height();
                 QRectF target = QRectF(mMapImageBounds.x() + x * 512 * scale,
                                        mMapImageBounds.y() + y * 512 * scale,

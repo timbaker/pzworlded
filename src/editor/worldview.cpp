@@ -85,9 +85,9 @@ void WorldMiniMapItem::paint(QPainter *painter,
 {
     foreach (WorldBMP *bmp, mImages.keys()) {
         if (MapImage *mapImage = mImages[bmp]) {
-            const QImage &image = mapImage->image();
+            const QImage &image = mapImage->miniMapImage();
             QRectF target = mScene->boundingRect(bmp->bounds());
-            QRectF source = QRect(QPoint(0, 0), image.size());
+            QRectF source = QRect(QPoint(), image.size());
             painter->drawImage(target, image, source);
         }
     }

@@ -160,6 +160,31 @@ public:
 
     bool isLoaded() const { return mLoaded; }
 
+#ifdef WORLDED
+    void chopIntoPieces();
+
+    QSize imageSize() const
+    { return mImageSize; }
+
+    int imageWidth() const
+    { return mImageSize.width(); }
+
+    int imageHeight() const
+    { return mImageSize.height(); }
+
+    int subImageColumns() const
+    { return (mImageSize.width() + 511) / 512; }
+
+    int subImageRows() const
+    { return (mImageSize.height() + 511) / 512; }
+
+    const QVector<QImage> &subImages() const
+    { return mSubImages; }
+
+    const QImage &miniMapImage() const
+    { return mMiniMapImage; }
+#endif /* WORLDED */
+
 private:
     QImage mImage;
     MapInfo *mInfo;
@@ -170,6 +195,13 @@ private:
     QSize mMapSize;
     QSize mTileSize;
     bool mLoaded;
+
+#ifdef WORLDED
+    // For WorldEd world images.
+    QSize mImageSize;
+    QVector<QImage> mSubImages;
+    QImage mMiniMapImage;
+#endif /* WORLDED */
 
     friend class MapImageManager;
 };
