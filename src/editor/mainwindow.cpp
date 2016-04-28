@@ -807,6 +807,12 @@ bool MainWindow::InitConfigFiles()
         return false;
     }
 
+    if (!TileMetaInfoMgr::instance()->addNewTilesets()) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("%1\n(while adding new tilesets)"));
+        return false;
+    }
+
     if (!BuildingTMX::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
                               tr("Error while reading %1\n%2")

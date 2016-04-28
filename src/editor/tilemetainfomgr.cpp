@@ -339,6 +339,42 @@ bool TileMetaInfoMgr::mergeTxt()
     return true;
 }
 
+bool TileMetaInfoMgr::addNewTilesets()
+{
+    QDir dir(tiles2xDirectory());
+    if (!dir.exists())
+        return true;
+
+    dir.setFilter(QDir::Files);
+    dir.setSorting(QDir::Name);
+    QStringList nameFilters;
+    foreach (QByteArray format, QImageReader::supportedImageFormats())
+        nameFilters += QLatin1String("*.") + QString::fromLatin1(format);
+
+    QFileInfoList fileInfoList = dir.entryInfoList(nameFilters);
+    foreach (QFileInfo fileInfo, fileInfoList) {
+        QString tilesetName = fileInfo.completeBaseName();
+        if (mTilesetByName.contains(tilesetName))
+            continue;
+        QImageReader ir(fileInfo.absoluteFilePath());
+        if (!ir.size().isValid())
+            continue;
+        int columns = ir.size().width() / (64 * 2);
+        int rows = ir.size().height() / (64 * 2);
+        Tileset *tileset = new Tileset(tilesetName, 64, 128);
+        tileset->loadFromNothing(QSize(columns * 64, rows * 128), fileInfo.fileName());
+        Tile *missingTile = TilesetManager::instance()->missingTile();
+        for (int i = 0; i < tileset->tileCount(); i++)
+            tileset->tileAt(i)->setImage(missingTile);
+        tileset->setMissing(true);
+        addTileset(tileset);
+        TilesetMetaInfo *info = new TilesetMetaInfo;
+        mTilesetInfo[tilesetName] = info;
+    }
+
+    return true;
+}
+
 Tileset *TileMetaInfoMgr::loadTileset(const QString &source)
 {
     QFileInfo info(source);
