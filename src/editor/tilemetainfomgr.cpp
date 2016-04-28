@@ -301,6 +301,10 @@ bool TileMetaInfoMgr::writeTxt()
 
         int columns = tileset->columnCount();
         int rows = tileset->tileCount() / columns;
+        if (tileset->isLoaded()) {
+            columns = tileset->columnCountForWidth(tileset->imageWidth());
+            rows = tileset->imageHeight() / (tileset->imageSource2x().isEmpty() ? 128 : (128 * 2));
+        }
         tilesetBlock.addValue("size", QString(QLatin1String("%1,%2")).arg(columns).arg(rows));
 
         if (mTilesetInfo.contains(tileset->name())) {
@@ -439,7 +443,7 @@ void TileMetaInfoMgr::removeTileset(Tileset *tileset)
     //    TilesetManager::instance()->removeReference(tileset);
 }
 
-void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
+void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets, bool processEvents)
 {
     QList<Tileset *> _tilesets = tilesets;
     if (_tilesets.isEmpty())
@@ -449,6 +453,17 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
         if (ts->isMissing()) {
             QString source = ts->imageSource();
             if (QDir::isRelativePath(ts->imageSource())) {
+                source = tiles2xDirectory() + QLatin1Char('/') + ts->imageSource();
+                QImageReader reader(source);
+                if (reader.size().isValid()) {
+                    ts->loadFromNothing(reader.size() / 2, ts->imageSource());
+                    QFileInfo info(tilesDirectory() + QLatin1Char('/') + ts->imageSource());
+                     // this should be canonicalFilePath, but it's handled properly by resolveImageSource
+                    TilesetManager::instance()->loadTileset(ts, info.absoluteFilePath());
+                    if (processEvents)
+                        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+                    continue;
+                }
                 source = tilesDirectory() + QLatin1Char('/')
                         // This is the name that was saved in Tilesets.txt,
                         // relative to Tiles directory, plus .png.
@@ -459,6 +474,8 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets)
                 ts->loadFromNothing(reader.size(), ts->imageSource()); // update the size now
                 QFileInfo info(source);
                 TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
+                if (processEvents)
+                    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
         }
     }

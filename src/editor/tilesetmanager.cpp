@@ -83,8 +83,8 @@ TilesetManager::TilesetManager():
         mImageReaderThreads[i] = new InterruptibleThread;
         mImageReaderWorkers[i] = new TilesetImageReaderWorker(i, mImageReaderThreads[i]);
         mImageReaderWorkers[i]->moveToThread(mImageReaderThreads[i]);
-        connect(mImageReaderWorkers[i], SIGNAL(imageLoaded(QImage*,Tiled::Tileset*)),
-                SLOT(imageLoaded(QImage*,Tiled::Tileset*)));
+        connect(mImageReaderWorkers[i], SIGNAL(imageLoaded(Tiled::Tileset*,Tiled::Tileset*)),
+                SLOT(imageLoaded(Tiled::Tileset*,Tiled::Tileset*)));
         mImageReaderThreads[i]->start();
     }
 
@@ -328,8 +328,37 @@ void TilesetManager::imageLoaded(QImage *image, Tileset *tileset)
     delete image;
 }
 
+void TilesetManager::imageLoaded(Tileset *fromThread, Tileset *tileset)
+{
+    Q_ASSERT(mTilesetImageCache->mTilesets.contains(tileset));
+
+    // This updates a tileset in the cache.
+    // HACK - 'fromThread' is not in the cache, 'tileset' is
+    tileset->loadFromCache(fromThread);
+    delete fromThread;
+
+    // Watch the image file for changes.
+    mWatcher->addPath(tileset->imageSource2x().isEmpty() ? tileset->imageSource() : tileset->imageSource2x());
+
+    // Now update every tileset using this image.
+    foreach (Tileset *candidate, tilesets()) {
+        if (candidate->isLoaded())
+            continue;
+        if (candidate->imageSource() == tileset->imageSource()
+                && candidate->tileWidth() == tileset->tileWidth()
+                && candidate->tileHeight() == tileset->tileHeight()
+                && candidate->tileSpacing() == tileset->tileSpacing()
+                && candidate->margin() == tileset->margin()
+                && candidate->transparentColor() == tileset->transparentColor()) {
+            candidate->loadFromCache(tileset);
+            candidate->setMissing(false);
+            emit tilesetChanged(candidate);
+        }
+    }
+}
+
 // If imageSource is in the Tiles directory, make it relative to Tiles2x directory.
-static bool resolveImageSource(QString &imageSource)
+bool resolveImageSource(QString &imageSource)
 {
     QString tiles2xDir = Preferences::instance()->tiles2xDirectory();
     if (tiles2xDir.isEmpty())
@@ -389,11 +418,12 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
             changeTilesetSource(tileset, imageSource, false);
             tileset->setImageSource2x(imageSource2x);
             cached = mTilesetImageCache->addTileset(tileset);
-#if QT_POINTER_SIZE == 8
+#if 1 /* QT_POINTER_SIZE == 8 */
             QMetaObject::invokeMethod(mImageReaderWorkers[mNextThreadForJob],
                                       "addJob", Qt::QueuedConnection,
                                       Q_ARG(Tileset*,cached));
             mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderWorkers.size();
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 #else
             QImage *image = new QImage(tileset->imageSource2x());
             imageLoaded(image, cached);
@@ -403,11 +433,12 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
             changeTilesetSource(tileset, imageSource, false);
             tileset->setImageSource2x(QString());
             cached = mTilesetImageCache->addTileset(tileset);
-#if QT_POINTER_SIZE == 8
+#if 1 /* QT_POINTER_SIZE == 8 */
             QMetaObject::invokeMethod(mImageReaderWorkers[mNextThreadForJob],
                                       "addJob", Qt::QueuedConnection,
                                       Q_ARG(Tileset*,cached));
             mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderWorkers.size();
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 #else
             QImage *image = new QImage(tileset->imageSource());
             imageLoaded(image, cached);
@@ -425,6 +456,21 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
 
 void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
 {
+    while (true) {
+        bool busy = false;
+        for (TilesetImageReaderWorker *worker : mImageReaderWorkers) {
+            if (worker->busy()) {
+                busy = true;
+                break;
+            }
+        }
+        if (!busy)
+            break;
+        Sleep::msleep(10);
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
     foreach (Tileset *ts, tilesets) {
         if (ts->isLoaded())
             continue;
@@ -747,7 +793,7 @@ void TilesetManager::syncTileLayerNames(Tileset *ts)
 TilesetImageReaderWorker::TilesetImageReaderWorker(int id, InterruptibleThread *thread) :
     BaseWorker(thread),
     mID(id),
-    mWorkPending(false)
+    mHasJobs(false)
 {
 }
 
@@ -755,16 +801,20 @@ TilesetImageReaderWorker::~TilesetImageReaderWorker()
 {
 }
 
+bool TilesetImageReaderWorker::busy()
+{
+    QMutexLocker locker(&mJobsMutex);
+    return mHasJobs;
+}
+
 void TilesetImageReaderWorker::work()
 {
     IN_WORKER_THREAD
 
-    mWorkPending = false;
-
     while (mJobs.size()) {
         if (aborted()) {
             mJobs.clear();
-            return;
+            break;
         }
 
         Job job = mJobs.takeAt(0);
@@ -772,15 +822,26 @@ void TilesetImageReaderWorker::work()
         QImage *image = new QImage(job.tileset->imageSource2x().isEmpty() ? job.tileset->imageSource() : job.tileset->imageSource2x());
 #if 0
         Sleep::msleep(500);
-//        qDebug() << "TilesetImageReaderThread #" << mID << "loaded" << job.tileset->imageSource();
+        qDebug() << "TilesetImageReaderThread #" << mID << "loaded" << job.tileset->imageSource();
 #endif
-        emit imageLoaded(image, job.tileset);
+        Tileset *fromThread = new Tileset(job.tileset->name(), 64, 128);
+        fromThread->setImageSource2x(job.tileset->imageSource2x());
+        fromThread->loadFromImage(*image, job.tileset->imageSource());
+        delete image;
+        emit imageLoaded(fromThread, job.tileset);
     }
+
+    QMutexLocker locker(&mJobsMutex);
+    mHasJobs = false;
 }
 
 void TilesetImageReaderWorker::addJob(Tileset *tileset)
 {
     IN_WORKER_THREAD
+
+    QMutexLocker locker(&mJobsMutex);
+    mHasJobs = true;
+    locker.unlock();
 
     mJobs += Job(tileset);
     scheduleWork();
