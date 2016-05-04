@@ -215,7 +215,11 @@ Tileset *Tileset::findSimilarTileset(const QList<Tileset*> &tilesets) const
 {
     foreach (Tileset *candidate, tilesets) {
         if (candidate != this
+        #ifdef ZOMBOID
+            && ((candidate->imageSource() == imageSource()) || (!imageSource2x().isEmpty() && (candidate->imageSource2x() == imageSource2x())))
+        #else
             && candidate->imageSource() == imageSource()
+        #endif
             && candidate->tileWidth() == tileWidth()
             && candidate->tileHeight() == tileHeight()
             && candidate->tileSpacing() == tileSpacing()
@@ -279,10 +283,10 @@ Tileset *TilesetImageCache::addTileset(Tileset *ts)
     return cached;
 }
 
-Tileset *TilesetImageCache::findMatch(Tileset *ts, const QString &imageSource)
+Tileset *TilesetImageCache::findMatch(Tileset *ts, const QString &imageSource, const QString &imageSource2x)
 {
     foreach (Tileset *candidate, mTilesets) {
-        if (candidate->imageSource() == imageSource
+        if (((candidate->imageSource() == imageSource) || (!imageSource2x.isEmpty() && (candidate->imageSource2x() == imageSource2x)))
                 && candidate->tileWidth() == ts->tileWidth()
                 && candidate->tileHeight() == ts->tileHeight()
                 && candidate->tileSpacing() == ts->tileSpacing()

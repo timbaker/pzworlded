@@ -80,7 +80,7 @@ public:
         return -1;
     }
 
-    QStringList tilesetPaths() const;
+    QStringList tilesetNames() const;
 
     QStringList enumNames() const
     { return mEnumNames; }

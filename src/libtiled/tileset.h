@@ -53,7 +53,7 @@ class TILEDSHARED_EXPORT TilesetImageCache
 public:
     ~TilesetImageCache();
     Tileset *addTileset(Tileset *ts);
-    Tileset *findMatch(Tileset *ts, const QString &imageSource);
+    Tileset *findMatch(Tileset *ts, const QString &imageSource, const QString &imageSource2x);
     QList<Tileset*> mTilesets;
 };
 

@@ -49,25 +49,26 @@ void TileMetaInfoMgr::deleteInstance()
     mInstance = 0;
 }
 
-/**
-  * Change the directory to look for tileset images in.
-  * Any tilesets that were already found relative to the old directory
-  * are searched for again relative to the new directory.
-  */
 void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
 {
-    QDir tilesDir(tilesDirectory());
-    Preferences::instance()->setTilesDirectory(path); // must be done before loading tilesets, see TilesetManager.resolveImageSource
+    Preferences::instance()->setTilesDirectory(path); // must be done before loading tilesets
+    QString tilesDir = tilesDirectory();
+    QString tiles2xDir = tiles2xDirectory();
     foreach (Tileset *ts, tilesets()) {
         if (ts->isMissing())
             continue; // keep the relative path
-        QString relativePath = tilesDir.relativeFilePath(ts->imageSource());
-        if (!QDir::isRelativePath(relativePath))
+        QString imageSource = QDir(tilesDir).filePath(ts->name() + QLatin1Literal(".png"));
+        QString imageSource2x = QDir(tiles2xDir).filePath(ts->name() + QLatin1Literal(".png"));
+        QImageReader reader2x(imageSource2x);
+        if (reader2x.size().isValid()) {
+            // can't use canonicalFilePath since the 1x tileset may not exist
+            TilesetManager::instance()->changeTilesetSource(ts, imageSource, false);
+            TilesetManager::instance()->loadTileset(ts, ts->imageSource());
             continue;
-        QString source = path + QLatin1Char('/') + relativePath;
-        QFileInfo finfo(source);
-        QImageReader reader(source);
+        }
+        QImageReader reader(imageSource);
         if (reader.size().isValid()) {
+            QFileInfo finfo(imageSource);
             TilesetManager::instance()->changeTilesetSource(ts, finfo.canonicalFilePath(), false);
             TilesetManager::instance()->loadTileset(ts, ts->imageSource());
         } else {
@@ -75,7 +76,7 @@ void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
             Tile *missingTile = TilesetManager::instance()->missingTile();
             for (int i = 0; i < ts->tileCount(); i++)
                 ts->tileAt(i)->setImage(missingTile);
-            TilesetManager::instance()->changeTilesetSource(ts, relativePath, true);
+            TilesetManager::instance()->changeTilesetSource(ts, imageSource, true);
         }
     }
     loadTilesets();
@@ -108,14 +109,11 @@ QString TileMetaInfoMgr::tiles2xDirectory() const
     return Preferences::instance()->tiles2xDirectory();
 }
 
-QStringList TileMetaInfoMgr::tilesetPaths() const
+QStringList TileMetaInfoMgr::tilesetNames() const
 {
     QStringList ret;
     foreach (Tileset *ts, tilesets()) {
-        QString path = ts->imageSource();
-        if (QDir::isRelativePath(path)) // hasn't been loaded yet?
-            path = QDir(tilesDirectory()).filePath(path);
-        ret += path;
+        ret += ts->name();
     }
     return ret;
 }
@@ -392,31 +390,25 @@ Tileset *TileMetaInfoMgr::loadTileset(const QString &source)
 
 bool TileMetaInfoMgr::loadTilesetImage(Tileset *ts, const QString &source)
 {
-#if 1
-    QString canonical = source;
-    QImageReader reader(source);
+    QString imageSource = QDir(tilesDirectory()).filePath(ts->name() + QLatin1Literal(".png"));
+    QString imageSource2x = QDir(tiles2xDirectory()).filePath(ts->name() + QLatin1Literal(".png"));
+
+    QImageReader ir2x(imageSource2x);
+    if (ir2x.size().isValid()) {
+        ts->loadFromNothing(ir2x.size() / 2, source);
+        // can't use canonicalFilePath since the 1x tileset may not exist
+        TilesetManager::instance()->loadTileset(ts, source);
+        return true;
+    }
+    QImageReader reader(imageSource);
     if (reader.size().isValid()) {
-        ts->loadFromNothing(reader.size(), source);
-        QFileInfo info(source);
+        ts->loadFromNothing(reader.size(), imageSource);
+        QFileInfo info(imageSource);
         TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
         return true;
     }
     mError = tr("Error loading tileset image:\n'%1'").arg(source);
     return false;
-#else
-    TilesetImageCache *cache = TilesetManager::instance()->imageCache();
-    Tileset *cached = cache->findMatch(ts, source);
-    if (!cached || !ts->loadFromCache(cached)) {
-        const QImage tilesetImage = QImage(source);
-        if (ts->loadFromImage(tilesetImage, source))
-            cache->addTileset(ts);
-        else {
-            mError = tr("Error loading tileset image:\n'%1'").arg(source);
-            return false;
-        }
-    }
-    return true;
-#endif
 }
 
 void TileMetaInfoMgr::addTileset(Tileset *tileset)
@@ -451,28 +443,23 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets, bool proces
 
     foreach (Tileset *ts, _tilesets) {
         if (ts->isMissing()) {
-            QString source = ts->imageSource();
-            if (QDir::isRelativePath(ts->imageSource())) {
-                source = tiles2xDirectory() + QLatin1Char('/') + ts->imageSource();
-                QImageReader reader(source);
-                if (reader.size().isValid()) {
-                    ts->loadFromNothing(reader.size() / 2, ts->imageSource());
-                    QFileInfo info(tilesDirectory() + QLatin1Char('/') + ts->imageSource());
-                     // this should be canonicalFilePath, but it's handled properly by resolveImageSource
-                    TilesetManager::instance()->loadTileset(ts, info.absoluteFilePath());
-                    if (processEvents)
-                        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-                    continue;
-                }
-                source = tilesDirectory() + QLatin1Char('/')
-                        // This is the name that was saved in Tilesets.txt,
-                        // relative to Tiles directory, plus .png.
-                        + ts->imageSource();
+            QString tilesDir = Preferences::instance()->tilesDirectory();
+            QString tiles2xDir = Preferences::instance()->tiles2xDirectory();
+            QString imageSource = QDir(tilesDir).filePath(ts->name() + QLatin1Literal(".png"));
+            QString imageSource2x = QDir(tiles2xDir).filePath(ts->name() + QLatin1Literal(".png"));
+            QImageReader ir2x(imageSource2x);
+            if (ir2x.size().isValid()) {
+                ts->loadFromNothing(ir2x.size() / 2, imageSource);
+                // can't use canonicalFilePath since the 1x tileset may not exist
+                TilesetManager::instance()->loadTileset(ts, imageSource);
+                if (processEvents)
+                    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+                continue;
             }
-            QImageReader reader(source);
+            QImageReader reader(imageSource);
             if (reader.size().isValid()) {
-                ts->loadFromNothing(reader.size(), ts->imageSource()); // update the size now
-                QFileInfo info(source);
+                ts->loadFromNothing(reader.size(), imageSource); // update the size now
+                QFileInfo info(imageSource);
                 TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
                 if (processEvents)
                     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
