@@ -2083,6 +2083,11 @@ void WorldCellTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     mClickedItem = 0;
 }
 
+void WorldCellTool::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
+{
+    mClickedItem = topmostItemAt(event->scenePos());
+}
+
 void WorldCellTool::startSelecting()
 {
     mMode = Selecting;

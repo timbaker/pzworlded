@@ -705,12 +705,13 @@ void WorldScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void WorldScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *)
+void WorldScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
     if (mActiveTool != WorldCellTool::instance())
         return;
 
     mDoubleClick = true;
+    WorldCellTool::instance()->mouseDoubleClickEvent(event);
 }
 
 void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
