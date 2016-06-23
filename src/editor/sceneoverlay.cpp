@@ -21,6 +21,7 @@
 #include "cellscene.h"
 #include "mapbuildings.h"
 #include "mapcomposite.h"
+#include "preferences.h"
 
 #include "maprenderer.h"
 #include "tile.h"
@@ -100,9 +101,10 @@ CellSceneOverlays::CellSceneOverlays(CellScene *scene) :
     mScene(scene)
 {
     QSettings settings;
-    QString d = settings.value(QLatin1String("LootWindow/GameDirectory")).toString();
-    if (QFileInfo(d).exists()) {
-        mTileDefFile.read(QDir(d).filePath(QLatin1String("media/newtiledefinitions.tiles")));
+//    QString d = settings.value(QLatin1String("LootWindow/GameDirectory")).toString();
+    QString fileName = Preferences::instance()->tilesDirectory() + QLatin1Literal("/newtiledefinitions.tiles");
+    if (QFileInfo(fileName).exists()) {
+        mTileDefFile.read(fileName);
 
         qDebug() << "CellSceneOverlays parsing tiledef...";
         QString lightswitch(QLatin1String("lightswitch"));

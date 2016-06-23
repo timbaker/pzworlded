@@ -76,6 +76,7 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
                         room++;
                 }
             }
+            delete chunk;
             if (empty == IsoChunk::WIDTH * IsoChunk::WIDTH)
                 out << quint8(EMPTY_CHUNK);
             else if (solid == IsoChunk::WIDTH * IsoChunk::WIDTH)

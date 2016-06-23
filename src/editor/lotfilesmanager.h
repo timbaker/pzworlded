@@ -325,6 +325,7 @@ public:
     void generateBuildingObjects(int mapWidth, int mapHeight);
     void generateBuildingObjects(int mapWidth, int mapHeight,
                                  LotFile::Room *room, LotFile::RoomRect *rr);
+    void generateJumboTrees(WorldCell *cell, MapComposite *mapComposite);
 
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
 
@@ -352,6 +353,7 @@ private:
     WorldDocument *mWorldDoc;
     QList<LotFile::Zone*> ZoneList;
     QMap<const Tiled::Tileset*,uint> mTilesetToFirstGid;
+    Tiled::Tileset *mJumboTreeTileset;
     QMap<int,LotFile::Tile*> TileMap;
     QVector<QVector<QVector<LotFile::Square> > > mGridData;
     int MaxLevel;

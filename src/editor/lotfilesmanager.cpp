@@ -321,6 +321,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     generateBuildingObjects(mapWidth, mapHeight);
 
+    generateJumboTrees(cell, mapComposite);
+
     generateHeaderAux(cell, mapComposite);
 
     /////
@@ -388,6 +390,14 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     QList<Tileset*> tilesets;
     foreach (MapComposite *mc, mapComposite->maps())
         tilesets += mc->map()->tilesets();
+
+    mJumboTreeTileset = 0;
+    if (mJumboTreeTileset == 0) {
+        mJumboTreeTileset = new Tiled::Tileset(QLatin1Literal("jumbo_tree_01"), 64, 128);
+        mJumboTreeTileset->loadFromNothing(QSize(64, 128), QLatin1String("jumbo_tree_01"));
+    }
+    tilesets += mJumboTreeTileset;
+    QScopedPointer<Tiled::Tileset> scoped(mJumboTreeTileset);
 
     qDeleteAll(TileMap.values());
     TileMap.clear();
@@ -513,6 +523,9 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         if (tile->used) {
             tile->id = tilecount;
             tilecount++;
+            if (tile->name.startsWith(QLatin1Literal("jumbo_tree_01"))) {
+                int nnn = 0;
+            }
         }
     }
     out << qint32(tilecount);
@@ -710,6 +723,168 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
                     object.metaEnum = metaEnum + 1;
                     room->objects += object;
                     ++mStats.numRoomObjects;
+                }
+            }
+        }
+    }
+}
+
+void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapComposite)
+{
+    const quint8 JUMBO_ZONE = 1;
+    const quint8 PREVENT_JUMBO = 2;
+    const quint8 REMOVE_TREE = 3;
+    const quint8 JUMBO_TREE = 4;
+
+    QSet<QString> treeTiles;
+    QSet<QString> floorVegTiles;
+    foreach (TileDefFile *tdf, Navigate::IsoGridSquare::mTileDefFiles) {
+        foreach (TileDefTileset *tdts, tdf->tilesets()) {
+            foreach (TileDefTile *tdt, tdts->mTiles) {
+                // Get the set of all tree tiles.
+                if (tdt->mProperties.contains(QLatin1Literal("tree")) || (tdts->mName.startsWith(QLatin1Literal("vegetation_trees")))) {
+                    treeTiles += QString::fromLatin1("%1_%2").arg(tdts->mName).arg(tdt->id());
+                }
+                // Get the set of all floor + vegetation tiles.
+                if (tdt->mProperties.contains(QLatin1Literal("solidfloor")) ||
+                        tdt->mProperties.contains(QLatin1Literal("FloorOverlay")) ||
+                        tdt->mProperties.contains(QLatin1Literal("vegitation"))) {
+                    floorVegTiles += QString::fromLatin1("%1_%2").arg(tdts->mName).arg(tdt->id());
+                }
+            }
+        }
+    }
+
+    quint8 grid[300][300];
+    for (int y = 0; y < 300; y++) {
+        for (int x = 0; x < 300; x++) {
+            grid[x][y] = PREVENT_JUMBO;
+        }
+    }
+
+    // Allow jumbo trees in Forest and DeepForest zones
+    foreach (WorldCellObject *obj, cell->objects()) {
+        if (obj->level() == 0 && obj->type() != 0 && obj->type()->name().contains(QLatin1Literal("Forest"))) {
+            int ox = obj->x(), oy = obj->y(), ow = obj->width(), oh = obj->height();
+            for (int y = oy; y < oy + oh; y++) {
+                for (int x = ox; x < ox + ow; x++) {
+                    if (x >= 0 && x < 300 && y >= 0 && y < 300)
+                        grid[x][y] = JUMBO_ZONE;
+                }
+            }
+        }
+    }
+
+    for (int y = 0; y < 300; y++) {
+        for (int x = 0; x < 300; x++) {
+            // Prevent jumbo trees near any second-story tiles
+            if (!mGridData[x][y][1].Entries.isEmpty()) {
+                for (int yy = y; yy <= y + 4; yy++) {
+                    for (int xx = x; xx <= x + 4; xx++) {
+                        if (xx >= 0 && xx < 300 && yy >= 0 && yy < 300)
+                            grid[xx][yy] = PREVENT_JUMBO;
+                    }
+                }
+            }
+
+            // Prevent jumbo trees near non-floor, non-vegetation (fences, etc)
+            foreach (LotFile::Entry *e, mGridData[x][y][0].Entries) {
+                LotFile::Tile *tile = TileMap[e->gid];
+                if (!floorVegTiles.contains(tile->name)) {
+                    for (int yy = y - 1; yy <= y + 1; yy++) {
+                        for (int xx = x - 1; xx <= x + 1; xx++) {
+                            if (xx >= 0 && xx < 300 && yy >= 0 && yy < 300)
+                                grid[xx][yy] = PREVENT_JUMBO;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Prevent jumbo trees near north/west edges of cells
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 300; x++) {
+            grid[x][y] = PREVENT_JUMBO;
+        }
+    }
+    for (int x = 0; x < 4; x++) {
+        for (int y = 0; y < 300; y++) {
+            grid[x][y] = PREVENT_JUMBO;
+        }
+    }
+
+#if 0
+    // Prevent jumbo trees near second-story rooms.
+    foreach (LotFile::Room *room, roomList) {
+//        if (room->floor != 1)
+//            continue;
+        foreach (LotFile::RoomRect *rr, room->rects) {
+            for (int y = rr->y - 1; y < rr->y + rr->h + 4 + 1; y++) {
+                for (int x = rr->x - 1; x < rr->x + rr->w + 4 + 1; x++) {
+                    if (x >= 0 && x < 300 && y >= 0 && y < 300)
+                        grid[x][y] = PREVENT_JUMBO;
+                }
+            }
+        }
+    }
+#endif
+
+    // Get a list of all tree positions in the cell.
+    QList<QPoint> allTreePos;
+    for (int y = 0; y < 300; y++) {
+        for (int x = 0; x < 300; x++) {
+            foreach (LotFile::Entry *e, mGridData[x][y][0].Entries) {
+                LotFile::Tile *tile = TileMap[e->gid];
+                if (treeTiles.contains(tile->name)) {
+                    allTreePos += QPoint(x, y);
+                    break;
+                }
+            }
+        }
+    }
+
+    while (!allTreePos.isEmpty()) {
+        int r = qrand() % allTreePos.size();
+        QPoint treePos = allTreePos.takeAt(r);
+        quint8 g = grid[treePos.x()][treePos.y()];
+        if (g == JUMBO_ZONE) {
+            grid[treePos.x()][treePos.y()] = JUMBO_TREE;
+            // Remove all trees surrounding a jumbo tree.
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    if (dx == 0 && dy == 0)
+                        continue;
+                    int x = treePos.x() + dx;
+                    int y = treePos.y() + dy;
+                    if (x >= 0 && x < 300 && y >= 0 && y < 300)
+                        grid[x][y] = REMOVE_TREE;
+                }
+            }
+        }
+    }
+
+    for (int y = 0; y < 300; y++) {
+        for (int x = 0; x < 300; x++) {
+            if (grid[x][y] == JUMBO_TREE) {
+                foreach (LotFile::Entry *e, mGridData[x][y][0].Entries) {
+                    LotFile::Tile *tile = TileMap[e->gid];
+                    if (treeTiles.contains(tile->name)) {
+                        e->gid = mTilesetToFirstGid[mJumboTreeTileset];
+                        TileMap[e->gid]->used = true;
+                        break;
+                    }
+                }
+            }
+            if (grid[x][y] == REMOVE_TREE) {
+                for (int i = 0; i < mGridData[x][y][0].Entries.size(); i++) {
+                    LotFile::Entry *e = mGridData[x][y][0].Entries[i];
+                    LotFile::Tile *tile = TileMap[e->gid];
+                    if (treeTiles.contains(tile->name)) {
+                        mGridData[x][y][0].Entries.removeAt(i);
+                        break;
+                    }
                 }
             }
         }
