@@ -70,6 +70,7 @@ public:
     bool worldThumbnails() const { return mWorldThumbnails; }
     void setWorldThumbnails(bool thumbs);
 
+    bool showObjects() const { return mShowObjects; }
     bool showObjectNames() const { return mShowObjectNames; }
     bool showBMPs() const { return mShowBMPs; }
 
@@ -89,6 +90,7 @@ signals:
     void useOpenGLChanged(bool useOpenGL);
     void worldThumbnailsChanged(bool thumbs);
 
+    void showObjectsChanged(bool show);
     void showObjectNamesChanged(bool show);
     void showBMPsChanged(bool show);
 
@@ -111,6 +113,7 @@ public slots:
     void setGridColor(const QColor &gridColor);
     void setShowMiniMap(bool show);
     void setMiniMapWidth(int width);
+    void setShowObjects(bool show);
     void setShowObjectNames(bool show);
     void setShowBMPs(bool show);
     void setHighlightCurrentLevel(bool highlight);
@@ -129,6 +132,7 @@ private:
     QColor mGridColor;
     bool mUseOpenGL;
     bool mWorldThumbnails;
+    bool mShowObjects;
     bool mShowObjectNames;
     bool mShowBMPs;
     bool mShowMiniMap;

@@ -297,6 +297,7 @@
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
     <addaction name="actionShowMiniMap"/>
+    <addaction name="actionShowObjects"/>
     <addaction name="actionShowObjectNames"/>
     <addaction name="actionShowBMP"/>
     <addaction name="separator"/>
@@ -815,6 +816,14 @@
   <action name="actionTMXToBMPSelected">
    <property name="text">
     <string>Selected Cells Only...</string>
+   </property>
+  </action>
+  <action name="actionShowObjects">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Objects</string>
    </property>
   </action>
  </widget>

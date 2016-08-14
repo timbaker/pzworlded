@@ -598,15 +598,27 @@ void SubMapTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-static MapComposite *mapUnderPoint(MapComposite *mc, MapRenderer *renderer,
+static MapComposite *mapUnderPoint(CellScene *scene, MapComposite *mc, MapRenderer *renderer,
                                    const QPointF &scenePos)
 {
     foreach (MapComposite *subMap, mc->subMaps()) {
         if (subMap->isAdjacentMap()) {
-            MapComposite *subSubMap = mapUnderPoint(subMap, renderer, scenePos);
+            MapComposite *subSubMap = mapUnderPoint(scene, subMap, renderer, scenePos);
             if (subSubMap)
                 subMap = subSubMap;
         }
+
+        bool ignore = false;
+        QList<SubMapItem*> items = scene->subMapItemsUsingMapInfo(subMap->mapInfo());
+        foreach (SubMapItem *item, items) {
+            if (item->subMap() == subMap) {
+                ignore = true;
+                break;
+            }
+        }
+        if (ignore)
+            continue;
+
         QRect tileBounds = subMap->mapInfo()->bounds().translated(subMap->originRecursive());
         QPolygonF scenePolygon = renderer->tileToPixelCoords(tileBounds);
         if (scenePolygon.containsPoint(scenePos, Qt::WindingFill))
@@ -621,7 +633,7 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     SubMapItem *item = topmostItemAt(event->scenePos());
     MapComposite *highlight = 0;
     if (!item && !mMousePressed) {
-        if (MapComposite *mc = mapUnderPoint(mScene->mapComposite(), mScene->renderer(), event->scenePos())) {
+        if (MapComposite *mc = mapUnderPoint(mScene, mScene->mapComposite(), mScene->renderer(), event->scenePos())) {
             if (mc->isAdjacentMap())
                 mc = 0;
             highlight = mc;
@@ -803,7 +815,8 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
 {
     SubMapItem *item = topmostItemAt(scenePos);
     if (!item) {
-        MapComposite *subMap = mapUnderPoint(mScene->mapComposite(),
+        MapComposite *subMap = mapUnderPoint(mScene,
+                                             mScene->mapComposite(),
                                              mScene->renderer(),
                                              scenePos);
         QPoint tilePos(mScene->renderer()->pixelToTileCoordsInt(scenePos));

@@ -144,6 +144,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowCoordinates->setChecked(prefs->showCoordinates());
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
     ui->actionShowMiniMap->setChecked(prefs->showMiniMap());
+    ui->actionShowObjects->setChecked(prefs->showObjects());
     ui->actionShowObjectNames->setChecked(prefs->showObjectNames());
     ui->actionShowBMP->setChecked(prefs->showBMPs());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
@@ -276,6 +277,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
     connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
     connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)), prefs, SLOT(setShowMiniMap(bool)));
+    connect(ui->actionShowObjects, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjects(bool)));
     connect(ui->actionShowObjectNames, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjectNames(bool)));
     connect(ui->actionShowBMP, SIGNAL(toggled(bool)), prefs, SLOT(setShowBMPs(bool)));
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));

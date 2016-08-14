@@ -83,6 +83,7 @@ Preferences::Preferences()
     mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
     mGridColor = QColor(mSettings->value(QLatin1String("GridColor"),
                                          QColor(Qt::black).name()).toString());
+    mShowObjects = mSettings->value(QLatin1String("ShowObjects"), true).toBool();
     mShowObjectNames = mSettings->value(QLatin1String("ShowObjectNames"), true).toBool();
     mShowBMPs = mSettings->value(QLatin1String("ShowBMPs"), true).toBool();
     mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
@@ -298,6 +299,17 @@ void Preferences::setShowAdjacentMaps(bool show)
     mSettings->setValue(QLatin1String("Interface/ShowAdjacentMaps"), mShowAdjacentMaps);
 
     emit showAdjacentMapsChanged(mShowAdjacentMaps);
+}
+
+void Preferences::setShowObjects(bool show)
+{
+    if (mShowObjects == show)
+        return;
+
+    mShowObjects = show;
+    mSettings->setValue(QLatin1String("Interface/ShowObjects"), mShowObjects);
+
+    emit showObjectsChanged(mShowObjects);
 }
 
 void Preferences::setShowObjectNames(bool show)

@@ -1145,6 +1145,7 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, SIGNAL(highlightCurrentLevelChanged(bool)), SLOT(setHighlightCurrentLevel(bool)));
     setGridVisible(prefs->showCellGrid());
     connect(prefs, SIGNAL(gridColorChanged(QColor)), SLOT(update()));
+    connect(prefs, SIGNAL(showObjectsChanged(bool)), SLOT(showObjectsChanged(bool)));
     connect(prefs, SIGNAL(showObjectNamesChanged(bool)), SLOT(showObjectNamesChanged(bool)));
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
@@ -1919,6 +1920,7 @@ void CellScene::objectLevelVisibilityChanged(int level)
             item->setVisible(shouldObjectItemBeVisible(item));
         }
     }
+    synchAdjacentMapObjectItemVisibility();
 }
 
 void CellScene::objectGroupVisibilityChanged(WorldObjectGroup *og, int level)
@@ -1929,6 +1931,7 @@ void CellScene::objectGroupVisibilityChanged(WorldObjectGroup *og, int level)
             item->setVisible(shouldObjectItemBeVisible(item));
         }
     }
+    synchAdjacentMapObjectItemVisibility();
 }
 
 void CellScene::objectGroupReordered(int index)
@@ -1981,6 +1984,14 @@ void CellScene::gridColorChanged(const QColor &gridColor)
 {
     Q_UNUSED(gridColor)
     mGridItem->update();
+}
+
+void CellScene::showObjectsChanged(bool show)
+{
+    Q_UNUSED(show)
+    foreach (ObjectItem *item, mObjectItems)
+        item->setVisible(shouldObjectItemBeVisible(item));
+    synchAdjacentMapObjectItemVisibility();
 }
 
 void CellScene::showObjectNamesChanged(bool show)
@@ -2207,6 +2218,8 @@ void CellScene::updateCurrentLevelHighlight()
         foreach (ObjectItem *item, mObjectItems)
             item->setVisible(shouldObjectItemBeVisible(item));
 
+        synchAdjacentMapObjectItemVisibility();
+
         return;
     }
 
@@ -2238,6 +2251,7 @@ void CellScene::updateCurrentLevelHighlight()
         bool visible = shouldObjectItemBeVisible(item);
         item->setVisible(visible);
     }
+    synchAdjacentMapObjectItemVisibility();
 
     // Darken layers below the current item
     mDarkRectangle->setZValue(currentItem->zValue() - 0.5);
@@ -2246,11 +2260,20 @@ void CellScene::updateCurrentLevelHighlight()
 
 bool CellScene::shouldObjectItemBeVisible(ObjectItem *item)
 {
+    if (!Preferences::instance()->showObjects())
+        return false;
     WorldCellObject *obj = item->object();
     return obj->isVisible() &&
             (!mHighlightCurrentLevel || (mDocument->currentLevel() == obj->level())) &&
             mDocument->isObjectGroupVisible(obj->group(), obj->level()) &&
             mDocument->isObjectLevelVisible(obj->level());
+}
+
+void CellScene::synchAdjacentMapObjectItemVisibility()
+{
+    foreach (AdjacentMap *am, mAdjacentMaps) {
+        am->synchObjectItemVisibility();
+    }
 }
 
 void CellScene::tilesetChanged(Tileset *tileset)
@@ -2808,6 +2831,8 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
         setZOrder();
 
         sceneRectChanged();
+
+        synchObjectItemVisibility();
     }
 
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
@@ -2846,6 +2871,26 @@ void AdjacentMap::mapFailedToLoad(MapInfo *mapInfo)
             mSubMapsLoading.removeAt(i);
             --i;
         }
+    }
+}
+
+bool AdjacentMap::shouldObjectItemBeVisible(ObjectItem *item)
+{
+    if (!Preferences::instance()->showObjects())
+        return false;
+    WorldCellObject *obj = item->object();
+    CellDocument *mDocument = scene()->document();
+    bool mHighlightCurrentLevel = Preferences::instance()->highlightCurrentLevel();
+    return obj->isVisible() &&
+            (!mHighlightCurrentLevel || (mDocument->currentLevel() == obj->level())) &&
+            mDocument->isObjectGroupVisible(obj->group(), obj->level()) &&
+            mDocument->isObjectLevelVisible(obj->level());
+}
+
+void AdjacentMap::synchObjectItemVisibility()
+{
+    foreach (ObjectItem *item, mObjectItems) {
+        item->setVisible(shouldObjectItemBeVisible(item));
     }
 }
 

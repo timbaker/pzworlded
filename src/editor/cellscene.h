@@ -359,6 +359,8 @@ public:
 
     void removeItems();
 
+    void synchObjectItemVisibility();
+
 private slots:
     void cellMapFileChanged(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
@@ -389,6 +391,7 @@ private:
     bool alreadyLoading(WorldCellLot *lot);
     QRectF lotSceneBounds(WorldCellLot *lot);
     void setZOrder();
+    bool shouldObjectItemBeVisible(ObjectItem *item);
 
     struct LoadingSubMap {
         LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
@@ -491,6 +494,7 @@ protected:
     void loadMap();
     void updateCurrentLevelHighlight();
     bool shouldObjectItemBeVisible(ObjectItem *item);
+    void synchAdjacentMapObjectItemVisibility();
 
     typedef Tiled::Tileset Tileset;
 signals:
@@ -539,6 +543,7 @@ public slots:
     void currentLevelChanged(int index);
     void setGridVisible(bool visible);
     void gridColorChanged(const QColor &gridColor);
+    void showObjectsChanged(bool show);
     void showObjectNamesChanged(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void highlightRoomUnderPointerChanged(bool highlight);
