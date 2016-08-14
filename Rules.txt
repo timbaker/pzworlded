@@ -607,6 +607,43 @@ label = Trees + Dark grass
         darkshortgrass
     ]
     layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Trees + Medium grass
+    bitmap = 1
+    color = 127 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Trees + Light grass
+    bitmap = 1
+    color = 127 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
 }
 rule
 {
@@ -697,6 +734,7 @@ rule
 }
 rule
 {
+	label = Grass + Few Trees (dark)
     bitmap = 1
     color = 0 128 0
     tiles = [
@@ -726,6 +764,75 @@ rule
 	vegetation_groundcover_01_23
     ]
     layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Grass + Few Trees (medium)
+    bitmap = 1
+    color = 0 128 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_10
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+        medlonggrass
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medmedgrass
+        vegetation_trees_01_8
+        vegetation_trees_01_10
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        vegetation_groundcover_01_18
+        vegetation_groundcover_01_19
+        vegetation_groundcover_01_21
+        vegetation_groundcover_01_22
+        vegetation_groundcover_01_23
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Grass + Few Trees (light)
+    bitmap = 1
+    color = 0 128 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_10
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+        lightlonggrass
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightmedgrass
+        vegetation_trees_01_8
+        vegetation_trees_01_10
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        vegetation_groundcover_01_18
+        vegetation_groundcover_01_19
+        vegetation_groundcover_01_21
+        vegetation_groundcover_01_22
+        vegetation_groundcover_01_23
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
 }
 rule
 {

@@ -332,7 +332,7 @@ blend
 {
     layer = 0_FloorOverlay4
     mainTile = lightgrass
-    blendTile = blends_natural_01_59
+    blendTile = blends_natural_01_50
     dir = se
     exclude = darkgrass medgrass water
     exclude2 = [
