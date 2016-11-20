@@ -403,8 +403,9 @@ QString BMPToTMX::tmxNameForCell(WorldCell *cell, WorldBMP *bmp)
 {
     QString exportDir = mWorldDoc->world()->getBMPToTMXSettings().exportDir;
     QString prefix = QFileInfo(bmp->filePath()).completeBaseName();
+    QPoint worldOrigin = mWorldDoc->world()->getGenerateLotsSettings().worldOrigin;
     QString filePath = exportDir + QLatin1Char('/')
-            + tr("%1_%2_%3.tmx").arg(prefix).arg(cell->x()).arg(cell->y());
+            + tr("%1_%2_%3.tmx").arg(prefix).arg(worldOrigin.x() + cell->x()).arg(worldOrigin.y() + cell->y());
     return filePath;
 }
 
