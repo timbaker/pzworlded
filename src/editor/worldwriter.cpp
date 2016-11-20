@@ -80,6 +80,9 @@ public:
         foreach (WorldBMP *bmp, world->bmps())
             writeBMP(w, bmp);
 
+        foreach (QString path, world->otherWorlds())
+            writeOtherWorld(w, path);
+
         foreach (PropertyEnum *pe, world->propertyEnums())
             writePropertyEnum(w, pe);
         foreach (PropertyDef *pd, world->propertyDefinitions())
@@ -428,6 +431,13 @@ public:
         w.writeAttribute(QLatin1String("width"), QString::number(bmp->width()));
         w.writeAttribute(QLatin1String("height"), QString::number(bmp->height()));
 
+        w.writeEndElement();
+    }
+
+    void writeOtherWorld(QXmlStreamWriter &w, const QString &path)
+    {
+        w.writeStartElement(QLatin1String("otherworld"));
+        w.writeAttribute(QLatin1String("path"), relativeFileName(path));
         w.writeEndElement();
     }
 

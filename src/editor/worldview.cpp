@@ -18,6 +18,7 @@
 #include "worldview.h"
 
 #include "mapimagemanager.h"
+#include "preferences.h"
 #include "world.h"
 #include "worlddocument.h"
 #include "worldscene.h"
@@ -64,6 +65,14 @@ WorldMiniMapItem::WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent) :
     for (int i = 0; i < mScene->world()->bmps().size(); i++)
         bmpAdded(i);
 
+    foreach (OtherWorld *otherWorld, mScene->otherWorlds()) {
+        foreach (WorldBMP *bmp, otherWorld->mWorld->bmps()) {
+            if (MapImage *mapImage = MapImageManager::instance()->getMapImage(bmp->filePath())) {
+                mImages[bmp] = mapImage;
+            }
+        }
+    }
+
     connect(mScene->worldDocument(), SIGNAL(worldResized(QSize)),
             SLOT(worldResized()));
     connect(mScene->worldDocument(), SIGNAL(bmpAdded(int)),
@@ -72,25 +81,48 @@ WorldMiniMapItem::WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent) :
             SLOT(bmpAboutToBeRemoved(int)));
     connect(mScene->worldDocument(), SIGNAL(bmpCoordsChanged(int)),
             SLOT(bmpCoordsChanged(int)));
+
+    Preferences *prefs = Preferences::instance();
+    connect(prefs, SIGNAL(showOtherWorldsChanged(bool)), SLOT(showOtherWorlds(bool)));
 }
 
 QRectF WorldMiniMapItem::boundingRect() const
 {
-    return mScene->boundingRect(mScene->world()->bounds());
+    QRect bounds = mScene->world()->bounds();
+    Preferences *prefs = Preferences::instance();
+    if (prefs->showOtherWorlds()) {
+        foreach (OtherWorld *otherWorld, mScene->otherWorlds()) {
+            bounds = bounds.united(otherWorld->adjustedBounds(mScene->world()));
+        }
+    }
+    return mScene->boundingRect(bounds);
 }
 
 void WorldMiniMapItem::paint(QPainter *painter,
                              const QStyleOptionGraphicsItem *,
                              QWidget *)
 {
+    Preferences *prefs = Preferences::instance();
+
     foreach (WorldBMP *bmp, mImages.keys()) {
         if (MapImage *mapImage = mImages[bmp]) {
             const QImage &image = mapImage->miniMapImage();
-            QRectF target = mScene->boundingRect(bmp->bounds());
+            QRect bmpBounds = bmp->bounds();
+            if (bmp->world() != mScene->world()) { // OtherWorld.mBMP
+                if (!prefs->showOtherWorlds())
+                    continue;
+                bmpBounds.translate(bmp->world()->getGenerateLotsSettings().worldOrigin - mScene->world()->getGenerateLotsSettings().worldOrigin);
+            }
+            QRectF target = mScene->boundingRect(bmpBounds);
             QRectF source = QRect(QPoint(), image.size());
             painter->drawImage(target, image, source);
         }
     }
+
+    QColor gridColor(Qt::black);
+    QPen gridPen(gridColor);
+    gridPen.setCosmetic(true);
+    painter->setPen(gridPen);
 
     QPolygonF polygon = mScene->cellRectToPolygon(mScene->world()->bounds());
     painter->drawPolygon(polygon);
@@ -120,5 +152,11 @@ void WorldMiniMapItem::bmpAboutToBeRemoved(int index)
 void WorldMiniMapItem::bmpCoordsChanged(int index)
 {
     Q_UNUSED(index)
+    update();
+}
+
+void WorldMiniMapItem::showOtherWorlds(bool show)
+{
+    prepareGeometryChange();
     update();
 }

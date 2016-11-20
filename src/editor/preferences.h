@@ -53,6 +53,8 @@ public:
     bool highlightCurrentLevel() const;
     bool highlightRoomUnderPointer() const
     { return mHighlightRoomUnderPointer; }
+    bool showOtherWorlds() const
+    { return mShowOtherWorlds; }
 
     QString mapsDirectory() const;
     void setMapsDirectory(const QString &path);
@@ -104,6 +106,7 @@ signals:
     void tilesDirectoryChanged();
     void showAdjacentMapsChanged(bool show);
     void highlightRoomUnderPointerChanged(bool highlight);
+    void showOtherWorldsChanged(bool show);
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -118,6 +121,7 @@ public slots:
     void setShowBMPs(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void setHighlightRoomUnderPointer(bool highlight);
+    void setShowOtherWorlds(bool show);
 
 private:
     Preferences();
@@ -144,6 +148,7 @@ private:
     QString mOpenFileDirectory;
     bool mShowAdjacentMaps;
     bool mHighlightRoomUnderPointer;
+    bool mShowOtherWorlds;
 
     static Preferences *mInstance;
 };

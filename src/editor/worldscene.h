@@ -322,6 +322,8 @@ public:
     WorldBMP *bmp() const
     { return mBMP; }
 
+    QRect bmpBounds() const;
+
     void synchWithBMP();
 
     void setSelected(bool selected);
@@ -344,11 +346,47 @@ private:
     QPoint mDragOffset;
 };
 
+/**
+ * This item displays a cell from an external World (a different PZW file).
+ */
+class OtherWorldCellItem : public BaseCellItem
+{
+public:
+    OtherWorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *parent = 0);
+
+    QPoint cellPos() const;
+    QString mapFilePath() const { return mCell->mapFilePath(); }
+    const QList<WorldCellLot*> &lots() const { return mCell->lots(); }
+
+    WorldCell *cell() const { return mCell; }
+
+    void cellContentsChanged();
+    int thumbnailsAreGo();
+    void thumbnailsAreFail();
+
+protected:
+    WorldCell *mCell;
+};
+
+class OtherWorld
+{
+public:
+    ~OtherWorld();
+    QPoint adjustedOrigin(World *world) const;
+    QRect adjustedBounds(World *world) const;
+
+    World *mWorld;
+    QList<WorldBMPItem*> mBMPItems;
+    QVector<OtherWorldCellItem*> mCellItems;
+    QList<OtherWorldCellItem*> mPendingThumbnails;
+};
+
 class WorldScene : public BaseGraphicsScene
 {
     Q_OBJECT
 public:
     explicit WorldScene(WorldDocument *worldDoc, QObject *parent = 0);
+    ~WorldScene();
     
     static const int ZVALUE_CELLITEM;
     static const int ZVALUE_ROADITEM_UNSELECTED;
@@ -404,6 +442,9 @@ public:
 
     void pasteCellsFromClipboard();
 
+    const QList<OtherWorld*> &otherWorlds() const
+    { return mOtherWorlds; }
+
 signals:
     
 public slots:
@@ -421,6 +462,7 @@ public slots:
     void setShowGrid(bool show);
     void setShowCoordinates(bool show);
     void setShowBMPs(bool show);
+    void setShowOtherWorlds(bool show);
 
     void selectedRoadsChanged();
     void roadAdded(int index);
@@ -472,6 +514,8 @@ private:
     WorldBMPItem *mDragBMPItem;
     bool mBMPToolActive;
     bool mDoubleClick;
+
+    QList<OtherWorld*> mOtherWorlds;
 };
 
 #endif // WORLDSCENE_H

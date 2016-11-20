@@ -46,6 +46,8 @@ private slots:
     void bmpAboutToBeRemoved(int index);
     void bmpCoordsChanged(int index);
 
+    void showOtherWorlds(bool show);
+
 private:
     WorldScene *mScene;
     QMap<WorldBMP*,MapImage*> mImages;

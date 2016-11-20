@@ -29,6 +29,7 @@
 #include "undoredo.h"
 #include "world.h"
 #include "worlddocument.h"
+#include "worldreader.h"
 #include "zoomable.h"
 
 #include <qmath.h>
@@ -120,6 +121,40 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     setSceneRect(mGridItem->boundingRect());
     mCoordItem->updateBoundingRect();
 
+    foreach (QString path, world()->otherWorlds()) {
+        WorldReader reader;
+        World *otherWorld = reader.readWorld(path);
+        if (otherWorld) {
+            Preferences *prefs = Preferences::instance();
+            OtherWorld *_otherWorld = new OtherWorld();
+            _otherWorld->mWorld = otherWorld;
+            _otherWorld->mCellItems.resize(otherWorld->width() * otherWorld->height());
+            mOtherWorlds += _otherWorld;
+
+            foreach (WorldBMP *bmp, otherWorld->bmps()) {
+                WorldBMPItem *item = new WorldBMPItem(this, bmp);
+                item->setVisible(prefs->showOtherWorlds());
+                addItem(item);
+                _otherWorld->mBMPItems += item;
+            }
+
+            for (int y = 0; y < otherWorld->height(); y++) {
+                for (int x = 0; x < otherWorld->width(); x++) {
+                    WorldCell *cell = otherWorld->cellAt(x, y);
+                    OtherWorldCellItem *item = new OtherWorldCellItem(cell, this);
+                    item->setVisible(prefs->showOtherWorlds());
+                    addItem(item);
+                    item->setZValue(ZVALUE_CELLITEM); // below mGridItem
+                    _otherWorld->mCellItems[y * otherWorld->width() + x] = item;
+                    _otherWorld->mPendingThumbnails += item;
+                }
+            }
+
+            if (prefs->showOtherWorlds())
+                setSceneRect(sceneRect().united(boundingRect(_otherWorld->adjustedBounds(world()))));
+        }
+    }
+
     mCellItems.resize(world()->width() * world()->height());
     for (int y = 0; y < world()->height(); y++) {
         for (int x = 0; x < world()->width(); x++) {
@@ -146,6 +181,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
     connect(prefs, SIGNAL(showBMPsChanged(bool)),
             SLOT(setShowBMPs(bool)));
+    connect(prefs, SIGNAL(showOtherWorldsChanged(bool)), SLOT(setShowOtherWorlds(bool)));
     connect(prefs, SIGNAL(worldThumbnailsChanged(bool)),
             SLOT(worldThumbnailsChanged(bool)));
 
@@ -164,6 +200,11 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
             SLOT(mapImageChanged(MapImage*)));
 
     handlePendingThumbnails();
+}
+
+WorldScene::~WorldScene()
+{
+    qDeleteAll(mOtherWorlds);
 }
 
 void WorldScene::setTool(AbstractTool *tool)
@@ -201,6 +242,11 @@ void WorldScene::setTool(AbstractTool *tool)
             setShowBMPs(Preferences::instance()->showBMPs());
         }
         mBMPToolActive = bmpToolActive;
+
+        foreach (OtherWorld *otherWorld, mOtherWorlds) {
+            foreach (OtherWorldCellItem *item, otherWorld->mCellItems)
+                item->setVisible(Preferences::instance()->showOtherWorlds() && !mBMPToolActive);
+        }
     }
 }
 
@@ -275,7 +321,8 @@ QList<WorldBMP *> WorldScene::bmpsInRect(const QRectF &cellRect)
     QList<WorldBMP*> result;
     foreach (QGraphicsItem *item, items(polygon)) {
         if (WorldBMPItem *bmpItem = dynamic_cast<WorldBMPItem*>(item))
-            result += bmpItem->bmp();
+            if (bmpItem->bmp()->world() == world()) // not an OtherWorld.mBMP
+                result += bmpItem->bmp();
     }
     return result;
 }
@@ -477,6 +524,24 @@ void WorldScene::setShowBMPs(bool show)
 {
     foreach (WorldBMPItem *bmpItem, mBMPItems)
         bmpItem->setVisible(show);
+    foreach (OtherWorld *otherWorld, mOtherWorlds) {
+        foreach (WorldBMPItem *item, otherWorld->mBMPItems)
+            item->setVisible(show && Preferences::instance()->showOtherWorlds());
+    }
+}
+
+void WorldScene::setShowOtherWorlds(bool show)
+{
+    QRectF bounds = mGridItem->boundingRect();
+    foreach (OtherWorld *otherWorld, mOtherWorlds) {
+        foreach (WorldBMPItem *item, otherWorld->mBMPItems)
+            item->setVisible(show && Preferences::instance()->showBMPs());
+        foreach (OtherWorldCellItem *item, otherWorld->mCellItems)
+            item->setVisible(show && !mBMPToolActive);
+        if (show)
+            bounds = bounds.united(boundingRect(otherWorld->adjustedBounds(world())));
+    }
+    setSceneRect(bounds);
 }
 
 void WorldScene::selectedRoadsChanged()
@@ -592,11 +657,12 @@ void WorldScene::bmpCoordsChanged(int index)
 WorldBMP *WorldScene::pointToBMP(const QPointF &scenePos)
 {
     QPoint cellPos = pixelToCellCoordsInt(scenePos);
+    WorldBMP *ret = 0;
     foreach (WorldBMP *bmp, world()->bmps()) {
         if (bmp->bounds().contains(cellPos))
-            return bmp;
+            ret = bmp;
     }
-    return 0;
+    return ret;
 }
 
 WorldBMPItem *WorldScene::itemForBMP(WorldBMP *bmp)
@@ -623,6 +689,16 @@ void WorldScene::mapImageChanged(MapImage *mapImage)
 
 void WorldScene::worldThumbnailsChanged(bool thumbs)
 {
+    foreach (OtherWorld *otherWorld, mOtherWorlds) {
+        otherWorld->mPendingThumbnails.clear();
+        foreach (OtherWorldCellItem *item, otherWorld->mCellItems) {
+            if (thumbs)
+                otherWorld->mPendingThumbnails += item;
+            else
+                item->thumbnailsAreFail();
+        }
+    }
+
     mPendingThumbnails.clear();
     if (thumbs) {
         foreach (WorldCellItem *item, mCellItems)
@@ -647,6 +723,20 @@ void WorldScene::handlePendingThumbnails()
             if (mPendingThumbnails.size()) {
                 QMetaObject::invokeMethod(this, "handlePendingThumbnails",
                                           Qt::QueuedConnection);
+            }
+        }
+    }
+
+    foreach (OtherWorld *otherWorld, mOtherWorlds) {
+        if (otherWorld->mPendingThumbnails.size()) {
+            OtherWorldCellItem *item = otherWorld->mPendingThumbnails.first();
+            int loaded = item->thumbnailsAreGo();
+            if (loaded != 2) {
+                otherWorld->mPendingThumbnails.takeFirst();
+                if (otherWorld->mPendingThumbnails.size()) {
+                    QMetaObject::invokeMethod(this, "handlePendingThumbnails",
+                                              Qt::QueuedConnection);
+                }
             }
         }
     }
@@ -1211,6 +1301,50 @@ QPoint DragMapImageItem::dropPos() const
     return mDropPos;
 }
 
+/////
+
+OtherWorldCellItem::OtherWorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *parent)
+    : BaseCellItem(scene, parent)
+    , mCell(cell)
+{
+//    setFlag(ItemIsSelectable);
+    mWantsImages = false;
+    initialize();
+}
+
+QPoint OtherWorldCellItem::cellPos() const
+{
+     return mCell->world()->getGenerateLotsSettings().worldOrigin - mScene->world()->getGenerateLotsSettings().worldOrigin + mCell->pos();
+}
+
+void OtherWorldCellItem::cellContentsChanged()
+{
+    updateCellImage();
+    mLotImages.clear();
+    for (int i = 0; i < mCell->lots().size(); i++)
+        updateLotImage(i);
+    updateBoundingRect();
+}
+
+int OtherWorldCellItem::thumbnailsAreGo()
+{
+    if (mMapImage && mMapImage->isLoaded())
+        return 1;
+    mWantsImages = true;
+    cellContentsChanged();
+    if (mMapImage && mMapImage->isLoaded())
+        return 1;
+    return (mMapImage != 0) ? 2 : 0;
+}
+
+void OtherWorldCellItem::thumbnailsAreFail()
+{
+    if (mWantsImages) {
+        mWantsImages = false;
+        cellContentsChanged();
+    }
+}
+
 ///// ///// ///// ///// /////
 
 WorldGridItem::WorldGridItem(WorldScene *scene)
@@ -1596,10 +1730,17 @@ void WorldBMPItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
     }
 }
 
+QRect WorldBMPItem::bmpBounds() const
+{
+    QRect bounds = mBMP->bounds().translated(mDragging ? mDragOffset : QPoint());
+    if (mBMP->world() != mScene->world()) // OtherWorld.mBMP
+        bounds.translate(mBMP->world()->getGenerateLotsSettings().worldOrigin - mScene->world()->getGenerateLotsSettings().worldOrigin);
+    return bounds;
+}
+
 void WorldBMPItem::synchWithBMP()
 {
-    QRectF bounds = mScene->boundingRect(mBMP->bounds()
-            .translated(mDragging ? mDragOffset : QPoint()));
+    QRectF bounds = mScene->boundingRect(bmpBounds());
     if (bounds != mMapImageBounds) {
         prepareGeometryChange();
         mMapImageBounds = bounds;
@@ -1626,6 +1767,22 @@ void WorldBMPItem::setDragOffset(const QPoint &offset)
 
 QPolygonF WorldBMPItem::polygon() const
 {
-    return mScene->cellRectToPolygon(mBMP->bounds()
-                                     .translated(mDragging ? mDragOffset : QPoint()));
+    return mScene->cellRectToPolygon(bmpBounds());
+}
+
+/////
+
+OtherWorld::~OtherWorld()
+{
+    delete mWorld;
+}
+
+QPoint OtherWorld::adjustedOrigin(World *world) const
+{
+    return mWorld->getGenerateLotsSettings().worldOrigin - world->getGenerateLotsSettings().worldOrigin;
+}
+
+QRect OtherWorld::adjustedBounds(World *world) const
+{
+    return QRect(adjustedOrigin(world), mWorld->size());
 }

@@ -92,6 +92,7 @@ Preferences::Preferences()
                                               false).toBool();
     mHighlightRoomUnderPointer = mSettings->value(QLatin1String("HighlightRoomUnderPointer"),
                                                   false).toBool();
+    mShowOtherWorlds = mSettings->value(QLatin1String("ShowOtherWorlds"), true).toBool();
     mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
     mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
     mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
@@ -374,6 +375,16 @@ void Preferences::setHighlightRoomUnderPointer(bool highlight)
     mSettings->setValue(QLatin1String("Interface/HighlightRoomUnderPointer"),
                         mHighlightRoomUnderPointer);
     emit highlightRoomUnderPointerChanged(mHighlightRoomUnderPointer);
+}
+
+void Preferences::setShowOtherWorlds(bool show)
+{
+    if (show == mShowOtherWorlds)
+        return;
+    mShowOtherWorlds = show;
+    mSettings->setValue(QLatin1String("Interface/ShowOtherWorlds"),
+                        mShowOtherWorlds);
+    emit showOtherWorldsChanged(mShowOtherWorlds);
 }
 
 void Preferences::setMapsDirectory(const QString &path)

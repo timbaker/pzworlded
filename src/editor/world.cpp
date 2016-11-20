@@ -109,6 +109,11 @@ WorldBMP *World::removeBmp(int index)
     return mBMPs.takeAt(index);
 }
 
+void World::insertOtherWorld(int index, const QString &path)
+{
+    mOtherWorlds.insert(index, path);
+}
+
 /////
 
 bool ObjectGroupList::contains(const QString &name) const

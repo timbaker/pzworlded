@@ -118,6 +118,8 @@ private:
                 readLuaSettings();
             else if (xml.name() == QLatin1String("bmp"))
                 readBMP();
+            else if (xml.name() == QLatin1String("otherworld"))
+                readOtherWorld();
             else
                 readUnknownElement();
         }
@@ -592,6 +594,19 @@ private:
         // No check wanted/needed on BMP coordinates
         WorldBMP *bmp = new WorldBMP(mWorld, x, y, width, height, path);
         mWorld->insertBmp(mWorld->bmps().count(), bmp);
+
+        xml.skipCurrentElement();
+    }
+
+    void readOtherWorld()
+    {
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("otherworld"));
+
+        const QXmlStreamAttributes atts = xml.attributes();
+        QString path = atts.value(QLatin1String("path")).toString();
+        path = resolveReference(path, mPath);
+
+        mWorld->insertOtherWorld(mWorld->otherWorlds().count(), path);
 
         xml.skipCurrentElement();
     }

@@ -264,6 +264,8 @@ public:
     void insertBmp(int index, WorldBMP *bmp);
     WorldBMP *removeBmp(int index);
 
+    void insertOtherWorld(int index, const QString &path);
+
     const ObjectGroupList &objectGroups() const
     { return mObjectGroups; }
     const ObjectTypeList &objectTypes() const
@@ -276,6 +278,8 @@ public:
     { return mRoads; }
     const QList<WorldBMP*> bmps() const
     { return mBMPs; }
+    const QStringList &otherWorlds() const
+    { return mOtherWorlds; }
 
     void setBMPToTMXSettings(const BMPToTMXSettings &settings)
     { mBMPToTMXSettings = settings; }
@@ -321,6 +325,7 @@ private:
     TMXToBMPSettings mTMXToBMPSettings;
     GenerateLotsSettings mGenerateLotsSettings;
     LuaSettings mLuaSettings;
+    QStringList mOtherWorlds;
 };
 
 #endif // WORLD_H

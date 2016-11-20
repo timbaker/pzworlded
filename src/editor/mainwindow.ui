@@ -299,6 +299,7 @@
     <addaction name="actionShowMiniMap"/>
     <addaction name="actionShowObjects"/>
     <addaction name="actionShowObjectNames"/>
+    <addaction name="actionShowOtherWorlds"/>
     <addaction name="actionShowBMP"/>
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
@@ -824,6 +825,14 @@
    </property>
    <property name="text">
     <string>Show Objects</string>
+   </property>
+  </action>
+  <action name="actionShowOtherWorlds">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Other Worlds</string>
    </property>
   </action>
  </widget>
