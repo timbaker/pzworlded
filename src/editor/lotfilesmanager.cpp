@@ -50,8 +50,10 @@ using namespace Tiled;
 
 static void SaveString(QDataStream& out, const QString& str)
 {
-    for (int i = 0; i < str.length(); i++)
+    for (int i = 0; i < str.length(); i++) {
+        if (str[i].toLatin1() == '\n') continue;
         out << quint8(str[i].toLatin1());
+    }
     out << quint8('\n');
 }
 
