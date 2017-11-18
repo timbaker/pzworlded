@@ -2378,11 +2378,13 @@ static bool tileHasGrimeProperties(BuildingTile *btile, GrimeProperties *props)
         if (TileDefTile *tdt = tdts->tileAt(btile->mIndex)) {
             if (tdt->mProperties.contains(QString::fromLatin1("GrimeType"))) {
                 if (props) {
-                    if (tdt->mProperties.contains(QString::fromLatin1("WallW")) ||
+                    if (tdt->mProperties.contains(QString::fromLatin1("DoorWallW")) ||
+                            tdt->mProperties.contains(QString::fromLatin1("WallW")) ||
                             tdt->mProperties.contains(QString::fromLatin1("WallWTrans")) ||
                             tdt->mProperties.contains(QString::fromLatin1("windowW")))
                         props->West = true;
-                    else if (tdt->mProperties.contains(QString::fromLatin1("WallN")) ||
+                    else if (tdt->mProperties.contains(QString::fromLatin1("DoorWallN")) ||
+                             tdt->mProperties.contains(QString::fromLatin1("WallN")) ||
                              tdt->mProperties.contains(QString::fromLatin1("WallNTrans")) ||
                              tdt->mProperties.contains(QString::fromLatin1("windowN")))
                         props->North = true;
