@@ -1202,6 +1202,15 @@ void ShadowBuilding::objectAdded(BuildingObject *object)
 
 void ShadowBuilding::objectAboutToBeRemoved(BuildingObject *object)
 {
+    foreach (BuildingModifier *bmod, mModifiers) {
+        if (MoveObjectModifier *mod = dynamic_cast<MoveObjectModifier*>(bmod)) {
+            if (mod->mObject == object) {
+                delete mod;
+                continue;
+            }
+        }
+    }
+
     if (mOriginalToShadowObject.contains(object)) {
         BuildingObject *shadowObject = mOriginalToShadowObject[object];
         shadowObject->floor()->removeObject(shadowObject->index());
