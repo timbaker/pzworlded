@@ -422,4 +422,8 @@ private:
     QPoint mPos;
 };
 
+#include <QMetaType>
+Q_DECLARE_METATYPE(ObjectType*)
+Q_DECLARE_METATYPE(WorldCell*)
+
 #endif // WORLDCELL_H

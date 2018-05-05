@@ -39,6 +39,7 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPixmap>
+#include <QSet>
 #include <QUndoStack>
 #include <QVBoxLayout>
 
@@ -334,6 +335,10 @@ ObjectsView::ObjectsView(QWidget *parent)
     header()->setResizeMode(1, QHeaderView::ResizeToContents);
 #endif
 
+    for (Level& level : mExpandedLevels) {
+        level.expanded = true;
+    }
+
     connect(mModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
             SLOT(rowsInserted(QModelIndex,int,int)));
     connect(mModel, SIGNAL(synched()), SLOT(modelSynched()));
@@ -369,10 +374,14 @@ void ObjectsView::setDocument(Document *doc)
     if (mCellDoc)
         mCellDoc->disconnect(this);
 
+    saveExpandedLevels();
+
     mWorldDoc = doc ? doc->asWorldDocument() : 0;
     mCellDoc = doc ? doc->asCellDocument() : 0;
 
     mModel->setDocument(doc);
+
+    restoreExpandedLevels();
 
     if (mWorldDoc) {
         connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
@@ -400,10 +409,15 @@ void ObjectsView::rowsInserted(const QModelIndex &parent, int start, int end)
 
 void ObjectsView::selectedCellsChanged()
 {
-    if (mWorldDoc->selectedCellCount() == 1)
+    saveExpandedLevels();
+
+    if (mWorldDoc->selectedCellCount() == 1) {
         mModel->setCell(mWorldDoc->selectedCells().first());
-    else
+    } else {
         mModel->setCell(0);
+    }
+
+    restoreExpandedLevels();
 }
 
 void ObjectsView::selectedObjectsChanged()
@@ -433,6 +447,66 @@ void ObjectsView::closeComboBoxEditor()
 {
     QModelIndex index = currentIndex();
     currentChanged( index, index );
+}
+
+void ObjectsView::saveExpandedLevels()
+{
+    int nLevels = mModel->rowCount();
+    for (int i = 0; i < nLevels; i++) {
+        const QModelIndex levelIndex = mModel->index(i, 0);
+        ObjectsModel::Level* modelLevel = mModel->toLevel(levelIndex);
+        Level& level = mExpandedLevels[modelLevel->level];
+        level.expanded = isExpanded(levelIndex);
+
+        int nGroups = mModel->rowCount(levelIndex);
+        for (int j = 0; j < nGroups; j++) {
+            const QModelIndex groupIndex = mModel->index(j, 0, levelIndex);
+            WorldObjectGroup* group = mModel->toGroup(groupIndex);
+            if (group == nullptr)
+                continue; // "No Group"
+
+            if (isExpanded(groupIndex))
+                level.expandedGroups.insert(group);
+            else
+                level.expandedGroups.remove(group);
+
+            // No checkboxes in WorldScene
+            if (mCellDoc == nullptr)
+                continue;
+
+            if (mModel->data(groupIndex, Qt::CheckStateRole).value<Qt::CheckState>() == Qt::Checked)
+                level.hiddenGroups.remove(group);
+            else
+                level.hiddenGroups.insert(group);
+        }
+    }
+}
+
+void ObjectsView::restoreExpandedLevels()
+{
+    int nLevels = mModel->rowCount();
+    for (int i = 0; i < nLevels; i++) {
+        const QModelIndex levelIndex = mModel->index(i, 0);
+        ObjectsModel::Level* modelLevel = mModel->toLevel(levelIndex);
+        Level& level = mExpandedLevels[modelLevel->level];
+        setExpanded(levelIndex, level.expanded);
+
+        int nGroups = mModel->rowCount(levelIndex);
+        for (int j = 0; j < nGroups; j++) {
+            const QModelIndex groupIndex = mModel->index(j, 0, levelIndex);
+            WorldObjectGroup* group = mModel->toGroup(groupIndex);
+            if (group == nullptr)
+                continue; // "No Group"
+
+            setExpanded(groupIndex, level.expandedGroups.contains(group));
+
+            // No checkboxes in WorldScene
+            if (mCellDoc == nullptr)
+                continue;
+
+            mModel->setData(groupIndex, level.hiddenGroups.contains(group) ? Qt::Unchecked : Qt::Checked, Qt::CheckStateRole);
+        }
+    }
 }
 
 /////

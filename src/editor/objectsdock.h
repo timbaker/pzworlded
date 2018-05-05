@@ -87,12 +87,25 @@ private slots:
     void closeComboBoxEditor();
 
 private:
+    void saveExpandedLevels();
+    void restoreExpandedLevels();
+
+private:
     ObjectsModel *mModel;
     WorldCell *mCell;
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
     bool mSynching;
     bool mSynchingSelection;
+
+    struct Level
+    {
+        bool expanded;
+        QSet<WorldObjectGroup*> expandedGroups;
+        QSet<WorldObjectGroup*> hiddenGroups;
+    };
+
+    Level mExpandedLevels[16];
 };
 
 class ObjectsViewDelegate : public QStyledItemDelegate

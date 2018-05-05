@@ -141,7 +141,8 @@ SOURCES += main.cpp\
     tmxtobmpdialog.cpp \
     navigation/isochunk.cpp \
     navigation/isogridsquare.cpp \
-    navigation/chunkdatafile.cpp
+    navigation/chunkdatafile.cpp \
+    searchdock.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -229,7 +230,8 @@ HEADERS  += mainwindow.h \
     tmxtobmpdialog.h \
     navigation/isochunk.h \
     navigation/isogridsquare.h \
-    navigation/chunkdatafile.h
+    navigation/chunkdatafile.h \
+    searchdock.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -254,7 +256,8 @@ FORMS    += mainwindow.ui \
     pngbuildingdialog.ui \
     lootwindow.ui \
     writeworldobjectsdialog.ui \
-    tmxtobmpdialog.ui
+    tmxtobmpdialog.ui \
+    searchdock.ui
 
 OTHER_FILES +=
 

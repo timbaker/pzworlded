@@ -350,14 +350,39 @@ void ObjectLabelItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     mItem->hoverLeaveEvent(event);
 }
 
+static void resolveProperties(PropertyHolder *ph, PropertyList &result)
+{
+    foreach (PropertyTemplate *pt, ph->templates())
+        resolveProperties(pt, result);
+    foreach (Property *p, ph->properties()) {
+        result.removeAll(p->mDefinition);
+        result += p;
+    }
+}
+
 void ObjectLabelItem::synch()
 {
-    if (!Preferences::instance()->showObjectNames()
-            || mItem->object()->name().isEmpty())
+    QString text = mItem->object()->name();
+    PropertyList properties;
+    resolveProperties(mItem->object(), properties);
+    if (!properties.empty()) {
+        foreach (Property *p, properties) {
+            if (!text.isEmpty())
+                text += QLatin1String(" ");
+            text += p->mDefinition->mName + QLatin1String("=") + p->mValue;
+        }
+    }
+
+    if (!mItem->resizeDelta().isNull()) {
+        QSizeF size = mItem->object()->size() + mItem->resizeDelta();
+        text = QString::fromLatin1("%1 x %2").arg((int)size.width()).arg((int)size.height());
+    }
+
+    if (!Preferences::instance()->showObjectNames() || text.isEmpty()) {
         setVisible(false);
-    else {
+    } else {
         setVisible(true);
-        setText(mItem->object()->name());
+        setText(text);
         setPos(mItem->boundingRect().center());
 
         mBgColor = mItem->isMouseOverHighlighted() ? Qt::white : Qt::lightGray;
@@ -575,6 +600,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
         QLineF bottom(bounds.bottomLeft(), bounds.bottomRight());
 
         QPen dashPen(Qt::DashLine);
+        dashPen.setCosmetic(true);
         dashPen.setDashOffset(qMax(qreal(0), mBoundingRect.x()));
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << top << bottom);
@@ -1260,6 +1286,12 @@ void CellScene::setDocument(CellDocument *doc)
             SLOT(objectGroupVisibilityChanged(WorldObjectGroup*,int)));
     connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
 
+    // These are to update ObjectLabelItem
+    connect(worldDocument(), &WorldDocument::propertyAdded, this, &CellScene::propertiesChanged);
+    connect(worldDocument(), &WorldDocument::propertyRemoved, this, &CellScene::propertiesChanged);
+    connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
+    connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
+
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
     connect(worldDocument(), SIGNAL(roadRemoved(Road*)),
@@ -1831,6 +1863,20 @@ void CellScene::objectXXXXChanged(WorldCellObject *obj)
             cellObjectAdded(obj->cell(), obj->index());
             item = itemForObject(obj);
         }
+        item->synchWithObject();
+    }
+}
+
+void CellScene::propertiesChanged(PropertyHolder* ph)
+{
+    WorldCellObject* obj = dynamic_cast<WorldCellObject*>(ph);
+    if (obj == nullptr)
+        return;
+
+    if (obj->cell() != cell())
+        return;
+
+    if (ObjectItem *item = itemForObject(obj)) {
         item->synchWithObject();
     }
 }

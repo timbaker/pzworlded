@@ -52,6 +52,7 @@
 #include "resizeworlddialog.h"
 #include "roadsdock.h"
 #include "scenetools.h"
+#include "searchdock.h"
 #include "simplefile.h"
 #include "templatesdialog.h"
 #include "tilemetainfomgr.h"
@@ -106,6 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mMapsDock(new MapsDock(this))
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
+    , mSearchDock(new SearchDock(this))
 #ifdef ROAD_UI
     , mRoadsDock(new RoadsDock(this))
 #endif
@@ -201,12 +203,14 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mMapsDock->toggleViewAction());
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
+    ui->menuView->addAction(mSearchDock->toggleViewAction());
 #ifdef ROAD_UI
     ui->menuView->addAction(mRoadsDock->toggleViewAction());
 #endif
 
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
+    addDockWidget(Qt::LeftDockWidgetArea, mSearchDock);
 #ifdef ROAD_UI
     addDockWidget(Qt::LeftDockWidgetArea, mRoadsDock);
 #endif
@@ -578,6 +582,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
 
         mLotsDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
+        mSearchDock->setDocument(doc);
 #ifdef ROAD_UI
         mRoadsDock->setDocument(doc);
 #endif
@@ -593,6 +598,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLayersDock->setCellDocument(0);
         mLotsDock->clearDocument();
         mObjectsDock->clearDocument();
+        mSearchDock->clearDocument();
 #ifdef ROAD_UI
         mRoadsDock->clearDocument();
 #endif

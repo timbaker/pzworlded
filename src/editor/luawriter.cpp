@@ -21,6 +21,7 @@
 #include "world.h"
 #include "worldcell.h"
 
+#include <QBuffer>
 #include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
@@ -330,7 +331,23 @@ public:
                     PropertyList properties;
                     resolveProperties(obj, properties);
                     if (properties.size()) {
-                        w.setSuppressNewlines(false);
+
+                        // Hack -- See if the "properties { ... }" string is short enough to inline it.
+                        QBuffer buf;
+                        buf.open(QIODevice::ReadWrite);
+                        LuaTableWriter w2(&buf);
+                        w2.setSuppressNewlines(true);
+                        w2.writeStartTable("properties");
+                        this->w = &w2;
+                        foreach (Property *p, properties) {
+                            writePropertyKeyAndValue(p->mDefinition->mName.toUtf8(), p->mValue);
+                        }
+                        this->w = &w;
+                        w2.writeEndTable();
+                        buf.close();
+                        bool suppressNewlines = buf.data().length() <= 64; // UTF-8
+
+                        w.setSuppressNewlines(suppressNewlines);
                         w.writeStartTable("properties");
                         foreach (Property *p, properties) {
                             writePropertyKeyAndValue(p->mDefinition->mName.toUtf8(), p->mValue);

@@ -34,6 +34,7 @@ class MapsDock;
 class ObjectsDock;
 class PropertiesDock;
 class RoadsDock;
+class SearchDock;
 class UndoDock;
 class World;
 class WorldDocument;
@@ -186,6 +187,7 @@ private:
     MapsDock *mMapsDock;
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
+    SearchDock* mSearchDock;
 #ifdef ROAD_UI
     RoadsDock *mRoadsDock;
 #endif

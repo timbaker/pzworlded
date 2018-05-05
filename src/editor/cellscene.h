@@ -39,6 +39,7 @@ class MapComposite;
 class MapImage;
 class MapInfo;
 class ObjectItem;
+class PropertyHolder;
 class ResizeHandle;
 class Road;
 class SceneOverlay;
@@ -548,6 +549,8 @@ public slots:
     void setHighlightCurrentLevel(bool highlight);
     void highlightRoomUnderPointerChanged(bool highlight);
     void handlePendingUpdates();
+
+    void propertiesChanged(PropertyHolder* ph);
 
     void roadAdded(int index);
     void roadRemoved(Road *road);
