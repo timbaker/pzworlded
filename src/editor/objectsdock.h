@@ -102,7 +102,6 @@ private:
     {
         bool expanded;
         QSet<WorldObjectGroup*> expandedGroups;
-        QSet<WorldObjectGroup*> hiddenGroups;
     };
 
     Level mExpandedLevels[16];

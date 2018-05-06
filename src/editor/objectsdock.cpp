@@ -469,21 +469,20 @@ void ObjectsView::saveExpandedLevels()
                 level.expandedGroups.insert(group);
             else
                 level.expandedGroups.remove(group);
-
-            // No checkboxes in WorldScene
-            if (mCellDoc == nullptr)
-                continue;
-
-            if (mModel->data(groupIndex, Qt::CheckStateRole).value<Qt::CheckState>() == Qt::Checked)
-                level.hiddenGroups.remove(group);
-            else
-                level.hiddenGroups.insert(group);
         }
     }
 }
 
 void ObjectsView::restoreExpandedLevels()
 {
+    blockSignals(true);
+    mModel->blockSignals(true);
+    bool animated = isAnimated();
+    setAnimated(false);
+
+    // This prevents updating the layout every time setExpanded() is called below - huge performance boost.
+    scheduleDelayedItemsLayout();
+
     int nLevels = mModel->rowCount();
     for (int i = 0; i < nLevels; i++) {
         const QModelIndex levelIndex = mModel->index(i, 0);
@@ -498,15 +497,15 @@ void ObjectsView::restoreExpandedLevels()
             if (group == nullptr)
                 continue; // "No Group"
 
-            setExpanded(groupIndex, level.expandedGroups.contains(group));
-
-            // No checkboxes in WorldScene
-            if (mCellDoc == nullptr)
-                continue;
-
-            mModel->setData(groupIndex, level.hiddenGroups.contains(group) ? Qt::Unchecked : Qt::Checked, Qt::CheckStateRole);
+            // SLOW
+            bool expanded = level.expandedGroups.contains(group);
+            setExpanded(groupIndex, expanded);
         }
     }
+
+    setAnimated(animated);
+    mModel->blockSignals(false);
+    blockSignals(false);
 }
 
 /////
