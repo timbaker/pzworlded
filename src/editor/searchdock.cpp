@@ -19,10 +19,13 @@
 #include "ui_searchdock.h"
 
 #include "celldocument.h"
+#include "documentmanager.h"
 #include "mainwindow.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
+#include "worldscene.h"
+#include "worldview.h"
 
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -30,6 +33,7 @@
 SearchDock::SearchDock(QWidget* parent)
     : QDockWidget(parent)
     , ui(new Ui::SearchDock)
+    , mSynching(false)
 {
     ui->setupUi(this);
 
@@ -37,7 +41,10 @@ SearchDock::SearchDock(QWidget* parent)
 
     connect(ui->combo1, QOverload<int>::of(&QComboBox::activated), this, &SearchDock::comboActivated1);
     connect(ui->combo2, QOverload<int>::of(&QComboBox::activated), this, &SearchDock::comboActivated2);
+    connect(ui->listWidget, &QListWidget::itemSelectionChanged, this, &SearchDock::listSelectionChanged);
     connect(ui->listWidget, &QListWidget::activated, this, &SearchDock::listActivated);
+
+    connect(DocumentManager::instance(), &DocumentManager::documentAboutToClose, this, &SearchDock::documentAboutToClose);
 }
 
 void SearchDock::changeEvent(QEvent *e)
@@ -62,21 +69,43 @@ void SearchDock::setDocument(Document *doc)
     mWorldDoc = doc->asWorldDocument();
     mCellDoc = doc->asCellDocument();
     setEnabled(true);
+
+    comboActivated1(0);
+
+    WorldDocument* worldDoc = worldDocument();
+    SearchResults* results = mResults.contains(worldDoc) ? mResults[worldDoc] : nullptr;
+    setList(results);
+    if (results && ui->combo1->currentIndex() == 0) {
+        int index = ui->combo2->findText(results->objectType);
+        ui->combo2->setCurrentIndex(index);
+    }
 }
 
 void SearchDock::clearDocument()
 {
-    mWorldDoc = 0;
-    mCellDoc = 0;
+    mWorldDoc = nullptr;
+    mCellDoc = nullptr;
     ui->listWidget->clear();
+    ui->combo2->clear();
     setEnabled(false);
+}
+
+WorldDocument *SearchDock::worldDocument()
+{
+    if (mWorldDoc)
+        return mWorldDoc;
+    if (mCellDoc)
+        return mCellDoc->worldDocument();
+    return nullptr;
 }
 
 void SearchDock::comboActivated1(int index)
 {
-    World* world = mWorldDoc ? mWorldDoc->world() : mCellDoc->world();
-
     ui->combo2->clear();
+
+    if (worldDocument() == nullptr)
+        return;
+    World* world = worldDocument()->world();
 
     if (index == 0) {
         for (ObjectType* objType : world->objectTypes()) {
@@ -91,6 +120,7 @@ void SearchDock::comboActivated1(int index)
 
 void SearchDock::comboActivated2(int index)
 {
+    Q_UNUSED(index);
     search();
 }
 
@@ -100,7 +130,9 @@ void SearchDock::search()
 
     ObjectType* objType = ui->combo2->currentData().value<ObjectType*>();
 
-    ui->listWidget->clear();
+    SearchResults* results = mResults.contains(mWorldDoc) ? mResults[mWorldDoc] : new SearchResults();
+    results->reset();
+    results->objectType = objType->name();
 
     for (int y = 0; y < world->height(); y++) {
         for (int x = 0; x < world->width(); x++) {
@@ -109,15 +141,74 @@ void SearchDock::search()
                 continue;
             for (WorldCellObject* obj : cell->objects()) {
                 if (obj->type() == objType) {
-                    QListWidgetItem* item = new QListWidgetItem(
-                                tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
-                    item->setData(Qt::UserRole, QVariant::fromValue(cell));
-                    ui->listWidget->addItem(item);
+                    // FIXME: If the world is resized, these cells may be destroyed.
+                    results->cells += cell;
                     break;
                 }
             }
         }
     }
+
+    mResults[mWorldDoc] = results;
+
+    setList(results);
+}
+
+void SearchDock::setList(SearchResults *results)
+{
+    mSynching = true;
+//    WorldCell* selected = results ? results->selectedCell : nullptr;
+    ui->listWidget->clear();
+    mSynching = false;
+
+    if (results == nullptr)
+        return;
+
+//    results->selectedCell = selected;
+    QListWidgetItem* selectedItem = nullptr;
+
+    for (WorldCell* cell : results->cells) {
+        QListWidgetItem* item = new QListWidgetItem(tr("Cell %1,%2").arg(cell->x()).arg(cell->y()));
+        item->setData(Qt::UserRole, QVariant::fromValue(cell));
+        ui->listWidget->addItem(item);
+
+        if (cell == results->selectedCell)
+            selectedItem = item;
+    }
+
+    if (selectedItem != nullptr) {
+        mSynching = true;
+        selectedItem->setSelected(true);
+        mSynching = false;
+        ui->listWidget->scrollToItem(selectedItem);
+    }
+}
+
+void SearchDock::listSelectionChanged()
+{
+    if (mSynching)
+        return;
+
+    WorldDocument* worldDoc = worldDocument();
+    if (worldDoc == nullptr)
+        return;
+
+    if (!mResults.contains(worldDoc))
+        return;
+    SearchResults* results = mResults[worldDoc];
+
+    QList<QListWidgetItem*> selected = ui->listWidget->selectedItems();
+    if (selected.size() != 1) {
+        results->selectedCell = nullptr;
+        return;
+    }
+
+    QListWidgetItem* item = selected.first();
+    WorldCell* cell = item->data(Qt::UserRole).value<WorldCell*>();
+    results->selectedCell = cell;
+
+    WorldScene* scene = worldDoc->view()->scene()->asWorldScene();
+    worldDoc->view()->centerOn(scene->cellToPixelCoords(cell->x() + 0.5f, cell->y() + 0.5f));
 }
 
 void SearchDock::listActivated(const QModelIndex &index)
@@ -126,6 +217,15 @@ void SearchDock::listActivated(const QModelIndex &index)
     WorldCell* cell = item->data(Qt::UserRole).value<WorldCell*>();
     WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
     worldDoc->setSelectedCells(QList<WorldCell*>() << cell);
-    // TODO: scroll into view
     worldDoc->editCell(cell);
+}
+
+void SearchDock::documentAboutToClose(int index, Document *doc)
+{
+    WorldDocument* worldDoc = doc->asWorldDocument() ? doc->asWorldDocument() : doc->asCellDocument()->worldDocument();
+    if (mResults.contains(worldDoc)) {
+        SearchResults* results = mResults[worldDoc];
+        mResults.remove(worldDoc);
+        delete results;
+    }
 }
