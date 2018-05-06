@@ -142,7 +142,8 @@ SOURCES += main.cpp\
     navigation/isochunk.cpp \
     navigation/isogridsquare.cpp \
     navigation/chunkdatafile.cpp \
-    searchdock.cpp
+    searchdock.cpp \
+    defaultsfile.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -231,7 +232,8 @@ HEADERS  += mainwindow.h \
     navigation/isochunk.h \
     navigation/isogridsquare.h \
     navigation/chunkdatafile.h \
-    searchdock.h
+    searchdock.h \
+    defaultsfile.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

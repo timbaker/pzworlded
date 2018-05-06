@@ -1,0 +1,168 @@
+version = 1
+
+enum
+{
+    name = Direction
+    values = [
+        N
+        S
+        W
+        E
+    ]
+}
+
+property
+{
+    name = Direction
+    default = N
+    enum = Direction
+}
+
+template
+{
+    name = ParkingStallN
+    property
+    {
+        name = Direction
+        value = N
+    }
+}
+
+template
+{
+    name = ParkingStallS
+    property
+    {
+        name = Direction
+        value = S
+    }
+}
+
+template
+{
+    name = ParkingStallW
+    property
+    {
+        name = Direction
+        value = W
+    }
+}
+
+template
+{
+    name = ParkingStallE
+    property
+    {
+        name = Direction
+        value = E
+    }
+}
+
+objecttype
+{
+    name = TownZone
+}
+
+objecttype
+{
+    name = Forest
+}
+
+objecttype
+{
+    name = DeepForest
+}
+
+objecttype
+{
+    name = Nav
+}
+
+objecttype
+{
+    name = Vegitation
+}
+
+objecttype
+{
+    name = TrailerPark
+}
+
+objecttype
+{
+    name = Farm
+}
+
+objecttype
+{
+    name = ParkingStall
+}
+
+objecttype
+{
+    name = FarmLand
+}
+
+objectgroup
+{
+    name = ParkingStall
+    color = #ff007f
+    defaulttype = ParkingStall
+}
+
+objectgroup
+{
+    name = TownZone
+    color = #aa0000
+    defaulttype = TownZone
+}
+
+objectgroup
+{
+    name = Forest
+    color = #00aa00
+    defaulttype = Forest
+}
+
+objectgroup
+{
+    name = Nav
+    color = #55aaff
+    defaulttype = Nav
+}
+
+objectgroup
+{
+    name = DeepForest
+    color = #003500
+    defaulttype = DeepForest
+}
+
+objectgroup
+{
+    name = Vegitation
+    color = #b3b300
+    defaulttype = Vegitation
+}
+
+objectgroup
+{
+    name = TrailerPark
+    color = #f50000
+    defaulttype = TrailerPark
+}
+
+objectgroup
+{
+    name = Farm
+    color = #55ff7f
+    defaulttype = Farm
+}
+
+objectgroup
+{
+    name = FarmLand
+    color = #bcff7d
+    defaulttype = FarmLand
+}
+

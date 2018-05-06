@@ -130,6 +130,15 @@ WorldObjectGroup::WorldObjectGroup(World *world, WorldObjectGroup *other)
         mType = world->nullObjectType();
 }
 
+WorldObjectGroup::WorldObjectGroup(ObjectType *defaultType, const QString &name, const QColor &color)
+    : mName(name)
+    , mColor(color)
+    , mType(defaultType)
+
+{
+
+}
+
 bool WorldObjectGroup::operator ==(const WorldObjectGroup &other) const
 {
     return mName == other.mName &&

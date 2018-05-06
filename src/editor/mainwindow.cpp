@@ -26,6 +26,7 @@
 #include "cellview.h"
 #include "clipboard.h"
 #include "copypastedialog.h"
+#include "defaultsfile.h"
 #include "documentmanager.h"
 #include "generatelotsdialog.h"
 #include "gotodialog.h"
@@ -414,6 +415,7 @@ void MainWindow::newWorld()
     QSize size = dialog.worldSize();
 
     World *newWorld = new World(size.width(), size.height());
+    DefaultsFile::newWorld(newWorld);
     WorldDocument *newDoc = new WorldDocument(newWorld);
     docman()->addDocument(newDoc);
 }
@@ -716,6 +718,8 @@ bool MainWindow::openFile(const QString &fileName)
                               reader.errorString());
         return false;
     }
+
+    DefaultsFile::oldWorld(world);
 
     docman()->addDocument(new WorldDocument(world, fileName));
     if (docman()->failedToAdd())

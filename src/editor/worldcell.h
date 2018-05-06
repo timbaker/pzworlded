@@ -145,6 +145,7 @@ public:
     WorldObjectGroup(World *world, const QString &name);
     WorldObjectGroup(World *world, const QString &name, const QColor &color);
     WorldObjectGroup(World *world, WorldObjectGroup *other);
+    WorldObjectGroup(ObjectType* defaultType, const QString &name, const QColor &color);
 
     void setName(const QString &name) { mName = name; }
     const QString &name() const { return mName; }
