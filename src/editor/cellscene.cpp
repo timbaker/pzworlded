@@ -307,6 +307,7 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
 ObjectLabelItem::ObjectLabelItem(ObjectItem *item, QGraphicsItem *parent)
     : QGraphicsSimpleTextItem(parent)
     , mItem(item)
+    , mShowSize(false)
 {
     setAcceptHoverEvents(true);
     setFlag(ItemIgnoresTransformations);
@@ -373,7 +374,7 @@ void ObjectLabelItem::synch()
         }
     }
 
-    if (!mItem->resizeDelta().isNull()) {
+    if (!mItem->resizeDelta().isNull() || mShowSize) {
         QSizeF size = mItem->object()->size() + mItem->resizeDelta();
         text = QString::fromLatin1("%1 x %2").arg((int)size.width()).arg((int)size.height());
     }
@@ -454,8 +455,11 @@ void ResizeHandle::paint(QPainter *painter,
 void ResizeHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     // Remember the old size since we may resize the object
-    if (event->button() == Qt::LeftButton)
+    if (event->button() == Qt::LeftButton) {
         mOldSize = mItem->object()->size();
+        mItem->labelItem()->setShowSize(true);
+        mItem->labelItem()->synch();
+    }
 
     QGraphicsItem::mousePressEvent(event);
 }
@@ -471,6 +475,8 @@ void ResizeHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         mItem->setResizeDelta(QSizeF(0, 0));
         document->resizeCellObject(obj, mOldSize + delta);
     }
+    mItem->labelItem()->setShowSize(false);
+    mItem->labelItem()->synch();
 }
 
 QVariant ResizeHandle::itemChange(GraphicsItemChange change,

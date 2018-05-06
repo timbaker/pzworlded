@@ -75,9 +75,12 @@ public:
 
     ObjectItem *objectItem() const { return mItem; }
 
+    void setShowSize(bool b) { mShowSize = b; }
+
 private:
     ObjectItem *mItem;
     QColor mBgColor;
+    bool mShowSize;
 };
 
 /**
@@ -126,6 +129,8 @@ public:
 
     void setAdjacent(bool adjacent) { mAdjacent = adjacent; }
     bool isAdjacent() { return mAdjacent; }
+
+    ObjectLabelItem* labelItem() const { return mLabel; }
 
 protected:
     Tiled::MapRenderer *mRenderer;

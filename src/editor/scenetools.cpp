@@ -219,6 +219,7 @@ void CreateObjectTool::startNewMapObject(const QPointF &pos)
                                                mScene->document()->currentLevel(),
                                                MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
     mItem = new ObjectItem(obj, mScene);
+    mItem->labelItem()->setShowSize(true);
     mItem->setZValue(10000);
     mScene->addItem(mItem);
 }
