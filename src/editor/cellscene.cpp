@@ -369,7 +369,7 @@ void ObjectLabelItem::synch()
     if (!properties.empty()) {
         foreach (Property *p, properties) {
             if (!text.isEmpty())
-                text += QLatin1String(" ");
+                text += QLatin1String("\n");
             text += p->mDefinition->mName + QLatin1String("=") + p->mValue;
         }
     }
@@ -1295,6 +1295,7 @@ void CellScene::setDocument(CellDocument *doc)
     // These are to update ObjectLabelItem
     connect(worldDocument(), &WorldDocument::propertyAdded, this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::propertyRemoved, this, &CellScene::propertiesChanged);
+    connect(worldDocument(), &WorldDocument::propertyValueChanged, this, &CellScene::propertiesChanged);
     connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
 
