@@ -72,6 +72,7 @@ copyFile $SRC $DEST Blends.txt
 copyFile $SRC $DEST MapBaseXML.txt
 copyFile $SRC $DEST Roads.txt
 copyFile $SRC $DEST Rules.txt
+copyFile $SRC $DEST WorldDefaults.txt
 copyFile $SRC $DEST qt.conf
 
 copyFile $QT_BINARY_DIR $DEST Qt5Core.dll

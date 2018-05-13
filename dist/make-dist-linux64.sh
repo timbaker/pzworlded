@@ -15,6 +15,7 @@ cp -a $BUILD/lib/libzlib1.so.1.0.0 $DEST/lib/libzlib1.so.1
 
 cp -a $SRC/Blends.txt $DEST
 cp -a $SRC/Rules.txt $DEST
+cp -a $SRC/WorldDefaults.txt $DEST
 
 cp -a $SRC/dist/qt.conf.linux $DEST/bin/qt.conf
 cp -a $SRC/dist/PZWorldEd.sh $DEST

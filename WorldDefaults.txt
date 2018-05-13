@@ -9,6 +9,7 @@ enum
         W
         E
     ]
+    multi = false
 }
 
 property
@@ -16,6 +17,12 @@ property
     name = Direction
     default = N
     enum = Direction
+}
+
+property
+{
+    name = FaceDirection
+    default = true
 }
 
 template
