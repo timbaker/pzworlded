@@ -231,6 +231,12 @@ QVariant PropertiesModel::data(const QModelIndex &index, int role) const
     }
     if (Property *p = toProperty(index)) {
         switch (role) {
+        case Qt::CheckStateRole: {
+            if (index.column() == 0) break;
+            if (p->mValue == QLatin1String("true") || p->mValue == QLatin1String("false"))
+                return p->mValue == QLatin1String("true") ? Qt::Checked : Qt::Unchecked;
+            break;
+        }
         case Qt::ForegroundRole:
             if (index.column() && (p->mValue != p->mDefinition->mDefaultValue))
                 return QBrush(Qt::blue);
@@ -268,6 +274,15 @@ bool PropertiesModel::setData(const QModelIndex &index, const QVariant &value,
 {
     Item *item = toItem(index);
     switch (role) {
+    case Qt::CheckStateRole:
+        if (isEditable(index)) {
+            Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
+            if ((item->p->mValue == QLatin1String("true")) != (c == Qt::Checked)) {
+                mWorldDoc->setPropertyValue(mPropertyHolder, item->p, QLatin1String((c == Qt::Checked) ? "true" : "false"));
+            }
+            return true;
+        }
+        break;
     case Qt::EditRole:
         if (isEditable(index)) {
             if (value.toString() != item->p->mValue)
@@ -320,8 +335,11 @@ Qt::ItemFlags PropertiesModel::flags(const QModelIndex &index) const
 {
     Qt::ItemFlags rc = QAbstractItemModel::flags(index);
     if (Item *item = toItem(index)) {
-        if (isPropertyOfCell(item) && (index.column() == 1))
+        if (isPropertyOfCell(item) && (index.column() == 1)) {
             rc |= Qt::ItemIsEditable;
+            if (item->p->mValue == QLatin1String("true") || item->p->mValue == QLatin1String("false"))
+                rc |= Qt::ItemIsUserCheckable;
+        }
         if (item->pe) {
             if (item->parent->parent->parent != mRootItem)
                 rc &= ~Qt::ItemIsSelectable;
