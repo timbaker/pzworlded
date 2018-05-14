@@ -22,6 +22,7 @@
 #include "buildingtemplates.h"
 #include "buildingtiles.h"
 #include "furnituregroups.h"
+#include "roofhiding.h"
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the MapRands class as so:
@@ -501,6 +502,8 @@ void BuildingFloor::LayoutToSquares()
     for (int x = 0; x < width(); x++) {
         for (int y = 0; y < height(); y++) {
             Room *room = mRoomAtPos[x][y];
+            if (room != nullptr && RoofHiding::isEmptyOutside(room->Name))
+                room = nullptr;
             mIndexAtPos[x][y] = room ? mBuilding->indexOf(room) : -1;
             squares[x][y].mExterior = room == 0;
         }

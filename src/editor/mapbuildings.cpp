@@ -20,6 +20,8 @@
 #include "mapcomposite.h"
 #include "mapmanager.h"
 
+#include "BuildingEditor/roofhiding.h"
+
 #include "map.h"
 #include "mapobject.h"
 #include "objectgroup.h"
@@ -144,6 +146,8 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
             if (index >= 0) {
                 QList<MapObject*> mapObjects = mc->map()->layerAt(index)->asObjectGroup()->objects();
                 foreach (MapObject *mapObject, mapObjects) {
+                    if (BuildingEditor::RoofHiding::isEmptyOutside(mapObject->name()))
+                        continue;
                     int x = qFloor(mapObject->x());
                     int y = qFloor(mapObject->y());
                     int w = qCeil(mapObject->x() + mapObject->width()) - x;

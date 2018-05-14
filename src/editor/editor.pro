@@ -143,7 +143,8 @@ SOURCES += main.cpp\
     navigation/isogridsquare.cpp \
     navigation/chunkdatafile.cpp \
     searchdock.cpp \
-    defaultsfile.cpp
+    defaultsfile.cpp \
+    BuildingEditor/roofhiding.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -233,7 +234,8 @@ HEADERS  += mainwindow.h \
     navigation/isogridsquare.h \
     navigation/chunkdatafile.h \
     searchdock.h \
-    defaultsfile.h
+    defaultsfile.h \
+    BuildingEditor/roofhiding.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
