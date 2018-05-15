@@ -16,13 +16,27 @@ class SearchDock;
 class SearchResults
 {
 public:
+    enum class SearchBy
+    {
+        ObjectType,
+        LotFileName,
+    };
+
+    SearchResults()
+        : searchBy(SearchBy::ObjectType)
+        , selectedCell(nullptr)
+    {
+
+    }
+
     void reset() {
-        objectType.clear();
         cells.clear();
         selectedCell = nullptr;
     }
 
-    QString objectType;
+    SearchBy searchBy;
+    QString searchStringObjectType;
+    QString searchStringLotFileName;
     QList<WorldCell*> cells;
     WorldCell* selectedCell;
 };
@@ -43,11 +57,16 @@ public:
 private slots:
     void comboActivated1(int index);
     void comboActivated2(int index);
-    void search();
+    void searchObjectType();
+    void searchLotFileName();
     void setList(SearchResults* results);
     void listSelectionChanged();
     void listActivated(const QModelIndex& index);
     void documentAboutToClose(int index, Document *doc);
+
+private:
+    void setCombo2(SearchResults::SearchBy searchBy);
+    SearchResults *searchResultsFor(WorldDocument *worldDoc, bool create = true);
 
 private:
     Ui::SearchDock* ui;

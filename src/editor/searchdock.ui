@@ -28,10 +28,22 @@
         <string>Object type</string>
        </property>
       </item>
+      <item>
+       <property name="text">
+        <string>Lot file name</string>
+       </property>
+      </item>
      </widget>
     </item>
     <item>
      <widget class="QComboBox" name="combo2"/>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="lineEdit">
+      <property name="clearButtonEnabled">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
     <item>
      <widget class="QListWidget" name="listWidget"/>
