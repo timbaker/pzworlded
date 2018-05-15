@@ -1,6 +1,6 @@
-QTDIR=~/Qt/5.8/gcc_64
+QTDIR=~/Qt/5.7/gcc_64
 SRC=~/Programming/TileZed/pzworlded
-BUILD=~/Programming/TileZed/build-PZWorldEd-Desktop_Qt_5_8_0_GCC_64bit-Release
+BUILD=~/Programming/TileZed/build-PZWorldEd-Desktop_Qt_5_7_1_GCC_64bit-Release
 DEST=~/Programming/TileZed/WorldEd
 
 mkdir $DEST
@@ -21,16 +21,16 @@ cp -a $SRC/dist/qt.conf.linux $DEST/bin/qt.conf
 cp -a $SRC/dist/PZWorldEd.sh $DEST
 chmod +x $DEST/PZWorldEd.sh
 
-cp $QTDIR/lib/libQt5Core.so.5.8.0 $DEST/lib/libQt5Core.so.5
-cp $QTDIR/lib/libQt5DBus.so.5.8.0 $DEST/lib/libQt5DBus.so.5
-cp $QTDIR/lib/libQt5Gui.so.5.8.0 $DEST/lib/libQt5Gui.so.5
-cp $QTDIR/lib/libQt5Network.so.5.8.0 $DEST/lib/libQt5Network.so.5
-cp $QTDIR/lib/libQt5OpenGL.so.5.8.0 $DEST/lib/libQt5OpenGL.so.5
-cp $QTDIR/lib/libQt5Widgets.so.5.8.0 $DEST/lib/libQt5Widgets.so.5
+cp $QTDIR/lib/libQt5Core.so.5.7.1 $DEST/lib/libQt5Core.so.5
+cp $QTDIR/lib/libQt5DBus.so.5.7.1 $DEST/lib/libQt5DBus.so.5
+cp $QTDIR/lib/libQt5Gui.so.5.7.1 $DEST/lib/libQt5Gui.so.5
+cp $QTDIR/lib/libQt5Network.so.5.7.1 $DEST/lib/libQt5Network.so.5
+cp $QTDIR/lib/libQt5OpenGL.so.5.7.1 $DEST/lib/libQt5OpenGL.so.5
+cp $QTDIR/lib/libQt5Widgets.so.5.7.1 $DEST/lib/libQt5Widgets.so.5
 cp $QTDIR/lib/libicudata.so.56.1 $DEST/lib/libicudata.so.56
 cp $QTDIR/lib/libicui18n.so.56.1 $DEST/lib/libicui18n.so.56
 cp $QTDIR/lib/libicuuc.so.56.1 $DEST/lib/libicuuc.so.56
-cp $QTDIR/lib/libQt5XcbQpa.so.5.8.0 $DEST/lib/libQt5XcbQpa.so.5
+cp $QTDIR/lib/libQt5XcbQpa.so.5.7.1 $DEST/lib/libQt5XcbQpa.so.5
 
 #for file in $QTDIR/lib/libQt5Gui.so*; do cp -a "$file" "$DEST/lib/"; done
 #for file in $QTDIR/lib/libQt5Network.so*; do cp -a "$file" "$DEST/lib/"; done

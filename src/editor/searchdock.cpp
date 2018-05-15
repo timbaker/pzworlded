@@ -49,6 +49,8 @@ SearchDock::SearchDock(QWidget* parent)
     connect(ui->listWidget, &QListWidget::activated, this, &SearchDock::listActivated);
 
     connect(DocumentManager::instance(), &DocumentManager::documentAboutToClose, this, &SearchDock::documentAboutToClose);
+
+    setEnabled(false);
 }
 
 void SearchDock::changeEvent(QEvent *e)
