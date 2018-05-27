@@ -32,6 +32,8 @@ class BuildingTileEntry;
 class FurnitureTiles;
 class Room;
 
+#define MAX_BUILDING_FLOORS 8
+
 class Building
 {
 public:
