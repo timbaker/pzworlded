@@ -75,7 +75,7 @@ LootWindow::LootWindow(QWidget *parent) :
 
     if (QFileInfo(d).exists()) {
         readTileProperties(QDir(d).filePath(QLatin1String("media/newtiledefinitions.tiles")));
-        readLuaDistributions(QDir(d).filePath(QLatin1String("media/lua/Items/SuburbsDistributions.lua")));
+        readLuaDistributions(QDir(d).filePath(QLatin1String("media/lua/server/Items/Distributions.lua")));
     }
 
     mTimer.setSingleShot(true);
@@ -288,7 +288,7 @@ void LootWindow::chooseGameDirectory()
     ui->gameDirectory->setText(QDir::toNativeSeparators(f));
 
     readTileProperties(QDir(f).filePath(QLatin1String("media/newtiledefinitions.tiles")));
-    readLuaDistributions(QDir(f).filePath(QLatin1String("media/lua/Items/SuburbsDistributions.lua")));
+    readLuaDistributions(QDir(f).filePath(QLatin1String("media/lua/server/Items/Distributions.lua")));
 }
 
 void LootWindow::selectionChanged()
