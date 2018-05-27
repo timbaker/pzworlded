@@ -30,6 +30,10 @@
 #include <QDir>
 #include <QFileInfo>
 
+#ifdef WORLDED
+#define MAX_WORLD_LEVELS 8
+#endif
+
 using namespace Tiled;
 
 static void maxMargins(const QMargins &a,
@@ -937,7 +941,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         mMinLevel = 0;
 #ifdef WORLDED
     if (!mParent && !mMapInfo->isBeingEdited())
-        mMaxLevel = qMax(mMaxLevel, 10);
+        mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVELS - 1);
 #endif // WORLDED
 
     mSortedLayerGroups.clear();
@@ -1586,7 +1590,7 @@ void MapComposite::recreate()
         mMinLevel = 0;
 #ifdef WORLDED
     if (!mParent && !mMapInfo->isBeingEdited())
-        mMaxLevel = qMax(mMaxLevel, 10);
+        mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVELS - 1);
 #endif
 
     for (int level = mMinLevel; level <= mMaxLevel; ++level) {

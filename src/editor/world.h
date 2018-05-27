@@ -31,6 +31,8 @@ class WorldObjectGroup;
 class ObjectType;
 class WorldCell;
 
+#define MAX_WORLD_LEVELS 8
+
 class ObjectGroupList : public QList<WorldObjectGroup*>
 {
 public:
