@@ -28,6 +28,8 @@
 #include "worldview.h"
 #include "worldwriter.h"
 
+#include "mapbox/mapboxundo.h"
+
 #include <QDebug>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -148,6 +150,13 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(objectLevelChanged(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
             SIGNAL(cellObjectReordered(WorldCellObject*)));
+
+    connect(&mUndoRedo, SIGNAL(mapboxFeatureAdded(WorldCell*,int)),
+            SIGNAL(mapboxFeatureAdded(WorldCell*,int)));
+    connect(&mUndoRedo, SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)),
+            SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)));
+    connect(&mUndoRedo, SIGNAL(mapboxPointMoved(WorldCell*,int,int)),
+            SIGNAL(mapboxPointMoved(WorldCell*,int,int)));
 
     connect(&mUndoRedo, SIGNAL(roadAdded(int)),
             SIGNAL(roadAdded(int)));
@@ -453,6 +462,25 @@ void WorldDocument::reorderCellObject(WorldCellObject *obj, WorldCellObject *ins
     const WorldCellObjectList &objects = obj->cell()->objects();
     int index = insertBefore ? objects.indexOf(insertBefore) : objects.size();
     undoStack()->push(new ReorderCellObject(this, obj, index));
+}
+
+void WorldDocument::addMapboxFeature(WorldCell *cell, int index, MapBoxFeature *feature)
+{
+    Q_ASSERT(!cell->mapBox().mFeatures.contains(feature));
+    Q_ASSERT(index >= 0 && index <= cell->mapBox().mFeatures.size());
+    undoStack()->push(new AddMapboxFeature(this, cell, index, feature));
+}
+
+void WorldDocument::removeMapboxFeature(WorldCell *cell, int index)
+{
+    Q_ASSERT(index >= 0 && index < cell->mapBox().mFeatures.size());
+    undoStack()->push(new RemoveMapboxFeature(this, cell, index));
+}
+
+void WorldDocument::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new MoveMapboxPoint(this, cell, featureIndex, pointIndex, point));
 }
 
 void WorldDocument::insertRoad(int index, Road *road)
@@ -1304,6 +1332,28 @@ int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
     Q_ASSERT(cell->objects().indexOf(obj) == index);
     emit cellObjectReordered(obj);
     return oldIndex;
+}
+
+void WorldDocumentUndoRedo::addMapboxFeature(WorldCell *cell, int index, MapBoxFeature *feature)
+{
+    cell->mapBox().mFeatures.insert(index, feature);
+    emit mapboxFeatureAdded(cell, index);
+}
+
+MapBoxFeature *WorldDocumentUndoRedo::removeMapboxFeature(WorldCell *cell, int index)
+{
+    emit mapboxFeatureAboutToBeRemoved(cell, index);
+    return cell->mapBox().mFeatures.takeAt(index);
+}
+
+MapBoxPoint WorldDocumentUndoRedo::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    MapBoxCoordinates& coords = feature->mGeometry.mCoordinates[0];
+    MapBoxPoint old = coords[pointIndex];
+    coords[pointIndex] = point;
+    emit mapboxPointMoved(cell, featureIndex, pointIndex);
+    return old;
 }
 
 void WorldDocumentUndoRedo::insertRoad(int index, Road *road)

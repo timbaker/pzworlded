@@ -1,0 +1,130 @@
+/*
+ * Copyright 2018, Tim Baker <treectrl@users.sf.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef WORLDCELLMAPBOX_H
+#define WORLDCELLMAPBOX_H
+
+#include <QList>
+
+class WorldCell;
+
+class WorldCellMapBox;
+
+class MapBoxPoint
+{
+public:
+    MapBoxPoint()
+        : x(0.0)
+        , y(0.0)
+    {
+
+    }
+
+    MapBoxPoint(double x, double y)
+        : x(x)
+        , y(y)
+    {
+
+    }
+
+    double x;
+    double y;
+
+    bool operator==(const MapBoxPoint& rhs) const {
+        return x == rhs.x && y == rhs.y;
+    }
+
+    bool operator!=(const MapBoxPoint& rhs) const {
+        return x != rhs.x || y != rhs.y;
+    }
+};
+
+class MapBoxCoordinates : public QList<MapBoxPoint>
+{
+public:
+};
+
+class MapBoxGeometry
+{
+public:
+    QString mType;
+    QList<MapBoxCoordinates> mCoordinates;
+};
+
+class MapBoxProperty
+{
+public:
+    QString mKey;
+    QString mValue;
+};
+
+class MapBoxProperties : public QList<MapBoxProperty>
+{
+public:
+};
+
+class MapBoxFeature
+{
+public:
+    MapBoxFeature(WorldCellMapBox* owner)
+        : mOwner(owner)
+    {
+
+    }
+
+    inline int index();
+
+    WorldCellMapBox* mOwner;
+    MapBoxGeometry mGeometry;
+    MapBoxProperties mProperties;
+};
+
+class MapBoxFeatures : public QList<MapBoxFeature*>
+{
+public:
+    MapBoxFeatures(WorldCellMapBox* owner)
+        : mOwner(owner)
+    {
+
+    }
+
+    ~MapBoxFeatures() {
+        qDeleteAll(*this);
+    }
+
+    WorldCellMapBox* mOwner;
+};
+
+class WorldCellMapBox
+{
+public:
+    WorldCellMapBox(WorldCell* cell)
+        : mCell(cell)
+        , mFeatures(this)
+    {
+
+    }
+
+    WorldCell* mCell;
+    MapBoxFeatures mFeatures;
+};
+
+int MapBoxFeature::index() {
+    return mOwner->mFeatures.indexOf(this);
+}
+
+#endif // WORLDCELLMAPBOX_H

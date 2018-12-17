@@ -1,0 +1,360 @@
+/*
+ * Copyright 2018, Tim Baker <treectrl@users.sf.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "mapboxgeojsongenerator.h"
+
+#include "mapboxreader.h"
+
+#include "lotfilesmanager.h"
+#include "mainwindow.h"
+#include "mapcomposite.h"
+#include "mapmanager.h"
+#include "progress.h"
+#include "world.h"
+#include "worldcell.h"
+#include "worlddocument.h"
+
+#include "mapobject.h"
+#include "objectgroup.h"
+
+#include <qmath.h>
+#include <QDebug>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMessageBox>
+
+using namespace Tiled;
+
+SINGLETON_IMPL(MapBoxGeojsonGenerator)
+
+// https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+// If your displacements aren't too great (less than a few kilometers) and you're not right at the poles,
+// use the quick and dirty estimate that 111,111 meters (111.111 km) in the y direction is 1 degree (of latitude)
+// and 111,111 * cos(latitude) meters in the x direction is 1 degree (of longitude).
+static double latitude = 0.0; // north/south
+static double longitude = 0.0; // west/east
+static double toLat(double worldX, double worldY) {
+    return latitude + -worldY / 111111.0;
+}
+static double toLong(double worldX, double worldY) {
+    return longitude + worldX / (111111.0 * qCos(qDegreesToRadians(toLat(worldX, worldY))));
+}
+
+MapBoxGeojsonGenerator::MapBoxGeojsonGenerator(QObject *parent) :
+    QObject(parent)
+{
+}
+
+bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojsonGenerator::GenerateMode mode)
+{
+    mWorldDoc = worldDoc;
+    World *world = mWorldDoc->world();
+
+    MapManager::instance()->purgeUnreferencedMaps();
+
+    PROGRESS progress(QLatin1String("Setting up images"));
+
+    progress.update(QLatin1String("Reading maps"));
+
+    if (mode == GenerateSelected) {
+        foreach (WorldCell *cell, worldDoc->selectedCells())
+            if (!generateCell(cell))
+                goto errorExit;
+    } else {
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                if (!generateCell(world->cellAt(x, y)))
+                    goto errorExit;
+            }
+        }
+    }
+
+    MapManager::instance()->purgeUnreferencedMaps();
+
+    {
+        QJsonObject object;
+        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
+        object[QLatin1Literal("features")] = mJsonFeatures;
+        QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-buildings.geojson"));
+        if (!saveFile.open(QIODevice::WriteOnly)) {
+             qWarning("Couldn't open save file.");
+             goto errorExit;
+        }
+        QJsonDocument json(object);
+        saveFile.write(json.toJson());
+    }
+
+    {
+        MapBoxReader reader;
+        if (reader.readWorld(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-features.xml"), world) == nullptr) {
+            qDebug() << reader.errorString();
+        }
+        QJsonArray jsonFeatures;
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                if (WorldCell* cell = world->cellAt(x, y)) {
+                    for (auto* mbFeature : cell->mapBox().mFeatures) {
+                        QJsonObject feature;
+
+                        feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
+
+                        QJsonObject properties;
+                        for (auto& mbProperty : mbFeature->mProperties) {
+                            properties[mbProperty.mKey] = mbProperty.mValue;
+                        }
+                        feature[QLatin1Literal("properties")] = properties;
+
+                        QJsonObject geometry;
+                        geometry[QLatin1Literal("type")] = mbFeature->mGeometry.mType;
+                        bool bPolygon = mbFeature->mGeometry.mType == QLatin1Literal("Polygon");
+                        QJsonArray coordinates;
+                        for (auto& mbCoords : mbFeature->mGeometry.mCoordinates) {
+                            QJsonArray ring; // counter-clockwise, longitude,latitude,elevation
+                            for (auto& mbPoint : mbCoords) {
+                                QJsonArray point;
+                                point.append(toLong(cell->x() * 300 + mbPoint.x, cell->y() * 300 + mbPoint.y));
+                                point.append(toLat(cell->x() * 300 + mbPoint.x, cell->y() * 300 + mbPoint.y));
+                                if (bPolygon)
+                                    ring.append(point);
+                                else {
+                                    coordinates += point;
+                                }
+                            }
+                            if (bPolygon)
+                                coordinates += ring;
+                        }
+                        geometry[QLatin1Literal("coordinates")] = coordinates;
+                        feature[QLatin1Literal("geometry")] = geometry;
+
+                        jsonFeatures.append(feature);
+                    }
+                }
+            }
+        }
+
+        QJsonObject object;
+        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
+        object[QLatin1Literal("features")] = jsonFeatures;
+        QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-roads.geojson"));
+        if (!saveFile.open(QIODevice::WriteOnly)) {
+             qWarning("Couldn't open save file.");
+             goto errorExit;
+        }
+        QJsonDocument json(object);
+        saveFile.write(json.toJson());
+    }
+
+    // While displaying this, the MapManager's FileSystemWatcher might see some
+    // changed .tmx files, which results in the PROGRESS dialog being displayed.
+    // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
+    QMessageBox::information(MainWindow::instance(),
+                             tr("MapBox"), tr("Finished!"));
+
+    return true;
+
+errorExit:
+    return false;
+}
+
+bool MapBoxGeojsonGenerator::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
+{
+    return true;
+}
+
+bool MapBoxGeojsonGenerator::generateCell(WorldCell *cell)
+{
+    int bmpIndex;
+    if (!shouldGenerateCell(cell, bmpIndex))
+        return true;
+
+    if (cell->mapFilePath().isEmpty()) {
+        return true;
+    }
+
+    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
+                                                       mWorldDoc->fileName());
+    if (!mapInfo) {
+        mError = MapManager::instance()->errorString();
+        return false;
+    }
+
+    MapManager::instance()->addReferenceToMap(mapInfo);
+
+    bool ok = true;
+    ok = doBuildings(cell, mapInfo);
+
+    MapManager::instance()->removeReferenceToMap(mapInfo);
+
+    return ok;
+}
+
+bool MapBoxGeojsonGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
+{
+    DelayedMapLoader mapLoader;
+    mapLoader.addMap(mapInfo);
+
+    foreach (WorldCellLot *lot, cell->lots()) {
+        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
+                                                            QString(), true,
+                                                            MapManager::PriorityMedium)) {
+            mapLoader.addMap(info);
+        } else {
+            mError = MapManager::instance()->errorString();
+            return false;
+        }
+    }
+
+    // The cell map must be loaded before creating the MapComposite, which will
+    // possibly load embedded lots.
+    while (mapInfo->isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    MapComposite staticMapComposite(mapInfo);
+    MapComposite *mapComposite = &staticMapComposite;
+    while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    if (!mapLoader.errorString().isEmpty()) {
+        mError = mapLoader.errorString();
+        return false;
+    }
+
+    foreach (WorldCellLot *lot, cell->lots()) {
+        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        Q_ASSERT(info && info->map());
+        mapComposite->addMap(info, lot->pos(), lot->level());
+    }
+
+    return processObjectGroups(cell, mapComposite);
+}
+
+bool MapBoxGeojsonGenerator::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
+{
+    foreach (Layer *layer, mapComposite->map()->layers()) {
+        if (ObjectGroup *og = layer->asObjectGroup()) {
+            if (!processObjectGroup(cell, og, mapComposite->levelRecursive(),
+                                    mapComposite->originRecursive()))
+                return false;
+        }
+    }
+
+    foreach (MapComposite *subMap, mapComposite->subMaps())
+        if (!processObjectGroups(cell, subMap))
+            return false;
+
+    return true;
+}
+
+bool MapBoxGeojsonGenerator::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
+                                int levelOffset, const QPoint &offset)
+{
+    int level;
+    if (!MapComposite::levelForLayer(objectGroup, &level))
+        return true;
+    level += levelOffset;
+
+    if (level != 0)
+        return true;
+
+    QRect buildingBounds;
+
+    foreach (const MapObject *mapObject, objectGroup->objects()) {
+#if 0
+        if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
+            continue;
+#endif
+        if (mapObject->width() * mapObject->height() <= 0)
+            continue;
+
+        int x = qFloor(mapObject->x());
+        int y = qFloor(mapObject->y());
+        int w = qCeil(mapObject->x() + mapObject->width()) - x;
+        int h = qCeil(mapObject->y() + mapObject->height()) - y;
+
+        QString name = mapObject->name();
+        if (name.isEmpty())
+            name = QLatin1String("unnamed");
+
+        if (objectGroup->map()->orientation() == Map::Isometric) {
+            x += 3 * level;
+            y += 3 * level;
+        }
+
+        // Apply the MapComposite offset in the top-level map.
+        x += offset.x();
+        y += offset.y();
+
+        if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
+            if (x < 0 || y < 0 || x + w > 300 || y + h > 300) {
+                x = qBound(0, x, 300);
+                y = qBound(0, y, 300);
+                mError = tr("A RoomDef in cell %1,%2 overlaps cell boundaries.\nNear x,y=%3,%4")
+                        .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
+                return false;
+            }
+            buildingBounds |= QRect(x, y, w, h);
+        }
+    }
+
+    if (!buildingBounds.isEmpty()) {
+        buildingBounds.translate(cell->x() * 300, cell->y() * 300);
+
+        QJsonObject feature;
+        feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
+
+        QJsonObject properties;
+        properties[QLatin1Literal("building")] = QLatin1Literal("yes");
+        feature[QLatin1Literal("properties")] = properties;
+
+        QJsonObject geometry;
+        geometry[QLatin1Literal("type")] = QLatin1Literal("Polygon");
+
+        QJsonArray exteriorRing; // counter-clockwise, longitude,latitude,elevation
+        QJsonArray point;
+        point.append(toLong(buildingBounds.left(), buildingBounds.top()));
+        point.append(toLat(buildingBounds.left(), buildingBounds.top()));
+        exteriorRing.append(point);
+        point = QJsonArray();
+
+        point.append(toLong(buildingBounds.left(), buildingBounds.bottom() + 1));
+        point.append(toLat(buildingBounds.left(), buildingBounds.bottom() + 1));
+        exteriorRing.append(point);
+        point = QJsonArray();
+
+        point.append(toLong(buildingBounds.right() + 1, buildingBounds.bottom() + 1));
+        point.append(toLat(buildingBounds.right() + 1, buildingBounds.bottom() + 1));
+        exteriorRing.append(point);
+        point = QJsonArray();
+
+        point.append(toLong(buildingBounds.right() + 1, buildingBounds.top()));
+        point.append(toLat(buildingBounds.right() + 1, buildingBounds.top()));
+        exteriorRing.append(point);
+
+        exteriorRing.append(exteriorRing.at(0));
+
+        QJsonArray coordinates;
+        coordinates += exteriorRing;
+        geometry[QLatin1Literal("coordinates")] = coordinates;
+
+        feature[QLatin1Literal("geometry")] = geometry;
+
+        mJsonFeatures.append(feature);
+    }
+
+    return true;
+}

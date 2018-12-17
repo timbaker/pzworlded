@@ -268,6 +268,7 @@
     <addaction name="menuGenerate_Lots"/>
     <addaction name="actionLUAObjectDump"/>
     <addaction name="actionWriteObjects"/>
+    <addaction name="actionWriteMapBox"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -833,6 +834,11 @@
    </property>
    <property name="text">
     <string>Show Other Worlds</string>
+   </property>
+  </action>
+  <action name="actionWriteMapBox">
+   <property name="text">
+    <string>Write MapBox...</string>
    </property>
   </action>
  </widget>

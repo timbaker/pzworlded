@@ -33,6 +33,8 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include "mapbox/mapboxscene.h"
+
 #include "isometricrenderer.h"
 #include "map.h"
 #include "mapobject.h"
@@ -1233,6 +1235,11 @@ void CellScene::setTool(AbstractTool *tool)
     if (mActiveTool != CellSelectMoveRoadTool::instance())
         worldDocument()->setSelectedRoads(QList<Road*>());
 
+    if (mActiveTool != EditMapboxFeatureTool::instance()) {
+        for (MapboxFeatureItem* item : mFeatureItems)
+            item->setEditable(false);
+    }
+
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
@@ -1298,6 +1305,9 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), &WorldDocument::propertyValueChanged, this, &CellScene::propertiesChanged);
     connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
+
+    connect(worldDocument(), &WorldDocument::mapboxFeatureAdded, this, &CellScene::mapboxFeatureAdded);
+    connect(worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellScene::mapboxFeatureAboutToBeRemoved);
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
@@ -1374,6 +1384,15 @@ ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
             return item;
     }
     return 0;
+}
+
+MapboxFeatureItem *CellScene::itemForMapboxFeature(MapBoxFeature *feature)
+{
+    foreach (auto* item, mFeatureItems) {
+        if (item->feature() == feature)
+            return item;
+    }
+    return nullptr;
 }
 
 void CellScene::setSelectedSubMapItems(const QSet<SubMapItem *> &selected)
@@ -1633,6 +1652,21 @@ void CellScene::loadMap()
         mRoadItems += item;
     }
 
+    {
+        MapBoxFeature* feature = new MapBoxFeature(&cell()->mapBox());
+        feature->mGeometry.mType = QLatin1Literal("LineString");
+        MapBoxCoordinates coords;
+        coords += { 223, 300 };
+        coords += { 223, 106 };
+        coords += { -2, 106 };
+        feature->mGeometry.mCoordinates += coords;
+        cell()->mapBox().mFeatures += feature;
+        MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
+        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+        addItem(item);
+        mFeatureItems += item;
+    }
+
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
     // all the items in the scene (without getting smaller, ever).
     setSceneRect(0, 0, 1, 1);
@@ -1886,6 +1920,35 @@ void CellScene::propertiesChanged(PropertyHolder* ph)
     if (ObjectItem *item = itemForObject(obj)) {
         item->synchWithObject();
     }
+}
+
+void CellScene::mapboxFeatureAdded(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature* feature = cell->mapBox().mFeatures[index];
+    MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
+    item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+    addItem(item);
+    mFeatureItems += item;
+    doLater(ZOrder);
+}
+
+void CellScene::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature *feature = cell->mapBox().mFeatures.at(index);
+    if (auto* item = itemForMapboxFeature(feature)) {
+        mFeatureItems.removeAll(item);
+//        mSelectedFeatureItems.remove(item);
+        removeItem(item);
+        delete item;
+        doLater(ZOrder);
+    }
+
 }
 
 void CellScene::cellObjectGroupChanged(WorldCellObject *obj)

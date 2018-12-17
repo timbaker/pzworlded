@@ -98,6 +98,7 @@ public slots:
 
     void WriteSpawnPoints();
     void WriteWorldObjects();
+    void WriteMapBox();
 
     void updateWindowTitle();
 

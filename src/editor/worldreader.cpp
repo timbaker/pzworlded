@@ -354,7 +354,7 @@ private:
         const QString mapName = atts.value(QLatin1String("map")).toString();
 
         if (!mWorld->contains(x, y))
-            xml.raiseError(tr("Invalid cell coodinates %1,%2").arg(x).arg(y));
+            xml.raiseError(tr("Invalid cell coordinates %1,%2").arg(x).arg(y));
         else {
             WorldCell *cell = mWorld->cellAt(x, y);
             cell->setMapFilePath(resolveReference(mapName, mPath));

@@ -60,6 +60,6 @@ protected:
     static T *mInstance;
 };
 
-#define SINGLETON_IMPL(T) template<> T *Singleton<T>::mInstance = 0;
+#define SINGLETON_IMPL(T) template<> T *Singleton<T>::mInstance = nullptr;
 
 #endif // SINGLETON_H

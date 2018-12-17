@@ -20,6 +20,8 @@
 
 #include "document.h"
 
+#include "mapbox/worldcellmapbox.h"
+
 #include <QColor>
 #include <QObject>
 #include <QList>
@@ -111,6 +113,10 @@ public:
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
     int reorderCellObject(WorldCellObject *obj, int index);
 
+    void addMapboxFeature(WorldCell* cell, int index, MapBoxFeature* feature);
+    MapBoxFeature* removeMapboxFeature(WorldCell* cell, int index);
+    MapBoxPoint moveMapboxPoint(WorldCell* cell, int featureIndex, int pointIndex, const MapBoxPoint& point);
+
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
     void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end,
@@ -198,6 +204,10 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
+    void mapboxFeatureAdded(WorldCell* cell, int index);
+    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
     void roadRemoved(Road *road);
@@ -279,6 +289,10 @@ public:
     void setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og);
     void setCellObjectType(WorldCellObject *obj, const QString &type);
     void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
+
+    void addMapboxFeature(WorldCell* cell, int index, MapBoxFeature* feature);
+    void removeMapboxFeature(WorldCell* cell, int index);
+    void moveMapboxPoint(WorldCell* cell, int featureIndex, int pointIndex, const MapBoxPoint& point);
 
     void insertRoad(int index, Road *road);
     void removeRoad(int index);
@@ -460,6 +474,10 @@ signals:
     void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
+
+    void mapboxFeatureAdded(WorldCell* cell, int index);
+    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);

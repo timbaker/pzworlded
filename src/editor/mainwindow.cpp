@@ -72,6 +72,9 @@
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
 
+#include "mapbox/mapboxgeojsongenerator.h"
+#include "mapbox/mapboxscene.h"
+
 #include "layer.h"
 #include "mapobject.h"
 #include "maprenderer.h"
@@ -246,6 +249,7 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(TMXToBMPSelected()));
     connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(WriteSpawnPoints()));
     connect(ui->actionWriteObjects, SIGNAL(triggered()), SLOT(WriteWorldObjects()));
+    connect(ui->actionWriteMapBox, SIGNAL(triggered()), SLOT(WriteMapBox()));
     connect(ui->actionFromToAll, SIGNAL(triggered()),
             SLOT(FromToAll()));
     connect(ui->actionFromToSelected, SIGNAL(triggered()),
@@ -324,6 +328,9 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
 #endif
+    new CreateMapboxPolylineTool;
+    toolManager->registerTool(CreateMapboxPolylineTool::instancePtr());
+    toolManager->registerTool(EditMapboxFeatureTool::instance());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -1301,6 +1308,15 @@ void MainWindow::WriteWorldObjects()
     d.exec();
 }
 
+void MainWindow::WriteMapBox()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    MapBoxGeojsonGenerator mapBox;
+    mapBox.generateWorld(worldDoc, MapBoxGeojsonGenerator::GenerateSelected);
+}
+
 void MainWindow::updateWindowTitle()
 {
     QString fileName = mCurrentDocument ? mCurrentDocument->fileName() : QString();
@@ -1960,6 +1976,7 @@ void MainWindow::updateActions()
 
     ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
     ui->actionWriteObjects->setEnabled(worldDoc != 0);
+    ui->actionWriteMapBox->setEnabled(worldDoc != nullptr);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

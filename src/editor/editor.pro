@@ -144,7 +144,12 @@ SOURCES += main.cpp\
     navigation/chunkdatafile.cpp \
     searchdock.cpp \
     defaultsfile.cpp \
-    BuildingEditor/roofhiding.cpp
+    BuildingEditor/roofhiding.cpp \
+    mapbox/mapboxreader.cpp \
+    mapbox/worldcellmapbox.cpp \
+    mapbox/mapboxscene.cpp \
+    mapbox/mapboxgeojsongenerator.cpp \
+    mapbox/mapboxundo.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -235,7 +240,12 @@ HEADERS  += mainwindow.h \
     navigation/chunkdatafile.h \
     searchdock.h \
     defaultsfile.h \
-    BuildingEditor/roofhiding.h
+    BuildingEditor/roofhiding.h \
+    mapbox/mapboxreader.h \
+    mapbox/worldcellmapbox.h \
+    mapbox/mapboxscene.h \
+    mapbox/mapboxgeojsongenerator.h \
+    mapbox/mapboxundo.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

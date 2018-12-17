@@ -1474,7 +1474,7 @@ void CellEditRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-// The read being edited could be deleted via undo/redo.
+// The road being edited could be deleted via undo/redo.
 void CellEditRoadTool::roadAboutToBeRemoved(int index)
 {
     Road *road = mScene->world()->roads().at(index);
