@@ -33,6 +33,8 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
+class MapBoxFeature;
+
 namespace Tiled {
 class Layer;
 class TileLayer;
@@ -68,6 +70,9 @@ public:
     const QList<WorldCellObject*> &selectedObjects() const { return mSelectedObjects; }
     int selectedObjectCount() const { return mSelectedObjects.count(); }
 
+    void setSelectedMapboxFeatures(const QList<MapBoxFeature*>& selected);
+    const QList<MapBoxFeature*>& selectedMapboxFeatures() const { return mSelectedMapboxFeatures; }
+
     void setLayerVisibility(Tiled::Layer *layer, bool visible);
     void setLayerGroupVisibility(Tiled::ZTileLayerGroup *layerGroup, bool visible);
 
@@ -101,6 +106,7 @@ signals:
     void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
     void selectedLotsChanged();
     void selectedObjectsChanged();
+    void selectedMapboxFeaturesChanged();
     void cellContentsAboutToChange();
     void cellContentsChanged();
     void cellMapFileAboutToChange();
@@ -130,6 +136,7 @@ private:
     CellScene *mCellScene;
     QList<WorldCellLot*> mSelectedLots;
     QList<WorldCellObject*> mSelectedObjects;
+    QList<MapBoxFeature*> mSelectedMapboxFeatures;
     int mCurrentLayerIndex;
     int mCurrentLevel;
     WorldObjectGroup *mCurrentObjectGroup;

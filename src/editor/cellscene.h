@@ -458,10 +458,15 @@ public:
     const QSet<ObjectItem*> &selectedObjectItems() const
     { return mSelectedObjectItems; }
 
+    void setSelectedMapboxFeatureItems(const QSet<MapboxFeatureItem*> &selected);
+    const QSet<MapboxFeatureItem*> &selectedMapboxFeatureItems() const
+    { return mSelectedFeatureItems; }
+
     void setGraphicsSceneZOrder();
 
     void setSubMapVisible(WorldCellLot *lot, bool visible);
     void setObjectVisible(WorldCellObject *obj, bool visible);
+    void setMapboxFeatureVisible(MapBoxFeature *feature, bool visible);
 
     void setLevelOpacity(int level, qreal opacity);
     qreal levelOpacity(int level);
@@ -563,6 +568,7 @@ public slots:
 
     void mapboxFeatureAdded(WorldCell* cell, int index);
     void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
 
     void roadAdded(int index);
     void roadRemoved(Road *road);
@@ -617,6 +623,7 @@ private:
     QList<CellRoadItem*> mRoadItems;
     QSet<CellRoadItem*> mSelectedRoadItems;
     QList<MapboxFeatureItem*> mFeatureItems;
+    QSet<MapboxFeatureItem*> mSelectedFeatureItems;
     QGraphicsRectItem *mDarkRectangle;
     CellGridItem *mGridItem;
     bool mHighlightCurrentLevel;

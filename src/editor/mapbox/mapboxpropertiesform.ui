@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MapboxPropertiesForm</class>
+ <widget class="QWidget" name="MapboxPropertiesForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>276</width>
+    <height>237</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QListWidget" name="listWidget"/>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QToolButton" name="addButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Add</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="editButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Edit</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="deleteButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Delete</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>addButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MapboxPropertiesForm</receiver>
+   <slot>onAddButton()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>224</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>117</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>listWidget</sender>
+   <signal>itemSelectionChanged()</signal>
+   <receiver>MapboxPropertiesForm</receiver>
+   <slot>onSelectionChanged()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>175</x>
+     <y>108</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>6</x>
+     <y>34</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MapboxPropertiesForm</receiver>
+   <slot>onEditButton()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>144</x>
+     <y>213</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>85</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>deleteButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MapboxPropertiesForm</receiver>
+   <slot>onDeleteButton()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>230</x>
+     <y>214</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>5</x>
+     <y>69</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>onAddButton()</slot>
+  <slot>onEditButton()</slot>
+  <slot>onDeleteButton()</slot>
+  <slot>onSelectionChanged()</slot>
+ </slots>
+</ui>

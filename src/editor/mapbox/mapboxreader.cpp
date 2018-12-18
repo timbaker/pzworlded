@@ -89,7 +89,7 @@ private:
 //        const int height = atts.value(QLatin1Literal("height")).toString().toInt();
 
         mWorld = world;
-
+/*
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 if (WorldCell* cell = world->cellAt(x, y)) {
@@ -97,7 +97,7 @@ private:
                 }
             }
         }
-
+*/
         while (xml.readNextStartElement()) {
             if (xml.name() == QLatin1Literal("cell"))
                 readCell();

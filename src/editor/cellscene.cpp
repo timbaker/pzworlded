@@ -1308,6 +1308,7 @@ void CellScene::setDocument(CellDocument *doc)
 
     connect(worldDocument(), &WorldDocument::mapboxFeatureAdded, this, &CellScene::mapboxFeatureAdded);
     connect(worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellScene::mapboxFeatureAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::mapboxPointMoved, this, &CellScene::mapboxPointMoved);
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
@@ -1413,6 +1414,15 @@ void CellScene::setSelectedObjectItems(const QSet<ObjectItem *> &selected)
     document()->setSelectedObjects(selection);
 }
 
+void CellScene::setSelectedMapboxFeatureItems(const QSet<MapboxFeatureItem *>& selected)
+{
+    QList<MapBoxFeature*> selection;
+    for (MapboxFeatureItem *item : selected) {
+        selection << item->feature();
+    }
+    document()->setSelectedMapboxFeatures(selection);
+}
+
 // Determine sane Z-order for layers in and out of TileLayerGroups
 void CellScene::setGraphicsSceneZOrder()
 {
@@ -1479,6 +1489,13 @@ void CellScene::setObjectVisible(WorldCellObject *obj, bool visible)
     if (ObjectItem *item = itemForObject(obj)) {
         item->object()->setVisible(visible);
         item->setVisible(shouldObjectItemBeVisible(item));
+    }
+}
+
+void CellScene::setMapboxFeatureVisible(MapBoxFeature *feature, bool visible)
+{
+    if (MapboxFeatureItem* item = itemForMapboxFeature(feature)) {
+        item->setVisible(visible);
     }
 }
 
@@ -1652,15 +1669,7 @@ void CellScene::loadMap()
         mRoadItems += item;
     }
 
-    {
-        MapBoxFeature* feature = new MapBoxFeature(&cell()->mapBox());
-        feature->mGeometry.mType = QLatin1Literal("LineString");
-        MapBoxCoordinates coords;
-        coords += { 223, 300 };
-        coords += { 223, 106 };
-        coords += { -2, 106 };
-        feature->mGeometry.mCoordinates += coords;
-        cell()->mapBox().mFeatures += feature;
+    for (auto* feature : cell()->mapBox().mFeatures) {
         MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
@@ -1949,6 +1958,17 @@ void CellScene::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
         doLater(ZOrder);
     }
 
+}
+
+void CellScene::mapboxPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature *feature = cell->mapBox().mFeatures.at(featureIndex);
+    if (auto* item = itemForMapboxFeature(feature)) {
+        item->synchWithFeature();
+    }
 }
 
 void CellScene::cellObjectGroupChanged(WorldCellObject *obj)

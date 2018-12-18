@@ -84,6 +84,8 @@ protected:
     bool mIsEditable;
     bool mIsSelected;
     QRectF mBoundingRect;
+    int mHoverRefCount;
+    QPointF mDragOffset;
 };
 
 class FeatureHandle;
@@ -109,18 +111,42 @@ public:
     bool affectsLots() const { return false; }
     bool affectsObjects() const { return false; }
 
-    void languageChanged()
-    {
-        setName(tr("Create Mapbox Feature"));
+    void languageChanged() {
+        switch (mFeatureType) {
+        case MapboxFeatureItem::Type::INVALID:
+            break;
+        case MapboxFeatureItem::Type::Point:
+            setName(tr("Create Mapbox Point"));
+            break;
+        case MapboxFeatureItem::Type::Polygon:
+            setName(tr("Create Mapbox Polygon"));
+            break;
+        case MapboxFeatureItem::Type::Polyline:
+            setName(tr("Create Mapbox LineString"));
+            break;
+        }
         //setShortcut(QKeySequence(tr("S")));
     }
 
 private:
+    void updatePathItem();
     void addPoint(const QPointF& scenePos);
 
     MapboxFeatureItem::Type mFeatureType;
     QGraphicsPathItem* mPathItem;
     QPolygonF mPolygon;
+    QPointF mScenePos;
+};
+
+class CreateMapboxPolygonTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPolygonTool>
+{
+    Q_OBJECT
+
+public:
+    CreateMapboxPolygonTool()
+        : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Polygon)
+    {
+    }
 };
 
 class CreateMapboxPolylineTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPolylineTool>
@@ -167,22 +193,16 @@ public:
 private slots:
     void featureAboutToBeRemoved(WorldCell* cell, int featureIndex);
     void featurePointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void selectedFeaturesChanged();
 
 private:
     Q_DISABLE_COPY(EditMapboxFeatureTool)
 
-    void startMoving(const QPointF &scenePos);
-    void finishMoving();
-    void cancelMoving();
-
-    void updateHandles(MapboxFeatureItem* feature);
+    void setSelectedItem(MapboxFeatureItem* feature);
 
     MapboxFeatureItem *mSelectedFeatureItem;
-    MapBoxFeature *mFeature;
-    MapboxFeatureItem *mFeatureItem;
-    bool mMoving;
+    MapBoxFeature *mSelectedFeature;
     QList<FeatureHandle*> mHandles;
-    bool mHandlesVisible;
 
     static EditMapboxFeatureTool *mInstance;
 };

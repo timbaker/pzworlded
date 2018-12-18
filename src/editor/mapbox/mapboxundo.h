@@ -86,4 +86,65 @@ private:
     MapBoxPoint mPoint;
 };
 
+class AddRemoveMapboxProperty : public QUndoCommand
+{
+public:
+    AddRemoveMapboxProperty(WorldDocument *doc, WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
+    ~AddRemoveMapboxProperty();
+
+protected:
+    void addProperty();
+    void removeProperty();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mFeatureIndex;
+    int mPropertyIndex;
+    MapBoxProperty mProperty;
+};
+
+class AddMapboxProperty : public AddRemoveMapboxProperty
+{
+public:
+    AddMapboxProperty(WorldDocument *doc, WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty& property)
+        : AddRemoveMapboxProperty(doc, cell, featureIndex, propertyIndex, property)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Add Mapbox Property"));
+    }
+
+    void undo() { removeProperty(); }
+    void redo() { addProperty(); }
+};
+
+class RemoveMapboxProperty : public AddRemoveMapboxProperty
+{
+public:
+    RemoveMapboxProperty(WorldDocument *doc, WorldCell *cell, int featureIndex, int propertyIndex)
+        : AddRemoveMapboxProperty(doc, cell, featureIndex, propertyIndex, MapBoxProperty())
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Remove Mapbox Property"));
+    }
+
+    void undo() { addProperty(); }
+    void redo() { removeProperty(); }
+};
+
+class SetMapboxProperty : public QUndoCommand
+{
+public:
+    SetMapboxProperty(WorldDocument *doc, WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
+
+    void undo() override { swap(); }
+    void redo() override { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mFeatureIndex;
+    int mPropertyIndex;
+    MapBoxProperty mProperty;
+};
+
 #endif // MAPBOXUNDO_H

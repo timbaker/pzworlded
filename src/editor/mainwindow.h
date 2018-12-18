@@ -41,6 +41,8 @@ class WorldDocument;
 //class WorldScene;
 class Zoomable;
 
+class MapboxDock;
+
 class QComboBox;
 class QMenu;
 
@@ -51,7 +53,7 @@ class MainWindow : public QMainWindow
 public:
     static MainWindow *instance();
 
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
     DocumentManager *docman() const;
@@ -189,6 +191,7 @@ private:
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
     SearchDock* mSearchDock;
+    MapboxDock* mMapboxDock;
 #ifdef ROAD_UI
     RoadsDock *mRoadsDock;
 #endif

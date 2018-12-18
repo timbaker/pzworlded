@@ -87,6 +87,8 @@ public:
     }
 
     inline int index();
+    inline WorldCell* cell() const;
+    inline MapBoxProperties& properties() { return mProperties; }
 
     WorldCellMapBox* mOwner;
     MapBoxGeometry mGeometry;
@@ -119,12 +121,19 @@ public:
 
     }
 
+    WorldCell* cell() const { return mCell; }
+    MapBoxFeatures& features() { return mFeatures; }
+
     WorldCell* mCell;
     MapBoxFeatures mFeatures;
 };
 
 int MapBoxFeature::index() {
     return mOwner->mFeatures.indexOf(this);
+}
+
+WorldCell* MapBoxFeature::cell() const {
+    return mOwner->cell();
 }
 
 #endif // WORLDCELLMAPBOX_H

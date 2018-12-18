@@ -20,10 +20,13 @@
 #include "mapboxundo.h"
 #include "worldcellmapbox.h"
 
+#include "celldocument.h"
 #include "cellscene.h"
+#include "cellview.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
+#include "zoomable.h"
 
 #include "maprenderer.h"
 
@@ -39,6 +42,7 @@ MapboxFeatureItem::MapboxFeatureItem(MapBoxFeature* feature, CellScene *scene, Q
     , mSyncing(false)
     , mIsEditable(false)
     , mIsSelected(false)
+    , mHoverRefCount(0)
 {
     setAcceptHoverEvents(true);
     synchWithFeature();
@@ -51,7 +55,11 @@ QRectF MapboxFeatureItem::boundingRect() const
 
 void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
-    QColor color = Qt::blue; //
+    QColor color = mHoverRefCount > 0 ? Qt::blue : Qt::darkBlue;
+    if (isSelected())
+        color = mHoverRefCount ? Qt::green : Qt::darkGreen;
+    if (isEditable())
+        color = mHoverRefCount ? Qt::red : Qt::darkRed;
 
     QColor brushColor = color;
     brushColor.setAlpha(50);
@@ -61,11 +69,12 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
     pen.setJoinStyle(Qt::RoundJoin);
     pen.setCapStyle(Qt::RoundCap);
     pen.setWidth(2);
+    pen.setCosmetic(true);
 
     painter->setPen(pen);
     painter->setRenderHint(QPainter::Antialiasing);
 
-    QPolygonF screenPolygon = mRenderer->tileToPixelCoords(mPolygon);
+    QPolygonF screenPolygon = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset));
 
     switch (geometryType()) {
     case Type::INVALID:
@@ -91,27 +100,39 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
         painter->drawPolyline(screenPolygon);
         break;
     }
-
 }
 
 void MapboxFeatureItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
+    if (++mHoverRefCount == 1) {
+        update();
+    }
 }
 
 void MapboxFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
+    if (--mHoverRefCount == 0) {
+        update();
+    }
 }
 
 QPainterPath MapboxFeatureItem::shape() const
 {
     QPolygonF polygon = mRenderer->tileToPixelCoords(mPolygon, 0);
 
+    if (isPolygon())
+        polygon += polygon[0];
+
     QPainterPath path;
-    // FIXME: this is a polygon for Polyline which messes with hit-testing
     path.addPolygon(polygon);
-    return path;
+    QPainterPathStroker stroker;
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    stroker.setWidth(20 / zoom); // TODO: adjust for zoom
+    return stroker.createStroke(path);
 }
 
 void MapboxFeatureItem::synchWithFeature()
@@ -141,7 +162,7 @@ void MapboxFeatureItem::synchWithFeature()
         break;
     }
 
-    QRectF bounds = mRenderer->tileToPixelCoords(mPolygon).boundingRect().adjusted(-2, -3, 2, 2);
+    QRectF bounds = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset)).boundingRect().adjusted(-2, -3, 2, 2);
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
@@ -259,17 +280,16 @@ void FeatureHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseReleaseEvent(event);
 
-    // If we resized the object, create an undo command
     if (event->button() == Qt::LeftButton && (mOldPos != geometryPoint())) {
         WorldDocument *document = mFeatureItem->mWorldDoc;
         int featureIndex = mFeatureItem->feature()->index();
         MapBoxPoint newPos = geometryPoint();
         mFeatureItem->feature()->mGeometry.mCoordinates[0][mPointIndex] = mOldPos;
-        QUndoCommand *cmd = new MoveMapboxPoint(document, mFeatureItem->feature()->mOwner->mCell, featureIndex, mPointIndex, newPos);
+        QUndoCommand *cmd = new MoveMapboxPoint(document, mFeatureItem->feature()->cell(), featureIndex, mPointIndex, newPos);
         document->undoStack()->push(cmd);
     }
 
-    // Stop the object context menu messing us up.
+    // Stop the context-menu messing us up.
     event->accept();
 }
 
@@ -311,15 +331,29 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
 
 /////
 
+SINGLETON_IMPL(CreateMapboxPolygonTool)
 SINGLETON_IMPL(CreateMapboxPolylineTool)
 
 CreateMapboxFeatureTool::CreateMapboxFeatureTool(MapboxFeatureItem::Type type)
-    : BaseCellSceneTool(tr("Create Mapbox Features"),
-                         QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
-                         QKeySequence())
+    : BaseCellSceneTool(QString(),
+                        QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
+                        QKeySequence())
     , mFeatureType(type)
     , mPathItem(nullptr)
 {
+    switch (mFeatureType) {
+    case MapboxFeatureItem::Type::INVALID:
+        break;
+    case MapboxFeatureItem::Type::Point:
+        setName(tr("Create Mapbox Point"));
+        break;
+    case MapboxFeatureItem::Type::Polygon:
+        setName(tr("Create Mapbox Polygon"));
+        break;
+    case MapboxFeatureItem::Type::Polyline:
+        setName(tr("Create Mapbox LineString"));
+        break;
+    }
 }
 
 CreateMapboxFeatureTool::~CreateMapboxFeatureTool()
@@ -347,15 +381,14 @@ void CreateMapboxFeatureTool::deactivate()
         delete mPathItem;
         mPathItem = nullptr;
     }
+    mPolygon.clear();
     BaseCellSceneTool::deactivate();
 }
 
 void CreateMapboxFeatureTool::keyPressEvent(QKeyEvent *event)
 {
     if ((event->key() == Qt::Key_Escape) && mPathItem) {
-        mScene->removeItem(mPathItem);
-        delete mPathItem;
-        mPathItem = nullptr;
+        mPolygon.clear();
         event->accept();
     }
 }
@@ -364,9 +397,22 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         addPoint(event->scenePos());
+        updatePathItem();
     }
     if (event->button() == Qt::RightButton) {
         switch (mFeatureType) {
+        case MapboxFeatureItem::Type::Polygon:
+            if (mPolygon.size() > 2) {
+                MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
+                MapBoxCoordinates coords;
+                for (QPointF& point : mPolygon)
+                    coords += MapBoxPoint(point.x(), point.y());
+                feature->mGeometry.mType = QLatin1Literal("Polygon");
+                feature->mGeometry.mCoordinates += coords;
+                mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+            }
+            break;
+            break;
         case MapboxFeatureItem::Type::Polyline:
             if (mPolygon.size() > 1) {
                 MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
@@ -379,16 +425,14 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             }
             break;
         }
-        if (mPathItem) {
-            mScene->removeItem(mPathItem);
-            delete mPathItem;
-            mPathItem = nullptr;
-        }
+        mPolygon.clear();
     }
 }
 
 void CreateMapboxFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    mScenePos = event->scenePos();
+    updatePathItem();
 }
 
 void CreateMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -397,8 +441,40 @@ void CreateMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
+void CreateMapboxFeatureTool::updatePathItem()
 {
+    QPainterPath path;
+
+    if (mFeatureType == MapboxFeatureItem::Type::Polygon) {
+        if (mPolygon.size() > 2) {
+            path.addPolygon(mScene->renderer()->tileToPixelCoords(mPolygon));
+        }
+    }
+
+    if (mPolygon.isEmpty()) {
+        QPointF tilePos = mScene->renderer()->pixelToTileCoordsInt(mScenePos);
+        QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
+        path.addRect(scenePos.x() - 5, scenePos.y() - 5, 10, 10);
+    } else {
+        for (QPointF& point : mPolygon) {
+            QPointF p = mScene->renderer()->tileToPixelCoords(point);
+            path.addRect(p.x() - 5, p.y() - 5, 10, 10);
+        }
+    }
+    if (!mPolygon.isEmpty()) {
+        QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0]);
+        path.moveTo(p1);
+        for (int i = 1; i < mPolygon.size(); i++) {
+            QPointF p2 = mScene->renderer()->tileToPixelCoords(mPolygon[i]);
+            path.lineTo(p2);
+        }
+
+        // Line to mouse pointer
+        QPointF p2 = mScene->renderer()->pixelToTileCoordsInt(mScenePos);
+        p2 = mScene->renderer()->tileToPixelCoords(p2);
+        path.lineTo(p2);
+    }
+
     if (mPathItem == nullptr) {
         mPathItem = new QGraphicsPathItem();
         QPen pen(Qt::blue);
@@ -408,21 +484,15 @@ void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
         pen.setCosmetic(true);
         mPathItem->setPen(pen);
         mScene->addItem(mPathItem);
-        mPolygon.clear();
     }
 
+    mPathItem->setPath(path);
+}
+
+void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
+{
     mPolygon += mScene->renderer()->pixelToTileCoordsInt(scenePos);
 
-    QPainterPath path;
-    if (mPolygon.size() < 2)
-        return;
-    QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0]);
-    path.moveTo(p1);
-    for (int i = 1; i < mPolygon.size(); i++) {
-        QPointF p2 = mScene->renderer()->tileToPixelCoords(mPolygon[i]);
-        path.lineTo(p2);
-    }
-    mPathItem->setPath(path);
 }
 
 /////
@@ -446,31 +516,31 @@ EditMapboxFeatureTool::EditMapboxFeatureTool()
                          QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                          QKeySequence())
     , mSelectedFeatureItem(nullptr)
-    , mFeature(nullptr)
-    , mFeatureItem(nullptr)
-    , mMoving(false)
-    , mHandlesVisible(false)
+    , mSelectedFeature(nullptr)
 {
 }
 
 EditMapboxFeatureTool::~EditMapboxFeatureTool()
 {
-    delete mFeatureItem;
-    delete mFeature;
 }
 
 void EditMapboxFeatureTool::setScene(BaseGraphicsScene *scene)
 {
-    if (mScene)
+    if (mScene) {
         mScene->worldDocument()->disconnect(this);
+        mScene->document()->disconnect(this);
+    }
 
     mScene = scene ? scene->asCellScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)),
-                SLOT(featureAboutToBeRemoved(WorldCell*,int)));
-        connect(mScene->worldDocument(), SIGNAL(mapboxPointMoved(WorldCell*,int,int)),
-                SLOT(featurePointMoved(WorldCell*,int,int)));
+        connect(mScene->worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved,
+                this, &EditMapboxFeatureTool::featureAboutToBeRemoved);
+        connect(mScene->worldDocument(), &WorldDocument::mapboxPointMoved,
+                this, &EditMapboxFeatureTool::featurePointMoved);
+
+        connect(mScene->document(), &CellDocument::selectedMapboxFeaturesChanged,
+                this, &EditMapboxFeatureTool::selectedFeaturesChanged);
     }
 }
 
@@ -481,24 +551,23 @@ void EditMapboxFeatureTool::activate()
 
 void EditMapboxFeatureTool::deactivate()
 {
-    if (mHandlesVisible) {
+    if (mSelectedFeatureItem) {
+        mSelectedFeatureItem->setEditable(false);
         for (FeatureHandle* handle : mHandles) {
             mScene->removeItem(handle);
             delete handle;
         }
         mHandles.clear();
-        mHandlesVisible = false;
+        mSelectedFeatureItem = nullptr;
+        mSelectedFeature = nullptr;
     }
-    mSelectedFeatureItem = nullptr;
 
     BaseCellSceneTool::deactivate();
 }
 
 void EditMapboxFeatureTool::keyPressEvent(QKeyEvent *event)
 {
-    if ((event->key() == Qt::Key_Escape) && mMoving) {
-        cancelMoving();
-        mMoving = false;
+    if ((event->key() == Qt::Key_Escape)) {
         event->accept();
     }
 }
@@ -506,55 +575,31 @@ void EditMapboxFeatureTool::keyPressEvent(QKeyEvent *event)
 void EditMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        if (mMoving)
+        MapboxFeatureItem* clickedItem = nullptr;
+        foreach (QGraphicsItem *item, mScene->items(event->scenePos())) {
+            if (MapboxFeatureItem *featureItem = dynamic_cast<MapboxFeatureItem*>(item)) {
+                clickedItem = featureItem;
+                break;
+            }
+        }
+        if (clickedItem == mSelectedFeatureItem)
             return;
-        startMoving(event->scenePos());
+        if (clickedItem == nullptr)
+            mScene->setSelectedMapboxFeatureItems(QSet<MapboxFeatureItem*>());
+        else
+            mScene->setSelectedMapboxFeatureItems(QSet<MapboxFeatureItem*>() << clickedItem);
     }
     if (event->button() == Qt::RightButton) {
-        if (!mMoving)
-            return;
-        cancelMoving();
-        mMoving = false;
     }
 }
 
 void EditMapboxFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (!mMoving)
-        return;
-#if 0
-    QPoint curPos = mScene->pixelToRoadCoords(event->scenePos());
-    QPoint delta = curPos - (mMovingStart
-            ? mSelectedFeatureItem->road()->start()
-            : mSelectedFeatureItem->road()->end());
-    if (mSelectedFeatureItem->road()->isVertical())
-        delta.setX(0);
-    else
-        delta.setY(0);
-    if (mMovingStart)
-        mFeature->setCoords(mSelectedFeatureItem->road()->start() + delta, mFeature->end());
-    else
-        mFeature->setCoords(mFeature->start(), mSelectedFeatureItem->road()->end() + delta);
-    mFeatureItem->synchWithFeature();
-    updateHandles(mFeature);
-#endif
 }
 
 void EditMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        if (!mMoving)
-            return;
-#if 0
-        if (mFeature->start() == mSelectedFeatureItem->road()->start() &&
-                mFeature->end() == mSelectedFeatureItem->road()->end()) {
-            cancelMoving();
-            mMoving = false;
-            return;
-        }
-#endif
-        finishMoving();
-        mMoving = false;
     }
 }
 
@@ -562,94 +607,48 @@ void EditMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 void EditMapboxFeatureTool::featureAboutToBeRemoved(WorldCell* cell, int featureIndex)
 {
     MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
-    if (mSelectedFeatureItem && feature == mSelectedFeatureItem->feature()) {
-        if (mMoving) {
-            cancelMoving();
-            mMoving = false;
-        }
-        updateHandles(nullptr);
-        mSelectedFeatureItem = nullptr;
+    if (feature == mSelectedFeature) {
+        setSelectedItem(nullptr);
     }
 }
 
 void EditMapboxFeatureTool::featurePointMoved(WorldCell* cell, int featureIndex, int pointIndex)
 {
     MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
-    if (mSelectedFeatureItem && feature == mSelectedFeatureItem->feature()) {
-        mSelectedFeatureItem->synchWithFeature();
-        updateHandles(mSelectedFeatureItem);
+    if (feature == mSelectedFeature) {
+//        mSelectedFeatureItem->synchWithFeature();
+        setSelectedItem(mSelectedFeatureItem);
     }
 }
 
-void EditMapboxFeatureTool::startMoving(const QPointF &scenePos)
+void EditMapboxFeatureTool::selectedFeaturesChanged()
+{
+    auto& selected = mScene->document()->selectedMapboxFeatures();
+    if (selected.size() == 1) {
+        MapBoxFeature* feature = selected.first();
+        if (MapboxFeatureItem* item = mScene->itemForMapboxFeature(feature)) {
+            setSelectedItem(item);
+        }
+    } else {
+        setSelectedItem(nullptr);
+    }
+}
+
+void EditMapboxFeatureTool::setSelectedItem(MapboxFeatureItem *featureItem)
 {
     if (mSelectedFeatureItem) {
-        QPoint roadPos = mScene->pixelToRoadCoords(scenePos);
-        mSelectedFeatureItem->setEditable(false);
-        mSelectedFeatureItem->setZValue(mSelectedFeatureItem->isSelected() ?
-                                         CellScene::ZVALUE_ROADITEM_SELECTED :
-                                         CellScene::ZVALUE_ROADITEM_UNSELECTED);
-        mSelectedFeatureItem = nullptr;
-        if (mSelectedFeatureItem) {
-            mMoving = true;
-
-            mFeature = new MapBoxFeature(&mScene->cell()->mapBox());
-            *mFeature = *mSelectedFeatureItem->feature();
-
-            mFeatureItem = new MapboxFeatureItem(mFeature, mScene);
-            mFeatureItem->setEditable(true);
-            mFeatureItem->setZValue(CellScene::ZVALUE_ROADITEM_CREATING);
-            mScene->addItem(mFeatureItem);
-            mSelectedFeatureItem->setVisible(false);
-            return;
-        }
-    }
-
-    foreach (QGraphicsItem *item, mScene->items(scenePos)) {
-        if (MapboxFeatureItem *featureItem = dynamic_cast<MapboxFeatureItem*>(item)) {
-            mSelectedFeatureItem = featureItem;
-            mSelectedFeatureItem->setEditable(true);
-            mSelectedFeatureItem->setZValue(CellScene::ZVALUE_ROADITEM_CREATING);
-            updateHandles(mSelectedFeatureItem);
-            break;
-        }
-    }
-    updateHandles(mSelectedFeatureItem ? mSelectedFeatureItem : nullptr);
-}
-
-void EditMapboxFeatureTool::finishMoving()
-{
-#if 0
-    QUndoStack *undoStack = mScene->worldDocument()->undoStack();
-    undoStack->push(new ChangeRoadCoords(mScene->worldDocument(),
-                                         mSelectedFeatureItem->road(),
-                                         mFeature->start(), mFeature->end()));
-#endif
-    cancelMoving();
-}
-
-void EditMapboxFeatureTool::cancelMoving()
-{
-    mSelectedFeatureItem->setVisible(true);
-    updateHandles(mSelectedFeatureItem);
-
-    mScene->removeItem(mFeatureItem);
-    delete mFeatureItem;
-    mFeatureItem = nullptr;
-
-    delete mFeature;
-    mFeature = nullptr;
-}
-
-void EditMapboxFeatureTool::updateHandles(MapboxFeatureItem *featureItem)
-{
-    if (mHandlesVisible) {
-        for (auto* handle : mHandles) {
-            mScene->removeItem(handle);
-            delete handle;
+        // The item may have been deleted if inside featureAboutToBeRemoved()
+        if (mScene->itemForMapboxFeature(mSelectedFeature)) {
+            for (auto* handle : mHandles) {
+                mScene->removeItem(handle);
+                delete handle;
+            }
+            mSelectedFeatureItem->setEditable(false);
+            mSelectedFeatureItem->setZValue(CellScene::ZVALUE_ROADITEM_UNSELECTED);
         }
         mHandles.clear();
-        mHandlesVisible = false;
+        mSelectedFeatureItem = nullptr;
+        mSelectedFeature = nullptr;
     }
 
     if (featureItem) {
@@ -682,7 +681,11 @@ void EditMapboxFeatureTool::updateHandles(MapboxFeatureItem *featureItem)
             }
             break;
         }
-        mHandlesVisible = true;
+
+        mSelectedFeatureItem = featureItem;
+        mSelectedFeature = featureItem->feature();
+        mSelectedFeatureItem->setEditable(true);
+        mSelectedFeatureItem->setZValue(CellScene::ZVALUE_ROADITEM_CREATING);
 
         featureItem->mSyncing = false;
     }

@@ -149,7 +149,11 @@ SOURCES += main.cpp\
     mapbox/worldcellmapbox.cpp \
     mapbox/mapboxscene.cpp \
     mapbox/mapboxgeojsongenerator.cpp \
-    mapbox/mapboxundo.cpp
+    mapbox/mapboxundo.cpp \
+    mapbox/mapboxwriter.cpp \
+    mapbox/mapboxdock.cpp \
+    mapbox/mapboxpropertiesform.cpp \
+    mapbox/mapboxpropertydialog.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -245,7 +249,11 @@ HEADERS  += mainwindow.h \
     mapbox/worldcellmapbox.h \
     mapbox/mapboxscene.h \
     mapbox/mapboxgeojsongenerator.h \
-    mapbox/mapboxundo.h
+    mapbox/mapboxundo.h \
+    mapbox/mapboxwriter.h \
+    mapbox/mapboxdock.h \
+    mapbox/mapboxpropertiesform.h \
+    mapbox/mapboxpropertydialog.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -271,7 +279,9 @@ FORMS    += mainwindow.ui \
     lootwindow.ui \
     writeworldobjectsdialog.ui \
     tmxtobmpdialog.ui \
-    searchdock.ui
+    searchdock.ui \
+    mapbox/mapboxpropertiesform.ui \
+    mapbox/mapboxpropertydialog.ui
 
 OTHER_FILES +=
 

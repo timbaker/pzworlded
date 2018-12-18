@@ -63,3 +63,42 @@ void MoveMapboxPoint::swap()
 }
 
 /////
+
+AddRemoveMapboxProperty::AddRemoveMapboxProperty(WorldDocument *doc, WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty& property)
+    : mDocument(doc)
+    , mCell(cell)
+    , mFeatureIndex(featureIndex)
+    , mPropertyIndex(propertyIndex)
+    , mProperty(property)
+{
+}
+
+AddRemoveMapboxProperty::~AddRemoveMapboxProperty()
+{
+}
+
+void AddRemoveMapboxProperty::addProperty() {
+    mDocument->undoRedo().addMapboxProperty(mCell, mFeatureIndex, mPropertyIndex, mProperty);
+}
+
+void AddRemoveMapboxProperty::removeProperty()
+{
+    mProperty = mDocument->undoRedo().removeMapboxProperty(mCell, mFeatureIndex, mPropertyIndex);
+}
+
+/////
+
+SetMapboxProperty::SetMapboxProperty(WorldDocument *doc, WorldCell* cell, int featureIndex, int pointIndex, const MapBoxProperty& property)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Edit Mapbox Property"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mFeatureIndex(featureIndex)
+    , mPropertyIndex(pointIndex)
+    , mProperty(property)
+{
+}
+
+void SetMapboxProperty::swap()
+{
+    mProperty = mDocument->undoRedo().setMapboxProperty(mCell, mFeatureIndex, mPropertyIndex, mProperty);
+}

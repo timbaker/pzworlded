@@ -17,7 +17,7 @@
 
 #include "mapboxgeojsongenerator.h"
 
-#include "mapboxreader.h"
+#include "mapboxwriter.h"
 
 #include "lotfilesmanager.h"
 #include "mainwindow.h"
@@ -88,6 +88,14 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
     MapManager::instance()->purgeUnreferencedMaps();
 
     {
+        MapboxWriter writer;
+        if (!writer.writeWorld(world, QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-features.xml"))) {
+            qWarning("Failed to write features.xml.");
+            goto errorExit;
+        }
+    }
+
+    {
         QJsonObject object;
         object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
         object[QLatin1Literal("features")] = mJsonFeatures;
@@ -101,11 +109,7 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
     }
 
     {
-        MapBoxReader reader;
-        if (reader.readWorld(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-features.xml"), world) == nullptr) {
-            qDebug() << reader.errorString();
-        }
-        QJsonArray jsonFeatures;
+        QJsonArray roads, water;
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 if (WorldCell* cell = world->cellAt(x, y)) {
@@ -142,22 +146,41 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
                         geometry[QLatin1Literal("coordinates")] = coordinates;
                         feature[QLatin1Literal("geometry")] = geometry;
 
-                        jsonFeatures.append(feature);
+                        if (bPolygon)
+                            water.append(feature);
+                        else {
+                            roads.append(feature);
+                        }
                     }
                 }
             }
         }
 
-        QJsonObject object;
-        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
-        object[QLatin1Literal("features")] = jsonFeatures;
-        QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-roads.geojson"));
-        if (!saveFile.open(QIODevice::WriteOnly)) {
-             qWarning("Couldn't open save file.");
-             goto errorExit;
+        {
+            QJsonObject object;
+            object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
+            object[QLatin1Literal("features")] = roads;
+            QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-roads.geojson"));
+            if (!saveFile.open(QIODevice::WriteOnly)) {
+                 qWarning("Couldn't open save file.");
+                 goto errorExit;
+            }
+            QJsonDocument json(object);
+            saveFile.write(json.toJson());
         }
-        QJsonDocument json(object);
-        saveFile.write(json.toJson());
+
+        {
+            QJsonObject object;
+            object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
+            object[QLatin1Literal("features")] = water;
+            QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-water.geojson"));
+            if (!saveFile.open(QIODevice::WriteOnly)) {
+                 qWarning("Couldn't open save file.");
+                 goto errorExit;
+            }
+            QJsonDocument json(object);
+            saveFile.write(json.toJson());
+        }
     }
 
     // While displaying this, the MapManager's FileSystemWatcher might see some

@@ -122,6 +122,23 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
     }
 }
 
+void CellDocument::setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selected)
+{
+    mSelectedMapboxFeatures.clear();
+    for (MapBoxFeature *obj : selected) {
+        if (!mSelectedMapboxFeatures.contains(obj))
+            mSelectedMapboxFeatures.append(obj);
+        else
+            qWarning("duplicate features passed to setSelectedMapboxFeatures");
+    }
+
+    emit selectedMapboxFeaturesChanged();
+
+    if (mSelectedMapboxFeatures.size() == 1) {
+        MapBoxFeature *feature = mSelectedMapboxFeatures.first();
+    }
+}
+
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
 {
     if (TileLayer *tl = layer->asTileLayer()) {

@@ -116,6 +116,9 @@ public:
     void addMapboxFeature(WorldCell* cell, int index, MapBoxFeature* feature);
     MapBoxFeature* removeMapboxFeature(WorldCell* cell, int index);
     MapBoxPoint moveMapboxPoint(WorldCell* cell, int featureIndex, int pointIndex, const MapBoxPoint& point);
+    void addMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
+    MapBoxProperty removeMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex);
+    MapBoxProperty setMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
 
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
@@ -207,6 +210,7 @@ signals:
     void mapboxFeatureAdded(WorldCell* cell, int index);
     void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
     void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void mapboxPropertiesChanged(WorldCell* cell, int featureIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
@@ -293,6 +297,9 @@ public:
     void addMapboxFeature(WorldCell* cell, int index, MapBoxFeature* feature);
     void removeMapboxFeature(WorldCell* cell, int index);
     void moveMapboxPoint(WorldCell* cell, int featureIndex, int pointIndex, const MapBoxPoint& point);
+    void addMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
+    void removeMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex);
+    void setMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
 
     void insertRoad(int index, Road *road);
     void removeRoad(int index);
@@ -478,6 +485,7 @@ signals:
     void mapboxFeatureAdded(WorldCell* cell, int index);
     void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
     void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void mapboxPropertiesChanged(WorldCell* cell, int featureIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);

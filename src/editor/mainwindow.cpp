@@ -72,7 +72,9 @@
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
 
+#include "mapbox/mapboxdock.h"
 #include "mapbox/mapboxgeojsongenerator.h"
+#include "mapbox/mapboxreader.h"
 #include "mapbox/mapboxscene.h"
 
 #include "layer.h"
@@ -96,7 +98,7 @@
 using namespace Tiled;
 using namespace Tiled::Internal;
 
-MainWindow *MainWindow::mInstance = 0;
+MainWindow *MainWindow::mInstance = nullptr;
 
 MainWindow *MainWindow::instance()
 {
@@ -112,14 +114,15 @@ MainWindow::MainWindow(QWidget *parent)
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
     , mSearchDock(new SearchDock(this))
+    , mMapboxDock(new MapboxDock(this))
 #ifdef ROAD_UI
     , mRoadsDock(new RoadsDock(this))
 #endif
-    , mCurrentDocument(0)
+    , mCurrentDocument(nullptr)
     , mCurrentLevelMenu(new QMenu(this))
     , mObjectGroupMenu(new QMenu(this))
-    , mZoomable(0)
-    , mLotPackWindow(0)
+    , mZoomable(nullptr)
+    , mLotPackWindow(nullptr)
 {
     ui->setupUi(this);
 
@@ -127,7 +130,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     Preferences *prefs = Preferences::instance();
 
-    setStatusBar(0);
+    setStatusBar(nullptr);
     mZoomComboBox = ui->zoomComboBox;
 
     QString coordString = QLatin1String("Cell x,y=300,300");
@@ -204,6 +207,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->menuView->addAction(mLayersDock->toggleViewAction());
     ui->menuView->addAction(mLotsDock->toggleViewAction());
+    ui->menuView->addAction(mMapboxDock->toggleViewAction());
     ui->menuView->addAction(mMapsDock->toggleViewAction());
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
@@ -212,6 +216,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mRoadsDock->toggleViewAction());
 #endif
 
+    addDockWidget(Qt::LeftDockWidgetArea, mMapboxDock);
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mSearchDock);
@@ -224,6 +229,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabifyDockWidget(mPropertiesDock, mLayersDock);
     tabifyDockWidget(mLayersDock, mMapsDock);
     tabifyDockWidget(mObjectsDock, mLotsDock);
+    tabifyDockWidget(mLotsDock, mMapboxDock);
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
@@ -328,7 +334,9 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
 #endif
+    new CreateMapboxPolygonTool;
     new CreateMapboxPolylineTool;
+    toolManager->registerTool(CreateMapboxPolygonTool::instancePtr());
     toolManager->registerTool(CreateMapboxPolylineTool::instancePtr());
     toolManager->registerTool(EditMapboxFeatureTool::instance());
     addToolBar(toolManager->toolBar());
@@ -590,6 +598,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         }
 
         mLotsDock->setDocument(doc);
+        mMapboxDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
         mSearchDock->setDocument(doc);
 #ifdef ROAD_UI
@@ -604,8 +613,9 @@ void MainWindow::currentDocumentChanged(Document *doc)
         CellDocument *cellDoc = mCurrentDocument->asCellDocument();
         mLayersDock->setCellDocument(cellDoc);
     } else {
-        mLayersDock->setCellDocument(0);
+        mLayersDock->setCellDocument(nullptr);
         mLotsDock->clearDocument();
+        mMapboxDock->clearDocument();
         mObjectsDock->clearDocument();
         mSearchDock->clearDocument();
 #ifdef ROAD_UI
@@ -725,6 +735,9 @@ bool MainWindow::openFile(const QString &fileName)
                               reader.errorString());
         return false;
     }
+
+    MapBoxReader mbreader;
+    mbreader.readWorld(QLatin1Literal("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-features.xml"), world);
 
     DefaultsFile::oldWorld(world);
 
