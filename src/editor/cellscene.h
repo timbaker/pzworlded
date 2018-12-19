@@ -569,6 +569,8 @@ public slots:
     void mapboxFeatureAdded(WorldCell* cell, int index);
     void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
     void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void mapboxGeometryChanged(WorldCell* cell, int featureIndex);
+    void selectedMapboxFeaturesChanged();
 
     void roadAdded(int index);
     void roadRemoved(Road *road);

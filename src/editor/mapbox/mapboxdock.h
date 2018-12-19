@@ -134,6 +134,7 @@ signals:
 private slots:
     void featureAdded(WorldCell *cell, int index);
     void featureAboutToBeRemoved(WorldCell *cell, int index);
+    void propertiesChanged(WorldCell* cell, int featureIndex);
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
 

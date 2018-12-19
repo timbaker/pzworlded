@@ -131,12 +131,14 @@ void MapboxDock::selectionChanged()
 
     if (mWorldDoc) {
         QModelIndexList selection = mView->selectionModel()->selectedIndexes();
-        if (selection.size() == 1) {
-            if (MapBoxFeature* feature = mView->model()->toFeature(selection.first()))
-                mPropertiesForm->setFeature(feature);
-        } else {
-            mPropertiesForm->setFeature(nullptr);
+        QList<MapBoxFeature*> selectedFeatures;
+        for (auto& index : selection) {
+            if (index.column() > 0)
+                continue;
+            if (auto *feature = mView->model()->toFeature(index))
+                selectedFeatures += feature;
         }
+        mWorldDoc->setSelectedMapboxFeatures(selectedFeatures);
         return;
     }
 
@@ -157,14 +159,16 @@ void MapboxDock::selectionChanged()
     }
 
     // Select features in the scene only if they can be edited
-    if (!EditMapboxFeatureTool::instance()->isCurrent())
+    if (!CreateMapboxPolygonTool::instance().isCurrent() &&
+            !CreateMapboxPolylineTool::instance().isCurrent() &&
+            !EditMapboxFeatureTool::instance()->isCurrent())
         return;
 
     QList<MapBoxFeature*> features;
-    foreach (QModelIndex index, selection) {
+    for (QModelIndex& index : selection) {
         if (index.column() > 0)
             continue;
-        if (MapBoxFeature * feature = mView->model()->toFeature(index)) {
+        if (MapBoxFeature* feature = mView->model()->toFeature(index)) {
             features << feature;
         }
     }
@@ -650,6 +654,8 @@ void MapboxModel::setDocument(Document *doc)
                 this, &MapboxModel::featureAdded);
         connect(worldDoc, &WorldDocument::mapboxFeatureAboutToBeRemoved,
                 this, &MapboxModel::featureAboutToBeRemoved);
+        connect(worldDoc, &WorldDocument::mapboxPropertiesChanged,
+                this, &MapboxModel::propertiesChanged);
     }
 
     setCell(cell);
@@ -687,6 +693,13 @@ void MapboxModel::featureAboutToBeRemoved(WorldCell *cell, int index)
         delete parentItem->children.takeAt(row);
         endRemoveRows();
     }
+}
+
+void MapboxModel::propertiesChanged(WorldCell *cell, int featureIndex)
+{
+    Q_UNUSED(featureIndex)
+    if (cell == mCell)
+        setCell(mCell); // lazy, just reset the whole list
 }
 
 void MapboxModel::cellContentsAboutToChange(WorldCell *cell)

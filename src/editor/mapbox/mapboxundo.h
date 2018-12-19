@@ -147,4 +147,39 @@ private:
     MapBoxProperty mProperty;
 };
 
+class SetMapboxProperties : public QUndoCommand
+{
+public:
+    SetMapboxProperties(WorldDocument *doc, WorldCell *cell, int featureIndex, const MapBoxProperties& properties);
+
+    void undo() override { swap(); }
+    void redo() override { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mFeatureIndex;
+    MapBoxProperties mProperties;
+};
+
+class SetMapboxCoordinates : public QUndoCommand
+{
+public:
+    SetMapboxCoordinates(WorldDocument *doc, WorldCell *cell, int featureIndex, int coordsIndex, const MapBoxCoordinates& coords);
+
+    void undo() override { swap(); }
+    void redo() override { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mFeatureIndex;
+    int mCoordsIndex;
+    MapBoxCoordinates mCoords;
+};
+
 #endif // MAPBOXUNDO_H

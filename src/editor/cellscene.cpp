@@ -1309,6 +1309,8 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), &WorldDocument::mapboxFeatureAdded, this, &CellScene::mapboxFeatureAdded);
     connect(worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellScene::mapboxFeatureAboutToBeRemoved);
     connect(worldDocument(), &WorldDocument::mapboxPointMoved, this, &CellScene::mapboxPointMoved);
+    connect(worldDocument(), &WorldDocument::mapboxGeometryChanged, this, &CellScene::mapboxGeometryChanged);
+    connect(mDocument, &CellDocument::selectedMapboxFeaturesChanged, this, &CellScene::selectedMapboxFeaturesChanged);
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
@@ -1562,7 +1564,7 @@ QString CellScene::roomNameAt(const QPointF &scenePos)
 
 void CellScene::keyPressEvent(QKeyEvent *event)
 {
-    if (mActiveTool != 0) {
+    if (mActiveTool != nullptr) {
         mActiveTool->keyPressEvent(event);
         if (event->isAccepted())
             return;
@@ -1952,7 +1954,7 @@ void CellScene::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
     MapBoxFeature *feature = cell->mapBox().mFeatures.at(index);
     if (auto* item = itemForMapboxFeature(feature)) {
         mFeatureItems.removeAll(item);
-//        mSelectedFeatureItems.remove(item);
+        mSelectedFeatureItems.remove(item);
         removeItem(item);
         delete item;
         doLater(ZOrder);
@@ -1969,6 +1971,38 @@ void CellScene::mapboxPointMoved(WorldCell *cell, int featureIndex, int pointInd
     if (auto* item = itemForMapboxFeature(feature)) {
         item->synchWithFeature();
     }
+}
+
+void CellScene::mapboxGeometryChanged(WorldCell *cell, int featureIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature *feature = cell->mapBox().mFeatures.at(featureIndex);
+    if (auto* item = itemForMapboxFeature(feature)) {
+        item->synchWithFeature();
+        item->update();
+    }
+}
+
+void CellScene::selectedMapboxFeaturesChanged()
+{
+    auto& selected = document()->selectedMapboxFeatures();
+
+    QSet<MapboxFeatureItem*> items;
+    for (auto* feature : selected) {
+        items.insert(itemForMapboxFeature(feature));
+    }
+
+    for (auto* item : mSelectedFeatureItems - items) {
+        item->setSelected(false);
+    }
+
+    for (auto* item : items - mSelectedFeatureItems) {
+        item->setSelected(true);
+    }
+
+    mSelectedFeatureItems = items;
 }
 
 void CellScene::cellObjectGroupChanged(WorldCellObject *obj)

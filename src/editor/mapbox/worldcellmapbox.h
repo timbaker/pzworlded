@@ -75,6 +75,13 @@ public:
 class MapBoxProperties : public QList<MapBoxProperty>
 {
 public:
+    bool containsKey(const QString& key) const {
+        for (auto& property : *this) {
+            if (property.mKey == key)
+                return true;
+        }
+        return false;
+    }
 };
 
 class MapBoxFeature

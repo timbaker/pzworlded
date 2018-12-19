@@ -47,6 +47,7 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
 
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event);
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
 
     QPainterPath shape() const;
@@ -86,6 +87,8 @@ protected:
     QRectF mBoundingRect;
     int mHoverRefCount;
     QPointF mDragOffset;
+    int mAddPointIndex = -1;
+    QPointF mAddPointPos;
 };
 
 class FeatureHandle;
@@ -193,6 +196,7 @@ public:
 private slots:
     void featureAboutToBeRemoved(WorldCell* cell, int featureIndex);
     void featurePointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void geometryChanged(WorldCell* cell, int featureIndex);
     void selectedFeaturesChanged();
 
 private:

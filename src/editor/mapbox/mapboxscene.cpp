@@ -30,6 +30,7 @@
 
 #include "maprenderer.h"
 
+#include <QDebug>
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
 #include <QPainter>
@@ -60,6 +61,9 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
         color = mHoverRefCount ? Qt::green : Qt::darkGreen;
     if (isEditable())
         color = mHoverRefCount ? Qt::red : Qt::darkRed;
+
+//    if (mHoverRefCount)
+//        painter->drawPath(shape());
 
     QColor brushColor = color;
     brushColor.setAlpha(50);
@@ -100,6 +104,15 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
         painter->drawPolyline(screenPolygon);
         break;
     }
+
+    if (mAddPointIndex != -1) {
+        auto scene = static_cast<CellScene*>(this->scene());
+        auto view = static_cast<CellView*>(scene->views().first());
+        qreal zoom = view->zoomable()->scale();
+        zoom = qMin(zoom, 1.0);
+
+        painter->drawRect(mAddPointPos.x() - 5/zoom, mAddPointPos.y() -5/zoom, (int)(10 / zoom), (int)(10 / zoom));
+    }
 }
 
 void MapboxFeatureItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
@@ -110,10 +123,89 @@ void MapboxFeatureItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
     }
 }
 
+// http://www.randygaul.net/2014/07/23/distance-point-to-line-segment/
+static float distanceOfPointToLineSegment(QVector2D p1, QVector2D p2, QVector2D p)
+{
+    QVector2D n = p2 - p1;
+    QVector2D pa =  p1 - p;
+
+    float c = QVector2D::dotProduct(n, pa);
+
+    if (c > 0.0f)
+        return QVector2D::dotProduct(pa, pa);
+
+    QVector2D bp = p - p2;
+
+    if (QVector2D::dotProduct(n, bp) > 0.0f)
+        return QVector2D::dotProduct(bp, bp);
+
+    QVector2D e = pa - n * (c / QVector2D::dotProduct(n, n));
+
+    return QVector2D::dotProduct(e, e);
+}
+
+#include <QtMath>
+
+void MapboxFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
+{
+    if (!isEditable()) {
+        if (mAddPointIndex != -1) {
+            mAddPointIndex = -1;
+            update();
+        }
+        return;
+    }
+
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    zoom = qMin(zoom, 1.0);
+
+    QPolygonF poly = mRenderer->tileToPixelCoords(mPolygon, 0);
+
+    // Don't add points near other points
+    for (int i = 0; i < poly.size(); i++) {
+        float d = QVector2D(event->scenePos()).distanceToPoint(QVector2D(poly[i]));
+        if (d < 20 / (float) zoom) {
+            if (mAddPointIndex != -1) {
+                mAddPointIndex = -1;
+                update();
+            }
+            return;
+        }
+    }
+
+    // Find the line segment the mouse pointer is over
+    int closestIndex = -1;
+    float closestDist = 10000;
+    for (int i = 0; i < poly.size() - 1; i++) {
+        QVector2D p1(poly[i]), p2(poly[i+1]);
+//        QVector2D dir = (p2 - p1).normalized();
+//        float d = QVector2D(event->scenePos()).distanceToLine(p1, dir);
+        float d = distanceOfPointToLineSegment(p1, p2, QVector2D(event->scenePos()));
+        d = qSqrt(qAbs(d));
+        if (d < 10 / (float)zoom && d < closestDist) {
+            closestIndex = i;
+            closestDist = d;
+        }
+    }
+    if (closestIndex != -1) {
+        mAddPointIndex = closestIndex;
+        mAddPointPos = event->scenePos();
+//        qDebug() << "mAddPointIndex " << mAddPointIndex << " dist " << closestDist;
+        update();
+    } else if (mAddPointIndex != -1) {
+        mAddPointIndex = -1;
+        update();
+    }
+
+}
+
 void MapboxFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
     if (--mHoverRefCount == 0) {
+        mAddPointIndex = -1;
         update();
     }
 }
@@ -131,13 +223,16 @@ QPainterPath MapboxFeatureItem::shape() const
     auto scene = static_cast<CellScene*>(this->scene());
     auto view = static_cast<CellView*>(scene->views().first());
     qreal zoom = view->zoomable()->scale();
-    stroker.setWidth(20 / zoom); // TODO: adjust for zoom
+    zoom = qMin(zoom, 1.0);
+
+    stroker.setWidth(20 / zoom);
     return stroker.createStroke(path);
 }
 
 void MapboxFeatureItem::synchWithFeature()
 {
     mPolygon.clear();
+    mAddPointIndex = -1;
 
     switch (geometryType()) {
     case Type::INVALID:
@@ -225,12 +320,25 @@ public:
                  QGraphicsItem::ItemSendsGeometryChanges |
                  QGraphicsItem::ItemIgnoresTransformations |
                  QGraphicsItem::ItemIgnoresParentOpacity);
+        setAcceptHoverEvents(true);
     }
 
     QRectF boundingRect() const;
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr);
+
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+        if (++mHoverRefCount == 1) {
+            update();
+        }
+    }
+
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+        if (--mHoverRefCount == 0) {
+            update();
+        }
+    }
 
     MapBoxPoint geometryPoint() const {
         auto& coords = mFeatureItem->feature()->mGeometry.mCoordinates;
@@ -249,6 +357,7 @@ protected:
     MapboxFeatureItem *mFeatureItem;
     int mPointIndex;
     MapBoxPoint mOldPos;
+    int mHoverRefCount = 0;
 };
 
 QRectF FeatureHandle::boundingRect() const
@@ -257,10 +366,10 @@ QRectF FeatureHandle::boundingRect() const
 }
 
 void FeatureHandle::paint(QPainter *painter,
-                   const QStyleOptionGraphicsItem *,
+                   const QStyleOptionGraphicsItem*,
                    QWidget *)
 {
-    painter->setBrush(Qt::blue);
+    painter->setBrush(mHoverRefCount ? Qt::red : Qt::blue);
     painter->setPen(Qt::black);
     painter->drawRect(QRectF(-5, -5, 10, 10));
 }
@@ -302,7 +411,7 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
             bool snapToGrid = true;
 
             // Calculate the absolute pixel position
-            const QPointF itemPos = pos();
+            const QPointF itemPos = mFeatureItem->pos();
             QPointF pixelPos = value.toPointF() + itemPos;
 
             // Calculate the new coordinates in tiles
@@ -412,7 +521,6 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
             }
             break;
-            break;
         case MapboxFeatureItem::Type::Polyline:
             if (mPolygon.size() > 1) {
                 MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
@@ -426,6 +534,7 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             break;
         }
         mPolygon.clear();
+        updatePathItem();
     }
 }
 
@@ -538,6 +647,8 @@ void EditMapboxFeatureTool::setScene(BaseGraphicsScene *scene)
                 this, &EditMapboxFeatureTool::featureAboutToBeRemoved);
         connect(mScene->worldDocument(), &WorldDocument::mapboxPointMoved,
                 this, &EditMapboxFeatureTool::featurePointMoved);
+        connect(mScene->worldDocument(), &WorldDocument::mapboxGeometryChanged,
+                this, &EditMapboxFeatureTool::geometryChanged);
 
         connect(mScene->document(), &CellDocument::selectedMapboxFeaturesChanged,
                 this, &EditMapboxFeatureTool::selectedFeaturesChanged);
@@ -582,8 +693,16 @@ void EditMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 break;
             }
         }
-        if (clickedItem == mSelectedFeatureItem)
+        if (clickedItem && clickedItem == mSelectedFeatureItem) {
+            if (mSelectedFeatureItem->mAddPointIndex != -1) {
+                QPointF tilePos = mScene->renderer()->pixelToTileCoordsInt(mSelectedFeatureItem->mAddPointPos);
+                MapBoxPoint point(tilePos.x(), tilePos.y());
+                MapBoxCoordinates coords = mSelectedFeature->mGeometry.mCoordinates[0];
+                coords.insert(mSelectedFeatureItem->mAddPointIndex + 1, point);
+                mScene->worldDocument()->setMapboxCoordinates(mScene->cell(), mSelectedFeature->index(), 0, coords);
+            }
             return;
+        }
         if (clickedItem == nullptr)
             mScene->setSelectedMapboxFeatureItems(QSet<MapboxFeatureItem*>());
         else
@@ -617,6 +736,14 @@ void EditMapboxFeatureTool::featurePointMoved(WorldCell* cell, int featureIndex,
     MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
     if (feature == mSelectedFeature) {
 //        mSelectedFeatureItem->synchWithFeature();
+        setSelectedItem(mSelectedFeatureItem);
+    }
+}
+
+void EditMapboxFeatureTool::geometryChanged(WorldCell *cell, int featureIndex)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
+    if (feature == mSelectedFeature) {
         setSelectedItem(mSelectedFeatureItem);
     }
 }

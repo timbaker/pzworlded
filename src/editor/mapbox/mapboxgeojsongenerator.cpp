@@ -68,10 +68,9 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
 
     MapManager::instance()->purgeUnreferencedMaps();
 
-    PROGRESS progress(QLatin1String("Setting up images"));
+    PROGRESS progress(QStringLiteral("Creating GeoJSON files"));
 
-    progress.update(QLatin1String("Reading maps"));
-
+#if 0
     if (mode == GenerateSelected) {
         foreach (WorldCell *cell, worldDoc->selectedCells())
             if (!generateCell(cell))
@@ -86,6 +85,7 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
     }
 
     MapManager::instance()->purgeUnreferencedMaps();
+#endif
 
     {
         MapboxWriter writer;
@@ -95,7 +95,7 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
         }
     }
 
-    {
+    if (false) {
         QJsonObject object;
         object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
         object[QLatin1Literal("features")] = mJsonFeatures;
@@ -109,7 +109,7 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
     }
 
     {
-        QJsonArray roads, water;
+        QJsonArray buildings, roads, water;
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 if (WorldCell* cell = world->cellAt(x, y)) {
@@ -140,15 +140,20 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
                                     coordinates += point;
                                 }
                             }
-                            if (bPolygon)
+                            if (bPolygon) {
+                                ring += ring[0];
                                 coordinates += ring;
+                            }
                         }
                         geometry[QLatin1Literal("coordinates")] = coordinates;
                         feature[QLatin1Literal("geometry")] = geometry;
 
-                        if (bPolygon)
-                            water.append(feature);
-                        else {
+                        if (bPolygon) {
+                            if (mbFeature->properties().containsKey(QStringLiteral("building")))
+                                buildings.append(feature);
+                            if (mbFeature->properties().containsKey(QStringLiteral("water")))
+                                water.append(feature);
+                        } else {
                             roads.append(feature);
                         }
                     }
@@ -156,38 +161,33 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
             }
         }
 
-        {
+        auto writeJSON = [](const QString& name, const QJsonArray& array) {
             QJsonObject object;
             object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
-            object[QLatin1Literal("features")] = roads;
-            QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-roads.geojson"));
+            object[QLatin1Literal("features")] = array;
+            QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-%1.geojson").arg(name));
             if (!saveFile.open(QIODevice::WriteOnly)) {
                  qWarning("Couldn't open save file.");
-                 goto errorExit;
+                 return false;
             }
             QJsonDocument json(object);
             saveFile.write(json.toJson());
-        }
+            return true;
+        };
 
-        {
-            QJsonObject object;
-            object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
-            object[QLatin1Literal("features")] = water;
-            QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-water.geojson"));
-            if (!saveFile.open(QIODevice::WriteOnly)) {
-                 qWarning("Couldn't open save file.");
-                 goto errorExit;
-            }
-            QJsonDocument json(object);
-            saveFile.write(json.toJson());
-        }
+        if (!writeJSON(QStringLiteral("buildings"), buildings))
+            goto errorExit;
+        if (!writeJSON(QStringLiteral("roads"), roads))
+            goto errorExit;
+        if (!writeJSON(QStringLiteral("water"), water))
+            goto errorExit;
     }
 
     // While displaying this, the MapManager's FileSystemWatcher might see some
     // changed .tmx files, which results in the PROGRESS dialog being displayed.
     // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
     QMessageBox::information(MainWindow::instance(),
-                             tr("MapBox"), tr("Finished!"));
+                             tr("Mapbox"), tr("Finished!"));
 
     return true;
 

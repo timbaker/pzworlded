@@ -134,6 +134,7 @@ public slots:
     void removeObject();
     void extractLots();
     void extractObjects();
+    void generateMapboxBuildingFeatures();
     void clearCells();
     void clearMapOnly();
 

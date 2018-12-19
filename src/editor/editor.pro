@@ -153,7 +153,8 @@ SOURCES += main.cpp\
     mapbox/mapboxwriter.cpp \
     mapbox/mapboxdock.cpp \
     mapbox/mapboxpropertiesform.cpp \
-    mapbox/mapboxpropertydialog.cpp
+    mapbox/mapboxpropertydialog.cpp \
+    mapbox/mapboxbuildings.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -253,7 +254,8 @@ HEADERS  += mainwindow.h \
     mapbox/mapboxwriter.h \
     mapbox/mapboxdock.h \
     mapbox/mapboxpropertiesform.h \
-    mapbox/mapboxpropertydialog.h
+    mapbox/mapboxpropertydialog.h \
+    mapbox/mapboxbuildings.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

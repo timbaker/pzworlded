@@ -102,3 +102,36 @@ void SetMapboxProperty::swap()
 {
     mProperty = mDocument->undoRedo().setMapboxProperty(mCell, mFeatureIndex, mPropertyIndex, mProperty);
 }
+
+/////
+
+SetMapboxProperties::SetMapboxProperties(WorldDocument *doc, WorldCell* cell, int featureIndex, const MapBoxProperties& properties)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Set Mapbox Properties"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mFeatureIndex(featureIndex)
+    , mProperties(properties)
+{
+}
+
+void SetMapboxProperties::swap()
+{
+    mProperties = mDocument->undoRedo().setMapboxProperties(mCell, mFeatureIndex, mProperties);
+}
+
+/////
+
+SetMapboxCoordinates::SetMapboxCoordinates(WorldDocument *doc, WorldCell* cell, int featureIndex, int coordsIndex, const MapBoxCoordinates& coords)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Set Mapbox Coordinates"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mFeatureIndex(featureIndex)
+    , mCoordsIndex(coordsIndex)
+    , mCoords(coords)
+{
+}
+
+void SetMapboxCoordinates::swap()
+{
+    mCoords = mDocument->undoRedo().setMapboxCoordinates(mCell, mFeatureIndex, mCoordsIndex, mCoords);
+}

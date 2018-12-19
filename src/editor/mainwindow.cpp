@@ -72,6 +72,7 @@
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
 
+#include "mapbox/mapboxbuildings.h"
 #include "mapbox/mapboxdock.h"
 #include "mapbox/mapboxgeojsongenerator.h"
 #include "mapbox/mapboxreader.h"
@@ -286,6 +287,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
     connect(ui->actionExtractLots, SIGNAL(triggered()), SLOT(extractLots()));
     connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
+    connect(ui->actionGenerateMapboxBuildingFeatures, &QAction::triggered, this, &MainWindow::generateMapboxBuildingFeatures);
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
@@ -1790,6 +1792,20 @@ void MainWindow::extractObjects()
     }
 
     worldDoc->undoStack()->endMacro();
+}
+
+void MainWindow::generateMapboxBuildingFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        MapboxBuildings generator;
+        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        MapboxBuildings generator;
+        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected);
+    }
 }
 
 void MainWindow::clearCells()

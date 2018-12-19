@@ -26,6 +26,7 @@ class WorldCell;
 class WorldDocument;
 
 class MapBoxFeature;
+class MapBoxProperties;
 
 namespace Ui {
 class MapboxPropertiesForm;
@@ -48,6 +49,8 @@ private slots:
     void onAddButton();
     void onEditButton();
     void onDeleteButton();
+    void onCopy();
+    void onPaste();
     void onSelectionChanged();
     void selectedFeaturesChanged();
     void propertiesChanged(WorldCell* cell, int featureIndex);
@@ -61,6 +64,7 @@ private:
     WorldDocument* mWorldDoc;
     CellDocument* mCellDoc;
     MapBoxFeature* mFeature;
+    MapBoxProperties* mProperties;
 };
 
 #endif // MAPBOXPROPERTIESFORM_H

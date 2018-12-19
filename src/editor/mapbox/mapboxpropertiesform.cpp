@@ -25,12 +25,15 @@
 #include "mapboxpropertydialog.h"
 #include "worldcellmapbox.h"
 
+#include <QUndoStack>
+
 MapboxPropertiesForm::MapboxPropertiesForm(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MapboxPropertiesForm)
     , mWorldDoc(nullptr)
     , mCellDoc(nullptr)
     , mFeature(nullptr)
+    , mProperties(nullptr)
 {
     ui->setupUi(this);
 
@@ -57,6 +60,8 @@ void MapboxPropertiesForm::setDocument(Document *doc)
     if (mWorldDoc) {
         connect(mWorldDoc, &WorldDocument::mapboxPropertiesChanged,
                 this, &MapboxPropertiesForm::propertiesChanged);
+        connect(mWorldDoc, &WorldDocument::selectedMapboxFeaturesChanged,
+                this, &MapboxPropertiesForm::selectedFeaturesChanged);
     }
     if (mCellDoc) {
         connect(mCellDoc->worldDocument(), &WorldDocument::mapboxPropertiesChanged,
@@ -91,7 +96,9 @@ void MapboxPropertiesForm::setFeature(MapBoxFeature *feature)
 
     if (mFeature != nullptr) {
         for (auto& property : mFeature->properties()) {
-            QListWidgetItem* item = new QListWidgetItem(QStringLiteral("%1 = %2").arg(property.mKey).arg(property.mValue), ui->listWidget);
+            QListWidgetItem* item = new QListWidgetItem(
+                        QStringLiteral("%1 = %2").arg(property.mKey).arg(property.mValue),
+                        ui->listWidget);
         }
     }
 
@@ -138,6 +145,26 @@ void MapboxPropertiesForm::onDeleteButton()
     worldDoc->removeMapboxProperty(mFeature->cell(), mFeature->index(), index);
 }
 
+void MapboxPropertiesForm::onCopy()
+{
+    if (!mFeature)
+        return;
+    if (!mProperties)
+        mProperties = new MapBoxProperties();
+    *mProperties = mFeature->mProperties;
+}
+
+void MapboxPropertiesForm::onPaste()
+{
+    auto& selected = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
+    WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
+    worldDoc->undoStack()->beginMacro(QStringLiteral("Paste Mapbox Properties"));
+    for (auto* feature : selected) {
+        worldDoc->setMapboxProperties(feature->cell(), feature->index(), *mProperties);
+    }
+    worldDoc->undoStack()->endMacro();
+}
+
 void MapboxPropertiesForm::onSelectionChanged()
 {
     syncUi();
@@ -145,7 +172,7 @@ void MapboxPropertiesForm::onSelectionChanged()
 
 void MapboxPropertiesForm::selectedFeaturesChanged()
 {
-    auto& selected = mCellDoc->selectedMapboxFeatures();
+    auto& selected = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
     auto feature = selected.size() == 1 ? selected.first() : nullptr;
     setFeature(feature);
 }
@@ -169,11 +196,21 @@ int MapboxPropertiesForm::selectedRow()
 
 void MapboxPropertiesForm::syncUi()
 {
+    if (!mWorldDoc && !mCellDoc) {
+        setEnabled(false);
+        return;
+    }
+
+    auto& selectedFeatures = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
+
     ui->addButton->setEnabled(mFeature != nullptr);
 
     auto selected = ui->listWidget->selectedItems();
     ui->deleteButton->setEnabled(!selected.isEmpty());
     ui->editButton->setEnabled(!selected.isEmpty());
 
-    setEnabled(mFeature != nullptr);
+    ui->copyButton->setEnabled(selectedFeatures.size() == 1);
+    ui->pasteButton->setEnabled(!selectedFeatures.isEmpty() && mProperties != nullptr);
+
+    setEnabled(!selectedFeatures.isEmpty());
 }
