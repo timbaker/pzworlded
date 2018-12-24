@@ -32,12 +32,14 @@
 #include "objectgroup.h"
 
 #include <qmath.h>
+#include <QApplication>
 #include <QDebug>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
+#include <QProcess>
 
 using namespace Tiled;
 
@@ -109,7 +111,7 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
     }
 
     {
-        QJsonArray buildings, roads, water;
+        QJsonArray buildings, roads, water, combined;
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 if (WorldCell* cell = world->cellAt(x, y)) {
@@ -148,14 +150,27 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
                         geometry[QLatin1Literal("coordinates")] = coordinates;
                         feature[QLatin1Literal("geometry")] = geometry;
 
+                        QString layerName = QStringLiteral("generic");
+
                         if (bPolygon) {
-                            if (mbFeature->properties().containsKey(QStringLiteral("building")))
+                            if (mbFeature->properties().containsKey(QStringLiteral("building"))) {
                                 buildings.append(feature);
-                            if (mbFeature->properties().containsKey(QStringLiteral("water")))
+                                layerName = QStringLiteral("buildings");
+                            }
+                            if (mbFeature->properties().containsKey(QStringLiteral("water"))) {
                                 water.append(feature);
+                                layerName = QStringLiteral("water");
+                            }
                         } else {
                             roads.append(feature);
+                            layerName = QStringLiteral("roads");
                         }
+
+                        QJsonObject tippecanoe;
+                        tippecanoe[QStringLiteral("layer")] = layerName;
+                        feature[QStringLiteral("tippecanoe")] = tippecanoe;
+
+                        combined += feature;
                     }
                 }
             }
@@ -175,12 +190,40 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
             return true;
         };
 
+        QProcess tippecanoe;
+        tippecanoe.setProcessChannelMode(QProcess::MergedChannels);
+        QStringList args;
+
+#if 1
+        if (!writeJSON(QStringLiteral("combined"), combined))
+            goto errorExit;
+
+         progress.update(QStringLiteral("Running tippecanoe"));
+
+        args << QStringLiteral("-e") << QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/tippecanoe");
+        args << QStringLiteral("--temporary-directory") << QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/tippecanoe-tmp");
+        args << QStringLiteral("--minimum-zoom") << QStringLiteral("11");
+        args << QStringLiteral("--maximum-zoom") << QStringLiteral("18");
+        args << QStringLiteral("--no-tile-compression");
+        args << QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-combined.geojson");
+#else
         if (!writeJSON(QStringLiteral("buildings"), buildings))
             goto errorExit;
         if (!writeJSON(QStringLiteral("roads"), roads))
             goto errorExit;
         if (!writeJSON(QStringLiteral("water"), water))
             goto errorExit;
+
+        args << QStringLiteral("-e D:/pz/worktree/build40-weather/build-pz-glfw-64/tippecanoe");
+        args << QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-buildings.geojson");
+        args << QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-roads.geojson");
+        args << QStringLiteral("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-water.geojson");
+#endif
+        tippecanoe.start(QCoreApplication::applicationDirPath() + QStringLiteral("/tippecanoe"),
+                         args);
+        tippecanoe.waitForFinished();
+        QString output = QString::fromLocal8Bit(tippecanoe.readAllStandardOutput());
+        qDebug() << "tippecanoe:" << output << tippecanoe.exitCode();
     }
 
     // While displaying this, the MapManager's FileSystemWatcher might see some
