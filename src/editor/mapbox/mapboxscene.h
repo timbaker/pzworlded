@@ -51,6 +51,7 @@ public:
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
 
     QPainterPath shape() const;
+    bool contains(const QPointF &point) const;
 
     void setEditable(bool editable);
     bool isEditable() const { return mIsEditable; }
@@ -141,6 +142,17 @@ private:
     QPointF mScenePos;
 };
 
+class CreateMapboxPointTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPointTool>
+{
+    Q_OBJECT
+
+public:
+    CreateMapboxPointTool()
+        : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Point)
+    {
+    }
+};
+
 class CreateMapboxPolygonTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPolygonTool>
 {
     Q_OBJECT
@@ -163,14 +175,11 @@ public:
     }
 };
 
-class EditMapboxFeatureTool : public BaseCellSceneTool
+class EditMapboxFeatureTool : public BaseCellSceneTool, public Singleton<EditMapboxFeatureTool>
 {
     Q_OBJECT
 
 public:
-    static EditMapboxFeatureTool *instance();
-    static void deleteInstance();
-
     explicit EditMapboxFeatureTool();
     ~EditMapboxFeatureTool();
 
@@ -200,15 +209,11 @@ private slots:
     void selectedFeaturesChanged();
 
 private:
-    Q_DISABLE_COPY(EditMapboxFeatureTool)
-
     void setSelectedItem(MapboxFeatureItem* feature);
 
     MapboxFeatureItem *mSelectedFeatureItem;
     MapBoxFeature *mSelectedFeature;
     QList<FeatureHandle*> mHandles;
-
-    static EditMapboxFeatureTool *mInstance;
 };
 
 #endif // MAPBOXSCENE_H

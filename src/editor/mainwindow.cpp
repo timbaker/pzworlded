@@ -336,11 +336,14 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
 #endif
+    new CreateMapboxPointTool;
     new CreateMapboxPolygonTool;
     new CreateMapboxPolylineTool;
+    new EditMapboxFeatureTool;
+    toolManager->registerTool(CreateMapboxPointTool::instancePtr());
     toolManager->registerTool(CreateMapboxPolygonTool::instancePtr());
     toolManager->registerTool(CreateMapboxPolylineTool::instancePtr());
-    toolManager->registerTool(EditMapboxFeatureTool::instance());
+    toolManager->registerTool(EditMapboxFeatureTool::instancePtr());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -739,7 +742,7 @@ bool MainWindow::openFile(const QString &fileName)
     }
 
     MapBoxReader mbreader;
-    mbreader.readWorld(QLatin1Literal("D:/pz/worktree/build40-weather/build-pz-glfw-64/WorldEd-features.xml"), world);
+    mbreader.readWorld(QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1-features.xml").arg(fileInfo.baseName()), world);
 
     DefaultsFile::oldWorld(world);
 

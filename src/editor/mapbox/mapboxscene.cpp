@@ -84,6 +84,10 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
     case Type::INVALID:
         break;
     case Type::Point:
+        pen.setColor(color);
+        painter->setPen(pen);
+        painter->setBrush(brush);
+        painter->drawEllipse(screenPolygon[0], 10, 10);
         break;
     case Type::Polygon:
         painter->drawPolygon(screenPolygon);
@@ -217,16 +221,27 @@ QPainterPath MapboxFeatureItem::shape() const
     if (isPolygon())
         polygon += polygon[0];
 
-    QPainterPath path;
-    path.addPolygon(polygon);
-    QPainterPathStroker stroker;
     auto scene = static_cast<CellScene*>(this->scene());
     auto view = static_cast<CellView*>(scene->views().first());
     qreal zoom = view->zoomable()->scale();
     zoom = qMin(zoom, 1.0);
 
+    QPainterPath path;
+    if (isPoint()) {
+//        path.addEllipse(polygon[0], 10, 10);
+        path.addRect(polygon[0].x() - 10, polygon[0].y() - 10, 20, 20);
+        return path;
+    }
+    path.addPolygon(polygon);
+
+    QPainterPathStroker stroker;
     stroker.setWidth(20 / zoom);
     return stroker.createStroke(path);
+}
+
+bool MapboxFeatureItem::contains(const QPointF &point) const
+{
+    return QGraphicsItem::contains(point);
 }
 
 void MapboxFeatureItem::synchWithFeature()
@@ -237,8 +252,17 @@ void MapboxFeatureItem::synchWithFeature()
     switch (geometryType()) {
     case Type::INVALID:
         break;
-    case Type::Point:
-        break;
+    case Type::Point: {
+        MapBoxPoint center = mFeature->mGeometry.mCoordinates[0][0];
+        mPolygon += { center.x , center.y };
+        QPointF scenePos = mRenderer->tileToPixelCoords(mPolygon[0] + mDragOffset);
+        QRectF bounds(scenePos.x() - 10, scenePos.y() - 10, 20, 20);
+        if (bounds != mBoundingRect) {
+            prepareGeometryChange();
+            mBoundingRect = bounds;
+        }
+        return;
+    }
     case Type::Polygon:
         for (auto& coords : mFeature->mGeometry.mCoordinates) {
             for (auto& point : coords) {
@@ -440,6 +464,7 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
 
 /////
 
+SINGLETON_IMPL(CreateMapboxPointTool)
 SINGLETON_IMPL(CreateMapboxPolygonTool)
 SINGLETON_IMPL(CreateMapboxPolylineTool)
 
@@ -600,25 +625,23 @@ void CreateMapboxFeatureTool::updatePathItem()
 
 void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
 {
-    mPolygon += mScene->renderer()->pixelToTileCoordsInt(scenePos);
+    if (mFeatureType == MapboxFeatureItem::Type::Point) {
+        MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
+        QPointF cellPos = mScene->renderer()->pixelToTileCoordsInt(scenePos);
+        MapBoxCoordinates coords;
+        coords += MapBoxPoint(cellPos.x(), cellPos.y());
+        feature->mGeometry.mType = QLatin1Literal("Point");
+        feature->mGeometry.mCoordinates += coords;
+        mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+        return;
+    }
 
+    mPolygon += mScene->renderer()->pixelToTileCoordsInt(scenePos);
 }
 
 /////
 
-EditMapboxFeatureTool *EditMapboxFeatureTool::mInstance = nullptr;
-
-EditMapboxFeatureTool *EditMapboxFeatureTool::instance()
-{
-    if (!mInstance)
-        mInstance = new EditMapboxFeatureTool();
-    return mInstance;
-}
-
-void EditMapboxFeatureTool::deleteInstance()
-{
-    delete mInstance;
-}
+SINGLETON_IMPL(EditMapboxFeatureTool)
 
 EditMapboxFeatureTool::EditMapboxFeatureTool()
     : BaseCellSceneTool(tr("Edit Mapbox Features"),
@@ -792,6 +815,11 @@ void EditMapboxFeatureTool::setSelectedItem(MapboxFeatureItem *featureItem)
         case MapboxFeatureItem::Type::INVALID:
             break;
         case MapboxFeatureItem::Type::Point:
+            for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
+                for (int i = 0; i < coords.size(); i++)
+                    createHandle(i);
+                break; // should be only one set of coordinates
+            }
             break;
         case MapboxFeatureItem::Type::Polygon:
             for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {

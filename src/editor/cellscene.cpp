@@ -1235,7 +1235,7 @@ void CellScene::setTool(AbstractTool *tool)
     if (mActiveTool != CellSelectMoveRoadTool::instance())
         worldDocument()->setSelectedRoads(QList<Road*>());
 
-    if (mActiveTool != EditMapboxFeatureTool::instance()) {
+    if (mActiveTool != EditMapboxFeatureTool::instancePtr()) {
         for (MapboxFeatureItem* item : mFeatureItems)
             item->setEditable(false);
     }

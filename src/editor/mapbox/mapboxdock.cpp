@@ -159,9 +159,10 @@ void MapboxDock::selectionChanged()
     }
 
     // Select features in the scene only if they can be edited
-    if (!CreateMapboxPolygonTool::instance().isCurrent() &&
+    if (!CreateMapboxPointTool::instance().isCurrent() &&
+            !CreateMapboxPolygonTool::instance().isCurrent() &&
             !CreateMapboxPolylineTool::instance().isCurrent() &&
-            !EditMapboxFeatureTool::instance()->isCurrent())
+            !EditMapboxFeatureTool::instance().isCurrent())
         return;
 
     QList<MapBoxFeature*> features;
@@ -228,18 +229,18 @@ class MapboxViewDelegate : public QStyledItemDelegate
      {
          QStyledItemDelegate::paint(painter, option, index);
 
-         if ((index.column() == 0) && index.parent().isValid() && (option.state & QStyle::State_MouseOver)) {
+         if ((index.column() == 0) /*&& index.parent().isValid()*/ && (option.state & QStyle::State_MouseOver)) {
              painter->save();
-             QRect closeRect(option.rect.x()-40+2, option.rect.y(), mTrashPixmap.width(), option.rect.height());
+             QRect closeRect = closeButtonRect(option.rect);
              painter->setClipRect(closeRect);
              painter->drawPixmap(closeRect.x(), closeRect.y(), mTrashPixmap);
              painter->restore();
          }
      }
 
-     QRect closeButtonRect(const QRect &itemViewRect)
+     QRect closeButtonRect(const QRect &itemViewRect) const
      {
-        QRect closeRect(itemViewRect.x()-40+2, itemViewRect.y(), mTrashPixmap.width(), itemViewRect.height());
+        QRect closeRect(itemViewRect.x()-20+2, itemViewRect.y(), mTrashPixmap.width(), itemViewRect.height());
         return closeRect;
      }
 
@@ -265,6 +266,8 @@ MapboxView::MapboxView(QWidget *parent)
     setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     setMouseTracking(true); // Needed on Mac OS X for garbage can
+
+    header()->hide();
 
     setItemDelegate(new MapboxViewDelegate(this));
 
@@ -493,8 +496,8 @@ Qt::ItemFlags MapboxModel::flags(const QModelIndex &index) const
     if (index.column() == 0) {
         if (mCellDoc)
             rc |= Qt::ItemIsUserCheckable;
-        if (toFeature(index))
-            rc |= Qt::ItemIsDragEnabled;
+//        if (toFeature(index))
+//            rc |= Qt::ItemIsDragEnabled;
     }
     return rc;
 }
