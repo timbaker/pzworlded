@@ -86,6 +86,8 @@ void CellDocument::setScene(CellScene *scene)
     connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
             SLOT(objectGroupAboutToBeRemoved(int)));
 
+    connect(mWorldDocument, &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellDocument::mapboxFeatureAboutToBeRemoved);
+
     connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
     connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
@@ -326,6 +328,15 @@ void CellDocument::cellLotMoved(WorldCellLot *lot)
         int index = mCell->lots().indexOf(lot);
         mMiniMapItem->lotMoved(index);
     }
+}
+
+void CellDocument::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != mCell)
+        return;
+    QList<MapBoxFeature*> selection = mSelectedMapboxFeatures;
+    selection.removeAll(cell->mapBox().features().at(index));
+    setSelectedMapboxFeatures(selection);
 }
 
 void CellDocument::objectGroupAboutToBeRemoved(int index)

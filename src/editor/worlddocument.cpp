@@ -1390,8 +1390,11 @@ void WorldDocumentUndoRedo::addMapboxFeature(WorldCell *cell, int index, MapBoxF
 
 MapBoxFeature *WorldDocumentUndoRedo::removeMapboxFeature(WorldCell *cell, int index)
 {
+    MapBoxFeature* feature = cell->mapBox().features().at(index);
+    mWorldDoc->mSelectedMapboxFeatures.removeAll(feature); // FIXME: no signal?
+
     emit mapboxFeatureAboutToBeRemoved(cell, index);
-    return cell->mapBox().mFeatures.takeAt(index);
+    return cell->mapBox().features().takeAt(index);
 }
 
 MapBoxPoint WorldDocumentUndoRedo::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)

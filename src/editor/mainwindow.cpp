@@ -288,6 +288,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionExtractLots, SIGNAL(triggered()), SLOT(extractLots()));
     connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
     connect(ui->actionGenerateMapboxBuildingFeatures, &QAction::triggered, this, &MainWindow::generateMapboxBuildingFeatures);
+    connect(ui->actionGenerateMapboxWaterFeatures, &QAction::triggered, this, &MainWindow::generateMapboxWaterFeatures);
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
@@ -1802,12 +1803,26 @@ void MainWindow::generateMapboxBuildingFeatures()
     if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
         cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
         MapboxBuildings generator;
-        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected);
+        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureBuilding);
     }
 
     if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
         MapboxBuildings generator;
-        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected);
+        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureBuilding);
+    }
+}
+
+void MainWindow::generateMapboxWaterFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        MapboxBuildings generator;
+        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureWater);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        MapboxBuildings generator;
+        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureWater);
     }
 }
 

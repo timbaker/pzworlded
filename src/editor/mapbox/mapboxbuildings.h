@@ -40,10 +40,14 @@ public:
         GenerateAll,
         GenerateSelected
     };
+    enum FeatureType {
+        FeatureBuilding,
+        FeatureWater
+    };
 
     explicit MapboxBuildings(QObject *parent = nullptr);
 
-    bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
+    bool generateWorld(WorldDocument *worldDoc, GenerateMode mode, FeatureType type);
 
     QString errorString() const { return mError; }
 
@@ -53,10 +57,12 @@ private:
     bool doBuildings(WorldCell *cell, MapInfo *mapInfo);
     bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
     bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
+    bool doWater(WorldCell* cell, MapInfo* mapInfo);
 
 private:
     WorldDocument *mWorldDoc;
     QString mError;
+    FeatureType mFeatureType;
 };
 
 #endif // MAPBOX_BUILDINGS_H

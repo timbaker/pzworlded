@@ -135,6 +135,7 @@ public slots:
     void extractLots();
     void extractObjects();
     void generateMapboxBuildingFeatures();
+    void generateMapboxWaterFeatures();
     void clearCells();
     void clearMapOnly();
 

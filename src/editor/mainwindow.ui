@@ -341,6 +341,7 @@
     <addaction name="actionExtractLots"/>
     <addaction name="actionExtractObjects"/>
     <addaction name="actionGenerateMapboxBuildingFeatures"/>
+    <addaction name="actionGenerateMapboxWaterFeatures"/>
     <addaction name="separator"/>
     <addaction name="actionClearCell"/>
     <addaction name="actionClearMapOnly"/>
@@ -845,6 +846,11 @@
   <action name="actionGenerateMapboxBuildingFeatures">
    <property name="text">
     <string>Generate Mapbox Building Features</string>
+   </property>
+  </action>
+  <action name="actionGenerateMapboxWaterFeatures">
+   <property name="text">
+    <string>Generate Mapbox Water Features</string>
    </property>
   </action>
  </widget>

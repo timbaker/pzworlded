@@ -313,6 +313,8 @@ void MapboxView::setDocument(Document *doc)
     if (mWorldDoc) {
         connect(mWorldDoc, &WorldDocument::selectedCellsChanged,
                 this, &MapboxView::selectedCellsChanged);
+        connect(mWorldDoc, &WorldDocument::selectedMapboxFeaturesChanged,
+                this, &MapboxView::selectedFeaturesChanged);
     }
     if (mCellDoc) {
         connect(mCellDoc, &CellDocument::selectedMapboxFeaturesChanged,
@@ -339,7 +341,8 @@ void MapboxView::selectedFeaturesChanged()
         return;
     mSynchingSelection = true;
     clearSelection();
-    for (MapBoxFeature* feature : mCellDoc->selectedMapboxFeatures()) {
+    auto selected = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
+    for (MapBoxFeature* feature : selected) {
         selectionModel()->select(model()->index(feature),
                                  QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
@@ -348,6 +351,8 @@ void MapboxView::selectedFeaturesChanged()
 
 void MapboxView::modelSynched()
 {
+    if (mWorldDoc)
+        selectedFeaturesChanged();
     if (mCellDoc)
         selectedFeaturesChanged();
     expandAll();

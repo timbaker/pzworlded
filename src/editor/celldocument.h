@@ -128,6 +128,8 @@ private slots:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
 
+    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
+
     void objectGroupAboutToBeRemoved(int index);
 
 private:
