@@ -260,11 +260,12 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
 
          progress.update(QStringLiteral("Running tippecanoe"));
 
-        args << QStringLiteral("-e") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1").arg(worldName);
+//        args << QStringLiteral("-e") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1").arg(worldName);
+        args << QStringLiteral("-o") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1.mbtiles").arg(worldName);
         args << QStringLiteral("-f"); // force overwrite existing
         args << QStringLiteral("--temporary-directory") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-tmp");
         args << QStringLiteral("--minimum-zoom") << QStringLiteral("11");
-        args << QStringLiteral("--maximum-zoom") << QStringLiteral("20");
+        args << QStringLiteral("--maximum-zoom") << QStringLiteral("18");
         args << QStringLiteral("--no-tile-compression");
         args << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1.geojson").arg(worldName);
 #else
@@ -282,8 +283,10 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
 #endif
         tippecanoe.start(QCoreApplication::applicationDirPath() + QStringLiteral("/tippecanoe"),
                          args);
-        tippecanoe.waitForFinished();
+        tippecanoe.waitForStarted();
+        tippecanoe.waitForFinished(10 * 60 * 1000);
         QString output = QString::fromLocal8Bit(tippecanoe.readAllStandardOutput());
+        qDebug() << "tippecanoe exit code=" << tippecanoe.exitCode();
         qDebug() << "tippecanoe:" << output << tippecanoe.exitCode();
     }
 
