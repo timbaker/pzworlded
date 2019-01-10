@@ -340,8 +340,6 @@
     <addaction name="separator"/>
     <addaction name="actionExtractLots"/>
     <addaction name="actionExtractObjects"/>
-    <addaction name="actionGenerateMapboxBuildingFeatures"/>
-    <addaction name="actionGenerateMapboxWaterFeatures"/>
     <addaction name="separator"/>
     <addaction name="actionClearCell"/>
     <addaction name="actionClearMapOnly"/>
@@ -362,11 +360,20 @@
     <addaction name="actionBuildingsToPNG"/>
     <addaction name="actionLootInspector"/>
    </widget>
+   <widget class="QMenu" name="menuMapbox">
+    <property name="title">
+     <string>Mapbox</string>
+    </property>
+    <addaction name="actionMapboxPreview"/>
+    <addaction name="actionGenerateMapboxBuildingFeatures"/>
+    <addaction name="actionGenerateMapboxWaterFeatures"/>
+   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
+   <addaction name="menuMapbox"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
@@ -851,6 +858,11 @@
   <action name="actionGenerateMapboxWaterFeatures">
    <property name="text">
     <string>Generate Mapbox Water Features</string>
+   </property>
+  </action>
+  <action name="actionMapboxPreview">
+   <property name="text">
+    <string>Preview</string>
    </property>
   </action>
  </widget>

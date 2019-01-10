@@ -47,6 +47,7 @@ public:
     explicit MapBoxGeojsonGenerator(QObject *parent = nullptr);
 
     bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
+    QMap<QString,QByteArray> generateJson(WorldDocument *worldDoc, GenerateMode mode);
 
     QString errorString() const { return mError; }
 

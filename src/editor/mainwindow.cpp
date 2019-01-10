@@ -77,6 +77,7 @@
 #include "mapbox/mapboxgeojsongenerator.h"
 #include "mapbox/mapboxreader.h"
 #include "mapbox/mapboxscene.h"
+#include "mapbox/mapboxwindow.h"
 
 #include "layer.h"
 #include "mapobject.h"
@@ -287,6 +288,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
     connect(ui->actionExtractLots, SIGNAL(triggered()), SLOT(extractLots()));
     connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
+    connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showMapboxPreviewWindow);
     connect(ui->actionGenerateMapboxBuildingFeatures, &QAction::triggered, this, &MainWindow::generateMapboxBuildingFeatures);
     connect(ui->actionGenerateMapboxWaterFeatures, &QAction::triggered, this, &MainWindow::generateMapboxWaterFeatures);
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
@@ -1870,6 +1872,14 @@ void MainWindow::clearMapOnly()
     foreach (WorldCell *cell, cells)
         worldDoc->setCellMapName(cell, QString());
     undoStack->endMacro();
+}
+
+void MainWindow::showMapboxPreviewWindow()
+{
+    MapboxWindow* window = new MapboxWindow();
+    if (auto worldDoc = mCurrentDocument->asWorldDocument())
+        window->setJson(MapBoxGeojsonGenerator().generateJson(worldDoc, MapBoxGeojsonGenerator::GenerateAll));
+    window->show();
 }
 
 bool MainWindow::confirmSave()

@@ -134,10 +134,12 @@ public slots:
     void removeObject();
     void extractLots();
     void extractObjects();
-    void generateMapboxBuildingFeatures();
-    void generateMapboxWaterFeatures();
     void clearCells();
     void clearMapOnly();
+
+    void showMapboxPreviewWindow();
+    void generateMapboxBuildingFeatures();
+    void generateMapboxWaterFeatures();
 
     void setStatusBarCoords(int x, int y);
 

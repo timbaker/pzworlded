@@ -138,7 +138,9 @@ void MapboxDock::selectionChanged()
             if (auto *feature = mView->model()->toFeature(index))
                 selectedFeatures += feature;
         }
+        mView->setSynchingSelection(true);
         mWorldDoc->setSelectedMapboxFeatures(selectedFeatures);
+        mView->setSynchingSelection(false);
         return;
     }
 
@@ -329,6 +331,8 @@ bool MapboxView::synchingSelection() const
 
 void MapboxView::selectedCellsChanged()
 {
+    mWorldDoc->setSelectedMapboxFeatures(QList<MapBoxFeature*>());
+
     if (mWorldDoc->selectedCellCount() == 1)
         mModel->setCell(mWorldDoc->selectedCells().first());
     else
@@ -583,9 +587,12 @@ bool MapboxModel::dropMimeData(const QMimeData* data,
 
 QModelIndex MapboxModel::index(MapBoxFeature* feature) const
 {
-    Item *item = toItem(feature);
-    int row = item->parent->children.indexOf(item);
-    return createIndex(row, 0, item);
+    if (Item *item = toItem(feature)) {
+        int row = item->parent->children.indexOf(item);
+        return createIndex(row, 0, item);
+    }
+    Q_ASSERT(false);
+    return QModelIndex();
 }
 
 MapboxModel::Item *MapboxModel::toItem(const QModelIndex &index) const

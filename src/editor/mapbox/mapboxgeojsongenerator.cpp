@@ -302,6 +302,137 @@ errorExit:
     return false;
 }
 
+QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *worldDoc, MapBoxGeojsonGenerator::GenerateMode mode)
+{
+    World* world = worldDoc->world();
+
+    auto& generateLotSettings = world->getGenerateLotsSettings();
+    const int worldOriginX = generateLotSettings.worldOrigin.x();
+    const int worldOriginY = generateLotSettings.worldOrigin.y();
+
+    QJsonArray combined;
+    QMap<QString,QJsonArray> layerToJsonArray;
+
+    // Create a background polygon covering the entire world.
+    // This is used to hide cells from other maps beneath this one (if any).
+    {
+        QJsonObject feature;
+        feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
+        QJsonObject geometry;
+        geometry[QLatin1Literal("type")] = QStringLiteral("Polygon");
+        QJsonArray coordinates;
+        QJsonArray ring;
+        QJsonArray point;
+        // nw
+        point.append(toLong(worldOriginX * 300, worldOriginY * 300));
+        point.append(toLat(worldOriginX * 300, worldOriginY * 300));
+        ring.append(point);
+        // sw
+        point[0] = toLong(worldOriginX * 300, (worldOriginY + world->height()) * 300);
+        point[1] = toLat(worldOriginX * 300, (worldOriginY + world->height()) * 300);
+        ring.append(point);
+        // se
+        point[0] = toLong((worldOriginX + world->width()) * 300, (worldOriginY + world->height()) * 300);
+        point[1] = toLat((worldOriginX + world->width()) * 300, (worldOriginY + world->height()) * 300);
+        ring.append(point);
+        // ne
+        point[0] = toLong((worldOriginX + world->width()) * 300, worldOriginY * 300);
+        point[1] = toLat((worldOriginX + world->width()) * 300, worldOriginY * 300);
+        ring.append(point);
+        ring += ring[0];
+        coordinates.append(ring);
+        geometry[QLatin1Literal("coordinates")] = coordinates;
+        feature[QLatin1Literal("geometry")] = geometry;
+
+        // Feature without "properties" produces a warning by tippecanoe.
+        QJsonObject properties;
+        feature[QLatin1Literal("properties")] = properties;
+
+        layerToJsonArray[QStringLiteral("background")] += feature;
+    }
+
+    for (int y = 0; y < world->height(); y++) {
+        for (int x = 0; x < world->width(); x++) {
+            if (WorldCell* cell = world->cellAt(x, y)) {
+                for (auto* mbFeature : cell->mapBox().mFeatures) {
+                    QJsonObject feature;
+
+                    feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
+
+                    QJsonObject properties;
+                    for (auto& mbProperty : mbFeature->mProperties) {
+                        properties[mbProperty.mKey] = mbProperty.mValue;
+                    }
+                    feature[QLatin1Literal("properties")] = properties;
+
+                    QJsonObject geometry;
+                    geometry[QLatin1Literal("type")] = mbFeature->mGeometry.mType;
+                    bool bPoint = mbFeature->mGeometry.mType == QLatin1Literal("Point");
+                    bool bPolygon = mbFeature->mGeometry.mType == QLatin1Literal("Polygon");
+                    QJsonArray coordinates;
+                    for (auto& mbCoords : mbFeature->mGeometry.mCoordinates) {
+                        QJsonArray ring; // counter-clockwise, longitude,latitude,elevation
+                        for (auto& mbPoint : mbCoords) {
+                            QJsonArray point;
+                            point.append(toLong((worldOriginX + cell->x()) * 300 + mbPoint.x, (worldOriginY + cell->y()) * 300 + mbPoint.y));
+                            point.append(toLat((worldOriginX + cell->x()) * 300 + mbPoint.x, (worldOriginY + cell->y()) * 300 + mbPoint.y));
+                            if (bPolygon)
+                                ring.append(point);
+                            else {
+                                coordinates += point;
+                            }
+                        }
+                        if (bPolygon) {
+                            ring += ring[0];
+                            coordinates += ring;
+                        }
+                    }
+                    if (bPoint) {
+                        coordinates = coordinates.first().toArray();
+                    }
+                    geometry[QLatin1Literal("coordinates")] = coordinates;
+                    feature[QLatin1Literal("geometry")] = geometry;
+
+                    QString layerName = QStringLiteral("generic");
+
+                    if (bPolygon) {
+                        if (mbFeature->properties().containsKey(QStringLiteral("building"))) {
+                            layerName = QStringLiteral("buildings");
+                        }
+                        if (mbFeature->properties().containsKey(QStringLiteral("water"))) {
+                            layerName = QStringLiteral("water");
+                        }
+                        if (mbFeature->properties().containsKey(QStringLiteral("natural"))) {
+                            layerName = QStringLiteral("landuse");
+                        }
+                    } else if (bPoint) {
+                        if (mbFeature->properties().containsKey(QStringLiteral("place")))
+                            layerName = QStringLiteral("place_label");
+                    } else {
+                        layerName = QStringLiteral("roads");
+                    }
+
+                    layerToJsonArray[layerName] += feature;
+                }
+            }
+        }
+    }
+
+    QMap<QString,QByteArray> layerToJson;
+    for (auto it = layerToJsonArray.begin(); it != layerToJsonArray.end(); it++) {
+        QJsonObject object;
+        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
+        object[QLatin1Literal("features")] = it.value();
+
+        qDebug() << "LAYER" << it.key() << "HAS" << it.value().size() << "FEATURES";
+
+        QJsonDocument jsonDoc(object);
+        layerToJson[it.key()] = jsonDoc.toJson();
+    }
+
+    return layerToJson;
+}
+
 bool MapBoxGeojsonGenerator::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
 {
     return true;

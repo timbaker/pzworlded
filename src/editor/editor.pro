@@ -154,7 +154,9 @@ SOURCES += main.cpp\
     mapbox/mapboxdock.cpp \
     mapbox/mapboxpropertiesform.cpp \
     mapbox/mapboxpropertydialog.cpp \
-    mapbox/mapboxbuildings.cpp
+    mapbox/mapboxbuildings.cpp \
+    mapbox/mapboxwindow.cpp \
+    mapbox/mapboxglwidget.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -255,7 +257,9 @@ HEADERS  += mainwindow.h \
     mapbox/mapboxdock.h \
     mapbox/mapboxpropertiesform.h \
     mapbox/mapboxpropertydialog.h \
-    mapbox/mapboxbuildings.h
+    mapbox/mapboxbuildings.h \
+    mapbox/mapboxwindow.h \
+    mapbox/mapboxglwidget.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
@@ -283,7 +287,8 @@ FORMS    += mainwindow.ui \
     tmxtobmpdialog.ui \
     searchdock.ui \
     mapbox/mapboxpropertiesform.ui \
-    mapbox/mapboxpropertydialog.ui
+    mapbox/mapboxpropertydialog.ui \
+    mapbox/mapboxwindow.ui
 
 OTHER_FILES +=
 
@@ -293,6 +298,22 @@ RESOURCES += \
 win32 {
     RC_FILE = worlded.rc
 }
+
+MBGL_SOURCE_DIR = D:/pz/worktree/build40-weather/mapbox-gl-native
+INCLUDEPATH += \
+    mapbox \
+    $${MBGL_SOURCE_DIR}/platform/qt/include \
+    $${MBGL_SOURCE_DIR}/include \
+    $${MBGL_SOURCE_DIR}/src \
+    $${MBGL_SOURCE_DIR}/platform/qt/include \
+    $${MBGL_SOURCE_DIR}/platform/default/include \
+    $${MBGL_SOURCE_DIR}/vendor/cheap-ruler-cpp/include \
+    $${MBGL_SOURCE_DIR}/vendor/geojson.hpp/include \
+    $${MBGL_SOURCE_DIR}/vendor/geometry.hpp/include \
+    $${MBGL_SOURCE_DIR}/vendor/optional/include \
+    $${MBGL_SOURCE_DIR}/vendor/unique_resource/include \
+    $${MBGL_SOURCE_DIR}/vendor/variant/include
+LIBS += C:/Programming/PZWorlded/build-mapbox-64/Release/qmapboxgl.lib
 
 win32:INCLUDEPATH += .
 
