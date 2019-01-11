@@ -45,12 +45,24 @@ void MapboxGLWidget::keyPressEvent(QKeyEvent *ev)
     ev->accept();
 }
 
+#include <QMenu>
+#include "mapboxcoordinate.h"
+
 void MapboxGLWidget::mousePressEvent(QMouseEvent *ev)
 {
     m_lastPos = ev->localPos();
 
     if (ev->type() == QEvent::MouseButtonPress) {
-        if (ev->buttons() == (Qt::LeftButton | Qt::RightButton)) {
+        if (ev->buttons() == Qt::RightButton) {
+            QMenu menu;
+            QAction *gotoAction = menu.addAction(tr("Go Here"));
+            QAction *action = menu.exec(ev->screenPos().toPoint());
+            if (action == gotoAction) {
+                QMapbox::Coordinate mc = m_map->coordinateForPixel(ev->pos());
+                GameCoordinate gc = GameCoordinate::fromLatLng(mc);
+                emit gotoLocation(gc.x, gc.y);
+            }
+
         }
     }
 
@@ -98,7 +110,7 @@ void MapboxGLWidget::wheelEvent(QWheelEvent *ev)
     ev->accept();
 }
 
-static const QString styleJson = QStringLiteral(
+static const QString pencilStyleJson = QStringLiteral(
 R"JSON(
 {
     "version": 8,
@@ -166,8 +178,8 @@ R"JSON(
 }
 
     },
-    "sprite": "file://D:/pz/worktree/build40-weather/workdir/media/mapbox/sprites/bright-v8",
-    "glyphs": "file://D:/pz/worktree/build40-weather/workdir/media/mapbox/glyphs/{fontstack}/{range}.pbf",
+    "sprite": "asset://sprites/bright-v8",
+    "glyphs": "asset://glyphs/{fontstack}/{range}.pbf",
     "layers": [
         {
             "id": "background",
@@ -356,6 +368,43 @@ R"JSON(
                     "step", ["zoom"],
                     0.75,
                     14, 1.0
+                ]
+            }
+        },
+        {
+            "id": "world1-trail",
+            "type": "line",
+            "source": "world1-roads",
+            "source-layer": "roads",
+            "minzoom": 12,
+            "layout": {
+                "visibility": "visible"
+            },
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "highway",
+                    "trail"
+                ]
+            ],
+            "paint": {
+                "line-pattern": [
+                    "step", ["zoom"],
+                    "line_dotted_4",
+                    16, "line_dotted_4",
+                    17, "line_dotted_6",
+                    18, "line_dotted_8"
+                ],
+                "line-width": [
+                    "interpolate", ["linear"], ["zoom"],
+                    12, 1,
+                    18, 3.5
+                ],
+                "line-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    12, 0.0,
+                    14, 1
                 ]
             }
         },
@@ -627,8 +676,394 @@ R"JSON(
 }
 )JSON");
 
+
+static const QString lootableStyleJson = QStringLiteral(
+R"JSON(
+{
+    "version": 8,
+    "name": "pz",
+    "sources": {
+        "world1-buildings": {
+            "type":"geojson",
+            "data": {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-77.0323, 38.9131]
+                }
+            }
+        },
+        "world1-roads": {
+            "type":"geojson",
+            "data": {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-77.0323, 38.9131]
+                }
+            }
+        },
+        "world1-landuse": {
+             "type":"geojson",
+                "data": {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-77.0323, 38.9131]
+                }
+            }
+        },
+        "world1-poi_label": {
+            "type":"geojson",
+            "data": {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-77.0323, 38.9131]
+                }
+            }
+        },
+        "world1-place_label": {
+            "type":"geojson",
+            "data": {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-77.0323, 38.9131]
+                }
+            }
+        },
+        "world1-water": {
+            "type":"geojson",
+            "data": {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-77.0323, 38.9131]
+                }
+            }
+        }
+    },
+    "sprite": "asset://sprites/bright-v8",
+    "glyphs": "asset://glyphs/{fontstack}/{range}.pbf",
+    "layers": [
+        {
+            "id": "background",
+            "type": "background",
+            "paint": {
+                "background-color": "rgb(225,225,225)"
+            }
+        },
+        {
+            "id": "world1-landuse_wood",
+            "type": "fill",
+            "source": "world1-landuse",
+            "source-layer": "landuse",
+            "filter": [
+                "==",
+                "natural",
+                "wood"
+            ],
+            "paint": {
+                "fill-color": "rgb(193,236,176)",
+                "fill-opacity": 1.0
+            }
+        },
+        {
+            "id": "world1-water",
+            "type": "fill",
+            "filter": [
+                "==",
+                "$type",
+                "Polygon"
+            ],
+            "source": "world1-water",
+            "source-layer": "water",
+            "paint": {
+                "fill-color": "rgb(57,135,147)"
+            }
+        },
+        {
+            "id": "world1-building_fill",
+            "type": "fill",
+            "source": "world1-buildings",
+            "source-layer": "buildings",
+            "paint": {
+                "fill-color": "rgb(186,138,93)"
+            }
+        },
+        {
+            "id": "world1-trail",
+            "type": "line",
+            "source": "world1-roads",
+            "source-layer": "roads",
+            "minzoom": 12,
+            "layout": {
+                "visibility": "visible"
+            },
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "highway",
+                    "trail"
+                ]
+            ],
+            "paint": {
+                "line-pattern": [
+                    "step", ["zoom"],
+                    "line_dotted_4",
+                    16, "line_dotted_4",
+                    17, "line_dotted_6",
+                    18, "line_dotted_8"
+                ],
+                "line-width": [
+                    "interpolate", ["linear"], ["zoom"],
+                    12, 1,
+                    18, 3.5
+                ],
+                "line-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    12, 0.0,
+                    14, 1
+                ]
+            }
+        },
+        {
+            "id": "world1-road_tertiary",
+            "type": "line",
+            "source": "world1-roads",
+            "source-layer": "roads",
+            "minzoom": 12,
+            "layout": {
+                "visibility": "visible"
+            },
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "highway",
+                    "tertiary"
+                ],
+                [
+                    "!in",
+                    "structure",
+                    "bridge",
+                    "tunnel"
+                ]
+            ],
+            "paint": {
+                "line-color": "rgb(160, 150, 138)",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [
+                            11,
+                            1
+                        ],
+                        [
+                            18,
+                            4
+                        ]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "world1-road_secondary",
+            "type": "line",
+            "source": "world1-roads",
+            "source-layer": "roads",
+            "layout": {
+                "visibility": "visible"
+            },
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "highway",
+                    "secondary"
+                ]
+            ],
+            "paint": {
+                "line-color": "rgb(126, 120, 110)",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [
+                            11,
+                            2
+                        ],
+                        [
+                            18,
+                            8
+                        ]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "world1-road_primary",
+            "type": "line",
+            "source": "world1-roads",
+            "source-layer": "roads",
+            "layout": {
+                "visibility": "visible"
+            },
+            "filter": [
+                "all",
+                [
+                    "in",
+                    "highway",
+                    "primary"
+                ]
+            ],
+            "paint": {
+                "line-color": "rgb(128, 128, 0)",
+                "line-width": {
+                    "base": 1.2,
+                    "stops": [
+                        [
+                            11,
+                            4
+                        ],
+                        [
+                            18,
+                            16
+                        ]
+                    ]
+                }
+            }
+        },
+        {
+            "id": "world1-poi_label_3",
+            "type": "symbol",
+            "source": "world1-poi_label",
+            "source-layer": "poi_label",
+            "minzoom": 15,
+            "layout": {
+                "icon-image": "marker-24",
+                "text-font": [
+                    "Open Sans Semibold"
+                ],
+                "text-field": "{name_en}",
+                "text-max-width": 9,
+                "text-padding": 2,
+                "text-offset": [
+                    0,
+                    0.6
+                ],
+                "text-anchor": "top",
+                "text-size": 12,
+                "visibility": "none"
+            },
+            "filter": [
+                "all",
+                [
+                    "==",
+                    "$type",
+                    "Point"
+                ],
+                [
+                    "==",
+                    "scalerank",
+                    3
+                ]
+            ],
+            "paint": {
+                "text-color": "#666",
+                "text-halo-color": "#ffffff",
+                "text-halo-width": 1,
+                "text-halo-blur": 0.5
+            }
+        },
+        {
+            "id": "world1-road_label",
+            "type": "symbol",
+            "source": "world1-poi_label",
+            "source-layer": "poi_label",
+            "minzoom": 15,
+            "layout": {
+                "text-font": [
+                    "Open Sans Semibold"
+                ],
+                "text-field": "{name_en}",
+                "text-max-width": 9,
+                "text-padding": 2,
+                "text-offset": [
+                    0,
+                    0
+                ],
+                "text-anchor": "center",
+                "text-size": 12,
+                "symbol-placement": "line-center"
+            },
+            "filter": [
+                "all",
+                [
+                    "==",
+                    "$type",
+                    "LineString"
+                ],
+                [
+                    "==",
+                    "scalerank",
+                    3
+                ]
+            ],
+            "paint": {
+                "text-color": "#666",
+                "text-halo-color": "#ffffff",
+                "text-halo-width": 1,
+                "text-halo-blur": 0.5
+            }
+        },
+        {
+            "layout": {
+                "text-font": [
+                    "Open Sans Regular"
+                ],
+                "text-field": "{name_enx}",
+                "text-max-width": 8,
+                "text-size": {
+                    "base": 1.2,
+                    "stops": [
+                        [
+                            10,
+                            14
+                        ],
+                        [
+                            15,
+                            24
+                        ]
+                    ]
+                },
+                "visibility": "none"
+            },
+            "filter": [
+                "==",
+                "place",
+                "town"
+            ],
+            "type": "symbol",
+            "source": "world1-place_label_town",
+            "id": "world1-place_label_town",
+            "paint": {
+                "text-color": "#333",
+                "text-halo-color": "rgba(255,255,255,0.8)",
+                "text-halo-width": 1.2
+            },
+            "source-layer": "place_label"
+        }
+    ]
+}
+
+)JSON");
+
 void MapboxGLWidget::initializeGL()
 {
+    m_settings.setAssetPath(QStringLiteral("D:/pz/worktree/build40-weather/workdir/media/mapbox"));
+
     m_map.reset(new QMapboxGL(nullptr, m_settings, size(), pixelRatio()));
     connect(m_map.data(), SIGNAL(needsRendering()), this, SLOT(update()));
     // Forward this signal
@@ -638,7 +1073,7 @@ void MapboxGLWidget::initializeGL()
 
 #if 1
     try {
-        m_map->setStyleJson(styleJson);
+        m_map->setStyleJson(lootableStyleJson);
     } catch (const std::exception& ex) {
         qDebug() << ex.what();
     }
@@ -662,7 +1097,6 @@ void MapboxGLWidget::setJson(const QMap<QString, QByteArray> &json)
         QVariantMap source;
         source[QStringLiteral("type")] = QStringLiteral("geojson"); // The only supported type by QtMapbox
         source[QStringLiteral("data")] = it.value();
-        qDebug() << it.key() << " string length = " << it.value().size();
         m_map->updateSource(QStringLiteral("world1-") + it.key(), source);
     }
 }

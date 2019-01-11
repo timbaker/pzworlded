@@ -381,6 +381,7 @@ protected:
     MapboxFeatureItem *mFeatureItem;
     int mPointIndex;
     MapBoxPoint mOldPos;
+    bool mMoveAllPoints = false;
     int mHoverRefCount = 0;
 };
 
@@ -402,8 +403,10 @@ void FeatureHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mousePressEvent(event);
 
-    if (event->button() == Qt::LeftButton)
+    if (event->button() == Qt::LeftButton) {
         mOldPos = geometryPoint();
+        mMoveAllPoints = (event->modifiers() & Qt::ShiftModifier) != 0;
+    }
 
     // Stop the object context menu messing us up.
     event->accept();
@@ -418,8 +421,15 @@ void FeatureHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         int featureIndex = mFeatureItem->feature()->index();
         MapBoxPoint newPos = geometryPoint();
         mFeatureItem->feature()->mGeometry.mCoordinates[0][mPointIndex] = mOldPos;
-        QUndoCommand *cmd = new MoveMapboxPoint(document, mFeatureItem->feature()->cell(), featureIndex, mPointIndex, newPos);
-        document->undoStack()->push(cmd);
+        if (mMoveAllPoints) {
+            MapBoxCoordinates coords = mFeatureItem->feature()->mGeometry.mCoordinates[0];
+            coords.translate(newPos.x - mOldPos.x, newPos.y - mOldPos.y);
+            QUndoCommand *cmd = new SetMapboxCoordinates(document, mFeatureItem->feature()->cell(), featureIndex, 0, coords);
+            document->undoStack()->push(cmd);
+        } else {
+            QUndoCommand *cmd = new MoveMapboxPoint(document, mFeatureItem->feature()->cell(), featureIndex, mPointIndex, newPos);
+            document->undoStack()->push(cmd);
+        }
     }
 
     // Stop the context-menu messing us up.

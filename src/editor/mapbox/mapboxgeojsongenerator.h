@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2019, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -39,29 +39,21 @@ class MapBoxGeojsonGenerator : public QObject, public Singleton<MapBoxGeojsonGen
 {
     Q_OBJECT
 public:
-    enum GenerateMode {
-        GenerateAll,
-        GenerateSelected
-    };
-
     explicit MapBoxGeojsonGenerator(QObject *parent = nullptr);
 
-    bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
-    QMap<QString,QByteArray> generateJson(WorldDocument *worldDoc, GenerateMode mode);
+    bool tippecanoe(WorldDocument *worldDoc);
+
+    QByteArray generateJson(WorldDocument *worldDoc);
+    QMap<QString,QByteArray> generateJsonLayers(WorldDocument *worldDoc);
 
     QString errorString() const { return mError; }
 
 private:
-    bool shouldGenerateCell(WorldCell *cell, int &bmpIndex);
-    bool generateCell(WorldCell *cell);
-    bool doBuildings(WorldCell *cell, MapInfo *mapInfo);
-    bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
-    bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
+    QMap<QString,QByteArray> generateJson(WorldDocument *worldDoc, bool separateLayers);
 
 private:
     WorldDocument *mWorldDoc;
     QString mError;
-    QJsonArray mJsonFeatures;
 };
 
 #endif // MAPBOX_H

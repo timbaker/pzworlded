@@ -259,7 +259,8 @@ HEADERS  += mainwindow.h \
     mapbox/mapboxpropertydialog.h \
     mapbox/mapboxbuildings.h \
     mapbox/mapboxwindow.h \
-    mapbox/mapboxglwidget.h
+    mapbox/mapboxglwidget.h \
+    mapbox/mapboxcoordinate.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

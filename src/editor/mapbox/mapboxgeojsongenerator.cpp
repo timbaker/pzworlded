@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2019, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -63,14 +63,14 @@ MapBoxGeojsonGenerator::MapBoxGeojsonGenerator(QObject *parent) :
 {
 }
 
-bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojsonGenerator::GenerateMode mode)
+bool MapBoxGeojsonGenerator::tippecanoe(WorldDocument *worldDoc)
 {
     mWorldDoc = worldDoc;
     World *world = mWorldDoc->world();
 
     MapManager::instance()->purgeUnreferencedMaps();
 
-    PROGRESS progress(QStringLiteral("Creating GeoJSON files"));
+    PROGRESS progress(QStringLiteral("Creating GeoJSON file"));
 
 #if 0
     if (mode == GenerateSelected) {
@@ -90,219 +90,203 @@ bool MapBoxGeojsonGenerator::generateWorld(WorldDocument *worldDoc, MapBoxGeojso
 #endif
 
     QString worldName = QFileInfo(worldDoc->fileName()).baseName();
-    {
-        MapboxWriter writer;
-        if (!writer.writeWorld(world, QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1-features.xml").arg(worldName))) {
-            qWarning("Failed to write features.xml.");
-            goto errorExit;
-        }
-    }
 
-    if (false) {
-        QJsonObject object;
-        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
-        object[QLatin1Literal("features")] = mJsonFeatures;
-        QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/WorldEd-buildings.geojson"));
+#if 1
+    auto combined = generateJson(worldDoc, false);
+
+    auto writeJSON = [](const QString& name, const QByteArray& json) {
+        QString fileName = QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1.geojson").arg(name);
+        QFile saveFile(fileName);
         if (!saveFile.open(QIODevice::WriteOnly)) {
-             qWarning("Couldn't open save file.");
-             goto errorExit;
+             qWarning("Couldn't write geojson file.");
+             return false;
         }
-        QJsonDocument json(object);
-        saveFile.write(json.toJson());
+        saveFile.write(json);
+        return true;
+    };
+
+    if (!writeJSON(worldName, combined[QString()]))
+        return false;
+
+#else
+    auto& generateLotSettings = world->getGenerateLotsSettings();
+    const int worldOriginX = generateLotSettings.worldOrigin.x();
+    const int worldOriginY = generateLotSettings.worldOrigin.y();
+
+    QJsonArray buildings, roads, water, combined;
+
+    // Create a background polygon covering the entire world.
+    // This is used to hide cells from other maps beneath this one (if any).
+    {
+        QJsonObject feature;
+        feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
+        QJsonObject geometry;
+        geometry[QLatin1Literal("type")] = QStringLiteral("Polygon");
+        QJsonArray coordinates;
+        QJsonArray ring;
+        QJsonArray point;
+        // nw
+        point.append(toLong(worldOriginX * 300, worldOriginY * 300));
+        point.append(toLat(worldOriginX * 300, worldOriginY * 300));
+        ring.append(point);
+        // sw
+        point[0] = toLong(worldOriginX * 300, (worldOriginY + world->height()) * 300);
+        point[1] = toLat(worldOriginX * 300, (worldOriginY + world->height()) * 300);
+        ring.append(point);
+        // se
+        point[0] = toLong((worldOriginX + world->width()) * 300, (worldOriginY + world->height()) * 300);
+        point[1] = toLat((worldOriginX + world->width()) * 300, (worldOriginY + world->height()) * 300);
+        ring.append(point);
+        // ne
+        point[0] = toLong((worldOriginX + world->width()) * 300, worldOriginY * 300);
+        point[1] = toLat((worldOriginX + world->width()) * 300, worldOriginY * 300);
+        ring.append(point);
+        ring += ring[0];
+        coordinates.append(ring);
+        geometry[QLatin1Literal("coordinates")] = coordinates;
+        feature[QLatin1Literal("geometry")] = geometry;
+
+        // Feature without "properties" produces a warning by tippecanoe.
+        QJsonObject properties;
+        feature[QLatin1Literal("properties")] = properties;
+
+        QJsonObject tippecanoe;
+        tippecanoe[QStringLiteral("layer")] = QStringLiteral("background");
+        feature[QStringLiteral("tippecanoe")] = tippecanoe;
+
+        combined += feature;
     }
 
-    {
-        auto& generateLotSettings = world->getGenerateLotsSettings();
-        const int worldOriginX = generateLotSettings.worldOrigin.x();
-        const int worldOriginY = generateLotSettings.worldOrigin.y();
+    for (int y = 0; y < world->height(); y++) {
+        for (int x = 0; x < world->width(); x++) {
+            if (WorldCell* cell = world->cellAt(x, y)) {
+                for (auto* mbFeature : cell->mapBox().mFeatures) {
+                    QJsonObject feature;
 
-        QJsonArray buildings, roads, water, combined;
+                    feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
 
-        // Create a background polygon covering the entire world.
-        // This is used to hide cells from other maps beneath this one (if any).
-        {
-            QJsonObject feature;
-            feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
-            QJsonObject geometry;
-            geometry[QLatin1Literal("type")] = QStringLiteral("Polygon");
-            QJsonArray coordinates;
-            QJsonArray ring;
-            QJsonArray point;
-            // nw
-            point.append(toLong(worldOriginX * 300, worldOriginY * 300));
-            point.append(toLat(worldOriginX * 300, worldOriginY * 300));
-            ring.append(point);
-            // sw
-            point[0] = toLong(worldOriginX * 300, (worldOriginY + world->height()) * 300);
-            point[1] = toLat(worldOriginX * 300, (worldOriginY + world->height()) * 300);
-            ring.append(point);
-            // se
-            point[0] = toLong((worldOriginX + world->width()) * 300, (worldOriginY + world->height()) * 300);
-            point[1] = toLat((worldOriginX + world->width()) * 300, (worldOriginY + world->height()) * 300);
-            ring.append(point);
-            // ne
-            point[0] = toLong((worldOriginX + world->width()) * 300, worldOriginY * 300);
-            point[1] = toLat((worldOriginX + world->width()) * 300, worldOriginY * 300);
-            ring.append(point);
-            ring += ring[0];
-            coordinates.append(ring);
-            geometry[QLatin1Literal("coordinates")] = coordinates;
-            feature[QLatin1Literal("geometry")] = geometry;
-
-            // Feature without "properties" produces a warning by tippecanoe.
-            QJsonObject properties;
-            feature[QLatin1Literal("properties")] = properties;
-
-            QJsonObject tippecanoe;
-            tippecanoe[QStringLiteral("layer")] = QStringLiteral("background");
-            feature[QStringLiteral("tippecanoe")] = tippecanoe;
-
-            combined += feature;
-        }
-
-        for (int y = 0; y < world->height(); y++) {
-            for (int x = 0; x < world->width(); x++) {
-                if (WorldCell* cell = world->cellAt(x, y)) {
-                    for (auto* mbFeature : cell->mapBox().mFeatures) {
-                        QJsonObject feature;
-
-                        feature[QLatin1Literal("type")] = QLatin1Literal("Feature");
-
-                        QJsonObject properties;
-                        for (auto& mbProperty : mbFeature->mProperties) {
-                            properties[mbProperty.mKey] = mbProperty.mValue;
-                        }
-                        feature[QLatin1Literal("properties")] = properties;
-
-                        QJsonObject geometry;
-                        geometry[QLatin1Literal("type")] = mbFeature->mGeometry.mType;
-                        bool bPoint = mbFeature->mGeometry.mType == QLatin1Literal("Point");
-                        bool bPolygon = mbFeature->mGeometry.mType == QLatin1Literal("Polygon");
-                        QJsonArray coordinates;
-                        for (auto& mbCoords : mbFeature->mGeometry.mCoordinates) {
-                            QJsonArray ring; // counter-clockwise, longitude,latitude,elevation
-                            for (auto& mbPoint : mbCoords) {
-                                QJsonArray point;
-                                point.append(toLong((worldOriginX + cell->x()) * 300 + mbPoint.x, (worldOriginY + cell->y()) * 300 + mbPoint.y));
-                                point.append(toLat((worldOriginX + cell->x()) * 300 + mbPoint.x, (worldOriginY + cell->y()) * 300 + mbPoint.y));
-                                if (bPolygon)
-                                    ring.append(point);
-                                else {
-                                    coordinates += point;
-                                }
-                            }
-                            if (bPolygon) {
-                                ring += ring[0];
-                                coordinates += ring;
-                            }
-                        }
-                        if (bPoint) {
-                            coordinates = coordinates.first().toArray();
-                        }
-                        geometry[QLatin1Literal("coordinates")] = coordinates;
-                        feature[QLatin1Literal("geometry")] = geometry;
-
-                        QString layerName = QStringLiteral("generic");
-
-                        if (bPolygon) {
-                            if (mbFeature->properties().containsKey(QStringLiteral("building"))) {
-                                buildings.append(feature);
-                                layerName = QStringLiteral("buildings");
-                            }
-                            if (mbFeature->properties().containsKey(QStringLiteral("water"))) {
-                                water.append(feature);
-                                layerName = QStringLiteral("water");
-                            }
-                            if (mbFeature->properties().containsKey(QStringLiteral("natural"))) {
-                                layerName = QStringLiteral("landuse");
-                            }
-                        } else if (bPoint) {
-                            if (mbFeature->properties().containsKey(QStringLiteral("place")))
-                                layerName = QStringLiteral("place_label");
-                        } else {
-                            roads.append(feature);
-                            layerName = QStringLiteral("roads");
-                        }
-
-                        QJsonObject tippecanoe;
-                        tippecanoe[QStringLiteral("layer")] = layerName;
-                        if (bPoint && mbFeature->properties().containsKey(QStringLiteral("place")))
-                            tippecanoe[QStringLiteral("minzoom")] = QStringLiteral("11");
-                        feature[QStringLiteral("tippecanoe")] = tippecanoe;
-
-                        combined += feature;
+                    QJsonObject properties;
+                    for (auto& mbProperty : mbFeature->mProperties) {
+                        properties[mbProperty.mKey] = mbProperty.mValue;
                     }
+                    feature[QLatin1Literal("properties")] = properties;
+
+                    QJsonObject geometry;
+                    geometry[QLatin1Literal("type")] = mbFeature->mGeometry.mType;
+                    bool bPoint = mbFeature->mGeometry.mType == QLatin1Literal("Point");
+                    bool bPolygon = mbFeature->mGeometry.mType == QLatin1Literal("Polygon");
+                    QJsonArray coordinates;
+                    for (auto& mbCoords : mbFeature->mGeometry.mCoordinates) {
+                        QJsonArray ring; // counter-clockwise, longitude,latitude,elevation
+                        for (auto& mbPoint : mbCoords) {
+                            QJsonArray point;
+                            point.append(toLong((worldOriginX + cell->x()) * 300 + mbPoint.x, (worldOriginY + cell->y()) * 300 + mbPoint.y));
+                            point.append(toLat((worldOriginX + cell->x()) * 300 + mbPoint.x, (worldOriginY + cell->y()) * 300 + mbPoint.y));
+                            if (bPolygon)
+                                ring.append(point);
+                            else {
+                                coordinates += point;
+                            }
+                        }
+                        if (bPolygon) {
+                            ring += ring[0];
+                            coordinates += ring;
+                        }
+                    }
+                    if (bPoint) {
+                        coordinates = coordinates.first().toArray();
+                    }
+                    geometry[QLatin1Literal("coordinates")] = coordinates;
+                    feature[QLatin1Literal("geometry")] = geometry;
+
+                    QString layerName = QStringLiteral("generic");
+
+                    if (bPolygon) {
+                        if (mbFeature->properties().containsKey(QStringLiteral("building"))) {
+                            buildings.append(feature);
+                            layerName = QStringLiteral("buildings");
+                        }
+                        if (mbFeature->properties().containsKey(QStringLiteral("water"))) {
+                            water.append(feature);
+                            layerName = QStringLiteral("water");
+                        }
+                        if (mbFeature->properties().containsKey(QStringLiteral("natural"))) {
+                            layerName = QStringLiteral("landuse");
+                        }
+                    } else if (bPoint) {
+                        if (mbFeature->properties().containsKey(QStringLiteral("place")))
+                            layerName = QStringLiteral("place_label");
+                    } else {
+                        roads.append(feature);
+                        layerName = QStringLiteral("roads");
+                    }
+
+                    QJsonObject tippecanoe;
+                    tippecanoe[QStringLiteral("layer")] = layerName;
+                    if (bPoint && mbFeature->properties().containsKey(QStringLiteral("place")))
+                        tippecanoe[QStringLiteral("minzoom")] = QStringLiteral("11");
+                    feature[QStringLiteral("tippecanoe")] = tippecanoe;
+
+                    combined += feature;
                 }
             }
         }
-
-        auto writeJSON = [](const QString& name, const QJsonArray& array) {
-            QJsonObject object;
-            object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
-            object[QLatin1Literal("features")] = array;
-            QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1.geojson").arg(name));
-            if (!saveFile.open(QIODevice::WriteOnly)) {
-                 qWarning("Couldn't open save file.");
-                 return false;
-            }
-            QJsonDocument json(object);
-            saveFile.write(json.toJson());
-            return true;
-        };
-
-        QProcess tippecanoe;
-        tippecanoe.setProcessChannelMode(QProcess::MergedChannels);
-        QStringList args;
-
-#if 1
-        if (!writeJSON(worldName, combined))
-            goto errorExit;
-
-         progress.update(QStringLiteral("Running tippecanoe"));
-
-//        args << QStringLiteral("-e") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1").arg(worldName);
-        args << QStringLiteral("-o") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1.mbtiles").arg(worldName);
-        args << QStringLiteral("-f"); // force overwrite existing
-        args << QStringLiteral("--temporary-directory") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-tmp");
-        args << QStringLiteral("--minimum-zoom") << QStringLiteral("11");
-        args << QStringLiteral("--maximum-zoom") << QStringLiteral("18");
-        args << QStringLiteral("--no-tile-compression");
-        args << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1.geojson").arg(worldName);
-#else
-        if (!writeJSON(QStringLiteral("buildings"), buildings))
-            goto errorExit;
-        if (!writeJSON(QStringLiteral("roads"), roads))
-            goto errorExit;
-        if (!writeJSON(QStringLiteral("water"), water))
-            goto errorExit;
-
-        args << QStringLiteral("-e D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe");
-        args << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/WorldEd-buildings.geojson");
-        args << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/WorldEd-roads.geojson");
-        args << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/WorldEd-water.geojson");
-#endif
-        tippecanoe.start(QCoreApplication::applicationDirPath() + QStringLiteral("/tippecanoe"),
-                         args);
-        tippecanoe.waitForStarted();
-        tippecanoe.waitForFinished(10 * 60 * 1000);
-        QString output = QString::fromLocal8Bit(tippecanoe.readAllStandardOutput());
-        qDebug() << "tippecanoe exit code=" << tippecanoe.exitCode();
-        qDebug() << "tippecanoe:" << output << tippecanoe.exitCode();
     }
+
+    auto writeJSON = [](const QString& name, const QJsonArray& array) {
+        QJsonObject object;
+        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
+        object[QLatin1Literal("features")] = array;
+        QFile saveFile(QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1.geojson").arg(name));
+        if (!saveFile.open(QIODevice::WriteOnly)) {
+             qWarning("Couldn't open save file.");
+             return false;
+        }
+        QJsonDocument json(object);
+        saveFile.write(json.toJson());
+        return true;
+    };
+
+    if (!writeJSON(worldName, combined))
+        goto errorExit;
+#endif
+
+    QProcess tippecanoe;
+    tippecanoe.setProcessChannelMode(QProcess::MergedChannels);
+    QStringList args;
+
+     progress.update(QStringLiteral("Running tippecanoe"));
+
+//    args << QStringLiteral("-e") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1").arg(worldName);
+    args << QStringLiteral("-o") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-%1.mbtiles").arg(worldName);
+    args << QStringLiteral("-f"); // force overwrite existing
+    args << QStringLiteral("--temporary-directory") << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/tippecanoe-tmp");
+    args << QStringLiteral("--minimum-zoom") << QStringLiteral("11");
+    args << QStringLiteral("--maximum-zoom") << QStringLiteral("18");
+    args << QStringLiteral("--no-tile-compression");
+    args << QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1.geojson").arg(worldName);
+
+    tippecanoe.start(QCoreApplication::applicationDirPath() + QStringLiteral("/tippecanoe"), args);
+    tippecanoe.waitForStarted();
+    tippecanoe.waitForFinished(10 * 60 * 1000);
+    QString output = QString::fromLocal8Bit(tippecanoe.readAllStandardOutput());
+    qDebug() << "tippecanoe exit code=" << tippecanoe.exitCode();
+    qDebug() << "tippecanoe:" << output << tippecanoe.exitCode();
 
     // While displaying this, the MapManager's FileSystemWatcher might see some
     // changed .tmx files, which results in the PROGRESS dialog being displayed.
     // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
-    QMessageBox::information(MainWindow::instance(),
-                             tr("Mapbox"), tr("Finished!"));
+    QMessageBox::information(MainWindow::instance(), tr("Mapbox"), tr("Finished!"));
 
     return true;
-
-errorExit:
-    return false;
 }
 
-QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *worldDoc, MapBoxGeojsonGenerator::GenerateMode mode)
+QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJsonLayers(WorldDocument *worldDoc)
+{
+    return generateJson(worldDoc, true);
+}
+
+QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *worldDoc, bool separateLayers)
 {
     World* world = worldDoc->world();
 
@@ -310,7 +294,6 @@ QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *wo
     const int worldOriginX = generateLotSettings.worldOrigin.x();
     const int worldOriginY = generateLotSettings.worldOrigin.y();
 
-    QJsonArray combined;
     QMap<QString,QJsonArray> layerToJsonArray;
 
     // Create a background polygon covering the entire world.
@@ -348,7 +331,14 @@ QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *wo
         QJsonObject properties;
         feature[QLatin1Literal("properties")] = properties;
 
-        layerToJsonArray[QStringLiteral("background")] += feature;
+        QString layerName = QStringLiteral("background");
+        if (!separateLayers) {
+            QJsonObject tippecanoe;
+            tippecanoe[QStringLiteral("layer")] = layerName;
+            feature[QStringLiteral("tippecanoe")] = tippecanoe;
+            layerName.clear();
+        }
+        layerToJsonArray[layerName] += feature;
     }
 
     for (int y = 0; y < world->height(); y++) {
@@ -412,6 +402,12 @@ QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *wo
                         layerName = QStringLiteral("roads");
                     }
 
+                    if (!separateLayers) {
+                        QJsonObject tippecanoe;
+                        tippecanoe[QStringLiteral("layer")] = layerName;
+                        feature[QStringLiteral("tippecanoe")] = tippecanoe;
+                        layerName.clear();
+                    }
                     layerToJsonArray[layerName] += feature;
                 }
             }
@@ -421,10 +417,8 @@ QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *wo
     QMap<QString,QByteArray> layerToJson;
     for (auto it = layerToJsonArray.begin(); it != layerToJsonArray.end(); it++) {
         QJsonObject object;
-        object[QLatin1Literal("type")] = QLatin1Literal("FeatureCollection");
-        object[QLatin1Literal("features")] = it.value();
-
-        qDebug() << "LAYER" << it.key() << "HAS" << it.value().size() << "FEATURES";
+        object[QStringLiteral("type")] = QLatin1Literal("FeatureCollection");
+        object[QStringLiteral("features")] = it.value();
 
         QJsonDocument jsonDoc(object);
         layerToJson[it.key()] = jsonDoc.toJson();
@@ -433,6 +427,7 @@ QMap<QString, QByteArray> MapBoxGeojsonGenerator::generateJson(WorldDocument *wo
     return layerToJson;
 }
 
+#if 0
 bool MapBoxGeojsonGenerator::shouldGenerateCell(WorldCell *cell, int &bmpIndex)
 {
     return true;
@@ -619,3 +614,4 @@ bool MapBoxGeojsonGenerator::processObjectGroup(WorldCell *cell, ObjectGroup *ob
 
     return true;
 }
+#endif

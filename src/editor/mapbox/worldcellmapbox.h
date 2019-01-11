@@ -51,11 +51,26 @@ public:
     bool operator!=(const MapBoxPoint& rhs) const {
         return x != rhs.x || y != rhs.y;
     }
+
+    MapBoxPoint operator+(const MapBoxPoint& rhs) const {
+        return { x + rhs.x, y + rhs.y };
+    }
+
+    MapBoxPoint operator-(const MapBoxPoint& rhs) const {
+        return { x - rhs.x, y - rhs.y };
+    }
 };
 
 class MapBoxCoordinates : public QList<MapBoxPoint>
 {
 public:
+    MapBoxCoordinates& translate(int dx, int dy) {
+        for (auto& pt : *this) {
+            pt.x += dx;
+            pt.y += dy;
+        }
+        return *this;
+    }
 };
 
 class MapBoxGeometry

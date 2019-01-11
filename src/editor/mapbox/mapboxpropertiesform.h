@@ -28,6 +28,8 @@ class WorldDocument;
 class MapBoxFeature;
 class MapBoxProperties;
 
+class QListWidgetItem;
+
 namespace Ui {
 class MapboxPropertiesForm;
 }
@@ -52,6 +54,7 @@ private slots:
     void onCopy();
     void onPaste();
     void onSelectionChanged();
+    void onItemDoubleClicked(QListWidgetItem* item);
     void selectedFeaturesChanged();
     void propertiesChanged(WorldCell* cell, int featureIndex);
 

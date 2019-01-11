@@ -47,6 +47,7 @@ public:
 
 signals:
     void mapChanged(QMapboxGL::MapChange change);
+    void gotoLocation(int squareX, int squareY);
 
 public:
     QPointF m_lastPos;

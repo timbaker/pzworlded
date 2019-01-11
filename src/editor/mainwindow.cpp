@@ -78,6 +78,7 @@
 #include "mapbox/mapboxreader.h"
 #include "mapbox/mapboxscene.h"
 #include "mapbox/mapboxwindow.h"
+#include "mapbox/mapboxwriter.h"
 
 #include "layer.h"
 #include "mapobject.h"
@@ -257,7 +258,6 @@ MainWindow::MainWindow(QWidget *parent)
             SLOT(TMXToBMPSelected()));
     connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(WriteSpawnPoints()));
     connect(ui->actionWriteObjects, SIGNAL(triggered()), SLOT(WriteWorldObjects()));
-    connect(ui->actionWriteMapBox, SIGNAL(triggered()), SLOT(WriteMapBox()));
     connect(ui->actionFromToAll, SIGNAL(triggered()),
             SLOT(FromToAll()));
     connect(ui->actionFromToSelected, SIGNAL(triggered()),
@@ -288,11 +288,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
     connect(ui->actionExtractLots, SIGNAL(triggered()), SLOT(extractLots()));
     connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
+    connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
+    connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
+
     connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showMapboxPreviewWindow);
     connect(ui->actionGenerateMapboxBuildingFeatures, &QAction::triggered, this, &MainWindow::generateMapboxBuildingFeatures);
     connect(ui->actionGenerateMapboxWaterFeatures, &QAction::triggered, this, &MainWindow::generateMapboxWaterFeatures);
-    connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
-    connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
+    connect(ui->actionMapboxWriteFeaturesXML, SIGNAL(triggered()), SLOT(mapboxWriteFeaturesXML()));
+    connect(ui->actionMapboxTippecanoe, SIGNAL(triggered()), SLOT(mapboxTippecanoe()));
 
     connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
@@ -984,7 +987,7 @@ void MainWindow::lotpackviewer()
     if (!mLotPackWindow)
         mLotPackWindow = new LotPackWindow(this);
 
-    mLotPackWindow->show();
+    mLotPackWindow->showNormal();
     mLotPackWindow->activateWindow();
     mLotPackWindow->raise();
 }
@@ -1327,15 +1330,6 @@ void MainWindow::WriteWorldObjects()
 
     WriteWorldObjectsDialog d(worldDoc, this);
     d.exec();
-}
-
-void MainWindow::WriteMapBox()
-{
-    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
-        worldDoc = cellDoc->worldDocument();
-    MapBoxGeojsonGenerator mapBox;
-    mapBox.generateWorld(worldDoc, MapBoxGeojsonGenerator::GenerateSelected);
 }
 
 void MainWindow::updateWindowTitle()
@@ -1876,10 +1870,39 @@ void MainWindow::clearMapOnly()
 
 void MainWindow::showMapboxPreviewWindow()
 {
-    MapboxWindow* window = new MapboxWindow();
-    if (auto worldDoc = mCurrentDocument->asWorldDocument())
-        window->setJson(MapBoxGeojsonGenerator().generateJson(worldDoc, MapBoxGeojsonGenerator::GenerateAll));
-    window->show();
+    if (mMapboxWindow == nullptr)
+        mMapboxWindow = new MapboxWindow(this);
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    mMapboxWindow->setDocument(worldDoc);
+    mMapboxWindow->showNormal();
+    mMapboxWindow->activateWindow();
+    mMapboxWindow->raise();
+}
+
+void MainWindow::mapboxWriteFeaturesXML()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    QString worldName = QFileInfo(worldDoc->fileName()).baseName();
+    MapboxWriter writer;
+    QString xmlPath = QStringLiteral("D:/pz/worktree/build40-weather/pzmapbox/data/%1-features.xml").arg(worldName);
+    if (!writer.writeWorld(worldDoc->world(), xmlPath)) {
+        qWarning("Failed to write features.xml.");
+        return;
+    }
+    QMessageBox::information(MainWindow::instance(), tr("Mapbox"), tr("Finished!"));
+}
+
+void MainWindow::mapboxTippecanoe()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    MapBoxGeojsonGenerator mapBox;
+    mapBox.tippecanoe(worldDoc);
 }
 
 bool MainWindow::confirmSave()
@@ -2033,7 +2056,6 @@ void MainWindow::updateActions()
 
     ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
     ui->actionWriteObjects->setEnabled(worldDoc != 0);
-    ui->actionWriteMapBox->setEnabled(worldDoc != nullptr);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
@@ -2066,6 +2088,13 @@ void MainWindow::updateActions()
     ui->actionExtractObjects->setEnabled(cellDoc != 0);
     ui->actionClearCell->setEnabled(false);
     ui->actionClearMapOnly->setEnabled(false);
+
+    ui->actionMapboxPreview->setEnabled(hasDoc);
+    bool selectedCells = (cellDoc != nullptr) || (worldDoc != nullptr && !worldDoc->selectedCells().isEmpty());
+    ui->actionGenerateMapboxBuildingFeatures->setEnabled(selectedCells);
+    ui->actionGenerateMapboxWaterFeatures->setEnabled(selectedCells);
+    ui->actionMapboxWriteFeaturesXML->setEnabled(hasDoc);
+    ui->actionMapboxTippecanoe->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);

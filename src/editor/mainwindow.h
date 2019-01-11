@@ -31,6 +31,8 @@ class LayersDock;
 class LotsDock;
 class LotPackWindow;
 class MapsDock;
+class MapboxDock;
+class MapboxWindow;
 class ObjectsDock;
 class PropertiesDock;
 class RoadsDock;
@@ -41,7 +43,6 @@ class WorldDocument;
 //class WorldScene;
 class Zoomable;
 
-class MapboxDock;
 
 class QComboBox;
 class QMenu;
@@ -100,7 +101,6 @@ public slots:
 
     void WriteSpawnPoints();
     void WriteWorldObjects();
-    void WriteMapBox();
 
     void updateWindowTitle();
 
@@ -140,6 +140,8 @@ public slots:
     void showMapboxPreviewWindow();
     void generateMapboxBuildingFeatures();
     void generateMapboxWaterFeatures();
+    void mapboxWriteFeaturesXML();
+    void mapboxTippecanoe();
 
     void setStatusBarCoords(int x, int y);
 
@@ -206,6 +208,7 @@ private:
     Zoomable *mZoomable;
     QSettings mSettings;
     LotPackWindow *mLotPackWindow;
+    MapboxWindow* mMapboxWindow = nullptr;
 
     static MainWindow *mInstance;
 };

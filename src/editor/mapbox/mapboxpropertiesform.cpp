@@ -37,6 +37,8 @@ MapboxPropertiesForm::MapboxPropertiesForm(QWidget *parent)
 {
     ui->setupUi(this);
 
+    connect(ui->listWidget, &QListWidget::itemDoubleClicked, this, &MapboxPropertiesForm::onItemDoubleClicked);
+
     syncUi();
 }
 
@@ -152,6 +154,7 @@ void MapboxPropertiesForm::onCopy()
     if (!mProperties)
         mProperties = new MapBoxProperties();
     *mProperties = mFeature->mProperties;
+    syncUi();
 }
 
 void MapboxPropertiesForm::onPaste()
@@ -168,6 +171,11 @@ void MapboxPropertiesForm::onPaste()
 void MapboxPropertiesForm::onSelectionChanged()
 {
     syncUi();
+}
+
+void MapboxPropertiesForm::onItemDoubleClicked(QListWidgetItem* item)
+{
+    onEditButton();
 }
 
 void MapboxPropertiesForm::selectedFeaturesChanged()

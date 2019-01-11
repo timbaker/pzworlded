@@ -1503,8 +1503,14 @@ QRectF WorldSelectionItem::boundingRect() const
 void WorldSelectionItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
 {
     Q_UNUSED(option)
+
+    qreal scale = mScene->worldDocument()->view()->zoomable()->scale();
+
     QPen pen(Qt::blue);
-//    pen.setWidth(4);
+    pen.setCosmetic(true);
+    if (scale > qreal(0.5))
+        pen.setWidth(2);
+
     painter->setPen(pen);
     painter->setBrush(QBrush(QColor(0x33,0x99,0xff,255/8)));
     foreach (WorldCell *cell, mScene->worldDocument()->selectedCells()) {

@@ -18,6 +18,17 @@
 #include "mapboxwindow.h"
 #include "ui_mapboxwindow.h"
 
+#include "mapboxgeojsongenerator.h"
+
+#include "basegraphicsview.h"
+#include "celldocument.h"
+#include "cellscene.h"
+#include "documentmanager.h"
+#include "maprenderer.h"
+#include "world.h"
+#include "worlddocument.h"
+#include "worldscene.h"
+
 #include <QDebug>
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
@@ -35,7 +46,9 @@ MapboxWindow::MapboxWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    connect(ui->actionRefresh, &QAction::triggered, this, &MapboxWindow::refresh);
     connect(ui->mapboxGLWidget, &MapboxGLWidget::mapChanged, this, &MapboxWindow::mapChanged);
+    connect(ui->mapboxGLWidget, &MapboxGLWidget::gotoLocation, this, &MapboxWindow::gotoLocation);
 }
 
 MapboxWindow::~MapboxWindow()
@@ -43,9 +56,31 @@ MapboxWindow::~MapboxWindow()
     delete ui;
 }
 
+void MapboxWindow::setDocument(WorldDocument *worldDoc)
+{
+    mWorldDoc = worldDoc;
+    mGeoJSON = MapBoxGeojsonGenerator().generateJsonLayers(mWorldDoc);
+    if (mStyleLoaded) {
+        ui->mapboxGLWidget->setJson(mGeoJSON);
+        mGeoJSON.clear();
+    }
+}
+
 void MapboxWindow::setJson(const QMap<QString, QByteArray> &json)
 {
     mGeoJSON = json;
+}
+
+void MapboxWindow::closeEvent(QCloseEvent *e)
+{
+    e->accept();
+}
+
+void MapboxWindow::refresh()
+{
+    mGeoJSON = MapBoxGeojsonGenerator().generateJsonLayers(mWorldDoc);
+    ui->mapboxGLWidget->setJson(mGeoJSON);
+    mGeoJSON.clear();
 }
 
 void MapboxWindow::mapChanged(QMapboxGL::MapChange change)
@@ -53,7 +88,9 @@ void MapboxWindow::mapChanged(QMapboxGL::MapChange change)
     switch (change) {
     case QMapboxGL::MapChange::MapChangeDidFinishLoadingStyle: {
         try {
+            mStyleLoaded = true;
             ui->mapboxGLWidget->setJson(mGeoJSON);
+            mGeoJSON.clear();
         } catch (const std::exception& ex) {
             qDebug() << ex.what();
         }
@@ -61,5 +98,36 @@ void MapboxWindow::mapChanged(QMapboxGL::MapChange change)
     }
     default:
         break;
+    }
+}
+
+#include "documentmanager.h"
+
+void MapboxWindow::gotoLocation(int squareX, int squareY)
+{
+    auto& generateLotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+    qreal cellX = squareX / 300.0 - generateLotSettings.worldOrigin.x();
+    qreal cellY = squareY / 300.0 - generateLotSettings.worldOrigin.y();
+
+    WorldCell* cell = mWorldDoc->world()->cellAt(int(cellX), int(cellY));
+    if (cell == nullptr)
+        return;
+
+    QPointF scenePos = dynamic_cast<WorldScene*>(
+                mWorldDoc->view()->scene())->cellToPixelCoords(
+                cellX,
+                cellY);
+
+    mWorldDoc->setSelectedCells(QList<WorldCell*>() << cell);
+    mWorldDoc->view()->centerOn(scenePos);
+
+    mWorldDoc->editCell(int(cellX), int(cellY));
+
+    if (CellDocument *cellDoc = DocumentManager::instance()->findDocument(cell)) {
+        DocumentManager::instance()->setCurrentDocument(cellDoc);
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        QPointF tilePos(squareX - cell->x() * 300,
+                        squareY - cell->y() * 300);
+        cellDoc->view()->centerOn(cellDoc->scene()->renderer()->tileToPixelCoords(tilePos));
     }
 }

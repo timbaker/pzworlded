@@ -25,22 +25,31 @@ namespace Ui {
 class MapboxWindow;
 }
 
+class WorldDocument;
+
 class MapboxWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
     explicit MapboxWindow(QWidget *parent = nullptr);
-    ~MapboxWindow();
+    ~MapboxWindow() override;
 
+    void setDocument(WorldDocument* worldDoc);
     void setJson(const QMap<QString,QByteArray>& json);
 
+    void closeEvent(QCloseEvent* e) override;
+
 private slots:
+    void refresh();
     void mapChanged(QMapboxGL::MapChange change);
+    void gotoLocation(int squareX, int squareY);
 
 private:
+    WorldDocument* mWorldDoc = nullptr;
+    bool mStyleLoaded = false;
     QMap<QString,QByteArray> mGeoJSON;
-    Ui::MapboxWindow *ui;
+    Ui::MapboxWindow *ui = nullptr;
 };
 
 #endif // MAPBOXWINDOW_H

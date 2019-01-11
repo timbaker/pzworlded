@@ -227,6 +227,7 @@ class OutlineGrid {
 public:
     std::vector<OutlineCellPtr> elements;
     int W, H;
+    bool EXTEND = true;
 
     void setSize(int w, int h) {
         elements.resize(size_t(w * h));
@@ -280,8 +281,6 @@ public:
         return elementAt(x, y);
     }
 
-    const bool EXTEND = false;
-
     void trace_W(OutlineCell& cell, QPolygon& nodes, int extend) {
         const int x = cell.x, y = cell.y;
         if (EXTEND && extend != -1) {
@@ -290,11 +289,6 @@ public:
             nodes += { x, y };
         }
         cell.tw = true; // done
-
-        OutlineCellPtr cell2 = get(x, y - 1);
-        if (cell2 && cell2->start) {
-            return; // back to start
-        }
 
         // turn w, continue n, turn e
         if (canTrace_S(x - 1, y - 1)) {
@@ -375,7 +369,8 @@ public:
         return nodes;
     }
 
-    void trace(std::function<void(QPolygon&)> callback) {
+    void trace(bool extend, std::function<void(QPolygon&)> callback) {
+        EXTEND = extend;
         for (int y = 0; y < H; y++) {
             for (int x = 0; x < W; x++) {
                 OutlineCell& cell = *get(x, y);
@@ -477,7 +472,7 @@ bool MapboxBuildings::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
                 grid.setInner(rect.x() - bounds.x() + x, rect.y() - bounds.y() + y);
     }
 
-    grid.trace([&](QPolygon& nodes) {
+    grid.trace(true, [&](QPolygon& nodes) {
         nodes.translate(bounds.left(), bounds.top());
 
         MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
@@ -644,7 +639,7 @@ bool MapboxBuildings::doWater(WorldCell *cell, MapInfo *mapInfo)
         }
     }
 
-    grid.trace([&](QPolygon& nodes) {
+    grid.trace(false, [&](QPolygon& nodes) {
 #if 1 // Simplification of the polygon using Ramer-Douglas-Peucker algorithm
         std::vector<DPPoint> points;
         std::int64_t SCALE = 1000;

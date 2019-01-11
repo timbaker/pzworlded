@@ -268,7 +268,6 @@
     <addaction name="menuGenerate_Lots"/>
     <addaction name="actionLUAObjectDump"/>
     <addaction name="actionWriteObjects"/>
-    <addaction name="actionWriteMapBox"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -367,6 +366,8 @@
     <addaction name="actionMapboxPreview"/>
     <addaction name="actionGenerateMapboxBuildingFeatures"/>
     <addaction name="actionGenerateMapboxWaterFeatures"/>
+    <addaction name="actionMapboxWriteFeaturesXML"/>
+    <addaction name="actionMapboxTippecanoe"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -845,9 +846,12 @@
     <string>Show Other Worlds</string>
    </property>
   </action>
-  <action name="actionWriteMapBox">
+  <action name="actionMapboxWriteFeaturesXML">
    <property name="text">
-    <string>Write MapBox...</string>
+    <string>Write Features XML</string>
+   </property>
+   <property name="toolTip">
+    <string>Don't forget to do this!</string>
    </property>
   </action>
   <action name="actionGenerateMapboxBuildingFeatures">
@@ -863,6 +867,11 @@
   <action name="actionMapboxPreview">
    <property name="text">
     <string>Preview</string>
+   </property>
+  </action>
+  <action name="actionMapboxTippecanoe">
+   <property name="text">
+    <string>Run Tippecanoe</string>
    </property>
   </action>
  </widget>
