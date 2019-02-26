@@ -17,7 +17,11 @@
 
 #include "mapboxglwidget.h"
 
+#include "mapboxcoordinate.h"
+
 #include <QDebug>
+#include <QKeyEvent>
+#include <QMenu>
 
 MapboxGLWidget::MapboxGLWidget(QWidget *parent)
     : QOpenGLWidget (parent)
@@ -45,8 +49,6 @@ void MapboxGLWidget::keyPressEvent(QKeyEvent *ev)
     ev->accept();
 }
 
-#include <QMenu>
-#include "mapboxcoordinate.h"
 
 void MapboxGLWidget::mousePressEvent(QMouseEvent *ev)
 {
