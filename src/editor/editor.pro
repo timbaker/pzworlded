@@ -144,7 +144,8 @@ SOURCES += main.cpp\
     navigation/chunkdatafile.cpp \
     searchdock.cpp \
     defaultsfile.cpp \
-    BuildingEditor/roofhiding.cpp
+    BuildingEditor/roofhiding.cpp \
+    waterflow.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -235,7 +236,8 @@ HEADERS  += mainwindow.h \
     navigation/chunkdatafile.h \
     searchdock.h \
     defaultsfile.h \
-    BuildingEditor/roofhiding.h
+    BuildingEditor/roofhiding.h \
+    waterflow.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

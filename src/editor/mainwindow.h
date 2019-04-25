@@ -151,6 +151,8 @@ public slots:
 
     void lootInspector();
 
+    void readOldWaterDotLua();
+
 private:
     void FromToAux(bool selectedOnly);
 

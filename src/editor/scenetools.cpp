@@ -229,7 +229,7 @@ WorldCellObject *CreateObjectTool::clearNewMapObjectItem()
     WorldCellObject *obj = mItem->object();
     mScene->removeItem(mItem);
     delete mItem;
-    mItem = 0;
+    mItem = nullptr;
     return obj;
 }
 
@@ -252,7 +252,7 @@ void CreateObjectTool::finishNewMapObject()
 
 /////
 
-SelectMoveObjectTool *SelectMoveObjectTool::mInstance = 0;
+SelectMoveObjectTool *SelectMoveObjectTool::mInstance = nullptr;
 
 SelectMoveObjectTool *SelectMoveObjectTool::instance()
 {
@@ -272,7 +272,7 @@ SelectMoveObjectTool::SelectMoveObjectTool()
                         QKeySequence(QLatin1String("S")))
     , mMode(NoMode)
     , mMousePressed(false)
-    , mClickedItem(0)
+    , mClickedItem(nullptr)
 {
 }
 
@@ -387,7 +387,7 @@ void SelectMoveObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 
     mMousePressed = false;
-    mClickedItem = 0;
+    mClickedItem = nullptr;
 }
 
 void SelectMoveObjectTool::startSelecting()
@@ -632,11 +632,11 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     // Do mouse-over highlighting of Lots that are baked into a map.
     SubMapItem *item = topmostItemAt(event->scenePos());
-    MapComposite *highlight = 0;
+    MapComposite *highlight = nullptr;
     if (!item && !mMousePressed) {
         if (MapComposite *mc = mapUnderPoint(mScene, mScene->mapComposite(), mScene->renderer(), event->scenePos())) {
             if (mc->isAdjacentMap())
-                mc = 0;
+                mc = nullptr;
             highlight = mc;
         }
     }
@@ -647,7 +647,7 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
             mMapHighlightItem->setPolygon(polygon);
             mMapHighlightItem->setToolTip(QDir::toNativeSeparators(highlight->mapInfo()->path()));
         }
-        mMapHighlightItem->setVisible(highlight != 0);
+        mMapHighlightItem->setVisible(highlight != nullptr);
         mHighlightedMap = highlight;
     }
 
@@ -716,7 +716,7 @@ void SubMapTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 
     mMousePressed = false;
-    mClickedItem = 0;
+    mClickedItem = nullptr;
 }
 
 void SubMapTool::startSelecting()
@@ -838,7 +838,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
 
     QMenu menu;
     QIcon lightIcon(QLatin1String(":/images/idea.png"));
-    QAction *lightbulbRoomAction = 0;
+    QAction *lightbulbRoomAction = nullptr;
     QString roomName;
     if (LightSwitchOverlay *overlay = topmostSwitchAt(scenePos)) {
         roomName = overlay->mRoomName;
@@ -852,7 +852,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
             lightbulbRoomAction = menu.addAction(lightIcon,
                                                  tr("Hide lights in rooms called %1").arg(roomName));
     }
-    QAction *lightbulbMapAction = 0;
+    QAction *lightbulbMapAction = nullptr;
     QString mapName = QFileInfo(item->subMap()->mapInfo()->path()).fileName();
     if (LightbulbsMgr::instance().maps().contains(mapName))
         lightbulbMapAction = menu.addAction(lightIcon, tr("Show lights in %1").arg(mapName));
@@ -865,7 +865,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
     QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
 
     QAction *action = menu.exec(screenPos);
-    if (action == 0) return;
+    if (action == nullptr) return;
     if (action == lightbulbRoomAction)
         LightbulbsMgr::instance().toggleRoom(roomName);
     if (action == lightbulbMapAction)
@@ -886,7 +886,7 @@ SubMapItem *SubMapTool::topmostItemAt(const QPointF &scenePos)
         if (SubMapItem *subMapItem = dynamic_cast<SubMapItem*>(item))
             return subMapItem;
     }
-    return 0;
+    return nullptr;
 }
 
 LightSwitchOverlay *SubMapTool::topmostSwitchAt(const QPointF &scenePos)

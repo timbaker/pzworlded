@@ -1162,7 +1162,8 @@ CellScene::CellScene(QObject *parent)
     , mPendingActive(false)
     , mPendingDefer(true)
     , mActiveTool(0)
-    , mOverlays(this)
+    , mLightSwitchOverlays(this)
+    , mWaterFlowOverlay(new WaterFlowOverlay(this))
 {
     setBackgroundBrush(Qt::darkGray);
 
@@ -1188,6 +1189,8 @@ CellScene::CellScene(QObject *parent)
     mMapBordersItem->setPen(pen);
     mMapBordersItem->setZValue(ZVALUE_GRID - 1);
 //    addItem(mMapBordersItem);
+
+
 }
 
 CellScene::~CellScene()
@@ -1502,7 +1505,7 @@ QRegion CellScene::getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn)
     if (mMapBuildingsInvalid) {
         mMapBuildings->calculate(mMapComposite);
         mMapBuildingsInvalid = false;
-        mOverlays.update();
+        mLightSwitchOverlays.update();
     }
     if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel())) {
         roomRgn = room->region();
@@ -1516,7 +1519,7 @@ QString CellScene::roomNameAt(const QPointF &scenePos)
     if (mMapBuildingsInvalid) {
         mMapBuildings->calculate(mMapComposite);
         mMapBuildingsInvalid = false;
-        mOverlays.update();
+        mLightSwitchOverlays.update();
     }
     QPoint tilePos = mRenderer->pixelToTileCoordsInt(scenePos, document()->currentLevel());
     if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel()))
@@ -1542,8 +1545,9 @@ void CellScene::loadMap()
         removeItem(mDarkRectangle);
         removeItem(mGridItem);
         removeItem(mMapBordersItem);
+        removeItem(mWaterFlowOverlay);
 
-        mOverlays.removeOverlays();
+        mLightSwitchOverlays.removeOverlays();
 
         foreach (AdjacentMap *am, mAdjacentMaps)
             am->removeItems();
@@ -1567,10 +1571,10 @@ void CellScene::loadMap()
         mRoadItems.clear();
 
         // mMap, mMapInfo are shared, don't destroy
-        mMap = 0;
-        mMapInfo = 0;
-        mMapComposite = 0;
-        mRenderer = 0;
+        mMap = nullptr;
+        mMapInfo = nullptr;
+        mMapComposite = nullptr;
+        mRenderer = nullptr;
     }
 
     PROGRESS progress(tr("Loading cell %1,%2").arg(cell()->x()).arg(cell()->y()));
@@ -1654,6 +1658,7 @@ void CellScene::loadMap()
     addItem(mDarkRectangle);
     addItem(mGridItem);
     addItem(mMapBordersItem);
+    addItem(mWaterFlowOverlay);
 
     updateCurrentLevelHighlight();
 
@@ -2250,7 +2255,7 @@ void CellScene::mapCompositeNeedsSynch()
 
 void CellScene::updateCurrentLevelHighlight()
 {
-    mOverlays.updateCurrentLevelHighlight();
+    mLightSwitchOverlays.updateCurrentLevelHighlight();
 
     int currentLevel = mDocument->currentLevel();
     if (!mHighlightCurrentLevel) {

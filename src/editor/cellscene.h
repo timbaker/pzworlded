@@ -627,8 +627,10 @@ private:
 
     BaseCellSceneTool *mActiveTool;
 
-    CellSceneOverlays mOverlays;
-    friend class CellSceneOverlays;
+    LightSwitchOverlays mLightSwitchOverlays;
+    friend class LightSwitchOverlays;
+
+    WaterFlowOverlay* mWaterFlowOverlay;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

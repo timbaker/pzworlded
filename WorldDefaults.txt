@@ -173,3 +173,132 @@ objectgroup
     defaulttype = FarmLand
 }
 
+
+property
+{
+    name = WaterDirection
+    default = 0.0
+}
+
+property
+{
+    name = WaterSpeed
+    default = 0.0
+}
+
+template
+{
+    name = WaterFlowN
+    property
+    {
+        name = WaterDirection
+        value = 0
+    }
+    property
+    {
+        name = WaterSpeed
+        value = 1.0
+    }
+}
+
+template
+{
+    name = WaterFlowS
+    property
+    {
+        name = WaterDirection
+        value = 180
+    }
+    property
+    {
+        name = WaterSpeed
+        value = 1.0
+    }
+}
+
+template
+{
+    name = WaterFlowE
+    property
+    {
+        name = WaterDirection
+        value = 90
+    }
+    property
+    {
+        name = WaterSpeed
+        value = 1.0
+    }
+}
+
+template
+{
+    name = WaterFlowW
+    property
+    {
+        name = WaterDirection
+        value = 270
+    }
+    property
+    {
+        name = WaterSpeed
+        value = 1.0
+    }
+}
+
+objecttype
+{
+    name = WaterFlow
+}
+
+objectgroup
+{
+    name = WaterFlow
+    color = #0000ff
+    defaulttype = WaterFlow
+}
+
+
+
+
+property
+{
+    name = WaterGround
+    default = false
+}
+
+property
+{
+    name = WaterShore
+    default = true
+}
+
+objecttype
+{
+    name = WaterZone
+}
+
+objectgroup
+{
+    name = WaterZone
+    color = #0000ff
+    defaulttype = WaterZone
+}
+
+template
+{
+    name = WaterZone
+    property
+    {
+        name = WaterGround
+        value = false
+    }
+    property
+    {
+        name = WaterShore
+        value = true
+    }
+}
+
+
+

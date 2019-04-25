@@ -19,9 +19,12 @@
 
 #include "celldocument.h"
 #include "cellscene.h"
+#include "map.h"
 #include "mapbuildings.h"
 #include "mapcomposite.h"
 #include "preferences.h"
+#include "world.h"
+#include "worldcell.h"
 
 #include "maprenderer.h"
 #include "tile.h"
@@ -97,7 +100,7 @@ QPainterPath LightSwitchOverlay::shape() const
 
 /////
 
-CellSceneOverlays::CellSceneOverlays(CellScene *scene) :
+LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
     mScene(scene)
 {
     QSettings settings;
@@ -125,7 +128,7 @@ CellSceneOverlays::CellSceneOverlays(CellScene *scene) :
     connect(LightbulbsMgr::instancePtr(), SIGNAL(changed()), SLOT(update()));
 }
 
-void CellSceneOverlays::update()
+void LightSwitchOverlays::update()
 {
     qDebug() << "CellSceneOverlays update...";
 
@@ -204,7 +207,7 @@ void CellSceneOverlays::update()
     qDebug() << "CellSceneOverlays update DONE";
 }
 
-void CellSceneOverlays::updateCurrentLevelHighlight()
+void LightSwitchOverlays::updateCurrentLevelHighlight()
 {
     int currentLevel = mScene->document()->currentLevel();
     foreach (SceneOverlay *overlay, mOverlays) {
@@ -213,7 +216,7 @@ void CellSceneOverlays::updateCurrentLevelHighlight()
     }
 }
 
-void CellSceneOverlays::removeOverlays()
+void LightSwitchOverlays::removeOverlays()
 {
     qDeleteAll(mOverlays);
     mOverlays.clear();
@@ -370,3 +373,92 @@ bool LightbulbsMgr::ignoreMap(const QString &map)
 {
     return mFile.maps().contains(map);
 }
+
+// // // // //
+
+WaterFlowOverlay::WaterFlowOverlay(CellScene *scene, QGraphicsItem *parent)
+    : SceneOverlay(scene, parent)
+    , mCellScene(scene->asCellScene())
+{
+}
+
+QRectF WaterFlowOverlay::boundingRect() const
+{
+    QRectF r = mCellScene->renderer()->boundingRect(QRect(0, 0, 300, 300), 0);
+    return r;
+}
+
+#include <QtMath>
+
+static void resolveProperties(PropertyHolder *ph, PropertyList &result)
+{
+    for (PropertyTemplate *pt : ph->templates()) {
+        resolveProperties(pt, result);
+    }
+    for (Property *p : ph->properties()) {
+        result.removeAll(p->mDefinition);
+        result += p;
+    }
+}
+
+void WaterFlowOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    ObjectType* objectType = mCellScene->world()->objectType(QStringLiteral("WaterFlow"));
+    if (objectType == nullptr)
+        return;
+    PropertyDef* pdefDir = mCellScene->world()->propertyDefinition(QStringLiteral("WaterDirection"));
+    PropertyDef* pdefSpeed = mCellScene->world()->propertyDefinition(QStringLiteral("WaterSpeed"));
+
+    QPen pen(Qt::red);
+    pen.setJoinStyle(Qt::RoundJoin);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setWidth(2);
+    painter->setPen(pen);
+    painter->setRenderHint(QPainter::Antialiasing);
+
+    for (WorldCellObject* object : mCellScene->cell()->objects()) {
+        if (object->type() != objectType)
+            continue;
+
+        QRectF tileBounds(object->pos(), object->size());
+        mCellScene->renderer()->drawFancyRectangle(painter, tileBounds, Qt::red, object->level());
+
+        PropertyList properties;
+        resolveProperties(object, properties);
+        Property* propertyDir = properties.find(pdefDir);
+        Property* propertySpeed = properties.find(pdefSpeed);
+        if (propertyDir != nullptr && propertySpeed != nullptr) {
+            // positive is clockwise, zero degrees is at 12 o'clock (north in isometric coords)
+            qreal directionDegrees = propertyDir->mValue.toDouble();
+//            float directionRadians = qDegreesToRadians(directionDegrees);
+            qreal speed = propertySpeed->mValue.toDouble();
+
+            if (speed <= 0.0)
+                continue;
+
+            QLineF line(tileBounds.center(), tileBounds.center() + QPointF(qMax(5 * speed, 0.5), 0));
+            // positive is counter-clockwise, zero degrees is at the 3 o'clock position
+            qreal angle1 = -int(directionDegrees - 90) % 360;
+            line.setAngle(angle1);
+
+            QPointF start = mCellScene->renderer()->tileToPixelCoords(tileBounds.center());
+            QPointF end = mCellScene->renderer()->tileToPixelCoords(line.p2());
+
+            qreal arrowSize = 0.5;
+            qreal angle = std::atan2(line.dy(), -line.dx());
+            QPointF arrowP1 = line.p2() + QPointF(sin(angle + M_PI / 3) * arrowSize, cos(angle + M_PI / 3) * arrowSize);
+            QPointF arrowP2 = line.p2() + QPointF(sin(angle + M_PI - M_PI / 3) * arrowSize, cos(angle + M_PI - M_PI / 3) * arrowSize);
+            QPolygonF arrowHead;
+            arrowHead << line.p2() << arrowP1 << arrowP2;
+            arrowHead = mCellScene->renderer()->tileToPixelCoords(arrowHead);
+
+            painter->drawLine(start, end);
+
+            painter->setBrush(Qt::red);
+            painter->drawPolygon(arrowHead);
+            painter->setBrush(Qt::transparent);
+
+        }
+    }
+}
+

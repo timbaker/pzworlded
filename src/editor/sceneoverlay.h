@@ -18,6 +18,7 @@
 #ifndef SCENEOVERLAY_H
 #define SCENEOVERLAY_H
 
+#include "singleton.h"
 #include "tiledeffile.h"
 
 #include <QGraphicsItem>
@@ -53,11 +54,11 @@ public:
     static QImage mImage;
 };
 
-class CellSceneOverlays : public QObject
+class LightSwitchOverlays : public QObject
 {
     Q_OBJECT
 public:
-    CellSceneOverlays(CellScene *scene);
+    LightSwitchOverlays(CellScene *scene);
     void updateCurrentLevelHighlight();
     void removeOverlays();
 
@@ -115,7 +116,6 @@ private:
     QString mError;
 };
 
-#include "singleton.h"
 class LightbulbsMgr : public QObject, public Singleton<LightbulbsMgr>
 {
     Q_OBJECT
@@ -143,5 +143,19 @@ signals:
 private:
     LightbulbsFile mFile;
 };
+
+// A single overlay per CellScene to display Yuri's water flow
+class WaterFlowOverlay : public SceneOverlay
+{
+public:
+    WaterFlowOverlay(CellScene *scene, QGraphicsItem *parent = nullptr);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+//    QPainterPath shape() const;
+
+    CellScene *mCellScene;
+};
+
 
 #endif // SCENEOVERLAY_H

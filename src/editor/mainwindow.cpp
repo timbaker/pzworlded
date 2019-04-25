@@ -297,6 +297,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
     connect(ui->actionLootInspector, SIGNAL(triggered()), SLOT(lootInspector()));
+//    connect(ui->actionReadOldWaterDotLua, &QAction::triggered, this, &MainWindow::readOldWaterDotLua);
 
     connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
@@ -1049,6 +1050,16 @@ void MainWindow::lootInspector()
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         LootWindow::instance().setDocument(mCurrentDocument);
     }
+}
+
+#include "waterflow.h"
+void MainWindow::readOldWaterDotLua()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        return;
+
+    WaterFlow().readOldWaterDotLua(worldDoc);
 }
 
 #include "mapwriter.h"
