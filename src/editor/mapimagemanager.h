@@ -18,6 +18,9 @@
 #ifndef MAPIMAGEMANAGER_H
 #define MAPIMAGEMANAGER_H
 
+#include "assetmanager.h"
+#include "singleton.h"
+
 #include <QFileInfo>
 #include <QImage>
 #include <QMap>
@@ -26,6 +29,7 @@
 
 class MapComposite;
 class MapInfo;
+class AssetTask_LoadMapImage;
 
 namespace Tiled {
 class Map;
@@ -120,9 +124,11 @@ private:
     QList<Job> mJobs;
 };
 
-class MapImage
+class MapImage : public Asset
 {
 public:
+    MapImage(AssetPath path, AssetManager* manager);
+
     MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize, MapInfo *mapInfo);
 
     void setImage(const QImage &image) { mImage = image; }
@@ -204,15 +210,16 @@ private:
 #endif /* WORLDED */
 
     friend class MapImageManager;
+    friend class AssetTask_LoadMapImage;
 };
 
-class MapImageManager : public QObject
+class MapImageManager : public AssetManager, public Singleton<MapImageManager>
 {
     Q_OBJECT
 
 public:
-    static MapImageManager *instance();
-    static void deleteInstance();
+    MapImageManager();
+    ~MapImageManager();
 
     MapImage *getMapImage(const QString &mapName, const QString &relativeTo = QString());
 
@@ -276,16 +283,19 @@ private slots:
     void mapFailedToLoad(MapInfo *mapInfo);
 
     void processDeferrals();
+    void processWaitingTasks();
+
+protected:
+    Asset* createAsset(AssetPath path, AssetParams* params) override;
+    void destroyAsset(Asset* asset) override;
+    void startLoading(Asset* asset) override;
+
+    friend class AssetTask_LoadMapImage;
 
 private:
-    Q_DISABLE_COPY(MapImageManager)
-    MapImageManager();
-    ~MapImageManager();
-
     QFileInfo imageFileInfo(const QString &mapFilePath);
     QFileInfo imageDataFileInfo(const QFileInfo &imageFileInfo);
 
-    QMap<QString,MapImage*> mMapImages;
     QString mError;
 
     QVector<InterruptibleThread*> mImageReaderThreads;
@@ -301,13 +311,13 @@ private:
 #endif
     MapComposite *mRenderMapComposite;
 
+    QList<AssetTask*> mWaitingTasks;
+
     friend class MapImageManagerDeferral;
     void deferThreadResults(bool defer);
     int mDeferralDepth;
     QList<MapImage*> mDeferredMapImages;
     bool mDeferralQueued;
-
-    static MapImageManager *mInstance;
 };
 
 class MapImageManagerDeferral
@@ -316,18 +326,18 @@ public:
     MapImageManagerDeferral() :
         mReleased(false)
     {
-        MapImageManager::instance()->deferThreadResults(true);
+        MapImageManager::instance().deferThreadResults(true);
     }
 
     ~MapImageManagerDeferral()
     {
         if (!mReleased)
-            MapImageManager::instance()->deferThreadResults(false);
+            MapImageManager::instance().deferThreadResults(false);
     }
 
     void release()
     {
-        MapImageManager::instance()->deferThreadResults(false);
+        MapImageManager::instance().deferThreadResults(false);
         mReleased = true;
     }
 

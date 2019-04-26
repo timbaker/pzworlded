@@ -196,7 +196,9 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
     if (mapInfo == nullptr || mapInfo->isFailure())
         return nullptr;
 
-    if (mapInfo->isLoading()) {
+    // Wait for MapInfo and/or MapAsset :-(
+
+    if (mapInfo->isLoading() || (mapInfo->mMap != nullptr)) {
 #if 0
         foreach (MapReaderWorker *w, mMapReaderWorker)
             QMetaObject::invokeMethod(w, "possiblyRaisePriority",
@@ -211,13 +213,14 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
                 MapDeferral md = mDeferredMaps[i];
                 if (md.mapInfo == mapInfo) {
                     mDeferredMaps.removeAt(i);
-                    mapLoadedByThread(md.map, md.mapInfo);
+                    mapLoadedByThread(md.mapAsset, md.mapInfo);
                     break;
                 }
             }
             IdleTasks::instance().blockTasks(true);
-            while (mapInfo->isLoading()) {
+            while ( mapInfo->isLoading() || mapInfo->isEmpty()) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+                AssetTaskManager::instance().updateAsyncTransactions();
             }
             IdleTasks::instance().blockTasks(false);
             mWaitingForMapInfo = nullptr;
@@ -260,13 +263,14 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
         MapDeferral md = mDeferredMaps[i];
         if (md.mapInfo == mapInfo) {
             mDeferredMaps.removeAt(i);
-            mapLoadedByThread(md.map, md.mapInfo);
+            mapLoadedByThread(md.mapAsset, md.mapInfo);
             break;
         }
     }
     IdleTasks::instance().blockTasks(true);
     while (mapInfo->isLoading()) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        AssetTaskManager::instance().updateAsyncTransactions();
     }
     IdleTasks::instance().blockTasks(false);
 
@@ -430,7 +434,9 @@ public:
 MapInfo *MapManager::mapInfo(const QString &mapFilePath)
 {
 #if 1
-    MapInfo* mapInfo = (MapInfo*)load(AssetPath(mapFilePath));
+    MapInfo* mapInfo = static_cast<MapInfo*>(load(AssetPath(mapFilePath)));
+    return mapInfo;
+#elif 0
     if (mapInfo == nullptr)
     {
         return mapInfo;
@@ -444,7 +450,7 @@ MapInfo *MapManager::mapInfo(const QString &mapFilePath)
     while (mapInfo->isEmpty())
     {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-//        AssetTaskManager::instance().updateAsyncTransactions();
+        AssetTaskManager::instance().updateAsyncTransactions();
         Sleep::msleep(10);
     }
     IdleTasks::instance().blockTasks(false);
@@ -528,7 +534,7 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int he
 {
     QString mapFilePath(mapName);
     MapInfo *mapInfo = static_cast<MapInfo*>(get(mapFilePath));
-    if (mapInfo != nullptr && mapInfo->mMap != nullptr)
+    if (mapInfo != nullptr && mapInfo->mMap != nullptr && !mapInfo->mMap->isFailure())
     {
          return mapInfo;
     }
@@ -542,6 +548,12 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int he
     }
     Map *map = new Map(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
                        mapInfo->tileWidth(), mapInfo->tileHeight());
+
+    if (mapInfo->mMap != nullptr)
+    {
+        // FIXME: old map failed to load, release it
+        int dbg = 1;
+    }
 
     mapInfo->mMap = new MapAsset(map, mapFilePath, MapAssetManager::instancePtr());
     mapInfo->addDependency(mapInfo->mMap);
@@ -566,22 +578,22 @@ void MapManager::mapParametersChanged(MapInfo *mapInfo)
 void MapManager::addReferenceToMap(MapInfo *mapInfo)
 {
     Q_ASSERT(mapInfo->mMap != nullptr);
-    if (mapInfo->mMap) {
+    if (mapInfo->mMap != nullptr) {
         MapAssetManager::instance().load(mapInfo->mMap);
         mapInfo->mReferenceEpoch = mReferenceEpoch;
-        if (mapInfo->getRefCount() == 1)
+        if (mapInfo->mMap->getRefCount() == 1)
             ++mReferenceEpoch;
-        noise() << "MapManager refCount++ =" << mapInfo->getRefCount() << mapInfo->mFilePath;
+        noise() << "MapManager refCount++ =" << mapInfo->mMap->getRefCount() << mapInfo->mFilePath;
     }
 }
 
 void MapManager::removeReferenceToMap(MapInfo *mapInfo)
 {
     Q_ASSERT(mapInfo->mMap != nullptr);
-    if (mapInfo->mMap) {
-        Q_ASSERT(mapInfo->getRefCount() > 0);
+    if (mapInfo->mMap != nullptr) {
+        Q_ASSERT(mapInfo->mMap->getRefCount() > 0);
         MapAssetManager::instance().unload(mapInfo->mMap);
-        noise() << "MapManager refCount-- =" << mapInfo->getRefCount() << mapInfo->mFilePath;
+        noise() << "MapManager refCount-- =" << mapInfo->mMap->getRefCount() << mapInfo->mFilePath;
         purgeUnreferencedMaps();
     }
 }
@@ -601,6 +613,7 @@ void MapManager::purgeUnreferencedMaps()
             mapInfo->mMap->disconnect(mapInfo);
 //            MapAssetManager::instance().enableUnload(true);
 //            MapAssetManager::instance().unload(mapInfo->mMap);
+            // FIXME: unload mMap
             mapInfo->mMap = nullptr;
         }
         else if (mapInfo->mMap && mapInfo->getRefCount() <= 0) {
@@ -724,11 +737,15 @@ void MapManager::metaTilesetRemoved(Tileset *tileset)
     }
 }
 
-void MapManager::mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo)
+void MapManager::mapLoadedByThread(MapAsset *mapAsset, MapInfo *mapInfo)
 {
+    Q_ASSERT(mapAsset == mapInfo->mMap);
+
+    Tiled::Map* map = mapAsset->mLoadedMap;
+
     if (mapInfo != mWaitingForMapInfo && mDeferralDepth > 0) {
         noise() << "MAP LOADED BY THREAD - DEFERR" << mapInfo->path();
-        mDeferredMaps += MapDeferral(mapInfo, map);
+        mDeferredMaps += MapDeferral(mapInfo, mapAsset);
         if (!mDeferralQueued) {
             QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
             mDeferralQueued = true;
@@ -752,18 +769,16 @@ void MapManager::mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo)
     }
     TilesetManager::instance().addReferences(map->tilesets());
 
-    bool replace = mapInfo->mMap != nullptr;
+    bool replace = mapInfo->mMap->mMap != nullptr;
     if (replace) {
         Q_ASSERT(!mapInfo->isBeingEdited());
         emit mapAboutToChange(mapInfo);
         TilesetManager& tilesetMgr = TilesetManager::instance();
         tilesetMgr.removeReferences(mapInfo->map()->tilesets());
-//        delete mapInfo->mMap;
-        MapAssetManager::instance().unload(mapInfo->mMap);
-        mapInfo->mMap = nullptr;
+        delete mapInfo->mMap->mMap;
     }
 
-//    mapInfo->mMap = map;
+    mapInfo->mMap->mMap = map;
     mapInfo->mOrientation = map->orientation();
     mapInfo->mHeight = map->height();
     mapInfo->mWidth = map->width();
@@ -784,9 +799,11 @@ void MapManager::mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo)
     emit mapLoaded(mapInfo);
 }
 
-void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
+void MapManager::buildingLoadedByThread(MapAsset *mapAsset, MapInfo *mapInfo)
 {
     MapManagerDeferral deferral;
+
+    Building* building = mapAsset->mLoadedBuilding;
 
     BuildingReader reader;
     reader.fix(building);
@@ -798,6 +815,7 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     bmap.addRoomDefObjects(map);
 
     delete building;
+    mapAsset->mLoadedBuilding = nullptr;
 
     QSet<Tileset*> usedTilesets = map->usedTilesets();
     usedTilesets.remove(TilesetManager::instance().missingTileset());
@@ -808,7 +826,8 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     // to them ourself below.
     TilesetManager::instance().removeReferences(map->tilesets());
 
-    mapLoadedByThread(map, mapInfo);
+    mapAsset->mLoadedMap = map;
+    mapLoadedByThread(mapAsset, mapInfo);
 }
 
 void MapManager::failedToLoadByThread(const QString error, MapInfo *mapInfo)
@@ -825,14 +844,13 @@ void MapManager::mapAssetStateChanged(MapInfo *mapInfo)
         return;
     if (mapAsset->isReady())
     {
-        if (mapAsset->mBuilding != nullptr)
+        if (mapAsset->mLoadedBuilding != nullptr)
         {
-            buildingLoadedByThread(mapAsset->mBuilding, mapInfo);
-            mapAsset->mBuilding = nullptr; // deleted by buildingLoadedByThread()
+            buildingLoadedByThread(mapAsset, mapInfo);
         }
-        else if (mapAsset->mMap != nullptr)
+        else if (mapAsset->mLoadedMap != nullptr)
         {
-            mapLoadedByThread(mapAsset->mMap, mapInfo);
+            mapLoadedByThread(mapAsset, mapInfo);
         }
     }
     else if (mapAsset->isFailure())
@@ -870,7 +888,7 @@ void MapManager::processDeferrals()
     mDeferredMaps.clear();
     mDeferralQueued = false;
     for (MapDeferral md : deferrals) {
-        mapLoadedByThread(md.map, md.mapInfo);
+        mapLoadedByThread(md.mapAsset, md.mapInfo);
     }
 }
 

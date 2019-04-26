@@ -197,7 +197,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(MapManager::instancePtr(), SIGNAL(mapFileCreated(QString)),
             SLOT(mapFileCreated(QString)));
 
-    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+    connect(MapImageManager::instancePtr(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(mapImageChanged(MapImage*)));
 
     connect(IdleTasks::instancePtr(), &IdleTasks::idleTime, this, &WorldScene::handlePendingThumbnails);
@@ -846,6 +846,9 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!mapInfo)
             continue;
 
+        if (!mapInfo->isReady())
+            continue;
+
         if (mapInfo->size() != QSize(300, 300))
             continue;
 
@@ -976,18 +979,18 @@ void BaseCellItem::paint(QPainter *painter,
 
 void BaseCellItem::updateCellImage()
 {
-    mMapImage = 0;
+    mMapImage = nullptr;
     mMapImageBounds = QRect();
     if (mWantsImages && !mapFilePath().isEmpty()) {
 #ifndef QT_NO_DEBUG
         Q_ASSERT(!mUpdatingImage);
         mUpdatingImage = true;
 #endif
-        mMapImage = MapImageManager::instance()->getMapImage(mapFilePath());
+        mMapImage = MapImageManager::instance().getMapImage(mapFilePath());
 #ifndef QT_NO_DEBUG
         mUpdatingImage = false;
 #endif
-        if (mMapImage) {
+        if (mMapImage && mMapImage->isReady()) {
             calcMapImageBounds();
         }
     }
@@ -999,7 +1002,7 @@ void BaseCellItem::updateLotImage(int index)
 {
     WorldCellLot *lot = lots().at(index);
     MapImage *mapImage = mWantsImages
-            ? MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/)
+            ? MapImageManager::instance().getMapImage(lot->mapName()/*, mapFilePath()*/)
             : 0;
     if (mapImage) {
         mLotImages.insert(index, LotImage(QRectF(), mapImage));
@@ -1638,8 +1641,8 @@ WorldBMPItem::WorldBMPItem(WorldScene *scene, WorldBMP *bmp)
     , mSelected(false)
     , mDragging(false)
 {
-    mMapImage = MapImageManager::instance()->getMapImage(bmp->filePath());
-    if (!mMapImage) qDebug() << MapImageManager::instance()->errorString();
+    mMapImage = MapImageManager::instance().getMapImage(bmp->filePath());
+    if (!mMapImage) qDebug() << MapImageManager::instance().errorString();
 
     // I chopped up the image to make OpenGL happy (no 6000x3000 textures), but
     // performance is way better without OpenGL, probably due to pixel format.

@@ -47,6 +47,9 @@ public:
     void addDependency(Asset* dependent_asset);
     void removeDependency(Asset* dependent_asset);
 
+    // Hack
+    void setManager(AssetManager* manager) { m_manager = manager; }
+
     virtual void setAssetParams(AssetParams* params);
 
 signals:

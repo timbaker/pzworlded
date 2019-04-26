@@ -219,9 +219,9 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
     }
 
-    foreach (WorldCellLot *lot, cell->lots()) {
+    for (WorldCellLot *lot : cell->lots()) {
         MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
-        Q_ASSERT(info && info->map());
+        Q_ASSERT(info && info->map() && info->isReady());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }
 

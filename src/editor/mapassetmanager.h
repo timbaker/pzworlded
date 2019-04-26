@@ -31,8 +31,11 @@ public:
 
     Tiled::Map* map() const { return mMap; }
 
-    BuildingEditor::Building* mBuilding = nullptr;
     Tiled::Map* mMap = nullptr;
+
+    // Temporaries used during loading
+    BuildingEditor::Building* mLoadedBuilding = nullptr;
+    Tiled::Map* mLoadedMap = nullptr;
 };
 
 class MapAssetManager : public AssetManager, public Singleton<MapAssetManager>

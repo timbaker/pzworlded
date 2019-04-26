@@ -86,9 +86,9 @@ MapsDock::MapsDock(QWidget *parent)
     connect(mMapsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             SLOT(selectionChanged()));
 
-    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+    connect(MapImageManager::instancePtr(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(onMapImageChanged(MapImage*)));
-    connect(MapImageManager::instance(), SIGNAL(mapImageFailedToLoad(MapImage*)),
+    connect(MapImageManager::instancePtr(), SIGNAL(mapImageFailedToLoad(MapImage*)),
             SLOT(mapImageFailedToLoad(MapImage*)));
 
     // Workaround since a tabbed dockwidget that is not currently visible still
@@ -134,7 +134,7 @@ void MapsDock::selectionChanged()
         return;
     if (info.suffix() == QLatin1String("pzw"))
         return;
-    MapImage *mapImage = MapImageManager::instance()->getMapImage(path);
+    MapImage *mapImage = MapImageManager::instance().getMapImage(path);
     if (mapImage) {
         if (mapImage->isLoaded()) {
             QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio,

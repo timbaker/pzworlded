@@ -26,16 +26,17 @@ void AssetTaskManager::submit(AssetTask *task)
 
 void AssetTaskManager::updateAsyncTransactions()
 {
-    int n = qMin(m_in_progress.size(), 16);
+    int n = m_in_progress.size();
+    QList<AssetTask*> in_progress(m_in_progress);
+    QList<AssetTask*> done;
     for (int i = 0; i < n; i++)
     {
-        AssetTask* item = m_in_progress.at(i);
+        AssetTask* item = in_progress.at(i);
         if (!item->isDone())
         {
             continue;
         }
-        m_in_progress.removeAt(i--);
-        n--;
+        done << item;
         if (item->isCancelled())
         {
             int dbg = 1;
@@ -46,6 +47,8 @@ void AssetTaskManager::updateAsyncTransactions()
         }
         item->release();
     }
+    for (AssetTask* task : done)
+        m_in_progress.removeOne(task);
 #if 0
     while (true)
     {
@@ -86,6 +89,7 @@ void AssetTaskManager::updateAsyncTransactions()
         AssetTask* item = m_pending.takeAt(0);
         if (item->isCancelled())
         {
+            item->release();
             continue;
         }
         m_in_progress << item;

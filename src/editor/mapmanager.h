@@ -160,8 +160,8 @@ private slots:
     void metaTilesetAdded(Tiled::Tileset *tileset);
     void metaTilesetRemoved(Tiled::Tileset *tileset);
 
-    void mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo);
-    void buildingLoadedByThread(Building *building, MapInfo *mapInfo);
+    void mapLoadedByThread(MapAsset *mapAsset, MapInfo *mapInfo);
+    void buildingLoadedByThread(MapAsset* mapAsset, MapInfo *mapInfo);
     void failedToLoadByThread(const QString error, MapInfo *mapInfo);
 
     void mapAssetStateChanged(MapInfo *mapInfo);
@@ -186,13 +186,13 @@ private:
     int mDeferralDepth;
     struct MapDeferral
     {
-        MapDeferral(MapInfo *mapInfo, Tiled::Map *map) :
+        MapDeferral(MapInfo *mapInfo, MapAsset* mapAsset) :
             mapInfo(mapInfo),
-            map(map)
+            mapAsset(mapAsset)
         {}
 
         MapInfo *mapInfo;
-        Tiled::Map *map;
+        MapAsset *mapAsset;
     };
     QList<MapDeferral> mDeferredMaps;
     bool mDeferralQueued;

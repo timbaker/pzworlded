@@ -10,7 +10,8 @@ Tiled::Map *MapInfo::map() const
 
 bool MapInfo::isLoading() const
 {
-    return mMap != nullptr && mMap->isEmpty();
+    // MapAsset is 'ready' before MapManager.mapLoadedByThread() has set MapAsset.mMap
+    return mMap != nullptr && (mMap->isEmpty() || (mMap->isReady() && mMap->mMap == nullptr));
 }
 
 void MapInfo::setFrom(MapInfo *other)
@@ -21,7 +22,7 @@ void MapInfo::setFrom(MapInfo *other)
     mTileWidth = other->mTileWidth;
     mTileHeight = other->mTileHeight;
     mFilePath = other->mFilePath;
-    mMap = other->mMap; // FIXME: addDepency()
+//    mMap = other->mMap; // FIXME: addDepency()
     mPlaceholder = other->mPlaceholder;
     mBeingEdited = other->mBeingEdited;
     mReferenceEpoch = other->mReferenceEpoch;

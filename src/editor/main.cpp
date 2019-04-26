@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
     new TilesetManager(); // before MapManager()
     new MapAssetManager();
     new MapManager();
+    new MapImageManager();
 
     MainWindow w;
     w.show();

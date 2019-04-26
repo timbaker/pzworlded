@@ -55,6 +55,7 @@ TilesetManager::TilesetManager():
     const int TILE_HEIGHT = 128;
 
     mMissingTileset = new Tileset(QLatin1String("missing"), TILE_WIDTH, TILE_HEIGHT);
+    mMissingTileset->setManager(this); // hack
     mMissingTileset->setTransparentColor(Qt::white);
     mMissingTileset->setMissing(true);
     QString fileName = QLatin1String(":/images/missing-tile.png");
@@ -67,6 +68,7 @@ TilesetManager::TilesetManager():
     mTilesets.insert(mMissingTileset, 1); //addReference(mMissingTileset);
 
     mNoBlendTileset = new Tileset(QLatin1String("noblend"), TILE_WIDTH, TILE_HEIGHT);
+    mNoBlendTileset->setManager(this); // hack
     mNoBlendTileset->setTransparentColor(Qt::white);
     mNoBlendTileset->setMissing(true);
     fileName = QLatin1String(":/images/noblend.png");
@@ -80,6 +82,7 @@ TilesetManager::TilesetManager():
 
     qRegisterMetaType<Tileset*>("Tileset*");
 
+#if 0
     mImageReaderThreads.resize(8);
     mImageReaderWorkers.resize(mImageReaderThreads.size());
     mNextThreadForJob = 0;
@@ -91,6 +94,7 @@ TilesetManager::TilesetManager():
                 SLOT(imageLoaded(Tiled::Tileset*,Tiled::Tileset*)));
         mImageReaderThreads[i]->start();
     }
+#endif
 
 #ifndef WORLDED
     mReloadTilesetsOnChange = Preferences::instance()->reloadTilesetsOnChange();
@@ -112,6 +116,7 @@ TilesetManager::~TilesetManager()
 #ifdef ZOMBOID
     removeReference(mMissingTileset);
     removeReference(mNoBlendTileset);
+#if 0
     for (int i = 0; i < mImageReaderThreads.size(); i++) {
         mImageReaderThreads[i]->interrupt();
         mImageReaderThreads[i]->quit();
@@ -119,7 +124,7 @@ TilesetManager::~TilesetManager()
         delete mImageReaderWorkers[i];
         delete mImageReaderThreads[i];
     }
-
+#endif
     delete mTilesetImageCache;
 #endif
 
@@ -406,6 +411,7 @@ public:
                 return;
             }
             mTileset = new Tileset(QStringLiteral("temp2x"), 64, 128);
+            mTileset->setManager(TilesetManager::instancePtr()); // hack
             mTileset->setImageSource2x(mImageSource2x);
             bLoaded = mTileset->loadFromImage(image, mImageSource);
         }
@@ -418,6 +424,7 @@ public:
                 return;
             }
             mTileset = new Tileset(QStringLiteral("temp"), 64, 128);
+            mTileset->setManager(TilesetManager::instancePtr()); // hack
             mTileset->setImageSource2x(QString());
             bLoaded = mTileset->loadFromImage(image, mImageSource);
         }
@@ -447,6 +454,8 @@ public:
 
 void TilesetManager::loadTilesetTaskFinished(AssetTask_LoadTileset *task)
 {
+    task->mCached->setManager(this); // hack
+
     if (task->bLoaded)
     {
         imageLoaded(task->mTileset, task->mCached);
@@ -925,6 +934,7 @@ void TilesetImageReaderWorker::work()
         qDebug() << "TilesetImageReaderThread #" << mID << "loaded" << job.tileset->imageSource();
 #endif
         Tileset *fromThread = new Tileset(job.tileset->name(), 64, 128);
+        fromThread->setManager(TilesetManager::instancePtr()); // hack
         fromThread->setImageSource2x(job.tileset->imageSource2x());
         fromThread->loadFromImage(*image, job.tileset->imageSource());
         delete image;

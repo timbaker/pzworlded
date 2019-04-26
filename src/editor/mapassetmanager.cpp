@@ -67,7 +67,7 @@ public:
 
         BuildingReader reader;
         mBuilding = reader.read(path);
-        if (mBuilding != nullptr)
+        if (mBuilding == nullptr)
         {
             mError = reader.errorString();
         }
@@ -140,7 +140,7 @@ void MapAssetManager::loadBuildingTaskFinished(AssetTask_LoadBuilding *task)
     MapAsset* mapAsset = static_cast<MapAsset*>(task->m_asset);
     if (task->bLoaded)
     {
-        mapAsset->mBuilding = task->mBuilding;
+        mapAsset->mLoadedBuilding = task->mBuilding;
         task->mBuilding = nullptr;
         onLoadingSucceeded(task->m_asset);
     }
@@ -155,7 +155,7 @@ void MapAssetManager::loadMapTaskFinished(AssetTask_LoadMap *task)
     MapAsset* mapAsset = static_cast<MapAsset*>(task->m_asset);
     if (task->bLoaded)
     {
-        mapAsset->mMap = task->mMap;
+        mapAsset->mLoadedMap = task->mMap;
         task->mMap = nullptr;
         onLoadingSucceeded(task->m_asset);
     }

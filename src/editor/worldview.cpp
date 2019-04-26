@@ -67,7 +67,7 @@ WorldMiniMapItem::WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent) :
 
     foreach (OtherWorld *otherWorld, mScene->otherWorlds()) {
         foreach (WorldBMP *bmp, otherWorld->mWorld->bmps()) {
-            if (MapImage *mapImage = MapImageManager::instance()->getMapImage(bmp->filePath())) {
+            if (MapImage *mapImage = MapImageManager::instance().getMapImage(bmp->filePath())) {
                 mImages[bmp] = mapImage;
             }
         }
@@ -136,7 +136,7 @@ void WorldMiniMapItem::worldResized()
 void WorldMiniMapItem::bmpAdded(int index)
 {
     WorldBMP *bmp = mScene->world()->bmps().at(index);
-    if (MapImage *mapImage = MapImageManager::instance()->getMapImage(bmp->filePath())) {
+    if (MapImage *mapImage = MapImageManager::instance().getMapImage(bmp->filePath())) {
         mImages[bmp] = mapImage;
     }
     update();

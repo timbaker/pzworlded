@@ -98,7 +98,7 @@ public:
     void onLoadingSucceeded()
     {
         Q_ASSERT(m_current_state != AssetState::READY);
-        Q_ASSERT(m_empty_dep_count == 1);
+        Q_ASSERT(m_empty_dep_count > 0);
         --m_empty_dep_count;
 //        delete m_task;
         m_task = nullptr;

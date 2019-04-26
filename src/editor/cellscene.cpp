@@ -120,7 +120,7 @@ CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
 
     updateBoundingRect();
 
-    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
+    connect(MapImageManager::instancePtr(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(mapImageChanged(MapImage*)));
     connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
 }
@@ -152,12 +152,12 @@ void CellMiniMapItem::paint(QPainter *painter,
 
 void CellMiniMapItem::updateCellImage()
 {
-    mMapImage = 0;
+    mMapImage = nullptr;
     mMapImageBounds = QRect();
 
     if (!mCell->mapFilePath().isEmpty()) {
-        mMapImage = MapImageManager::instance()->getMapImage(mCell->mapFilePath());
-        if (mMapImage) {
+        mMapImage = MapImageManager::instance().getMapImage(mCell->mapFilePath());
+        if (mMapImage != nullptr && mMapImage->isLoaded()) {
             qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
             QPointF offset = mMapImage->tileToImageCoords(0, 0) / mMapImage->scale() * tileScale;
             mMapImageBounds = QRectF(mScene->renderer()->tileToPixelCoords(0.0, 0.0) - offset,
@@ -169,8 +169,8 @@ void CellMiniMapItem::updateCellImage()
 void CellMiniMapItem::updateLotImage(int index)
 {
     WorldCellLot *lot = mCell->lots().at(index);
-    MapImage *mapImage = MapImageManager::instance()->getMapImage(lot->mapName()/*, mapFilePath()*/);
-    if (mapImage) {
+    MapImage *mapImage = MapImageManager::instance().getMapImage(lot->mapName()/*, mapFilePath()*/);
+    if (mapImage != nullptr && mapImage->isLoaded()) {
         qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mapImage->tileSize().width();
         QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale() * tileScale;
         QRectF bounds = QRectF(mScene->renderer()->tileToPixelCoords(lot->x(), lot->y(), lot->level()) - offset,
@@ -1041,7 +1041,7 @@ void CellRoadItem::setDragOffset(const QPoint &offset)
 
 DnDItem::DnDItem(const QString &path, MapRenderer *renderer, int level, QGraphicsItem *parent)
     : QGraphicsItem(parent)
-    , mMapImage(MapImageManager::instance()->getMapImage(path))
+    , mMapImage(MapImageManager::instance().getMapImage(path))
     , mRenderer(renderer)
     , mLevel(level)
 {
@@ -1148,11 +1148,11 @@ const int CellScene::ZVALUE_ROADITEM_UNSELECTED = 20000;
 
 CellScene::CellScene(QObject *parent)
     : BaseGraphicsScene(CellSceneType, parent)
-    , mMap(0)
-    , mMapComposite(0)
-    , mDocument(0)
-    , mRenderer(0)
-    , mDnDItem(0)
+    , mMap(nullptr)
+    , mMapComposite(nullptr)
+    , mDocument(nullptr)
+    , mRenderer(nullptr)
+    , mDnDItem(nullptr)
     , mDarkRectangle(new QGraphicsRectItem)
     , mGridItem(new CellGridItem(this))
     , mMapBordersItem(new QGraphicsPolygonItem)
@@ -1161,7 +1161,7 @@ CellScene::CellScene(QObject *parent)
     , mPendingFlags(None)
     , mPendingActive(false)
     , mPendingDefer(true)
-    , mActiveTool(0)
+    , mActiveTool(nullptr)
     , mLightSwitchOverlays(this)
     , mWaterFlowOverlay(new WaterFlowOverlay(this))
 {
@@ -1581,14 +1581,18 @@ void CellScene::loadMap()
 
     if (cell()->mapFilePath().isEmpty())
         mMapInfo = MapManager::instance().getEmptyMap();
-    else {
+    else
+    {
         mMapInfo = MapManager::instance().loadMap(cell()->mapFilePath());
-        if (!mMapInfo) {
+        if (mMapInfo == nullptr)
+        {
+            // There's no map currently, but it might get created later.
             qDebug() << "failed to load cell map" << cell()->mapFilePath();
             mMapInfo = MapManager::instance().getPlaceholderMap(cell()->mapFilePath(), 300, 300);
         }
     }
-    if (!mMapInfo) {
+    if (mMapInfo == nullptr)
+    {
         QMessageBox::warning(MainWindow::instance(), tr("Error Loading Map"),
                              tr("%1\nCouldn't load the map for cell %2,%3.\nTry setting the maptools folder and try again.")
                              .arg(cell()->mapFilePath()).arg(cell()->x()).arg(cell()->y()));
@@ -1619,7 +1623,7 @@ void CellScene::loadMap()
     for (int i = 0; i < cell()->lots().size(); i++)
         cellLotAdded(cell(), i);
 
-    foreach (WorldCellObject *obj, cell()->objects()) {
+    for (WorldCellObject *obj : cell()->objects()) {
         ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, this)
                                                : new ObjectItem(obj, this);
         addItem(item);
@@ -1630,7 +1634,7 @@ void CellScene::loadMap()
 
     // FIXME: This creates a new CellRoadItem for every road in the world,
     // even if many are not visible in this cell.
-    foreach (Road *road, world()->roads()) {
+    for (Road *road : world()->roads()) {
         CellRoadItem *item = new CellRoadItem(this, road);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
@@ -1709,41 +1713,14 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
         WorldCellLot *lot = cell()->lots().at(index);
         MapInfo *subMapInfo = MapManager::instance().loadMap(
                     lot->mapName(), QString(), true, MapManager::PriorityLow);
-        if (!subMapInfo) {
+        if (!subMapInfo || subMapInfo->isFailure()) {
             qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
             subMapInfo = MapManager::instance().getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
-#if 1
             mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
             if (!subMapInfo->isLoading())
                 mapLoaded(subMapInfo);
-#else
-            if (subMapInfo->isLoading())
-                mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            else {
-                MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
-                SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
-                mMapBuildingsInvalid = true;
-
-                // Don't just call mSubMapItems.insert(), due to asynchronous loading.
-                QMap<int,SubMapItem*> zzz;
-                foreach (SubMapItem *item, mSubMapItems)
-                    zzz[cell()->lots().indexOf(item->lot())] = item;
-                zzz[index] = item;
-                mSubMapItems = zzz.values();
-
-                // Update with most recent information
-                lot->setMapName(subMapInfo->path());
-                lot->setWidth(subMapInfo->width());
-                lot->setHeight(subMapInfo->height());
-
-                // Schedule update *before* addItem() schedules its update.
-                doLater(AllGroups | Bounds | Synch | ZOrder);
-
-                addItem(item);
-            }
-#endif
         }
     }
 }
@@ -2381,8 +2358,10 @@ bool CellScene::mapChanged(MapInfo *mapInfo)
 
     if (mMapComposite->mapChanged(mapInfo)) {
         if (mapInfo != mMapComposite->mapInfo()) {
-            foreach (SubMapItem *item, subMapItemsUsingMapInfo(mapInfo))
+            for (SubMapItem *item : subMapItemsUsingMapInfo(mapInfo))
+            {
                 item->subMapMoved(); // update bounds, check valid position
+            }
             doLater(AllGroups | Bounds | Synch | Paint); // only a Lot map changed
             mMapBuildingsInvalid = true;
         }
@@ -2448,7 +2427,7 @@ void CellScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!info.isFile()) continue;
         if (info.suffix() != QLatin1String("tmx") &&
                 info.suffix() != QLatin1String("tbx")) continue;
-        if (!MapManager::instance().mapInfo(info.canonicalFilePath()))
+        if (MapManager::instance().mapInfo(info.canonicalFilePath()) == nullptr)
             continue;
 
         QString path = info.canonicalFilePath();
@@ -2865,7 +2844,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
         mMapComposite = scene()->mapComposite()->adjacentMap(x, y);
         scene()->mapCompositeNeedsSynch();
 
-        foreach (WorldCellLot *lot, cell()->lots()) {
+        for (WorldCellLot *lot : cell()->lots()) {
             MapInfo *subMapInfo = MapManager::instance().loadMap(
                         lot->mapName(), QString(), true, MapManager::PriorityLow);
             if (subMapInfo && !alreadyLoading(lot)) {
@@ -2877,7 +2856,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
 
         qDeleteAll(mObjectItems);
         mObjectItems.clear();
-        foreach (WorldCellObject *obj, cell()->objects()) {
+        for (WorldCellObject *obj : cell()->objects()) {
             ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, scene(), mObjectItemParent)
                                                    : new ObjectItem(obj, scene(), mObjectItemParent);
             item->setAdjacent(true);
@@ -2981,7 +2960,7 @@ void AdjacentMap::loadMap()
 
 bool AdjacentMap::alreadyLoading(WorldCellLot *lot)
 {
-    foreach (LoadingSubMap sm, mSubMapsLoading) {
+    for (LoadingSubMap sm : mSubMapsLoading) {
         if (sm.lot == lot)
             return true;
     }

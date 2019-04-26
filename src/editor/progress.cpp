@@ -17,6 +17,7 @@
 
 #include "progress.h"
 
+#include "idletasks.h"
 #include "mainwindow.h"
 
 #include <QApplication>
@@ -64,14 +65,18 @@ void Progress::begin(const QString &text)
     mLabel->setText(text);
     if (mDepth++ == 0)
         mDialog->show();
+    IdleTasks::instance().blockTasks(true);
     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    IdleTasks::instance().blockTasks(false);
 }
 
 void Progress::update(const QString &text)
 {
     Q_ASSERT(mDepth > 0);
     mLabel->setText(text);
+    IdleTasks::instance().blockTasks(true);
     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    IdleTasks::instance().blockTasks(false);
 }
 
 void Progress::end()
@@ -80,6 +85,8 @@ void Progress::end()
 //    mDialog->setValue(mDialog->maximum()); // hides dialog!
     if (--mDepth == 0)
         mDialog->hide();
+    IdleTasks::instance().blockTasks(true);
     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    IdleTasks::instance().blockTasks(false);
 }
 

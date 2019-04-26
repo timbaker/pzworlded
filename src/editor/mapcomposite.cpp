@@ -809,7 +809,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mMapInfo(mapInfo)
     , mMap(mapInfo->map())
 #ifdef BUILDINGED
-    , mBlendOverMap(0)
+    , mBlendOverMap(nullptr)
 #endif
     , mParent(parent)
     , mPos(positionInParent)
@@ -951,7 +951,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         mSortedLayerGroups.append(mLayerGroups[level]);
     }
 
-    connect(mBmpBlender, SIGNAL(layersRecreated()), SLOT(bmpBlenderLayersRecreated()));
+    connect(mBmpBlender, &Tiled::Internal::BmpBlender::layersRecreated, this, &MapComposite::bmpBlenderLayersRecreated);
     mBmpBlender->markDirty(0, 0, mMap->width() - 1, mMap->height() - 1);
     mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
