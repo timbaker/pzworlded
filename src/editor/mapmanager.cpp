@@ -17,6 +17,7 @@
 
 #include "mapmanager.h"
 
+#include "idletasks.h"
 #include "mapassetmanager.h"
 #include "mapcomposite.h"
 #include "mapinfo.h"
@@ -214,9 +215,11 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
                     break;
                 }
             }
+            IdleTasks::instance().blockTasks(true);
             while (mapInfo->isLoading()) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
+            IdleTasks::instance().blockTasks(false);
             mWaitingForMapInfo = nullptr;
             if (!mapInfo->map())
                 return nullptr;
@@ -227,7 +230,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
     Q_ASSERT(mapInfo->mMap == nullptr);
     mapInfo->mMap = static_cast<MapAsset*>(MapAssetManager::instance().load(mapFilePath));
     mapInfo->addDependency(mapInfo->mMap);
-    connect(mapInfo->mMap, &MapAsset::stateChanged, this, [&]{ MapManager::mapAssetStateChanged(mapInfo); });
+    connect(mapInfo->mMap, &MapAsset::stateChanged, this, [this, mapInfo]{ MapManager::mapAssetStateChanged(mapInfo); });
 #else
     mapInfo->mLoading = true;
     QMetaObject::invokeMethod(mMapReaderWorker[mNextThreadForJob], "addJob",
@@ -261,9 +264,12 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
             break;
         }
     }
+    IdleTasks::instance().blockTasks(true);
     while (mapInfo->isLoading()) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
+    IdleTasks::instance().blockTasks(false);
+
     mWaitingForMapInfo = nullptr;
     if (mapInfo->map())
         return mapInfo;
@@ -434,12 +440,14 @@ MapInfo *MapManager::mapInfo(const QString &mapFilePath)
         return nullptr;
     }
     // FIXME
+    IdleTasks::instance().blockTasks(true);
     while (mapInfo->isEmpty())
     {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 //        AssetTaskManager::instance().updateAsyncTransactions();
         Sleep::msleep(10);
     }
+    IdleTasks::instance().blockTasks(false);
     if (mapInfo->isFailure())
     {
         return nullptr;
@@ -750,7 +758,9 @@ void MapManager::mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo)
         emit mapAboutToChange(mapInfo);
         TilesetManager& tilesetMgr = TilesetManager::instance();
         tilesetMgr.removeReferences(mapInfo->map()->tilesets());
-        delete mapInfo->mMap;
+//        delete mapInfo->mMap;
+        MapAssetManager::instance().unload(mapInfo->mMap);
+        mapInfo->mMap = nullptr;
     }
 
 //    mapInfo->mMap = map;

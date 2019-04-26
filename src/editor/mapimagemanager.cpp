@@ -21,6 +21,7 @@
 #include "bmptotmx.h"
 #endif // WORLDED
 #include "bmpblender.h"
+#include "idletasks.h"
 #include "imagelayer.h"
 #include "isometricrenderer.h"
 #include "mainwindow.h"
@@ -100,6 +101,8 @@ MapImageManager::MapImageManager() :
             SLOT(mapLoaded(MapInfo*)));
     connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
             SLOT(mapFailedToLoad(MapInfo*)));
+
+    connect(IdleTasks::instancePtr(), &IdleTasks::idleTime, this, &MapImageManager::processDeferrals);
 }
 
 MapImageManager::~MapImageManager()
@@ -783,21 +786,27 @@ void MapImageManager::deferThreadResults(bool defer)
         Q_ASSERT(mDeferralDepth > 0);
 //        noise() << "MapImageManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
         if (--mDeferralDepth == 0) {
+#if 0
             if (!mDeferralQueued && mDeferredMapImages.size()) {
                 QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
                 mDeferralQueued = true;
             }
+#endif
         }
     }
 }
 
 void MapImageManager::processDeferrals()
 {
+    if (mDeferralDepth > 0 || mDeferredMapImages.isEmpty())
+        return;
     QList<MapImage*> mapImages = mDeferredMapImages;
     mDeferredMapImages.clear();
     mDeferralQueued = false;
-    foreach (MapImage *mapImage, mapImages)
+    for (MapImage *mapImage : mapImages)
+    {
         emit mapImageChanged(mapImage);
+    }
 }
 
 ///// ///// ///// ///// /////

@@ -17,6 +17,11 @@ using namespace Tiled;
 
 SINGLETON_IMPL(MapAssetManager)
 
+MapAsset::~MapAsset()
+{
+    int dbg = 1;
+}
+
 MapAsset::MapAsset(Map *map, AssetPath path, AssetManager *manager)
     : Asset(path, manager)
     , mMap(map)

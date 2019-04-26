@@ -6,7 +6,9 @@ SINGLETON_IMPL(AssetTaskManager)
 
 AssetTaskManager::AssetTaskManager()
 {
-    m_timer.setInterval(100);
+    // To make your application perform idle processing (i.e. executing a special function whenever there are no pending events),
+    // use a QTimer with 0 timeout. More sophisticated idle processing schemes can be achieved using processEvents().
+    m_timer.setInterval(0);
     m_timer.setSingleShot(false);
     connect(&m_timer, &QTimer::timeout, this, &AssetTaskManager::updateAsyncTransactions);
 }

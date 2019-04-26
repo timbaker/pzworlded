@@ -25,6 +25,8 @@ public:
         : Asset(path, manager)
     {}
 
+    ~MapAsset() override;
+
     MapAsset(Tiled::Map* map, AssetPath path, AssetManager* manager);
 
     Tiled::Map* map() const { return mMap; }

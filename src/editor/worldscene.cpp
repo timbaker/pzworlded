@@ -21,6 +21,7 @@
 #include "bmptotmx.h"
 #include "celldocument.h"
 #include "documentmanager.h"
+#include "idletasks.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
@@ -198,6 +199,8 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 
     connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(mapImageChanged(MapImage*)));
+
+    connect(IdleTasks::instancePtr(), &IdleTasks::idleTime, this, &WorldScene::handlePendingThumbnails);
 
     handlePendingThumbnails();
 }
@@ -720,10 +723,12 @@ void WorldScene::handlePendingThumbnails()
         int loaded = item->thumbnailsAreGo();
         if (loaded != 2) {
             mPendingThumbnails.takeFirst();
+#if 0
             if (mPendingThumbnails.size()) {
                 QMetaObject::invokeMethod(this, "handlePendingThumbnails",
                                           Qt::QueuedConnection);
             }
+#endif
         }
     }
 
@@ -733,10 +738,12 @@ void WorldScene::handlePendingThumbnails()
             int loaded = item->thumbnailsAreGo();
             if (loaded != 2) {
                 otherWorld->mPendingThumbnails.takeFirst();
+#if 0
                 if (otherWorld->mPendingThumbnails.size()) {
                     QMetaObject::invokeMethod(this, "handlePendingThumbnails",
                                               Qt::QueuedConnection);
                 }
+#endif
             }
         }
     }
@@ -1334,7 +1341,7 @@ int OtherWorldCellItem::thumbnailsAreGo()
     cellContentsChanged();
     if (mMapImage && mMapImage->isLoaded())
         return 1;
-    return (mMapImage != 0) ? 2 : 0;
+    return (mMapImage != nullptr) ? 2 : 0;
 }
 
 void OtherWorldCellItem::thumbnailsAreFail()

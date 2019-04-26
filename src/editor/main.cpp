@@ -21,6 +21,7 @@
 #ifdef ZOMBOID
 #include "assettaskmanager.h"
 #include "documentmanager.h"
+#include "idletasks.h"
 #include "toolmanager.h"
 #include "preferences.h"
 #include "mapassetmanager.h"
@@ -48,6 +49,7 @@ int main(int argc, char *argv[])
     a.setAttribute(Qt::AA_DontShowIconsInMenus);
 #endif
 
+    new IdleTasks();
     new AssetTaskManager();
     new TilesetManager(); // before MapManager()
     new MapAssetManager();
