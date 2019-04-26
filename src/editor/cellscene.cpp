@@ -1317,14 +1317,14 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(selectedRoadsChanged()),
             SLOT(selectedRoadsChanged()));
 
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
             SLOT(mapFailedToLoad(MapInfo*)));
 
     loadMap();
 
-    connect(Tiled::Internal::TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
+    connect(Tiled::Internal::TilesetManager::instancePtr(), SIGNAL(tilesetChanged(Tileset*)),
             SLOT(tilesetChanged(Tileset*)));
 
     connect(Preferences::instance(), SIGNAL(highlightRoomUnderPointerChanged(bool)),
@@ -1580,12 +1580,12 @@ void CellScene::loadMap()
     PROGRESS progress(tr("Loading cell %1,%2").arg(cell()->x()).arg(cell()->y()));
 
     if (cell()->mapFilePath().isEmpty())
-        mMapInfo = MapManager::instance()->getEmptyMap();
+        mMapInfo = MapManager::instance().getEmptyMap();
     else {
-        mMapInfo = MapManager::instance()->loadMap(cell()->mapFilePath());
+        mMapInfo = MapManager::instance().loadMap(cell()->mapFilePath());
         if (!mMapInfo) {
             qDebug() << "failed to load cell map" << cell()->mapFilePath();
-            mMapInfo = MapManager::instance()->getPlaceholderMap(cell()->mapFilePath(), 300, 300);
+            mMapInfo = MapManager::instance().getPlaceholderMap(cell()->mapFilePath(), 300, 300);
         }
     }
     if (!mMapInfo) {
@@ -1707,11 +1707,11 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
 {
     if (_cell == cell()) {
         WorldCellLot *lot = cell()->lots().at(index);
-        MapInfo *subMapInfo = MapManager::instance()->loadMap(
+        MapInfo *subMapInfo = MapManager::instance().loadMap(
                     lot->mapName(), QString(), true, MapManager::PriorityLow);
         if (!subMapInfo) {
             qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
-            subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
+            subMapInfo = MapManager::instance().getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
 #if 1
@@ -2448,7 +2448,7 @@ void CellScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!info.isFile()) continue;
         if (info.suffix() != QLatin1String("tmx") &&
                 info.suffix() != QLatin1String("tbx")) continue;
-        if (!MapManager::instance()->mapInfo(info.canonicalFilePath()))
+        if (!MapManager::instance().mapInfo(info.canonicalFilePath()))
             continue;
 
         QString path = info.canonicalFilePath();
@@ -2654,9 +2654,9 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
 
     connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged()));
 
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
             SLOT(mapFailedToLoad(MapInfo*)));
 
     loadMap();
@@ -2706,7 +2706,7 @@ void AdjacentMap::cellLotAdded(WorldCell *_cell, int index)
     if (_cell != cell()) return;
 
     WorldCellLot *lot = cell()->lots().at(index);
-    MapInfo *subMapInfo = MapManager::instance()->loadMap(
+    MapInfo *subMapInfo = MapManager::instance().loadMap(
                 lot->mapName(), QString(), true, MapManager::PriorityLow);
     if (subMapInfo && !alreadyLoading(lot)) {
         mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
@@ -2866,7 +2866,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
         scene()->mapCompositeNeedsSynch();
 
         foreach (WorldCellLot *lot, cell()->lots()) {
-            MapInfo *subMapInfo = MapManager::instance()->loadMap(
+            MapInfo *subMapInfo = MapManager::instance().loadMap(
                         lot->mapName(), QString(), true, MapManager::PriorityLow);
             if (subMapInfo && !alreadyLoading(lot)) {
                 mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
@@ -2967,9 +2967,9 @@ void AdjacentMap::sceneRectChanged()
 void AdjacentMap::loadMap()
 {
     if (cell()->mapFilePath().isEmpty()) {
-        mMapInfo = MapManager::instance()->getEmptyMap();
+        mMapInfo = MapManager::instance().getEmptyMap();
     } else {
-        mMapInfo = MapManager::instance()->loadMap(cell()->mapFilePath(), QString(), true,
+        mMapInfo = MapManager::instance().loadMap(cell()->mapFilePath(), QString(), true,
                                                    MapManager::PriorityMedium);
     }
     if (mMapInfo && !mMapInfo->isLoading()) {

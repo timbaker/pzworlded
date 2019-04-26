@@ -1112,7 +1112,7 @@ void MainWindow::FromToAux(bool selectedOnly)
     PROGRESS progress(tr("Making a mess of things"));
 
     foreach (QString fileName, fileNames) {
-        if (MapInfo *mapInfo = MapManager::instance()->loadMap(fileName)) {
+        if (MapInfo *mapInfo = MapManager::instance().loadMap(fileName)) {
             QScopedPointer<Map> map(mapInfo->map()->clone());
 
             QMap<QString,TileLayer*> layerMapping;

@@ -67,13 +67,13 @@ BuildingMap::~BuildingMap()
     if (mMapComposite) {
         MapInfo *mapInfo = mMapComposite->mapInfo();
         delete mMapComposite;
-        TilesetManager::instance()->removeReferences(mMap->tilesets());
+        TilesetManager::instance().removeReferences(mMap->tilesets());
         delete mMap;
         delete mapInfo;
 
         mapInfo = mBlendMapComposite->mapInfo();
         delete mBlendMapComposite;
-        TilesetManager::instance()->removeReferences(mBlendMap->tilesets());
+        TilesetManager::instance().removeReferences(mBlendMap->tilesets());
         delete mBlendMap;
         delete mapInfo;
 
@@ -133,7 +133,7 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                     if (test) {
                         Tile *realTile = test;
                         if (test->image().isNull()) {
-                            test = TilesetManager::instance()->missingTile();
+                            test = TilesetManager::instance().missingTile();
                         }
                         QRect imageBox(test->offset(), test->image().size());
                         QPoint p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, test->height()));
@@ -311,7 +311,7 @@ void BuildingMap::suppressTiles(BuildingFloor *floor, const QRegion &rgn)
 Map *BuildingMap::mergedMap() const
 {
     Map *map = mBlendMap->clone();
-    TilesetManager::instance()->addReferences(map->tilesets());
+    TilesetManager::instance().addReferences(map->tilesets());
     for (int i = 0; i < map->layerCount(); i++) {
         if (TileLayer *tl = map->layerAt(i)->asTileLayer())
             tl->merge(tl->position(), mMap->layerAt(i)->asTileLayer());
@@ -454,12 +454,12 @@ void BuildingMap::BuildingToMap()
     if (mMapComposite) {
         delete mMapComposite->mapInfo();
         delete mMapComposite;
-        TilesetManager::instance()->removeReferences(mMap->tilesets());
+        TilesetManager::instance().removeReferences(mMap->tilesets());
         delete mMap;
 
         delete mBlendMapComposite->mapInfo();
         delete mBlendMapComposite;
-        TilesetManager::instance()->removeReferences(mBlendMap->tilesets());
+        TilesetManager::instance().removeReferences(mBlendMap->tilesets());
         delete mBlendMap;
 
         delete mMapRenderer;
@@ -484,10 +484,10 @@ void BuildingMap::BuildingToMap()
                    64, 32);
 
     // Add tilesets from Tilesets.txt
-    mMap->addTileset(TilesetManager::instance()->missingTileset());
+    mMap->addTileset(TilesetManager::instance().missingTileset());
     foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets())
         mMap->addTileset(ts);
-    TilesetManager::instance()->addReferences(mMap->tilesets());
+    TilesetManager::instance().addReferences(mMap->tilesets());
 
     switch (mMap->orientation()) {
     case Map::Isometric:
@@ -518,7 +518,7 @@ void BuildingMap::BuildingToMap()
         }
     }
 
-    MapInfo *mapInfo = MapManager::instance()->newFromMap(mMap);
+    MapInfo *mapInfo = MapManager::instance().newFromMap(mMap);
     mMapComposite = new MapComposite(mapInfo);
 
     // Synch layer opacity with the floor.
@@ -532,8 +532,8 @@ void BuildingMap::BuildingToMap()
 
     // This map displays the automatically-generated tiles from the building.
     mBlendMap = mMap->clone();
-    TilesetManager::instance()->addReferences(mBlendMap->tilesets());
-    mapInfo = MapManager::instance()->newFromMap(mBlendMap);
+    TilesetManager::instance().addReferences(mBlendMap->tilesets());
+    mapInfo = MapManager::instance().newFromMap(mBlendMap);
     mBlendMapComposite = new MapComposite(mapInfo);
     mMapComposite->setBlendOverMap(mBlendMapComposite);
 
@@ -643,7 +643,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
             QString tileName = shadowFloor->grimeAt(layerName, x, y);
             Tile *tile = 0;
             if (!tileName.isEmpty()) {
-                tile = TilesetManager::instance()->missingTile();
+                tile = TilesetManager::instance().missingTile();
                 QString tilesetName;
                 int index;
                 if (BuildingTilesMgr::parseTileName(tileName, tilesetName, index)) {
@@ -798,10 +798,10 @@ void BuildingMap::tilesetAdded(Tileset *tileset)
         return;
 
     mMap->addTileset(tileset);
-    TilesetManager::instance()->addReference(tileset);
+    TilesetManager::instance().addReference(tileset);
 
     mBlendMap->addTileset(tileset);
-    TilesetManager::instance()->addReference(tileset);
+    TilesetManager::instance().addReference(tileset);
 
     foreach (BuildingFloor *floor, mBuilding->floors()) {
         pendingSquaresToTileLayers[floor] = floor->bounds(1, 1);
@@ -819,10 +819,10 @@ void BuildingMap::tilesetAboutToBeRemoved(Tileset *tileset)
         return;
 
     mMap->removeTilesetAt(index);
-    TilesetManager::instance()->removeReference(tileset);
+    TilesetManager::instance().removeReference(tileset);
 
     mBlendMap->removeTilesetAt(index);
-    TilesetManager::instance()->removeReference(tileset);
+    TilesetManager::instance().removeReference(tileset);
 
     // Erase every layer to get rid of Tiles from the tileset.
     foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups())
@@ -879,14 +879,14 @@ void BuildingMap::handlePending()
             layer->resize(QSize(width, height), QPoint());
         mMap->setWidth(width);
         mMap->setHeight(height);
-        MapManager::instance()->mapParametersChanged(mMapComposite->mapInfo());
+        MapManager::instance().mapParametersChanged(mMapComposite->mapInfo());
         mMapComposite->bmpBlender()->recreate();
 
         foreach (Layer *layer, mBlendMap->layers())
             layer->resize(QSize(width, height), QPoint());
         mBlendMap->setWidth(width);
         mBlendMap->setHeight(height);
-        MapManager::instance()->mapParametersChanged(mBlendMapComposite->mapInfo());
+        MapManager::instance().mapParametersChanged(mBlendMapComposite->mapInfo());
         mBlendMapComposite->bmpBlender()->recreate();
 
         foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups())

@@ -88,7 +88,7 @@ void PNGBuildingDialog::browse()
 bool PNGBuildingDialog::generateWorld(World *world)
 {
     // Try to free up some memory before loading large images.
-    MapManager::instance()->purgeUnreferencedMaps();
+    MapManager::instance().purgeUnreferencedMaps();
 
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
@@ -133,10 +133,10 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     PROGRESS progress(tr("Processing cell %1,%2")
                       .arg(cell->x()).arg(cell->y()));
 
-    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
+    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        QString(), true);
     if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
+        mError = MapManager::instance().errorString();
         return false;
     }
 
@@ -144,12 +144,12 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     mapLoader.addMap(mapInfo);
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
+        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
         } else {
-            mError = MapManager::instance()->errorString();
+            mError = MapManager::instance().errorString();
             return false;
         }
     }
@@ -169,7 +169,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     }
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }

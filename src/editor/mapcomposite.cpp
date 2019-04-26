@@ -98,7 +98,7 @@ CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
     , mOwner(owner)
     , mAnyVisibleLayers(false)
     , mNeedsSynch(true)
-    , mNoBlendCell(Tiled::Internal::TilesetManager::instance()->noBlendTile())
+    , mNoBlendCell(Tiled::Internal::TilesetManager::instance().noBlendTile())
 #if 1 // ROAD_CRUD
     , mRoadLayer0(0)
     , mRoadLayer1(0)
@@ -827,7 +827,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mSuppressLevel(0)
 {
 #ifdef WORLDED
-    MapManager::instance()->addReferenceToMap(mMapInfo);
+    MapManager::instance().addReferenceToMap(mMapInfo);
 #endif
     if (mOrientRender == Map::Unknown)
         mOrientRender = mMap->orientation();
@@ -871,22 +871,22 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
             foreach (MapObject *object, objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
 #if 1
-                    MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                    MapInfo *subMapInfo = MapManager::instance().loadMap(
                                 object->type(), QFileInfo(mMapInfo->path()).absolutePath(),
                                 true, MapManager::PriorityLow);
 
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
 #if 1 // FIXME: attempt to load this if mapsDirectory changes
-                        subMapInfo = MapManager::instance()->getPlaceholderMap(
+                        subMapInfo = MapManager::instance().getPlaceholderMap(
                                     object->type(), 32, 32); // FIXME: calculate map size
 #endif
                     }
                     if (subMapInfo) {
                         if (subMapInfo->isLoading()) {
-                            connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+                            connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
                                     SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
-                            connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+                            connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
                                     SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
                             mSubMapsLoading += SubMapLoading(subMapInfo,
                                                              object->position().toPoint()
@@ -900,12 +900,12 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 #else
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
-                    MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
+                    MapInfo *subMapInfo = MapManager::instance().loadMap(object->type(),
                                                                           QFileInfo(mMapInfo->path()).absolutePath());
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
 #if 1 // FIXME: attempt to load this if mapsDirectory changes
-                        subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(),
+                        subMapInfo = MapManager::instance().getPlaceholderMap(object->type(),
                                                                                32, 32); // FIXME: calculate map size
 #endif
                     }
@@ -966,7 +966,7 @@ MapComposite::~MapComposite()
     qDeleteAll(mLayerGroups);
 #ifdef WORLDED
     if (mMapInfo)
-        MapManager::instance()->removeReferenceToMap(mMapInfo);
+        MapManager::instance().removeReferenceToMap(mMapInfo);
 #endif
 }
 
@@ -1540,21 +1540,21 @@ void MapComposite::recreate()
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
-                    MapInfo *subMapInfo = MapManager::instance()->loadMap(object->type(),
+                    MapInfo *subMapInfo = MapManager::instance().loadMap(object->type(),
                                                                           QFileInfo(mMapInfo->path()).absolutePath(),
                                                                           true, MapManager::PriorityLow);
                     if (!subMapInfo) {
                         qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
 #if 1 // FIXME: attempt to load this if mapsDirectory changes
-                        subMapInfo = MapManager::instance()->getPlaceholderMap(object->type(),
+                        subMapInfo = MapManager::instance().getPlaceholderMap(object->type(),
                                                                                32, 32); // FIXME: calculate map size
 #endif
                     }
                     if (subMapInfo) {
                         if (subMapInfo->isLoading()) {
-                            connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+                            connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
                                     SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
-                            connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+                            connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
                                     SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
                             mSubMapsLoading += SubMapLoading(subMapInfo,
                                                              object->position().toPoint()

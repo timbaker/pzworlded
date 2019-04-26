@@ -2,6 +2,9 @@ include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
 include(../qtlockedfile/qtlockedfile.pri)
 include(../lua/lua.pri)
+include(../assets/assets.pri)
+PRE_TARGETDEPS += $$top_builddir/lib/assets.lib
+PRE_TARGETDEPS += $$top_builddir/lib/tiled.lib
 
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
@@ -145,7 +148,11 @@ SOURCES += main.cpp\
     searchdock.cpp \
     defaultsfile.cpp \
     BuildingEditor/roofhiding.cpp \
-    waterflow.cpp
+    waterflow.cpp \
+    mapinfo.cpp \
+    mapassetmanager.cpp \
+    assettaskmanager.cpp \
+    idletasks.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -237,7 +244,11 @@ HEADERS  += mainwindow.h \
     searchdock.h \
     defaultsfile.h \
     BuildingEditor/roofhiding.h \
-    waterflow.h
+    waterflow.h \
+    mapinfo.h \
+    mapassetmanager.h \
+    assettaskmanager.h \
+    idletasks.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

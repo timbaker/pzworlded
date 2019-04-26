@@ -104,7 +104,7 @@ BuildingTilesMgr::BuildingTilesMgr() :
     mCatRoofSlopes->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_roof_slopes.png")));
     mCatRoofTops->setShadowImage(QImage(QLatin1String(":/BuildingEditor/icons/shadow_roof_tops.png")));
 
-    mMissingTile = TilesetManager::instance()->missingTile();
+    mMissingTile = TilesetManager::instance().missingTile();
 
     Tileset *tileset = new Tileset(QLatin1String("none"), 64, 128);
     tileset->setTransparentColor(Qt::white);

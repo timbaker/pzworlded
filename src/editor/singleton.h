@@ -39,11 +39,12 @@ public:
     static void deleteInstance()
     {
         delete mInstance;
+        mInstance = nullptr;
     }
 
     static bool hasInstance()
     {
-        return mInstance != 0;
+        return mInstance != nullptr;
     }
 
     Singleton()
@@ -60,6 +61,6 @@ protected:
     static T *mInstance;
 };
 
-#define SINGLETON_IMPL(T) template<> T *Singleton<T>::mInstance = 0;
+#define SINGLETON_IMPL(T) template<> T *Singleton<T>::mInstance = nullptr;
 
 #endif // SINGLETON_H

@@ -98,8 +98,8 @@ bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
 
     if (map->orientation() == Map::LevelIsometric) {
         if (!BuildingPreferences::instance()->levelIsometric()) {
-            Map *isoMap = MapManager::instance()->convertOrientation(map, Map::Isometric);
-            TilesetManager::instance()->removeReferences(map->tilesets());
+            Map *isoMap = MapManager::instance().convertOrientation(map, Map::Isometric);
+            TilesetManager::instance().removeReferences(map->tilesets());
             delete map;
             map = isoMap;
         }
@@ -173,7 +173,7 @@ bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
     bool ok = writer.write(map, fileName);
     if (!ok)
         mError = writer.errorString();
-    TilesetManager::instance()->removeReferences(map->tilesets());
+    TilesetManager::instance().removeReferences(map->tilesets());
     delete map;
     return ok;
 #endif // WORLDED
@@ -339,7 +339,7 @@ bool BuildingTMX::upgradeTxt()
                     Tileset *ts = new Tileset(tilesetName, 64, 128);
                     // Since the tileset image height/width wasn't saved, create
                     // a tileset with only a single tile.
-                    ts->loadFromImage(TilesetManager::instance()->missingTile()->image(),
+                    ts->loadFromImage(TilesetManager::instance().missingTile()->image(),
                                       kv.value + QLatin1String(".png"));
                     ts->setMissing(true);
                     TileMetaInfoMgr::instance()->addTileset(ts);

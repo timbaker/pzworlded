@@ -184,10 +184,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     PROGRESS progress(tr("Loading maps (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 
-    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
+    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        QString(), true);
     if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
+        mError = MapManager::instance().errorString();
         return false;
     }
 
@@ -195,12 +195,12 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     mapLoader.addMap(mapInfo);
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
+        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
         } else {
-            mError = MapManager::instance()->errorString();
+            mError = MapManager::instance().errorString();
             return false;
         }
     }
@@ -220,7 +220,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }
@@ -231,9 +231,9 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     progress.update(tr("Generating .lot files (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 #else
-    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
+    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath());
     if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
+        mError = MapManager::instance().errorString();
         return false;
     }
 
@@ -248,10 +248,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                                      cell->world()->roads());
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName())) {
+        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName())) {
             mapComposite->addMap(info, lot->pos(), lot->level());
         } else {
-            mError = MapManager::instance()->errorString();
+            mError = MapManager::instance().errorString();
             return false;
         }
     }
@@ -294,7 +294,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             mGridData[x][y].fill(LotFile::Square(), MaxLevel);
     }
 
-    Tile *missingTile = Tiled::Internal::TilesetManager::instance()->missingTile();
+    Tile *missingTile = Tiled::Internal::TilesetManager::instance().missingTile();
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
         lg->prepareDrawing2();
@@ -1059,9 +1059,9 @@ void LotFilesManager::resolveProperties(PropertyHolder *ph, PropertyList &result
 
 DelayedMapLoader::DelayedMapLoader()
 {
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
             SLOT(mapFailedToLoad(MapInfo*)));
 }
 
@@ -1096,7 +1096,7 @@ void DelayedMapLoader::mapFailedToLoad(MapInfo *mapInfo)
 {
     for (int i = 0; i < mLoading.size(); i++) {
         if (mLoading[i]->mapInfo == mapInfo) {
-            mError = MapManager::instance()->errorString();
+            mError = MapManager::instance().errorString();
             delete mLoading.takeAt(i);
             --i;
             // Keep going, could be duplicate submaps to load
@@ -1110,7 +1110,7 @@ DelayedMapLoader::SubMapLoading::SubMapLoading(MapInfo *info) :
     mapInfo(info), holdsReference(false)
 {
     if (mapInfo->map()) {
-        MapManager::instance()->addReferenceToMap(mapInfo);
+        MapManager::instance().addReferenceToMap(mapInfo);
         holdsReference = true;
     }
 }
@@ -1118,5 +1118,5 @@ DelayedMapLoader::SubMapLoading::SubMapLoading(MapInfo *info) :
 DelayedMapLoader::SubMapLoading::~SubMapLoading()
 {
     if (holdsReference)
-        MapManager::instance()->removeReferenceToMap(mapInfo);
+        MapManager::instance().removeReferenceToMap(mapInfo);
 }

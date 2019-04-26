@@ -55,7 +55,7 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
     mDoVeg = settings.doVegetation;
     mDoBldg = settings.doBuildings;
 
-    MapManager::instance()->purgeUnreferencedMaps();
+    MapManager::instance().purgeUnreferencedMaps();
 
     PROGRESS progress(QLatin1String("Setting up images"));
 
@@ -151,7 +151,7 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
         }
     }
 
-    MapManager::instance()->purgeUnreferencedMaps();
+    MapManager::instance().purgeUnreferencedMaps();
 
 #if 1
     foreach (BMPToTMXImages *images, mImages) {
@@ -252,14 +252,14 @@ bool TMXToBMP::generateCell(WorldCell *cell)
         return true;
     }
 
-    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
+    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        mWorldDoc->fileName());
     if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
+        mError = MapManager::instance().errorString();
         return false;
     }
 
-    MapManager::instance()->addReferenceToMap(mapInfo);
+    MapManager::instance().addReferenceToMap(mapInfo);
 
     QRgb black = qRgba(0, 0, 0, 255);
     QRgb transparent = qRgba(0, 0, 0, 0);
@@ -288,7 +288,7 @@ bool TMXToBMP::generateCell(WorldCell *cell)
         ok = doBuildings(cell, mapInfo);
     }
 
-    MapManager::instance()->removeReferenceToMap(mapInfo);
+    MapManager::instance().removeReferenceToMap(mapInfo);
 
     return ok;
 }
@@ -299,12 +299,12 @@ bool TMXToBMP::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     mapLoader.addMap(mapInfo);
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
+        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
         } else {
-            mError = MapManager::instance()->errorString();
+            mError = MapManager::instance().errorString();
             return false;
         }
     }
@@ -324,7 +324,7 @@ bool TMXToBMP::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     }
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }

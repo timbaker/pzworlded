@@ -37,7 +37,11 @@
 using namespace Tiled;
 using namespace Tiled::Internal;
 
+#ifdef ZOMBOID
+SINGLETON_IMPL(TilesetManager)
+#else
 TilesetManager *TilesetManager::mInstance = 0;
+#endif
 
 TilesetManager::TilesetManager():
 #ifdef ZOMBOID
@@ -129,6 +133,24 @@ TilesetManager::~TilesetManager()
 #endif
 }
 
+#ifdef ZOMBOID
+Asset *TilesetManager::createAsset(AssetPath path, AssetParams *params)
+{
+    return new Tileset(path, this, params);
+}
+
+void TilesetManager::destroyAsset(Asset *asset)
+{
+    Q_UNUSED(asset);
+}
+
+void TilesetManager::startLoading(Asset *asset)
+{
+
+}
+#endif
+
+#ifndef ZOMBOID
 TilesetManager *TilesetManager::instance()
 {
     if (!mInstance)
@@ -142,6 +164,7 @@ void TilesetManager::deleteInstance()
     delete mInstance;
     mInstance = 0;
 }
+#endif
 
 Tileset *TilesetManager::findTileset(const QString &fileName) const
 {
@@ -336,13 +359,12 @@ void TilesetManager::imageLoaded(Tileset *fromThread, Tileset *tileset)
     // This updates a tileset in the cache.
     // HACK - 'fromThread' is not in the cache, 'tileset' is
     tileset->loadFromCache(fromThread);
-    delete fromThread;
 
     // Watch the image file for changes.
     mWatcher->addPath(tileset->imageSource2x().isEmpty() ? tileset->imageSource() : tileset->imageSource2x());
 
     // Now update every tileset using this image.
-    foreach (Tileset *candidate, tilesets()) {
+    for (Tileset *candidate : tilesets()) {
         if (candidate->isLoaded())
             continue;
         if (((candidate->imageSource() == tileset->imageSource()) || (!tileset->imageSource2x().isEmpty() && (candidate->imageSource2x() == tileset->imageSource2x())))
@@ -355,6 +377,103 @@ void TilesetManager::imageLoaded(Tileset *fromThread, Tileset *tileset)
             candidate->setMissing(false);
             emit tilesetChanged(candidate);
         }
+    }
+}
+
+#include "assettask.h"
+#include "assettaskmanager.h"
+
+class AssetTask_LoadTileset : public BaseAsyncAssetTask
+{
+public:
+    AssetTask_LoadTileset(Tileset* asset, QString imageSource2x, QString imageSource)
+        : BaseAsyncAssetTask(asset)
+        , mCached(asset)
+        , mImageSource2x(imageSource2x)
+        , mImageSource(imageSource)
+    {
+
+    }
+
+    void run() override
+    {
+        if (QImageReader(mImageSource2x).size().isValid())
+        {
+            qDebug() << "2x YES " << mImageSource;
+            QImage image(mImageSource2x);
+            if (image.isNull())
+            {
+                return;
+            }
+            mTileset = new Tileset(QStringLiteral("temp2x"), 64, 128);
+            mTileset->setImageSource2x(mImageSource2x);
+            bLoaded = mTileset->loadFromImage(image, mImageSource);
+        }
+        else if (QImageReader(mImageSource).size().isValid())
+        {
+            qDebug() << "2x NO " << mImageSource;
+            QImage image(mImageSource);
+            if (image.isNull())
+            {
+                return;
+            }
+            mTileset = new Tileset(QStringLiteral("temp"), 64, 128);
+            mTileset->setImageSource2x(QString());
+            bLoaded = mTileset->loadFromImage(image, mImageSource);
+        }
+        else
+        {
+        }
+    }
+
+    void handleResult() override
+    {
+        TilesetManager::instance().loadTilesetTaskFinished(this);
+    }
+
+    void release() override
+    {
+        delete mTileset;
+        delete this;
+    }
+
+    Tileset* mCached;
+    Tileset* mTileset = nullptr; // in mTilesetImageCache
+    QString mImageSource2x;
+    QString mImageSource;
+    bool bLoaded = false;
+    QString mError;
+};
+
+void TilesetManager::loadTilesetTaskFinished(AssetTask_LoadTileset *task)
+{
+    if (task->bLoaded)
+    {
+        imageLoaded(task->mTileset, task->mCached);
+        onLoadingSucceeded(task->m_asset);
+    }
+    else
+    {
+        Tileset* tileset = task->mCached;
+        for (Tileset *candidate : tilesets())
+        {
+            if (candidate->isLoaded())
+                continue;
+            if (candidate->imageSource() == task->mImageSource)
+            {
+                if (tileset->tileHeight() == mMissingTile->height() && tileset->tileWidth() == mMissingTile->width())
+                {
+                    for (int i = 0; i < tileset->tileCount(); i++)
+                    {
+                        tileset->tileAt(i)->setImage(mMissingTile);
+                    }
+                }
+                changeTilesetSource(tileset, task->mImageSource, true);
+                tileset->setImageSource2x(QString());
+            }
+        }
+
+        onLoadingFailed(task->m_asset);
     }
 }
 
@@ -383,6 +502,17 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
                 changeTilesetSource(tileset, imageSource, false);
                 tileset->setImageSource2x(cached->imageSource2x());
             }
+        }
+#if 1
+        else
+        {
+            cached = mTilesetImageCache->addTileset(tileset);
+
+            AssetTask_LoadTileset* assetTask = new AssetTask_LoadTileset(cached, imageSource2x, imageSource);
+//            assetTask->connect(this, [this, assetTask]{ loadTilesetTaskFinished(assetTask); });
+            setTask(cached, assetTask);
+            AssetTaskManager::instance().submit(assetTask);
+#else
         } else if (QImageReader(imageSource2x).size().isValid()) {
             qDebug() << "2x YES " << imageSource;
             changeTilesetSource(tileset, imageSource, false);
@@ -419,6 +549,7 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
             }
             changeTilesetSource(tileset, imageSource, true);
             tileset->setImageSource2x(QString());
+#endif
         }
     }
 }

@@ -86,9 +86,9 @@ void CellDocument::setScene(CellScene *scene)
     connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
             SLOT(objectGroupAboutToBeRemoved(int)));
 
-    connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapChanged(MapInfo*)),
             SLOT(mapChanged(MapInfo*)));
 }
 

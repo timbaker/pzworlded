@@ -44,8 +44,8 @@ static QString STR_0Floor = QLatin1String("0_Floor");
 
 BmpBlender::BmpBlender(QObject *parent) :
     QObject(parent),
-    mMap(0),
-    mFakeTileGrid(0),
+    mMap(nullptr),
+    mFakeTileGrid(nullptr),
     mInitTilesLater(true),
     mHack(false)
 {
@@ -54,7 +54,7 @@ BmpBlender::BmpBlender(QObject *parent) :
 BmpBlender::BmpBlender(Map *map, QObject *parent) :
     QObject(parent),
     mMap(map),
-    mFakeTileGrid(0),
+    mFakeTileGrid(nullptr),
     mInitTilesLater(true),
     mHack(false)
 {
@@ -84,7 +84,7 @@ void BmpBlender::recreate()
         qDeleteAll(mTileGrids);
         mTileGrids.clear();
         delete mFakeTileGrid;
-        mFakeTileGrid = 0;
+        mFakeTileGrid = nullptr;
 
         qDeleteAll(mTileLayers);
         mTileLayers.clear();
@@ -344,7 +344,7 @@ QList<Tile*> BmpBlender::tileNamesToTiles(const QStringList &names)
         else if (mTileByName.contains(name))
             ret += mTileByName[name];
         else
-            ret += TilesetManager::instance()->missingTile();
+            ret += TilesetManager::instance().missingTile();
     }
     return ret;
 }

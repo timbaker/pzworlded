@@ -1,4 +1,4 @@
 TEMPLATE  = subdirs
 CONFIG   += ordered
 
-SUBDIRS = zlib lua libtiled editor
+SUBDIRS = zlib lua assets libtiled editor

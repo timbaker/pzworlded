@@ -241,6 +241,7 @@ int Tileset::columnCountForWidth(int width) const
 }
 
 #ifdef ZOMBOID
+#if 0
 Tileset *Tileset::clone() const
 {
     Tileset *clone = new Tileset(*this);
@@ -252,6 +253,7 @@ Tileset *Tileset::clone() const
 
     return clone;
 }
+#endif
 
 TilesetImageCache::~TilesetImageCache()
 {

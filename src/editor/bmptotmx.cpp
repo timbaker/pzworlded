@@ -159,7 +159,7 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
     }
 
     // Try to free up some memory before loading large images.
-    MapManager::instance()->purgeUnreferencedMaps();
+    MapManager::instance().purgeUnreferencedMaps();
 
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
@@ -199,7 +199,7 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         assignMapsToCells(worldDoc, mode);
 
     foreach (QString path, mNewFiles)
-        MapManager::instance()->newMapFileCreated(path);
+        MapManager::instance().newMapFileCreated(path);
 
     // While displaying this, the MapManager's FileSystemWatcher might see some
     // changed .tmx files, which results in the PROGRESS dialog being displayed.

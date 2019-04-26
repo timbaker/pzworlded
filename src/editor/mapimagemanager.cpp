@@ -90,15 +90,15 @@ MapImageManager::MapImageManager() :
             SLOT(renderJobDone(MapComposite*)));
     mImageRenderThread->start();
 
-    connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapChanged(MapInfo*)),
             SLOT(mapChanged(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapFileChanged(MapInfo*)),
             SLOT(mapFileChanged(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
             SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
+    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
             SLOT(mapFailedToLoad(MapInfo*)));
 }
 
@@ -164,7 +164,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     }
 #endif
 
-    QString mapFilePath = MapManager::instance()->pathForMap(mapName, relativeTo);
+    QString mapFilePath = MapManager::instance().pathForMap(mapName, relativeTo);
     if (mapFilePath.isEmpty())
         return 0;
 
@@ -175,7 +175,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     if (!data.valid)
         return 0;
 
-    MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
+    MapInfo *mapInfo = MapManager::instance().mapInfo(mapFilePath);
     if (data.threadLoad || data.threadRender)
         paintDummyImage(data, mapInfo);
     MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, data.mapSize, data.tileSize, mapInfo);
@@ -202,7 +202,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     // up this image.
     QList<MapInfo*> sources;
     foreach (QString source, data.sources)
-        if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
+        if (MapInfo *sourceInfo = MapManager::instance().mapInfo(source))
             sources += sourceInfo;
     mapImage->setSources(sources);
 
@@ -256,9 +256,9 @@ MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapF
     }
 
     // Create ImageData appropriate for paintDummyImage().
-    MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
+    MapInfo *mapInfo = MapManager::instance().mapInfo(mapFilePath);
     if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
+        mError = MapManager::instance().errorString();
         return ImageData();
     }
 
@@ -560,7 +560,7 @@ void MapImageManager::renderThreadNeedsMap(MapImage *mapImage)
 {
     bool asynch = true;
     Q_ASSERT(mExpectMapImage == 0);
-    MapInfo *mapInfo = MapManager::instance()->loadMap(mapImage->mapInfo()->path(),
+    MapInfo *mapInfo = MapManager::instance().loadMap(mapImage->mapInfo()->path(),
                                                        QString(), asynch,
                                                        MapManager::PriorityLow);
     if (!mapInfo) {
@@ -629,7 +629,7 @@ QStringList getSubMapFileNames(const MapInfo *mapInfo)
     foreach (ObjectGroup *objectGroup, mapInfo->map()->objectGroups()) {
         foreach (MapObject *object, objectGroup->objects()) {
             if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
-                QString path = MapManager::instance()->pathForMap(object->type(), relativeTo);
+                QString path = MapManager::instance().pathForMap(object->type(), relativeTo);
                 if (!path.isEmpty())
                     ret += path;
             }
@@ -645,37 +645,37 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
 
     if (mExpectMapImage->mapInfo() == mapInfo) {
 #ifdef WORLDED
-        MapManager::instance()->addReferenceToMap(mapInfo), mReferencedMaps += mapInfo;
+        MapManager::instance().addReferenceToMap(mapInfo), mReferencedMaps += mapInfo;
 #endif
         foreach (const QString &path, getSubMapFileNames(mapInfo)) {
             bool async = true;
-            if (MapInfo *subMapInfo = MapManager::instance()->loadMap(path, QString(), async,
+            if (MapInfo *subMapInfo = MapManager::instance().loadMap(path, QString(), async,
                                                                       MapManager::PriorityLow)) {
                 if (!mExpectSubMaps.contains(subMapInfo)) {
                     if (subMapInfo->isLoading())
                         mExpectSubMaps += subMapInfo;
 #ifdef WORLDED
                     else
-                        MapManager::instance()->addReferenceToMap(subMapInfo), mReferencedMaps += subMapInfo;
+                        MapManager::instance().addReferenceToMap(subMapInfo), mReferencedMaps += subMapInfo;
 #endif
                 }
             }
         }
     } else if (mExpectSubMaps.contains(mapInfo)) {
 #ifdef WORLDED
-        MapManager::instance()->addReferenceToMap(mapInfo), mReferencedMaps += mapInfo;
+        MapManager::instance().addReferenceToMap(mapInfo), mReferencedMaps += mapInfo;
 #endif
         mExpectSubMaps.removeAll(mapInfo);
         foreach (const QString &path, getSubMapFileNames(mapInfo)) {
             bool async = true;
-            if (MapInfo *subMapInfo = MapManager::instance()->loadMap(
+            if (MapInfo *subMapInfo = MapManager::instance().loadMap(
                         path, QString(), async, MapManager::PriorityLow)) {
                 if (!mExpectSubMaps.contains(subMapInfo)) {
                     if (subMapInfo->isLoading())
                         mExpectSubMaps += subMapInfo;
 #ifdef WORLDED
                     else
-                        MapManager::instance()->addReferenceToMap(subMapInfo), mReferencedMaps += subMapInfo;
+                        MapManager::instance().addReferenceToMap(subMapInfo), mReferencedMaps += subMapInfo;
 #endif
                 }
             }
@@ -695,20 +695,20 @@ void MapImageManager::mapLoaded(MapInfo *mapInfo)
 #ifdef WORLDED
     // Now that mapComposite is referencing the maps...
     foreach (MapInfo *mapInfo, mReferencedMaps)
-        MapManager::instance()->removeReferenceToMap(mapInfo);
+        MapManager::instance().removeReferenceToMap(mapInfo);
 #endif
     // Wait for TilesetManager's threads to finish loading the tilesets.
     // FIXME: this shouldn't block the gui.
 #if 1
     QList<Tileset*> usedTilesets = mRenderMapComposite->usedTilesets();
-    usedTilesets.removeAll(TilesetManager::instance()->missingTileset());
-    TilesetManager::instance()->waitForTilesets(usedTilesets);
+    usedTilesets.removeAll(TilesetManager::instance().missingTileset());
+    TilesetManager::instance().waitForTilesets(usedTilesets);
 #else
     QSet<Tileset*> usedTilesets;
     foreach (MapComposite *mc, mRenderMapComposite->maps())
         usedTilesets += mc->map()->usedTilesets();
-    usedTilesets.remove(TilesetManager::instance()->missingTileset());
-    TilesetManager::instance()->waitForTilesets(usedTilesets.toList());
+    usedTilesets.remove(TilesetManager::instance().missingTileset());
+    TilesetManager::instance().waitForTilesets(usedTilesets.toList());
 #endif
 
     // BmpBlender sends a signal to the MapComposite when it has finished
@@ -733,7 +733,7 @@ void MapImageManager::mapFailedToLoad(MapInfo *mapInfo)
     if (mExpectMapImage && (mapInfo == mExpectMapImage->mapInfo())) {
 #ifdef WORLDED
         foreach (MapInfo *mapInfo, mReferencedMaps)
-            MapManager::instance()->removeReferenceToMap(mapInfo);
+            MapManager::instance().removeReferenceToMap(mapInfo);
         mReferencedMaps.clear();
 #endif
         MapImage *mapImage = mExpectMapImage;

@@ -19,9 +19,11 @@
 #include "mainwindow.h"
 
 #ifdef ZOMBOID
+#include "assettaskmanager.h"
 #include "documentmanager.h"
 #include "toolmanager.h"
 #include "preferences.h"
+#include "mapassetmanager.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "tilemetainfomgr.h"
@@ -46,6 +48,11 @@ int main(int argc, char *argv[])
     a.setAttribute(Qt::AA_DontShowIconsInMenus);
 #endif
 
+    new AssetTaskManager();
+    new TilesetManager(); // before MapManager()
+    new MapAssetManager();
+    new MapManager();
+
     MainWindow w;
     w.show();
 
@@ -67,6 +74,7 @@ int main(int argc, char *argv[])
     Preferences::deleteInstance();
     MapImageManager::deleteInstance();
     MapManager::deleteInstance();
+    MapAssetManager::deleteInstance();
     TileMetaInfoMgr::deleteInstance();
     TilesetManager::deleteInstance();
 

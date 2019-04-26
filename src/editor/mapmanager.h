@@ -18,8 +18,11 @@
 #ifndef MAPMANAGER_H
 #define MAPMANAGER_H
 
+#include "assetmanager.h"
 #include "map.h"
+#include "mapinfo.h"
 #include "filesystemwatcher.h"
+#include "singleton.h"
 #include "threads.h"
 
 #include <QDateTime>
@@ -27,6 +30,7 @@
 #include <QTimer>
 
 class MapInfo;
+class AssetTask_LoadMapInfo;
 
 namespace BuildingEditor {
 class Building;
@@ -75,74 +79,12 @@ private:
     QString mError;
 };
 
-class MapInfo
-{
-public:
-    MapInfo(Tiled::Map::Orientation orientation,
-            int width, int height,
-            int tileWidth, int tileHeight)
-        : mOrientation(orientation)
-        , mWidth(width)
-        , mHeight(height)
-        , mTileWidth(tileWidth)
-        , mTileHeight(tileHeight)
-        , mMap(0)
-        , mPlaceholder(false)
-        , mBeingEdited(false)
-#ifdef WORLDED
-        , mMapRefCount(0)
-        , mReferenceEpoch(0)
-#endif
-        , mLoading(false)
-    {
-
-    }
-
-    bool isValid() const { return mWidth > 0 && mHeight > 0; }
-
-    Tiled::Map::Orientation orientation() const { return mOrientation; }
-    int width() const { return mWidth; }
-    int height() const { return mHeight; }
-    QSize size() const { return QSize(mWidth, mHeight); }
-    QRect bounds() const { return QRect(0, 0, mWidth, mHeight); }
-    int tileWidth() const { return mTileWidth; }
-    int tileHeight() const { return mTileHeight; }
-
-    void setFilePath(const QString& path) { mFilePath = path; }
-    const QString &path() const { return mFilePath; }
-
-    Tiled::Map *map() const { return mMap; }
-
-    void setBeingEdited(bool edited) { mBeingEdited = edited; }
-    bool isBeingEdited() const { return mBeingEdited; }
-
-    bool isLoading() const { return mLoading; }
-
-private:
-    Tiled::Map::Orientation mOrientation;
-    int mWidth;
-    int mHeight;
-    int mTileWidth;
-    int mTileHeight;
-    QString mFilePath;
-    Tiled::Map *mMap;
-    bool mPlaceholder;
-    bool mBeingEdited;
-#ifdef WORLDED
-    int mMapRefCount;
-    int mReferenceEpoch;
-#endif
-    bool mLoading;
-
-    friend class MapManager;
-};
-
-class MapManager : public QObject
+class MapManager : public AssetManager, public Singleton<MapManager>
 {
     Q_OBJECT
 public:
-    static MapManager *instance();
-    static void deleteInstance();
+    MapManager();
+    ~MapManager() override;
 
     /**
      * Returns the canonical (absolute) path for a map file.
@@ -199,7 +141,6 @@ public:
     QString errorString() const
     { return mError; }
 
-    typedef Tiled::Map Map;
     typedef BuildingEditor::Building Building;
 
 signals:
@@ -219,20 +160,23 @@ private slots:
     void metaTilesetAdded(Tiled::Tileset *tileset);
     void metaTilesetRemoved(Tiled::Tileset *tileset);
 
-    void mapLoadedByThread(Map *map, MapInfo *mapInfo);
+    void mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo);
     void buildingLoadedByThread(Building *building, MapInfo *mapInfo);
     void failedToLoadByThread(const QString error, MapInfo *mapInfo);
 
+    void mapAssetStateChanged(MapInfo *mapInfo);
+
     void processDeferrals();
 
+protected:
+    Asset* createAsset(AssetPath path, AssetParams* params) override;
+    void destroyAsset(Asset* asset) override;
+    void startLoading(Asset* asset) override;
+
+    friend class AssetTask_LoadMapInfo;
+    void loadMapInfoTaskFinished(AssetTask_LoadMapInfo* task);
+
 private:
-    Q_DISABLE_COPY(MapManager)
-    static MapManager *mInstance;
-    MapManager();
-    ~MapManager();
-
-    QMap<QString,MapInfo*> mMapInfo;
-
     Tiled::Internal::FileSystemWatcher *mFileSystemWatcher;
     QSet<QString> mChangedFiles;
     QTimer mChangedFilesTimer;
@@ -242,13 +186,13 @@ private:
     int mDeferralDepth;
     struct MapDeferral
     {
-        MapDeferral(MapInfo *mapInfo, Map *map) :
+        MapDeferral(MapInfo *mapInfo, Tiled::Map *map) :
             mapInfo(mapInfo),
             map(map)
         {}
 
         MapInfo *mapInfo;
-        Map *map;
+        Tiled::Map *map;
     };
     QList<MapDeferral> mDeferredMaps;
     bool mDeferralQueued;
@@ -269,18 +213,18 @@ public:
     MapManagerDeferral() :
         mReleased(false)
     {
-        MapManager::instance()->deferThreadResults(true);
+        MapManager::instance().deferThreadResults(true);
     }
 
     ~MapManagerDeferral()
     {
         if (!mReleased)
-            MapManager::instance()->deferThreadResults(false);
+            MapManager::instance().deferThreadResults(false);
     }
 
     void release()
     {
-        MapManager::instance()->deferThreadResults(false);
+        MapManager::instance().deferThreadResults(false);
         mReleased = true;
     }
 

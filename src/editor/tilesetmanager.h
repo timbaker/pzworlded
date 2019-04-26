@@ -23,6 +23,8 @@
 #define TILESETMANAGER_H
 
 #ifdef ZOMBOID
+#include "assetmanager.h"
+#include "singleton.h"
 #include <QFileInfo>
 #endif
 #include <QObject>
@@ -73,6 +75,8 @@ private:
     QMutex mJobsMutex;
     bool mHasJobs;
 };
+
+class AssetTask_LoadTileset;
 #endif // ZOMBOID
 
 namespace Tiled {
@@ -109,11 +113,17 @@ struct TilesetSpec
  * watches the tileset images for changes and will attempt to reload them when
  * they change.
  */
+#ifdef ZOMBOID
+class TilesetManager : public AssetManager, public Singleton<TilesetManager>
+#else
 class TilesetManager : public QObject
+#endif
 {
     Q_OBJECT
 
 public:
+#ifdef ZOMBOID
+#else
     /**
      * Requests the tileset manager. When the manager doesn't exist yet, it
      * will be created.
@@ -124,7 +134,7 @@ public:
      * Deletes the tileset manager instance, when it exists.
      */
     static void deleteInstance();
-
+#endif
     /**
      * Searches for a tileset matching the given file name.
      * @return a tileset matching the given file name, or 0 if none exists
@@ -218,19 +228,24 @@ private slots:
 private:
     Q_DISABLE_COPY(TilesetManager)
 
-    /**
-     * Constructor. Only used by the tileset manager itself.
-     */
+#ifdef ZOMBOID
+public:
     TilesetManager();
 
     /**
-     * Destructor.
+     * Destructor.  Accessed by Singleton::deleteInstance().
      */
-    ~TilesetManager();
+    ~TilesetManager() override;
 
-    static TilesetManager *mInstance;
+protected:
+    Asset* createAsset(AssetPath path, AssetParams* params) override;
+    void destroyAsset(Asset* asset) override;
+    void startLoading(Asset* asset) override;
 
-#ifdef ZOMBOID
+    friend class ::AssetTask_LoadTileset;
+    void loadTilesetTaskFinished(AssetTask_LoadTileset* task);
+
+private:
     TilesetImageCache *mTilesetImageCache;
 
     Tileset *mMissingTileset;
@@ -242,6 +257,18 @@ private:
     QVector<InterruptibleThread*> mImageReaderThreads;
     QVector<TilesetImageReaderWorker*> mImageReaderWorkers;
     int mNextThreadForJob;
+#else
+    /**
+     * Constructor. Only used by the tileset manager itself.
+     */
+    TilesetManager();
+
+    /**
+     * Destructor.
+     */
+    ~TilesetManager();
+
+    static TilesetManager *mInstance;
 #endif
 
 #ifdef ZOMBOID_TILE_LAYER_NAMES

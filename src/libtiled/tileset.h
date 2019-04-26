@@ -36,6 +36,7 @@
 #include <QList>
 #include <QPoint>
 #ifdef ZOMBOID
+#include "asset.h"
 #include <QSize>
 #endif
 #include <QString>
@@ -65,9 +66,20 @@ public:
  * This class currently only supports loading tiles from a tileset image, using
  * loadFromImage(). There is no way to add or remove arbitrary tiles.
  */
+#ifdef ZOMBOID
+class TILEDSHARED_EXPORT Tileset : public Asset, public Object
+#else
 class TILEDSHARED_EXPORT Tileset : public Object
+#endif
 {
 public:
+#ifdef ZOMBOID
+    Tileset(AssetPath path, AssetManager* manager, AssetParams* params)
+        : Asset(path, manager)
+    {
+        Q_UNUSED(params);
+    }
+#endif
     /**
      * Constructor.
      *
@@ -79,6 +91,7 @@ public:
      */
     Tileset(const QString &name, int tileWidth, int tileHeight,
             int tileSpacing = 0, int margin = 0):
+        Asset(name, nullptr),
         mName(name),
         mTileWidth(tileWidth),
         mTileHeight(tileHeight),
@@ -243,7 +256,7 @@ public:
     int columnCountForWidth(int width) const;
 
 #ifdef ZOMBOID
-    Tileset *clone() const;
+//    Tileset *clone() const;
 
     void setMissing(bool missing)
     { mMissing = missing; }

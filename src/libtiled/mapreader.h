@@ -57,7 +57,11 @@ class TILEDSHARED_EXPORT MapReader
 {
 public:
     MapReader();
+#ifdef ZOMBOID
+    virtual ~MapReader();
+#else
     ~MapReader();
+#endif
 
     /**
      * Reads a TMX map from the given \a device. Optionally a \a path can

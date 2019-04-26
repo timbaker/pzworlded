@@ -193,7 +193,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
         mBMPItems += item;
     }
 
-    connect(MapManager::instance(), SIGNAL(mapFileCreated(QString)),
+    connect(MapManager::instancePtr(), SIGNAL(mapFileCreated(QString)),
             SLOT(mapFileCreated(QString)));
 
     connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
@@ -835,7 +835,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
 
         if (info.suffix() != QLatin1String("tmx")) continue;
 
-        MapInfo *mapInfo = MapManager::instance()->mapInfo(info.canonicalFilePath());
+        MapInfo *mapInfo = MapManager::instance().mapInfo(info.canonicalFilePath());
         if (!mapInfo)
             continue;
 
@@ -1188,7 +1188,7 @@ int WorldCellItem::thumbnailsAreGo()
     cellContentsChanged();
     if (mMapImage && mMapImage->isLoaded())
         return 1;
-    return (mMapImage != 0) ? 2 : 0;
+    return (mMapImage != nullptr) ? 2 : 0;
 }
 
 void WorldCellItem::thumbnailsAreFail()

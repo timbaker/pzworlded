@@ -62,21 +62,21 @@ void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
         QImageReader reader2x(imageSource2x);
         if (reader2x.size().isValid()) {
             // can't use canonicalFilePath since the 1x tileset may not exist
-            TilesetManager::instance()->changeTilesetSource(ts, imageSource, false);
-            TilesetManager::instance()->loadTileset(ts, ts->imageSource());
+            TilesetManager::instance().changeTilesetSource(ts, imageSource, false);
+            TilesetManager::instance().loadTileset(ts, ts->imageSource());
             continue;
         }
         QImageReader reader(imageSource);
         if (reader.size().isValid()) {
             QFileInfo finfo(imageSource);
-            TilesetManager::instance()->changeTilesetSource(ts, finfo.canonicalFilePath(), false);
-            TilesetManager::instance()->loadTileset(ts, ts->imageSource());
+            TilesetManager::instance().changeTilesetSource(ts, finfo.canonicalFilePath(), false);
+            TilesetManager::instance().loadTileset(ts, ts->imageSource());
         } else {
             // There was a valid image in the old directory, but not in the new one.
-            Tile *missingTile = TilesetManager::instance()->missingTile();
+            Tile *missingTile = TilesetManager::instance().missingTile();
             for (int i = 0; i < ts->tileCount(); i++)
                 ts->tileAt(i)->setImage(missingTile);
-            TilesetManager::instance()->changeTilesetSource(ts, imageSource, true);
+            TilesetManager::instance().changeTilesetSource(ts, imageSource, true);
         }
     }
     loadTilesets();
@@ -88,14 +88,14 @@ TileMetaInfoMgr::TileMetaInfoMgr(QObject *parent) :
     mSourceRevision(0),
     mHasReadTxt(false)
 {
-    connect(TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
+    connect(TilesetManager::instancePtr(), SIGNAL(tilesetChanged(Tileset*)),
             SLOT(tilesetChanged(Tileset*)));
 }
 
 TileMetaInfoMgr::~TileMetaInfoMgr()
 {
-    TilesetManager::instance()->removeReferences(tilesets());
-    TilesetManager::instance()->removeReferences(mRemovedTilesets);
+    TilesetManager::instance().removeReferences(tilesets());
+    TilesetManager::instance().removeReferences(mRemovedTilesets);
     qDeleteAll(mTilesetInfo);
 }
 
@@ -212,7 +212,7 @@ bool TileMetaInfoMgr::readTxt()
                 // other code asks for them or when the Tiles directory is changed.
                 int width = columns * 64, height = rows * 128;
                 tileset->loadFromNothing(QSize(width, height), tilesetFileName);
-                Tile *missingTile = TilesetManager::instance()->missingTile();
+                Tile *missingTile = TilesetManager::instance().missingTile();
                 for (int i = 0; i < tileset->tileCount(); i++)
                     tileset->tileAt(i)->setImage(missingTile);
                 tileset->setMissing(true);
@@ -365,7 +365,7 @@ bool TileMetaInfoMgr::addNewTilesets()
         int rows = ir.size().height() / (64 * 2);
         Tileset *tileset = new Tileset(tilesetName, 64, 128);
         tileset->loadFromNothing(QSize(columns * 64, rows * 128), fileInfo.fileName());
-        Tile *missingTile = TilesetManager::instance()->missingTile();
+        Tile *missingTile = TilesetManager::instance().missingTile();
         for (int i = 0; i < tileset->tileCount(); i++)
             tileset->tileAt(i)->setImage(missingTile);
         tileset->setMissing(true);
@@ -397,14 +397,14 @@ bool TileMetaInfoMgr::loadTilesetImage(Tileset *ts, const QString &source)
     if (ir2x.size().isValid()) {
         ts->loadFromNothing(ir2x.size() / 2, source);
         // can't use canonicalFilePath since the 1x tileset may not exist
-        TilesetManager::instance()->loadTileset(ts, source);
+        TilesetManager::instance().loadTileset(ts, source);
         return true;
     }
     QImageReader reader(imageSource);
     if (reader.size().isValid()) {
         ts->loadFromNothing(reader.size(), imageSource);
         QFileInfo info(imageSource);
-        TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
+        TilesetManager::instance().loadTileset(ts, info.canonicalFilePath());
         return true;
     }
     mError = tr("Error loading tileset image:\n'%1'").arg(source);
@@ -416,7 +416,7 @@ void TileMetaInfoMgr::addTileset(Tileset *tileset)
     Q_ASSERT(mTilesetByName.contains(tileset->name()) == false);
     mTilesetByName[tileset->name()] = tileset;
     if (!mRemovedTilesets.contains(tileset))
-        TilesetManager::instance()->addReference(tileset);
+        TilesetManager::instance().addReference(tileset);
     mRemovedTilesets.removeAll(tileset);
     emit tilesetAdded(tileset);
 }
@@ -432,7 +432,7 @@ void TileMetaInfoMgr::removeTileset(Tileset *tileset)
     // Don't remove references now, that will delete the tileset, and the
     // user might undo the removal.
     mRemovedTilesets += tileset;
-    //    TilesetManager::instance()->removeReference(tileset);
+    //    TilesetManager::instance().removeReference(tileset);
 }
 
 void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets, bool processEvents)
@@ -451,7 +451,7 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets, bool proces
             if (ir2x.size().isValid()) {
                 ts->loadFromNothing(ir2x.size() / 2, imageSource);
                 // can't use canonicalFilePath since the 1x tileset may not exist
-                TilesetManager::instance()->loadTileset(ts, imageSource);
+                TilesetManager::instance().loadTileset(ts, imageSource);
                 if (processEvents)
                     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
                 continue;
@@ -460,7 +460,7 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets, bool proces
             if (reader.size().isValid()) {
                 ts->loadFromNothing(reader.size(), imageSource); // update the size now
                 QFileInfo info(imageSource);
-                TilesetManager::instance()->loadTileset(ts, info.canonicalFilePath());
+                TilesetManager::instance().loadTileset(ts, info.canonicalFilePath());
                 if (processEvents)
                     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }

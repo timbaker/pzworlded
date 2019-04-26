@@ -1,6 +1,9 @@
 include(../../PZWorldEd.pri)
 include(../qtlockedfile/qtlockedfile.pri)
 include(../zlib/zlib.pri)
+include(../assets/assets.pri)
+LIBS += $${ASSET_LIBS}
+PRE_TARGETDEPS += $${ASSET_LIBS}
 
 TEMPLATE = lib
 TARGET = tiled
