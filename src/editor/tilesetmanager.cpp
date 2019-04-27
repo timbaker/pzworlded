@@ -472,33 +472,34 @@ void TilesetManager::loadTilesetTaskFinished(AssetTask_LoadTileset *task)
     }
     else
     {
-        Tileset* tileset = task->mCached;
         for (Tileset *candidate : tilesets())
         {
             if (candidate->isLoaded())
                 continue;
             if (candidate->imageSource() == task->mImageSource)
             {
-                if (tileset->tileHeight() == mMissingTile->height() && tileset->tileWidth() == mMissingTile->width())
+                if (candidate->tileHeight() == mMissingTile->height() && candidate->tileWidth() == mMissingTile->width())
                 {
-                    for (int i = 0; i < tileset->tileCount(); i++)
+                    for (int i = 0; i < candidate->tileCount(); i++)
                     {
-                        tileset->tileAt(i)->setImage(mMissingTile);
+                        candidate->tileAt(i)->setImage(mMissingTile);
                     }
                 }
-                changeTilesetSource(tileset, task->mImageSource, true);
-                tileset->setImageSource2x(QString());
-                if (tileset->isEmpty())
-                    onLoadingFailed(tileset);
+                changeTilesetSource(candidate, task->mImageSource, true);
+                candidate->setImageSource2x(QString());
+                if (candidate->isEmpty())
+                    onLoadingFailed(candidate);
             }
         }
 
-        onLoadingFailed(task->m_asset);
+        onLoadingFailed(task->mCached);
     }
 }
 
 void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
 {
+    tileset->setManager(this); // hack
+
     // Hack to ignore TileMetaInfoMgr's tilesets that haven't been loaded,
     // their paths are relative to the Tiles Directory.
     if (QDir(imageSource_).isRelative())
@@ -517,6 +518,7 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
             if (cached->isLoaded()) {
                 tileset->loadFromCache(cached);
                 tileset->setMissing(false);
+                tileset->onCreated(AssetState::READY);
                 emit tilesetChanged(tileset);
             } else {
                 changeTilesetSource(tileset, imageSource, false);
@@ -526,6 +528,7 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
 #if 1
         else
         {
+            changeTilesetSource(tileset, imageSource, false);
             cached = mTilesetImageCache->addTileset(tileset);
 
             AssetTask_LoadTileset* assetTask = new AssetTask_LoadTileset(cached, imageSource2x, imageSource);

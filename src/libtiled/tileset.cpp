@@ -41,7 +41,7 @@ Tileset::~Tileset()
 
 Tile *Tileset::tileAt(int id) const
 {
-    return (id < mTiles.size()) ? mTiles.at(id) : 0;
+    return (id < mTiles.size()) ? mTiles.at(id) : nullptr;
 }
 
 bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
@@ -227,7 +227,7 @@ Tileset *Tileset::findSimilarTileset(const QList<Tileset*> &tilesets) const
                 return candidate;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 int Tileset::columnCountForWidth(int width) const
@@ -298,7 +298,7 @@ Tileset *TilesetImageCache::findMatch(Tileset *ts, const QString &imageSource, c
             return candidate;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #endif

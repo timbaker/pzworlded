@@ -17,6 +17,7 @@
 
 #include "worldview.h"
 
+#include "mapimage.h"
 #include "mapimagemanager.h"
 #include "preferences.h"
 #include "world.h"

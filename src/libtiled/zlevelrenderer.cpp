@@ -183,7 +183,7 @@ void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor grid
     }
 }
 
-static Tile *g_missing_tile = 0;
+static Tile *g_missing_tile = nullptr;
 
 void ZLevelRenderer::drawTileLayer(QPainter *painter,
                                       const TileLayer *layer,
@@ -422,7 +422,7 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                     if (!cell->isEmpty()) {
                         Tile *tile = cell->tile;
                         if (tile->image().isNull()) {
-                            if (g_missing_tile == 0) {
+                            if (g_missing_tile == nullptr) {
                                 Tileset *ts = new Tileset(QLatin1String("MISSING"), 64, 128);
                                 if (ts->loadFromImage(QImage(QLatin1String(":/images/missing-tile.png")), QLatin1String(":/images/missing-tile.png"))) {
                                     g_missing_tile = ts->tileAt(0);

@@ -23,6 +23,7 @@
 #include "cellscene.h"
 #include "clipboard.h"
 #include "mapcomposite.h"
+#include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "mainwindow.h"
 #include "preferences.h"
@@ -2265,10 +2266,17 @@ void WorldCellTool::showContextMenu(const QPointF &scenePos, const QPoint &scree
     if (item->cell()->mapFilePath().isEmpty())
         openAction->setEnabled(false);
 
+    QIcon redoIcon(QLatin1String(":images/16x16/edit-redo.png"));
+    QAction *thumbnailAction = menu.addAction(redoIcon, tr("Recreate Thumbnail"));
+    if (item->cell()->mapFilePath().isEmpty())
+        thumbnailAction->setEnabled(false);
+
     QAction *action = menu.exec(screenPos);
     if (action == openAction) {
         QUrl url = QUrl::fromLocalFile(item->cell()->mapFilePath());
         QDesktopServices::openUrl(url);
+    } else if (action == thumbnailAction) {
+        MapImageManager::instance().recreateImage(item->cell()->mapFilePath());
     }
 }
 

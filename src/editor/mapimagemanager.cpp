@@ -17,6 +17,8 @@
 
 #include "mapimagemanager.h"
 
+#include "assettask.h"
+#include "assettaskmanager.h"
 #ifdef WORLDED
 #include "bmptotmx.h"
 #endif // WORLDED
@@ -27,6 +29,7 @@
 #include "mainwindow.h"
 #include "map.h"
 #include "mapcomposite.h"
+#include "mapimage.h"
 #include "mapmanager.h"
 #include "objectgroup.h"
 #include "orthogonalrenderer.h"
@@ -57,40 +60,13 @@ const int IMAGE_WIDTH = 512;
 
 SINGLETON_IMPL(MapImageManager)
 
-MapImageManager::MapImageManager() :
-    mExpectMapImage(nullptr),
-    mRenderMapComposite(nullptr),
-    mDeferralDepth(0),
-    mDeferralQueued(false)
+MapImageManager::MapImageManager()
+    : mDeferralDepth(0)
 {
-#if 0
-    mImageReaderThreads.resize(4);
-    mImageReaderWorkers.resize(mImageReaderThreads.size());
-    mNextThreadForJob = 0;
-    for (int i = 0; i < mImageReaderWorkers.size(); i++) {
-        mImageReaderThreads[i] = new InterruptibleThread;
-        mImageReaderWorkers[i] = new MapImageReaderWorker(mImageReaderThreads[i]);
-        mImageReaderWorkers[i]->moveToThread(mImageReaderThreads[i]);
-        connect(mImageReaderWorkers[i], SIGNAL(imageLoaded(QImage*,MapImage*)),
-                SLOT(imageLoadedByThread(QImage*,MapImage*)));
-        mImageReaderThreads[i]->start();
-    }
-
-    mImageRenderThread = new InterruptibleThread;
-    mImageRenderWorker = new MapImageRenderWorker(mImageRenderThread);
-    mImageRenderWorker->moveToThread(mImageRenderThread);
-    connect(mImageRenderWorker, SIGNAL(mapNeeded(MapImage*)),
-            SLOT(renderThreadNeedsMap(MapImage*)));
     qRegisterMetaType<MapImageData>("MapImageData");
     qRegisterMetaType<MapImage*>("MapImage*");
     qRegisterMetaType<MapComposite*>("MapComposite*");
-    connect(mImageRenderWorker,
-            SIGNAL(imageRendered(MapImageData,MapImage*)),
-            SLOT(imageRenderedByThread(MapImageData,MapImage*)));
-    connect(mImageRenderWorker, SIGNAL(jobDone(MapComposite*)),
-            SLOT(renderJobDone(MapComposite*)));
-    mImageRenderThread->start();
-#endif
+
     connect(MapManager::instancePtr(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
     connect(MapManager::instancePtr(), SIGNAL(mapChanged(MapInfo*)),
@@ -108,21 +84,6 @@ MapImageManager::MapImageManager() :
 
 MapImageManager::~MapImageManager()
 {
-#if 0
-    for (int i = 0; i < mImageReaderThreads.size(); i++) {
-        mImageReaderThreads[i]->interrupt();
-        mImageReaderThreads[i]->quit();
-        mImageReaderThreads[i]->wait();
-        delete mImageReaderWorkers[i];
-        delete mImageReaderThreads[i];
-    }
-
-    mImageRenderThread->interrupt();
-    mImageRenderThread->quit();
-    mImageRenderThread->wait();
-    delete mImageRenderWorker;
-    delete mImageRenderThread;
-#endif
 }
 
 MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &relativeTo)
@@ -152,7 +113,6 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
                                           data.levelZeroBounds, data.mapSize, data.tileSize,
                                           mapInfo);
         mapImage->setManager(this);
-        mapImage->mLoaded = true;
         m_assets[keyName] = mapImage;
         mapImage->chopIntoPieces();
         return mapImage;
@@ -166,144 +126,24 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     if (MapImage* mapImage = static_cast<MapImage*>(get(mapFilePath)))
         return mapImage;
 
-#if 1
     return static_cast<MapImage*>(load(AssetPath(mapFilePath)));
-#else
-    ImageData data = generateMapImage(mapFilePath);
-    if (!data.valid)
-        return nullptr;
-
-    MapInfo *mapInfo = MapManager::instance().mapInfo(mapFilePath);
-    if (data.threadLoad || data.threadRender)
-        paintDummyImage(data, mapInfo);
-    MapImage *mapImage = new MapImage(data.image, data.scale, data.levelZeroBounds, data.mapSize, data.tileSize, mapInfo);
-    mapImage->mMissingTilesets = data.missingTilesets;
-    mapImage->mLoaded = !(data.threadLoad || data.threadRender);
-
-    if (data.threadLoad || data.threadRender) {
-        if (data.threadLoad) {
-            QString imageFileName = imageFileInfo(mapFilePath).canonicalFilePath();
-            QMetaObject::invokeMethod(mImageReaderWorkers[mNextThreadForJob],
-                                      "addJob", Qt::QueuedConnection,
-                                      Q_ARG(QString,imageFileName),
-                                      Q_ARG(MapImage*,mapImage));
-            mNextThreadForJob = (mNextThreadForJob + 1) % mImageReaderWorkers.size();
-        }
-        if (data.threadRender) {
-            QMetaObject::invokeMethod(mImageRenderWorker,
-                                      "addJob", Qt::QueuedConnection,
-                                      Q_ARG(MapImage*,mapImage));
-        }
-    }
-
-    // Set up file modification tracking on each TMX that makes
-    // up this image.
-    QList<MapInfo*> sources;
-    foreach (QString source, data.sources)
-        if (MapInfo *sourceInfo = MapManager::instance().mapInfo(source))
-            sources += sourceInfo;
-    mapImage->setSources(sources);
-
-    mMapImages.insert(mapFilePath, mapImage);
-    return mapImage;
-#endif
 }
 
-MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapFilePath, bool force)
+void MapImageManager::recreateImage(const QString &mapName)
 {
-#if 0
-    if (mapFilePath == QLatin1String("<fail>")) {
-        QImage image(IMAGE_WIDTH, 256, QImage::Format_ARGB32);
-        image.fill(Qt::transparent);
-        QPainter painter(&image);
-        painter.setFont(QFont(QLatin1String("Helvetica"), 48, 1, true));
-        painter.drawText(0, 0, image.width(), image.height(), Qt::AlignCenter, QLatin1String("FAIL"));
-        return image;
+    MapImage* mapImage = getMapImage(mapName);
+    if (mapImage == nullptr)
+        return;
+    if (mapImage->isEmpty())
+        return;
+    QFileInfo fileInfo = imageFileInfo(mapName);
+    if (fileInfo.exists())
+    {
+        QFile(fileInfo.absoluteFilePath()).remove();
+        mapImage->mSources.clear();
+        mapImage->mSources += mapImage->mapInfo();
+        reload(mapImage);
     }
-#endif
-
-    QFileInfo fileInfo(mapFilePath);
-    QFileInfo imageInfo = imageFileInfo(mapFilePath);
-    QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
-    if (!force && imageInfo.exists() && imageDataInfo.exists() && (fileInfo.lastModified() < imageInfo.lastModified())) {
-        QImageReader reader(imageInfo.absoluteFilePath());
-        if (!reader.size().isValid())
-            QMessageBox::warning(MainWindow::instance(), tr("Error Loading Image"),
-                                 tr("An error occurred trying to read a map thumbnail image.\n") + imageInfo.absoluteFilePath());
-        if (reader.size().width() == IMAGE_WIDTH) {
-            ImageData data = readImageData(imageDataInfo);
-            // If the image was originally created with some tilesets missing,
-            // try to recreate the image in case those tileset issues were
-            // resolved.
-            if (data.missingTilesets)
-                data.valid = false;
-            if (data.valid) {
-                foreach (QString source, data.sources) {
-                    QFileInfo sourceInfo(source);
-                    if (sourceInfo.exists() && (sourceInfo.lastModified() > imageInfo.lastModified())) {
-                        data.valid = false;
-                        break;
-                    }
-                }
-            }
-            if (data.valid) {
-                data.threadLoad = true;
-                data.size = reader.size();
-                return data;
-            }
-        }
-    }
-
-    // Create ImageData appropriate for paintDummyImage().
-    MapInfo *mapInfo = MapManager::instance().mapInfo(mapFilePath);
-    if (!mapInfo) {
-        mError = MapManager::instance().errorString();
-        return ImageData();
-    }
-
-    MapRenderer *renderer = nullptr;
-    Map staticMap(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
-            mapInfo->tileWidth(), mapInfo->tileHeight());
-    Map *map = &staticMap;
-
-    switch (map->orientation()) {
-    case Map::Isometric:
-        renderer = new IsometricRenderer(map);
-        break;
-    case Map::LevelIsometric:
-        renderer = new ZLevelRenderer(map);
-        break;
-    case Map::Orthogonal:
-        renderer = new OrthogonalRenderer(map);
-        break;
-    case Map::Staggered:
-        renderer = new StaggeredRenderer(map);
-        break;
-    default:
-        return ImageData();
-    }
-
-    QRectF sceneRect = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
-    QSize mapSize = sceneRect.size().toSize();
-    if (mapSize.isEmpty()) {
-        delete renderer;
-        return ImageData();
-    }
-
-    qreal scale = IMAGE_WIDTH / qreal(mapSize.width());
-    mapSize *= scale;
-
-    ImageData data;
-    data.threadRender = true;
-    data.size = mapSize;
-    data.scale = scale;
-    data.levelZeroBounds = sceneRect;
-    data.sources += mapInfo->path();
-    data.mapSize = map->size();
-    data.tileSize = renderer->boundingRect(QRect(0, 0, 1, 1)).size();
-    data.valid = true;
-    delete renderer;
-    return data;
 }
 
 void MapImageManager::paintDummyImage(ImageData &data, MapInfo *mapInfo)
@@ -528,7 +368,7 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
     {
         MapImage *mapImage = static_cast<MapImage*>(asset);
         if (mapImage->sources().contains(mapInfo)) {
-            if (mapImage->mLoaded) {
+            if (mapImage->isEmpty() == false) {
 #if 0
                 bool force = true;
                 ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
@@ -537,17 +377,7 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
                                          data.levelZeroBounds,
                                          data.mapSize, data.tileSize);
 #endif
-                mapImage->mSources.clear();
-                mapImage->mSources += mapImage->mapInfo();
-                mapImage->mLoaded = false;
-#if 1
-                reload(mapImage);
-#else
-                QMetaObject::invokeMethod(mImageRenderWorker,
-                                          "addJob", Qt::QueuedConnection,
-                                          Q_ARG(MapImage*,mapImage));
-                emit mapImageChanged(mapImage);
-#endif
+                recreateImage(mapImage->mapInfo()->path());
             }
         }
     }
@@ -556,8 +386,6 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
 void MapImageManager::imageLoadedByThread(QImage *image, MapImage *mapImage)
 {
     mapImage->setImage(*image);
-    mapImage->mLoaded = true;
-
     onLoadingSucceeded(mapImage);
 //    delete image;
 
@@ -565,30 +393,6 @@ void MapImageManager::imageLoadedByThread(QImage *image, MapImage *mapImage)
         mDeferredMapImages += mapImage;
     else
         emit mapImageChanged(mapImage);
-}
-
-void MapImageManager::renderThreadNeedsMap(MapImage *mapImage)
-{
-    bool asynch = true;
-    Q_ASSERT(mExpectMapImage == nullptr);
-    MapInfo *mapInfo = MapManager::instance().loadMap(mapImage->mapInfo()->path(),
-                                                       QString(), asynch,
-                                                       MapManager::PriorityLow);
-    if (!mapInfo) {
-        // The map file went away since MapImage's MapInfo was created.
-        QMetaObject::invokeMethod(mImageRenderWorker,
-                                  "mapFailedToLoad", Qt::QueuedConnection);
-        emit mapImageFailedToLoad(mapImage);
-        return;
-    }
-    mExpectMapImage = mapImage;
-    mExpectSubMaps.clear();
-#ifdef WORLDED
-    mReferencedMaps.clear();
-#endif
-    Q_ASSERT(mapInfo == mapImage->mapInfo());
-    if (!mapInfo->isLoading())
-        mapLoaded(mapInfo);
 }
 
 void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapImage)
@@ -602,7 +406,6 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
     mapImage->mSources = imgData.sources;
     mapImage->mMapSize = imgData.mapSize;
     mapImage->mTileSize = imgData.tileSize;
-    mapImage->mLoaded = true;
 
     ImageData data;
     data.image = mapImage->image();
@@ -625,13 +428,6 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
         mDeferredMapImages += mapImage;
     else
         emit mapImageChanged(mapImage);
-}
-
-void MapImageManager::renderJobDone(MapComposite *mapComposite)
-{
-    Q_ASSERT(mapComposite == mRenderMapComposite);
-    mRenderMapComposite = nullptr;
-    delete mapComposite;
 }
 
 #include "mapobject.h"
@@ -804,12 +600,6 @@ void MapImageManager::deferThreadResults(bool defer)
         Q_ASSERT(mDeferralDepth > 0);
 //        noise() << "MapImageManager::deferThreadResults depth-- =" << mDeferralDepth - 1;
         if (--mDeferralDepth == 0) {
-#if 0
-            if (!mDeferralQueued && mDeferredMapImages.size()) {
-                QMetaObject::invokeMethod(this, "processDeferrals", Qt::QueuedConnection);
-                mDeferralQueued = true;
-            }
-#endif
         }
     }
 }
@@ -820,22 +610,9 @@ void MapImageManager::processDeferrals()
         return;
     QList<MapImage*> mapImages = mDeferredMapImages;
     mDeferredMapImages.clear();
-    mDeferralQueued = false;
     for (MapImage *mapImage : mapImages)
     {
         emit mapImageChanged(mapImage);
-    }
-}
-
-#include "assettask.h"
-#include "assettaskmanager.h"
-
-void MapImageManager::processWaitingTasks()
-{
-    QList<AssetTask*> waiting(mWaitingTasks);
-    for (AssetTask* task : waiting)
-    {
-        task->handleResult(); // hack
     }
 }
 
@@ -881,24 +658,22 @@ public:
         switch (mState)
         {
         case State::Init:
+            Q_ASSERT(false);
             break;
         case State::LoadedCache:
-            MapImageManager::instance().imageLoadedByThread(&mImage, mMapImage);
+            handleLoadedCache();
             break;
         case State::FailedCache:
             handleFailedCache(mapFilePath);
             break;
         case State::WaitForMaps:
-            handleWaitForMaps();
+            Q_ASSERT(false);
             break;
         case State::WaitForTilesets:
-            handleWaitForTilesets();
-            if (mState == State::GenerateImage)
-            {
-                AssetTaskManager::instance().submit(this);
-            }
+            Q_ASSERT(false);
             break;
         case State::GenerateImage:
+            Q_ASSERT(false);
             break;
         case State::GeneratedImage:
             MapImageManager::instance().imageRenderedByThread(mMapImageData, mMapImage);
@@ -941,12 +716,18 @@ public:
                 mImage = mImage.convertToFormat(QImage::Format_ARGB4444_Premultiplied);
 #endif // WORLDED
 
+#ifndef QT_NO_DEBUG
+//        Sleep::msleep(250);
+#endif
+
             mMapImage->mImage = mImageData.image;
             mMapImage->mScale = mImageData.scale;
             mMapImage->mLevelZeroBounds = mImageData.levelZeroBounds;
             mMapImage->mMapSize = mImageData.mapSize;
             mMapImage->mTileSize = mImageData.tileSize;
             mMapImage->mImageSize = mMapImage->mImage.size();
+
+            mMapImage->mMissingTilesets = mMapImage->mMissingTilesets;
 
             mState = State::LoadedCache;
             bLoaded = true;
@@ -966,8 +747,30 @@ public:
         mMapImage->mTileSize = mMapImageData.tileSize;
         mMapImage->mImageSize = mMapImage->mImage.size();
 
+        mMapImage->mMissingTilesets = mMapImageData.missingTilesets;
+
+        // Set up file-modification tracking on each TMX that makes up this image.
+        mMapImage->setSources(mMapImageData.sources);
+
         mState = State::GeneratedImage;
         bLoaded = true;
+    }
+
+    void handleLoadedCache()
+    {
+        // Set up file modification tracking on each TMX that makes
+        // up this image.
+        QList<MapInfo*> sources;
+        for (QString source : mImageData.sources)
+        {
+            if (MapInfo *sourceInfo = MapManager::instance().mapInfo(source))
+            {
+                sources += sourceInfo;
+            }
+        }
+        mMapImage->setSources(sources);
+
+        MapImageManager::instance().imageLoadedByThread(&mImage, mMapImage);
     }
 
     void handleFailedCache(QString mapFilePath)
@@ -986,14 +789,13 @@ public:
         }
 
         Q_ASSERT(mapInfo == mMapImage->mapInfo());
+        mState = State::WaitForMaps;
+        MapImageManager::instance().mWaitingTasks << this;
         if (mapInfo->isLoading())
         {
-            mState = State::WaitForMaps;
-            MapImageManager::instance().mWaitingTasks << this;
         }
         else
         {
-            mState = State::WaitForMaps;
             mapLoaded(mapInfo);
         }
     }
@@ -1014,8 +816,6 @@ public:
                 return;
             }
         }
-
-        MapImageManager::instance().mWaitingTasks.removeAll(this);
 
         // BmpBlender sends a signal to the MapComposite when it has finished
         // blending.  That needs to happen in the render thread.
@@ -1119,7 +919,7 @@ public:
             release();
 
 //            mapImage->mImage.fill(Qt::transparent);
-            mapImage->mLoaded = true; // FIXME: delete bogus MapImage???
+            // FIXME: delete bogus MapImage???
             MapImageManager::instance().onLoadingFailed(mapImage);
 
             emit MapImageManager::instance().mapImageFailedToLoad(mapImage);
@@ -1179,7 +979,6 @@ public:
                 }
                 if (data.valid)
                 {
-                    data.threadLoad = true;
                     data.size = reader.size();
                     mImageData = data;
                     return true;
@@ -1198,6 +997,7 @@ public:
         switch (map->orientation()) {
         case Map::Isometric:
             renderer = new IsometricRenderer(map);
+            renderer->set2x(true);
             break;
         case Map::LevelIsometric:
             renderer = new ZLevelRenderer(map);
@@ -1216,15 +1016,22 @@ public:
 
         // Don't draw empty levels
         int maxLevel = 0;
-        for (CompositeLayerGroup *layerGroup : mapComposite->sortedLayerGroups()) {
+        for (CompositeLayerGroup *layerGroup : mapComposite->sortedLayerGroups())
+        {
             if (!layerGroup->bounds().isEmpty())
+            {
                 maxLevel = layerGroup->level();
+            }
         }
         renderer->setMaxLevel(maxLevel);
 
         for (MapComposite *mc : mapComposite->maps())
+        {
             if (mc->bmpBlender())
+            {
                 mc->bmpBlender()->flush(QRect(0, 0, mc->map()->width() - 1, mc->map()->height() - 1));
+            }
+        }
 
         // HACK: MapComposite::bmpBlenderLayersRecreated() would be called by a signal but this is a different thread.
        mapComposite->layerGroupForLevel(0)->setBmpBlendLayers(mapComposite->bmpBlender()->tileLayers());
@@ -1245,15 +1052,20 @@ public:
                                QPainter::HighQualityAntialiasing);
         painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
 
-        foreach (MapComposite::ZOrderItem zo, mapComposite->zOrder()) {
-            if (zo.group) {
+        for (MapComposite::ZOrderItem zo : mapComposite->zOrder())
+        {
+            if (zo.group)
+            {
                 renderer->drawTileLayerGroup(&painter, zo.group);
-            } else if (TileLayer *tl = zo.layer->asTileLayer()) {
+            }
+            else if (TileLayer *tl = zo.layer->asTileLayer())
+            {
                 if (tl->name().contains(QLatin1String("NoRender")))
                     continue;
                 renderer->drawTileLayer(&painter, tl);
             }
-            if (aborted()) {
+            if (aborted())
+            {
                 painter.end();
                 delete renderer;
                 return MapImageData();
@@ -1272,8 +1084,10 @@ public:
         for (MapComposite *mc : mapComposite->maps())
             data.sources += mc->mapInfo();
 
-        for (MapComposite *mc : mapComposite->maps()) {
-            if (mc->map()->hasUsedMissingTilesets()) {
+        for (MapComposite *mc : mapComposite->maps())
+        {
+            if (mc->map()->hasUsedMissingTilesets())
+            {
                 data.missingTilesets = true;
                 break;
             }
@@ -1286,6 +1100,37 @@ public:
         delete renderer;
 
         return data;
+    }
+
+    void processWaitingTask()
+    {
+        QString mapFilePath = m_asset->getPath().getString();
+
+        switch (mState)
+        {
+        case State::Init:
+            Q_ASSERT(false);
+            break;
+        case State::LoadedCache:
+            Q_ASSERT(false);
+            break;
+        case State::FailedCache:
+            Q_ASSERT(false);
+            break;
+        case State::WaitForMaps:
+            handleWaitForMaps();
+            break;
+        case State::WaitForTilesets:
+            handleWaitForTilesets();
+            break;
+        case State::GenerateImage:
+            MapImageManager::instance().mWaitingTasks.removeAll(this);
+            AssetTaskManager::instance().submit(this);
+            break;
+        case State::GeneratedImage:
+            Q_ASSERT(false);
+            break;
+        }
     }
 
     bool aborted()
@@ -1321,6 +1166,15 @@ public:
     QImage mImage;
     bool bLoaded = false;
 };
+
+void MapImageManager::processWaitingTasks()
+{
+    QList<AssetTask*> waiting(mWaitingTasks);
+    for (AssetTask* task : waiting)
+    {
+        static_cast<AssetTask_LoadMapImage*>(task)->processWaitingTask();
+    }
+}
 
 void MapImageManager::mapLoaded(MapInfo *mapInfo)
 {
@@ -1367,106 +1221,9 @@ void MapImageManager::startLoading(Asset *asset)
 
 ///// ///// ///// ///// /////
 
-MapImage::MapImage(AssetPath path, AssetManager *manager)
-    : Asset(path, manager)
-    , mImage(nullptr)
-    , mInfo(nullptr)
-    , mScale(0)
-    , mMissingTilesets(false)
-    , mLoaded(false)
-{
-
-}
-
-MapImage::MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize, MapInfo *mapInfo)
-    : Asset(AssetPath(), MapImageManager::instancePtr())
-    , mImage(image)
-    , mInfo(mapInfo)
-    , mLevelZeroBounds(levelZeroBounds)
-    , mScale(scale)
-    , mMissingTilesets(false)
-    , mMapSize(mapSize)
-    , mTileSize(tileSize)
-    , mLoaded(false)
-#ifdef WORLDED
-    , mImageSize(image.size())
-#endif
-{
-    onCreated(AssetState::READY);
-}
-
-QPointF MapImage::tileToPixelCoords(qreal x, qreal y)
-{
-    const int tileWidth = mTileSize.width();
-    const int tileHeight = mTileSize.height();
-    const int originX = mMapSize.height() * tileWidth / 2;
-
-    return QPointF((x - y) * tileWidth / 2 + originX,
-                   (x + y) * tileHeight / 2);
-}
-
-QRectF MapImage::tileBoundingRect(const QRect &rect)
-{
-    const int tileWidth = mTileSize.width();
-    const int tileHeight = mTileSize.height();
-
-    const int originX = mMapSize.height() * tileWidth / 2;
-    const QPoint pos((rect.x() - (rect.y() + rect.height()))
-                     * tileWidth / 2 + originX,
-                     (rect.x() + rect.y()) * tileHeight / 2);
-
-    const int side = rect.height() + rect.width();
-    const QSize size(side * tileWidth / 2,
-                     side * tileHeight / 2);
-
-    return QRect(pos, size);
-}
-
-QRectF MapImage::bounds()
-{
-    return tileBoundingRect(QRect(QPoint(), mMapSize));
-}
-
-qreal MapImage::scale()
-{
-    return mScale;
-}
-
-QPointF MapImage::tileToImageCoords(qreal x, qreal y)
-{
-    QPointF pos = tileToPixelCoords(x, y);
-    pos += mLevelZeroBounds.topLeft();
-    return pos * scale();
-}
-
-void MapImage::mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize)
-{
-    mImage = image;
-    mScale = scale;
-    mLevelZeroBounds = levelZeroBounds;
-    mMapSize = mapSize;
-    mTileSize = tileSize;
-}
-
-#ifdef WORLDED
-void MapImage::chopIntoPieces()
-{
-    int columns = subImageColumns();
-    int rows = subImageRows();
-    mSubImages.resize(columns * rows);
-    QRect r(QPoint(), image().size());
-    for (int x = 0; x < columns; x++) {
-        for (int y = 0; y < rows; y++) {
-            QRect subr = QRect(x * 512, y * 512, 512, 512) & r;
-            mSubImages[x + y * columns] = image().copy(subr).convertToFormat(QImage::Format_ARGB4444_Premultiplied);
-        }
-    }
-    mMiniMapImage = mImage.scaledToWidth(512);
-    mImage = QImage();
-}
-#endif /* WORLDED */
-
 /////
+
+#if 0
 
 MapImageReaderWorker::MapImageReaderWorker(InterruptibleThread *thread) :
     BaseWorker(thread)
@@ -1511,7 +1268,11 @@ void MapImageReaderWorker::addJob(const QString &imageFileName, MapImage *mapIma
     scheduleWork();
 }
 
+#endif
+
 /////
+
+#if 0
 
 MapImageRenderWorker::MapImageRenderWorker(InterruptibleThread *thread) :
     BaseWorker(thread)
@@ -1701,3 +1462,5 @@ MapImageRenderWorker::Job::Job(MapImage *mapImage) :
     mapImage(mapImage)
 {
 }
+
+#endif

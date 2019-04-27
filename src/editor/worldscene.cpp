@@ -22,6 +22,7 @@
 #include "celldocument.h"
 #include "documentmanager.h"
 #include "idletasks.h"
+#include "mapimage.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
@@ -737,8 +738,8 @@ void WorldScene::handlePendingThumbnails()
     foreach (OtherWorld *otherWorld, mOtherWorlds) {
         if (otherWorld->mPendingThumbnails.size()) {
             OtherWorldCellItem *item = otherWorld->mPendingThumbnails.first();
-            int loaded = item->thumbnailsAreGo();
-            if (loaded != 2) {
+            ThumbnailState loaded = item->thumbnailsAreGo();
+            if (loaded != ThumbnailState::Loading) {
                 otherWorld->mPendingThumbnails.takeFirst();
 #if 0
                 if (otherWorld->mPendingThumbnails.size()) {
@@ -961,14 +962,15 @@ void BaseCellItem::paint(QPainter *painter,
 {
     Q_UNUSED(option)
 
-    if (mMapImage && mMapImage->isLoaded()) {
+    if (mMapImage && mMapImage->isReady()) {
         QRectF target = mMapImageBounds.translated(mDrawOffset);
         QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
         painter->drawImage(target, mMapImage->image(), source);
     }
 
     foreach (const LotImage &lotImage, mLotImages) {
-        if (!lotImage.mMapImage || !lotImage.mMapImage->isLoaded()) continue;
+        if (!lotImage.mMapImage || !lotImage.mMapImage->isReady())
+            continue;
         QRectF target = lotImage.mBounds.translated(mDrawOffset);
         QRectF source = QRect(QPoint(0, 0), lotImage.mMapImage->image().size());
         painter->drawImage(target, lotImage.mMapImage->image(), source);
@@ -1194,11 +1196,11 @@ void WorldCellItem::mapFileCreated(const QString &path)
 
 ThumbnailState WorldCellItem::thumbnailsAreGo()
 {
-    if (mMapImage && mMapImage->isLoaded())
+    if (mMapImage && mMapImage->isReady())
         return ThumbnailState::Loaded;
     mWantsImages = true;
     cellContentsChanged();
-    if (mMapImage && mMapImage->isLoaded())
+    if (mMapImage && mMapImage->isReady())
         return ThumbnailState::Loaded;
     return (mMapImage != nullptr) ? ThumbnailState::Loading : ThumbnailState::Missing;
 }
@@ -1338,15 +1340,15 @@ void OtherWorldCellItem::cellContentsChanged()
     updateBoundingRect();
 }
 
-int OtherWorldCellItem::thumbnailsAreGo()
+ThumbnailState OtherWorldCellItem::thumbnailsAreGo()
 {
-    if (mMapImage && mMapImage->isLoaded())
-        return 1;
+    if (mMapImage && mMapImage->isReady())
+        return ThumbnailState::Loaded;
     mWantsImages = true;
     cellContentsChanged();
-    if (mMapImage && mMapImage->isLoaded())
-        return 1;
-    return (mMapImage != nullptr) ? 2 : 0;
+    if (mMapImage && mMapImage->isReady())
+        return ThumbnailState::Loaded;
+    return (mMapImage != nullptr) ? ThumbnailState::Loading : ThumbnailState::Missing;
 }
 
 void OtherWorldCellItem::thumbnailsAreFail()

@@ -37,35 +37,6 @@ class Map;
 
 #include "threads.h"
 class MapImage;
-class MapImageReaderWorker : public BaseWorker
-{
-    Q_OBJECT
-public:
-    MapImageReaderWorker(InterruptibleThread *thread);
-
-    ~MapImageReaderWorker();
-
-signals:
-    void imageLoaded(QImage *image, MapImage *mapImage);
-
-public slots:
-    void work();
-    void addJob(const QString &imageFileName, MapImage *mapImage);
-
-private:
-    class Job {
-    public:
-        Job(const QString &imageFileName, MapImage *mapImage) :
-            imageFileName(imageFileName),
-            mapImage(mapImage)
-        {
-        }
-
-        QString imageFileName;
-        MapImage *mapImage;
-    };
-    QList<Job> mJobs;
-};
 
 class MapImageData
 {
@@ -91,128 +62,6 @@ public:
 #include <QMetaType>
 Q_DECLARE_METATYPE(MapImageData) // for QueuedConnection
 
-class MapImageRenderWorker : public BaseWorker
-{
-    Q_OBJECT
-public:
-    MapImageRenderWorker(InterruptibleThread *thread);
-
-    ~MapImageRenderWorker();
-
-signals:
-    void mapNeeded(MapImage *mapImage);
-    void imageRendered(MapImageData data, MapImage *mapImage);
-    void jobDone(MapComposite *mapComposite);
-
-public slots:
-    void work();
-    void addJob(MapImage *mapImage);
-    void mapLoaded(MapComposite *mapComposite);
-    void mapFailedToLoad();
-    void resume(MapImage *mapImage);
-
-private:
-    MapImageData generateMapImage(MapComposite *mapComposite);
-
-    class Job {
-    public:
-        Job(MapImage *mapImage);
-
-        MapComposite *mapComposite;
-        MapImage *mapImage;
-    };
-    QList<Job> mJobs;
-};
-
-class MapImage : public Asset
-{
-public:
-    MapImage(AssetPath path, AssetManager* manager);
-
-    MapImage(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize, MapInfo *mapInfo);
-
-    void setImage(const QImage &image) { mImage = image; }
-    QImage image() const {return mImage; }
-    MapInfo *mapInfo() const { return mInfo; }
-
-    QPointF tileToPixelCoords(qreal x, qreal y);
-
-    QRectF tileBoundingRect(const QRect &rect);
-
-    QRectF bounds();
-
-    qreal scale();
-
-    QPointF tileToImageCoords(qreal x, qreal y);
-
-    QPointF tileToImageCoords(const QPoint &pos)
-    { return tileToImageCoords(pos.x(), pos.y()); }
-
-    void mapFileChanged(QImage image, qreal scale, const QRectF &levelZeroBounds, const QSize &mapSize, const QSize &tileSize);
-
-    void setSources(const QList<MapInfo*> &sources)
-    { mSources = sources; }
-
-    QList<MapInfo*> sources() const
-    { return mSources; }
-
-    QRectF levelZeroBounds() const
-    { return mLevelZeroBounds; }
-
-    bool isMissingTilesets() const { return mMissingTilesets; }
-
-    QSize tileSize() const
-    { return mTileSize; }
-
-    bool isLoaded() const { return mLoaded; }
-
-#ifdef WORLDED
-    void chopIntoPieces();
-
-    QSize imageSize() const
-    { return mImageSize; }
-
-    int imageWidth() const
-    { return mImageSize.width(); }
-
-    int imageHeight() const
-    { return mImageSize.height(); }
-
-    int subImageColumns() const
-    { return (mImageSize.width() + 511) / 512; }
-
-    int subImageRows() const
-    { return (mImageSize.height() + 511) / 512; }
-
-    const QVector<QImage> &subImages() const
-    { return mSubImages; }
-
-    const QImage &miniMapImage() const
-    { return mMiniMapImage; }
-#endif /* WORLDED */
-
-private:
-    QImage mImage;
-    MapInfo *mInfo;
-    QRectF mLevelZeroBounds;
-    qreal mScale;
-    QList<MapInfo*> mSources;
-    bool mMissingTilesets;
-    QSize mMapSize;
-    QSize mTileSize;
-    bool mLoaded;
-
-#ifdef WORLDED
-    // For WorldEd world images.
-    QSize mImageSize;
-    QVector<QImage> mSubImages;
-    QImage mMiniMapImage;
-#endif /* WORLDED */
-
-    friend class MapImageManager;
-    friend class AssetTask_LoadMapImage;
-};
-
 class MapImageManager : public AssetManager, public Singleton<MapImageManager>
 {
     Q_OBJECT
@@ -223,6 +72,8 @@ public:
 
     MapImage *getMapImage(const QString &mapName, const QString &relativeTo = QString());
 
+    void recreateImage(const QString& mapName);
+
     QString errorString() const
     { return mError; }
 
@@ -232,9 +83,7 @@ protected:
         ImageData() :
             scale(0),
             valid(false),
-            missingTilesets(false),
-            threadLoad(false),
-            threadRender(false)
+            missingTilesets(false)
         {}
         qreal scale;
         QRectF levelZeroBounds;
@@ -245,15 +94,8 @@ protected:
         QSize mapSize;
         QSize tileSize;
         QSize size;
-
-        bool threadLoad;
-        bool threadRender;
     };
 
-    ImageData generateMapImage(const QString &mapFilePath, bool force = false);
-#if 0
-    ImageData generateMapImage(MapComposite *mapComposite);
-#endif
     void paintDummyImage(ImageData &data, MapInfo *mapInfo);
 
 #ifdef WORLDED
@@ -275,9 +117,7 @@ private slots:
 private slots:
     void imageLoadedByThread(QImage *image, MapImage *mapImage);
 
-    void renderThreadNeedsMap(MapImage *mapImage);
     void imageRenderedByThread(MapImageData imgData, MapImage *mapImage);
-    void renderJobDone(MapComposite *mapComposite);
 
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
@@ -298,26 +138,12 @@ private:
 
     QString mError;
 
-    QVector<InterruptibleThread*> mImageReaderThreads;
-    QVector<MapImageReaderWorker*> mImageReaderWorkers;
-    int mNextThreadForJob;
-
-    InterruptibleThread *mImageRenderThread;
-    MapImageRenderWorker *mImageRenderWorker;
-    MapImage *mExpectMapImage;
-    QList<MapInfo*> mExpectSubMaps;
-#ifdef WORLDED
-    QList<MapInfo*> mReferencedMaps;
-#endif
-    MapComposite *mRenderMapComposite;
-
     QList<AssetTask*> mWaitingTasks;
 
     friend class MapImageManagerDeferral;
     void deferThreadResults(bool defer);
     int mDeferralDepth;
     QList<MapImage*> mDeferredMapImages;
-    bool mDeferralQueued;
 };
 
 class MapImageManagerDeferral

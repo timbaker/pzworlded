@@ -18,6 +18,7 @@
 #include "mapsdock.h"
 
 #include "bmptotmx.h"
+#include "mapimage.h"
 #include "mapimagemanager.h"
 #include "mainwindow.h"
 #include "preferences.h"
@@ -124,7 +125,7 @@ void MapsDock::selectionChanged()
     QModelIndexList selectedRows = mMapsView->selectionModel()->selectedRows();
     if (selectedRows.isEmpty()) {
         mPreviewLabel->setPixmap(QPixmap());
-        mPreviewMapImage = 0;
+        mPreviewMapImage = nullptr;
         return;
     }
     QModelIndex index = selectedRows.first();
@@ -136,7 +137,7 @@ void MapsDock::selectionChanged()
         return;
     MapImage *mapImage = MapImageManager::instance().getMapImage(path);
     if (mapImage) {
-        if (mapImage->isLoaded()) {
+        if (mapImage->isReady()) {
             QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio,
                                                     Qt::SmoothTransformation);
             mPreviewLabel->setPixmap(QPixmap::fromImage(image));
@@ -148,7 +149,7 @@ void MapsDock::selectionChanged()
 
 void MapsDock::onMapImageChanged(MapImage *mapImage)
 {
-    if ((mapImage == mPreviewMapImage) && mapImage->isLoaded()) {
+    if ((mapImage == mPreviewMapImage) && mapImage->isReady()) {
         QImage image = mapImage->image().scaled(256, 123, Qt::KeepAspectRatio,
                                                 Qt::SmoothTransformation);
         mPreviewLabel->setPixmap(QPixmap::fromImage(image));

@@ -368,7 +368,7 @@ public:
     WorldCell *cell() const { return mCell; }
 
     void cellContentsChanged();
-    int thumbnailsAreGo();
+    ThumbnailState thumbnailsAreGo();
     void thumbnailsAreFail();
 
 protected:

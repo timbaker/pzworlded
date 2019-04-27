@@ -22,6 +22,7 @@
 #include "mainwindow.h"
 #include "mapbuildings.h"
 #include "mapcomposite.h"
+#include "mapimage.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
@@ -157,7 +158,7 @@ void CellMiniMapItem::updateCellImage()
 
     if (!mCell->mapFilePath().isEmpty()) {
         mMapImage = MapImageManager::instance().getMapImage(mCell->mapFilePath());
-        if (mMapImage != nullptr && mMapImage->isLoaded()) {
+        if (mMapImage != nullptr && mMapImage->isReady()) {
             qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
             QPointF offset = mMapImage->tileToImageCoords(0, 0) / mMapImage->scale() * tileScale;
             mMapImageBounds = QRectF(mScene->renderer()->tileToPixelCoords(0.0, 0.0) - offset,
@@ -170,7 +171,7 @@ void CellMiniMapItem::updateLotImage(int index)
 {
     WorldCellLot *lot = mCell->lots().at(index);
     MapImage *mapImage = MapImageManager::instance().getMapImage(lot->mapName()/*, mapFilePath()*/);
-    if (mapImage != nullptr && mapImage->isLoaded())
+    if (mapImage != nullptr && mapImage->isReady())
     {
         qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mapImage->tileSize().width();
         QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale() * tileScale;
@@ -1542,7 +1543,7 @@ QString CellScene::roomNameAt(const QPointF &scenePos)
 
 void CellScene::keyPressEvent(QKeyEvent *event)
 {
-    if (mActiveTool != 0) {
+    if (mActiveTool != nullptr) {
         mActiveTool->keyPressEvent(event);
         if (event->isAccepted())
             return;
@@ -1562,7 +1563,7 @@ void CellScene::loadMap()
 
         mLightSwitchOverlays.removeOverlays();
 
-        foreach (AdjacentMap *am, mAdjacentMaps)
+        for (AdjacentMap *am : mAdjacentMaps)
             am->removeItems();
         qDeleteAll(mAdjacentMaps);
         mAdjacentMaps.clear();
@@ -1702,7 +1703,7 @@ void CellScene::cellAboutToBeRemoved(WorldCell *_cell)
         if (_cell == am->cell()) {
             int x = am->cell()->x() - cell()->x();
             int y = am->cell()->y() - cell()->y();
-            mMapComposite->setAdjacentMap(x, y, 0);
+            mMapComposite->setAdjacentMap(x, y, nullptr);
             delete mAdjacentMaps.takeAt(i);
             doLater(AllGroups | Bounds | Synch | ZOrder);
             --i;

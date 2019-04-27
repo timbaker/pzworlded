@@ -152,7 +152,8 @@ SOURCES += main.cpp\
     mapinfo.cpp \
     mapassetmanager.cpp \
     assettaskmanager.cpp \
-    idletasks.cpp
+    idletasks.cpp \
+    mapimage.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -248,7 +249,8 @@ HEADERS  += mainwindow.h \
     mapinfo.h \
     mapassetmanager.h \
     assettaskmanager.h \
-    idletasks.h
+    idletasks.h \
+    mapimage.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \
