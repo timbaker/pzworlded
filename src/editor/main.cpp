@@ -56,6 +56,9 @@ int main(int argc, char *argv[])
     new MapManager();
     new MapImageManager();
 
+    // These braces ensure 'w' is destroyed before all the deleteInstance() calls below
+    int ret = 0;
+    {
     MainWindow w;
     w.show();
 
@@ -70,7 +73,8 @@ int main(int argc, char *argv[])
     w.openLastFiles();
 
 #if 1
-    int ret = a.exec();
+    ret = a.exec();
+    }
 
     DocumentManager::deleteInstance();
     ToolManager::deleteInstance();

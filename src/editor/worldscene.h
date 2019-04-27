@@ -176,6 +176,13 @@ protected:
 #endif
 };
 
+enum struct ThumbnailState
+{
+    Loading,
+    Loaded,
+    Missing,
+};
+
 /**
   * There is one of these for each cell in the world.
   */
@@ -195,7 +202,7 @@ public:
     void lotMoved(WorldCellLot *lot);
     void cellContentsChanged();
     void mapFileCreated(const QString &path);
-    int thumbnailsAreGo();
+    ThumbnailState thumbnailsAreGo();
     void thumbnailsAreFail();
 
 protected:

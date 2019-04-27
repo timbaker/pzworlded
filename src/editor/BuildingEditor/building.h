@@ -53,7 +53,7 @@ public:
         TileCount
     };
 
-    Building(int width, int height, BuildingTemplate *btemplate = 0);
+    Building(int width, int height, BuildingTemplate *btemplate = nullptr);
     ~Building();
 
     int width() const { return mWidth; }

@@ -704,11 +704,11 @@ void WorldScene::worldThumbnailsChanged(bool thumbs)
 
     mPendingThumbnails.clear();
     if (thumbs) {
-        foreach (WorldCellItem *item, mCellItems)
+        for (WorldCellItem *item : mCellItems)
             mPendingThumbnails += item;
         handlePendingThumbnails();
     } else {
-        foreach (WorldCellItem *item, mCellItems)
+        for (WorldCellItem *item : mCellItems)
             item->thumbnailsAreFail();
     }
 }
@@ -718,10 +718,12 @@ void WorldScene::handlePendingThumbnails()
     if (!Preferences::instance()->worldThumbnails())
         return;
 
-    if (mPendingThumbnails.size()) {
+    if (mPendingThumbnails.size())
+    {
         WorldCellItem *item = mPendingThumbnails.first();
-        int loaded = item->thumbnailsAreGo();
-        if (loaded != 2) {
+        ThumbnailState state = item->thumbnailsAreGo();
+        if (state != ThumbnailState::Loading)
+        {
             mPendingThumbnails.takeFirst();
 #if 0
             if (mPendingThumbnails.size()) {
@@ -922,10 +924,10 @@ static QSize mapSize(int mapWidth, int mapHeight, int tileWidth, int tileHeight)
 BaseCellItem::BaseCellItem(WorldScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mScene(scene)
-    , mMapImage(0)
+    , mMapImage(nullptr)
     , mWantsImages(true)
 {
-    setAcceptedMouseButtons(0);
+    setAcceptedMouseButtons(nullptr);
 #ifndef QT_NO_DEBUG
     mUpdatingImage = false;
 #endif
@@ -1003,7 +1005,7 @@ void BaseCellItem::updateLotImage(int index)
     WorldCellLot *lot = lots().at(index);
     MapImage *mapImage = mWantsImages
             ? MapImageManager::instance().getMapImage(lot->mapName()/*, mapFilePath()*/)
-            : 0;
+            : nullptr;
     if (mapImage) {
         mLotImages.insert(index, LotImage(QRectF(), mapImage));
         calcLotImageBounds(index);
@@ -1098,7 +1100,7 @@ void BaseCellItem::worldResized()
 
 void BaseCellItem::calcMapImageBounds()
 {
-    if (mMapImage) {
+    if (mMapImage && mMapImage->isReady()) {
         int SCL = 2;
         QSizeF gridSize = mapSize(300, 300, 64 * SCL, 32 * SCL);
         QSizeF unscaledMapSize = mMapImage->bounds().size();
@@ -1118,7 +1120,7 @@ void BaseCellItem::calcLotImageBounds(int index)
     WorldCellLot *lot = lots().at(index);
     LotImage &lotImage = mLotImages[index];
     MapImage *mapImage = lotImage.mMapImage;
-    if (!mapImage)
+    if (!mapImage || !mapImage->isReady())
         return;
 
     int SCL = 2;
@@ -1190,15 +1192,15 @@ void WorldCellItem::mapFileCreated(const QString &path)
         cellContentsChanged();
 }
 
-int WorldCellItem::thumbnailsAreGo()
+ThumbnailState WorldCellItem::thumbnailsAreGo()
 {
     if (mMapImage && mMapImage->isLoaded())
-        return 1;
+        return ThumbnailState::Loaded;
     mWantsImages = true;
     cellContentsChanged();
     if (mMapImage && mMapImage->isLoaded())
-        return 1;
-    return (mMapImage != nullptr) ? 2 : 0;
+        return ThumbnailState::Loaded;
+    return (mMapImage != nullptr) ? ThumbnailState::Loading : ThumbnailState::Missing;
 }
 
 void WorldCellItem::thumbnailsAreFail()

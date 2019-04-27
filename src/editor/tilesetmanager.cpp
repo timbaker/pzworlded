@@ -369,17 +369,26 @@ void TilesetManager::imageLoaded(Tileset *fromThread, Tileset *tileset)
     mWatcher->addPath(tileset->imageSource2x().isEmpty() ? tileset->imageSource() : tileset->imageSource2x());
 
     // Now update every tileset using this image.
-    for (Tileset *candidate : tilesets()) {
+    QList<Tileset*> tilesets = this->tilesets();
+    for (Tileset *candidate : tilesets)
+    {
         if (candidate->isLoaded())
             continue;
-        if (((candidate->imageSource() == tileset->imageSource()) || (!tileset->imageSource2x().isEmpty() && (candidate->imageSource2x() == tileset->imageSource2x())))
+        if (((candidate->imageSource() == tileset->imageSource()) ||
+                (!tileset->imageSource2x().isEmpty() && (candidate->imageSource2x() == tileset->imageSource2x())))
                 && candidate->tileWidth() == tileset->tileWidth()
                 && candidate->tileHeight() == tileset->tileHeight()
                 && candidate->tileSpacing() == tileset->tileSpacing()
                 && candidate->margin() == tileset->margin()
-                && candidate->transparentColor() == tileset->transparentColor()) {
+                && candidate->transparentColor() == tileset->transparentColor())
+        {
             candidate->loadFromCache(tileset);
             candidate->setMissing(false);
+
+            // Abusing the Asset-loading system
+            if (candidate->isEmpty())
+                candidate->onCreated(AssetState::READY);
+
             emit tilesetChanged(candidate);
         }
     }
@@ -459,7 +468,7 @@ void TilesetManager::loadTilesetTaskFinished(AssetTask_LoadTileset *task)
     if (task->bLoaded)
     {
         imageLoaded(task->mTileset, task->mCached);
-        onLoadingSucceeded(task->m_asset);
+        onLoadingSucceeded(task->mCached);
     }
     else
     {
@@ -479,6 +488,8 @@ void TilesetManager::loadTilesetTaskFinished(AssetTask_LoadTileset *task)
                 }
                 changeTilesetSource(tileset, task->mImageSource, true);
                 tileset->setImageSource2x(QString());
+                if (tileset->isEmpty())
+                    onLoadingFailed(tileset);
             }
         }
 

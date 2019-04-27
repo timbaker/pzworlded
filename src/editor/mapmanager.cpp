@@ -702,7 +702,7 @@ void MapManager::fileChangedTimeout()
                     Q_ASSERT(!mapInfo->isBeingEdited());
                     MapAssetManager::instance().reload(mapInfo->mMap);
                 }
-                emit mapFileChanged(mapInfo); // FIXME
+//                emit mapFileChanged(mapInfo); // FIXME
             }
         }
     }

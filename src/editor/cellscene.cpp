@@ -108,9 +108,9 @@ CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mScene(scene)
     , mCell(scene->cell())
-    , mMapImage(0)
+    , mMapImage(nullptr)
 {
-    setAcceptedMouseButtons(0);
+    setAcceptedMouseButtons(nullptr);
 
     updateCellImage();
 
@@ -170,16 +170,24 @@ void CellMiniMapItem::updateLotImage(int index)
 {
     WorldCellLot *lot = mCell->lots().at(index);
     MapImage *mapImage = MapImageManager::instance().getMapImage(lot->mapName()/*, mapFilePath()*/);
-    if (mapImage != nullptr && mapImage->isLoaded()) {
+    if (mapImage != nullptr && mapImage->isLoaded())
+    {
         qreal tileScale = mScene->renderer()->boundingRect(QRect(0,0,1,1)).width() / (qreal)mapImage->tileSize().width();
         QPointF offset = mapImage->tileToImageCoords(0, 0) / mapImage->scale() * tileScale;
         QRectF bounds = QRectF(mScene->renderer()->tileToPixelCoords(lot->x(), lot->y(), lot->level()) - offset,
                                mapImage->image().size() / mapImage->scale() * tileScale);
         mLotImages[index].mBounds = bounds;
         mLotImages[index].mMapImage = mapImage;
-    } else {
+    }
+    else if (mapImage != nullptr)
+    {
         mLotImages[index].mBounds = QRectF();
-        mLotImages[index].mMapImage = 0;
+        mLotImages[index].mMapImage = mapImage;
+    }
+    else
+    {
+        mLotImages[index].mBounds = QRectF();
+        mLotImages[index].mMapImage = nullptr;
     }
 }
 
@@ -252,11 +260,16 @@ void CellMiniMapItem::sceneRectChanged(const QRectF &sceneRect)
 void CellMiniMapItem::mapImageChanged(MapImage *mapImage)
 {
     if (mapImage == mMapImage) {
+        updateCellImage();
         update();
         return;
     }
-    foreach (const LotImage &lotImage, mLotImages) {
-        if (mapImage == lotImage.mMapImage) {
+    for (int i = 0; i < mLotImages.size(); i++)
+    {
+        const LotImage &lotImage = mLotImages[i];
+        if (mapImage == lotImage.mMapImage)
+        {
+            updateLotImage(i);
             update();
             return;
         }

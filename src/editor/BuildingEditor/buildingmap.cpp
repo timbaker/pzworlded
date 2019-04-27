@@ -48,13 +48,13 @@ using namespace Tiled::Internal;
 
 BuildingMap::BuildingMap(Building *building) :
     mBuilding(building),
-    mMapComposite(0),
-    mMap(0),
-    mBlendMapComposite(0),
-    mBlendMap(0),
-    mMapRenderer(0),
-    mCursorObjectFloor(0),
-    mShadowBuilding(0),
+    mMapComposite(nullptr),
+    mMap(nullptr),
+    mBlendMapComposite(nullptr),
+    mBlendMap(nullptr),
+    mMapRenderer(nullptr),
+    mCursorObjectFloor(nullptr),
+    mShadowBuilding(nullptr),
     pending(false),
     pendingRecreateAll(false),
     pendingBuildingResized(false)
@@ -108,7 +108,7 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
 {
     // x and y are scene coordinates
     // Perform per-pixel hit detection
-    Tile *tile = 0;
+    Tile *tile = nullptr;
 
     for (int level = 0; level < mBuilding->floorCount(); level++) {
         if (!visibleLevels[level]) continue;
@@ -223,7 +223,7 @@ void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object)
         if (mCursorObjectFloor->floorAbove())
             pendingLayoutToSquares.insert(mCursorObjectFloor->floorAbove());
         schedulePending();
-        mCursorObjectFloor = 0;
+        mCursorObjectFloor = nullptr;
     }
 
     if (mShadowBuilding->setCursorObject(floor, object)) {
@@ -231,7 +231,7 @@ void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object)
         if (floor && floor->floorAbove())
             pendingLayoutToSquares.insert(floor->floorAbove());
         schedulePending();
-        mCursorObjectFloor = object ? floor : 0;
+        mCursorObjectFloor = object ? floor : nullptr;
     }
 }
 
@@ -468,7 +468,7 @@ void BuildingMap::BuildingToMap()
     if (mShadowBuilding)
         delete mShadowBuilding;
     mShadowBuilding = new ShadowBuilding(mBuilding);
-    mCursorObjectFloor = 0;
+    mCursorObjectFloor = nullptr;
 
     Map::Orientation orient = static_cast<Map::Orientation>(defaultOrientation());
 
@@ -507,8 +507,8 @@ void BuildingMap::BuildingToMap()
         layerToSection.insert(QLatin1String(gLayerNames[i]), i);
 
     mLayerToSection.clear();
-    foreach (BuildingFloor *floor, mBuilding->floors()) {
-        foreach (QString name, layerNames(floor->level())) {
+    for (BuildingFloor *floor : mBuilding->floors()) {
+        for (QString name : layerNames(floor->level())) {
             QString layerName = tr("%1_%2").arg(floor->level()).arg(name);
             TileLayer *tl = new TileLayer(layerName,
                                           0, 0, mapSize.width(), mapSize.height());
@@ -522,7 +522,7 @@ void BuildingMap::BuildingToMap()
     mMapComposite = new MapComposite(mapInfo);
 
     // Synch layer opacity with the floor.
-    foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups()) {
+    for (CompositeLayerGroup *layerGroup : mMapComposite->layerGroups()) {
         BuildingFloor *floor = mBuilding->floor(layerGroup->level());
         foreach (TileLayer *tl, layerGroup->layers()) {
             QString layerName = MapComposite::layerNameWithoutPrefix(tl);
@@ -538,15 +538,15 @@ void BuildingMap::BuildingToMap()
     mMapComposite->setBlendOverMap(mBlendMapComposite);
 
     // Set the automatically-generated tiles.
-    foreach (CompositeLayerGroup *layerGroup, mBlendMapComposite->layerGroups()) {
+    for (CompositeLayerGroup *layerGroup : mBlendMapComposite->layerGroups()) {
         BuildingFloor *floor = mBuilding->floor(layerGroup->level());
         floor->LayoutToSquares();
         BuildingSquaresToTileLayers(floor, floor->bounds(1, 1), layerGroup);
     }
 
     // Set the user-drawn tiles.
-    foreach (BuildingFloor *floor, mBuilding->floors()) {
-        foreach (QString layerName, floor->grimeLayers())
+    for (BuildingFloor *floor : mBuilding->floors()) {
+        for (QString layerName : floor->grimeLayers())
             userTilesToLayer(floor, layerName, floor->bounds(1, 1));
     }
 
@@ -610,7 +610,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
                                    const QRect &bounds)
 {
     CompositeLayerGroup *layerGroup = mMapComposite->layerGroupForLevel(floor->level());
-    TileLayer *layer = 0;
+    TileLayer *layer = nullptr;
     foreach (TileLayer *tl, layerGroup->layers()) {
         if (layerName == MapComposite::layerNameWithoutPrefix(tl)) {
             layer = tl;
@@ -641,7 +641,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
                 continue;
             }
             QString tileName = shadowFloor->grimeAt(layerName, x, y);
-            Tile *tile = 0;
+            Tile *tile = nullptr;
             if (!tileName.isEmpty()) {
                 tile = TilesetManager::instance().missingTile();
                 QString tilesetName;
@@ -1099,7 +1099,7 @@ public:
 
 ShadowBuilding::ShadowBuilding(const Building *building) :
     mBuilding(building),
-    mCursorObjectModifier(0)
+    mCursorObjectModifier(nullptr)
 {
     mShadowBuilding = new Building(mBuilding->width(), mBuilding->height());
     mShadowBuilding->setTiles(mBuilding->tiles());
@@ -1180,7 +1180,7 @@ void ShadowBuilding::objectAdded(BuildingObject *object)
     foreach (BuildingModifier *bmod, mModifiers) {
         if (AddObjectModifier *mod = dynamic_cast<AddObjectModifier*>(bmod)) {
             if (mod->mObject == object) {
-                mod->mObject = 0;
+                mod->mObject = nullptr;
             }
         }
     }
@@ -1298,7 +1298,7 @@ bool ShadowBuilding::setCursorObject(BuildingFloor *floor, BuildingObject *objec
     if (!object) {
         if (mCursorObjectModifier) {
             delete mCursorObjectModifier;
-            mCursorObjectModifier = 0;
+            mCursorObjectModifier = nullptr;
             return true;
         }
         return false;
@@ -1326,7 +1326,7 @@ bool ShadowBuilding::setCursorObject(BuildingFloor *floor, BuildingObject *objec
 
 void ShadowBuilding::dragObject(BuildingFloor *floor, BuildingObject *object, const QPoint &offset)
 {
-    if (object->floor() == 0) {
+    if (object->floor() == nullptr) {
         foreach (BuildingModifier *bmod, mModifiers) {
             if (AddObjectModifier *mod = dynamic_cast<AddObjectModifier*>(bmod)) {
                 if (mod->mObject == object) {
