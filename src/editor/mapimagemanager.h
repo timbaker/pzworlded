@@ -27,6 +27,7 @@
 #include <QObject>
 #include <QStringList>
 
+class MapAsset;
 class MapComposite;
 class MapInfo;
 class AssetTask_LoadMapImage;
@@ -111,8 +112,8 @@ signals:
     void mapImageFailedToLoad(MapImage *mapImage);
     
 private slots:
-    void mapAboutToChange(MapInfo *mapInfo);
-    void mapChanged(MapInfo *mapInfo);
+    void mapAboutToChange(MapAsset *mapInfo);
+    void mapChanged(MapAsset *mapInfo);
     void mapFileChanged(MapInfo *mapInfo);
 
 private slots:
@@ -120,8 +121,8 @@ private slots:
 
     void imageRenderedByThread(MapImageData imgData, MapImage *mapImage);
 
-    void mapLoaded(MapInfo *mapInfo);
-    void mapFailedToLoad(MapInfo *mapInfo);
+    void mapLoaded(MapAsset *mapInfo);
+    void mapFailedToLoad(MapAsset *mapInfo);
 
     void processDeferrals();
     void processWaitingTasks();

@@ -150,10 +150,11 @@ SOURCES += main.cpp\
     BuildingEditor/roofhiding.cpp \
     waterflow.cpp \
     mapinfo.cpp \
-    mapassetmanager.cpp \
     assettaskmanager.cpp \
     idletasks.cpp \
-    mapimage.cpp
+    mapimage.cpp \
+    mapinfomanager.cpp \
+    mapasset.cpp
 
 HEADERS  += mainwindow.h \
     worldview.h \
@@ -247,10 +248,11 @@ HEADERS  += mainwindow.h \
     BuildingEditor/roofhiding.h \
     waterflow.h \
     mapinfo.h \
-    mapassetmanager.h \
     assettaskmanager.h \
     idletasks.h \
-    mapimage.h
+    mapimage.h \
+    mapinfomanager.h \
+    mapasset.h
 
 FORMS    += mainwindow.ui \
     propertiesview.ui \

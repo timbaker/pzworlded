@@ -34,6 +34,7 @@ class BaseCellSceneTool;
 class CellDocument;
 class CellGridItem;
 class CompositeLayerGroup;
+class MapAsset;
 class MapBuildings;
 class MapComposite;
 class MapImage;
@@ -385,8 +386,8 @@ private slots:
     void cellObjectGroupChanged(WorldCellObject *obj);
     void cellObjectReordered(WorldCellObject *obj);
 
-    void mapLoaded(MapInfo *mapInfo);
-    void mapFailedToLoad(MapInfo *mapInfo);
+    void mapLoaded(MapAsset *mapInfo);
+    void mapFailedToLoad(MapAsset *mapInfo);
 
     void sceneRectChanged();
 
@@ -400,19 +401,19 @@ private:
     bool shouldObjectItemBeVisible(ObjectItem *item);
 
     struct LoadingSubMap {
-        LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
+        LoadingSubMap(WorldCellLot *lot, MapAsset *mapInfo) :
             lot(lot),
             mapInfo(mapInfo)
         {}
         WorldCellLot *lot;
-        MapInfo *mapInfo;
+        MapAsset *mapInfo;
     };
     QList<LoadingSubMap> mSubMapsLoading;
 
     CellScene *mScene;
     WorldCell *mCell;
     MapComposite *mMapComposite;
-    MapInfo *mMapInfo;
+    MapAsset *mMapInfo;
     QMap<WorldCellLot*,MapComposite*> mLotToMC;
     QGraphicsItem *mObjectItemParent;
     QList<ObjectItem*> mObjectItems;
@@ -442,7 +443,7 @@ public:
 
     SubMapItem *itemForLot(WorldCellLot *lot);
     WorldCellLot *lotForItem(SubMapItem *item);
-    QList<SubMapItem*> subMapItemsUsingMapInfo(MapInfo *mapInfo);
+    QList<SubMapItem*> subMapItemsUsingMapInfo(MapAsset *mapInfo);
 
     ObjectItem *itemForObject(WorldCellObject *obj);
 
@@ -509,10 +510,10 @@ signals:
 public slots:
     void tilesetChanged(Tileset *tileset);
 
-    bool mapAboutToChange(MapInfo *mapInfo);
-    bool mapChanged(MapInfo *mapInfo);
-    void mapLoaded(MapInfo *mapInfo);
-    void mapFailedToLoad(MapInfo *mapInfo);
+    bool mapAboutToChange(MapAsset *mapInfo);
+    bool mapChanged(MapAsset *mapInfo);
+    void mapLoaded(MapAsset *mapInfo);
+    void mapFailedToLoad(MapAsset *mapInfo);
 
     void cellAdded(WorldCell *cell);
     void cellAboutToBeRemoved(WorldCell *cell);
@@ -583,12 +584,12 @@ private:
     void synchLayerGroupsLater();
 
     struct LoadingSubMap {
-        LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
+        LoadingSubMap(WorldCellLot *lot, MapAsset *mapInfo) :
             lot(lot),
             mapInfo(mapInfo)
         {}
         WorldCellLot *lot;
-        MapInfo *mapInfo;
+        MapAsset *mapInfo;
     };
     QList<LoadingSubMap> mSubMapsLoading;
 
@@ -596,7 +597,7 @@ private:
     void initAdjacentMaps();
 
     Tiled::Map *mMap;
-    MapInfo *mMapInfo;
+    MapAsset *mMapInfo;
     MapComposite *mMapComposite;
     QVector<QGraphicsItem*> mLayerItems;
     QMap<int,CompositeLayerGroupItem*> mTileLayerGroupItems;

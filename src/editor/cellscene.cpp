@@ -20,10 +20,13 @@
 #include "bmpblender.h"
 #include "celldocument.h"
 #include "mainwindow.h"
+#include "mapasset.h"
 #include "mapbuildings.h"
 #include "mapcomposite.h"
 #include "mapimage.h"
 #include "mapimagemanager.h"
+#include "mapinfo.h"
+#include "mapinfomanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
 #include "progress.h"
@@ -1374,7 +1377,7 @@ WorldCellLot *CellScene::lotForItem(SubMapItem *item)
     return item->lot();
 }
 
-QList<SubMapItem *> CellScene::subMapItemsUsingMapInfo(MapInfo *mapInfo)
+QList<SubMapItem *> CellScene::subMapItemsUsingMapInfo(MapAsset *mapInfo)
 {
     QList<SubMapItem *> ret;
     foreach (SubMapItem *item, mSubMapItems) {
@@ -1725,7 +1728,7 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
 {
     if (_cell == cell()) {
         WorldCellLot *lot = cell()->lots().at(index);
-        MapInfo *subMapInfo = MapManager::instance().loadMap(
+        MapAsset *subMapInfo = MapManager::instance().loadMap(
                     lot->mapName(), QString(), true, MapManager::PriorityLow);
         if (!subMapInfo || subMapInfo->isFailure()) {
             qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
@@ -1733,7 +1736,7 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
         }
         if (subMapInfo) {
             mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            if (!subMapInfo->isLoading())
+            if (subMapInfo->isReady())
                 mapLoaded(subMapInfo);
         }
     }
@@ -2336,7 +2339,7 @@ void CellScene::tilesetChanged(Tileset *tileset)
         update();
 }
 
-bool CellScene::mapAboutToChange(MapInfo *mapInfo)
+bool CellScene::mapAboutToChange(MapAsset *mapInfo)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
     // inside loadMap().
@@ -2363,7 +2366,7 @@ bool CellScene::mapAboutToChange(MapInfo *mapInfo)
     return (mapInfo == mMapComposite->mapInfo());
 }
 
-bool CellScene::mapChanged(MapInfo *mapInfo)
+bool CellScene::mapChanged(MapAsset *mapInfo)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
     // inside loadMap().
@@ -2441,7 +2444,7 @@ void CellScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!info.isFile()) continue;
         if (info.suffix() != QLatin1String("tmx") &&
                 info.suffix() != QLatin1String("tbx")) continue;
-        if (MapManager::instance().mapInfo(info.canonicalFilePath()) == nullptr)
+        if (MapInfoManager::instance().mapInfo(info.canonicalFilePath()) == nullptr)
             continue;
 
         QString path = info.canonicalFilePath();
@@ -2560,7 +2563,7 @@ void CellScene::initAdjacentMaps()
     }
 }
 
-void CellScene::mapLoaded(MapInfo *mapInfo)
+void CellScene::mapLoaded(MapAsset *mapInfo)
 {
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
@@ -2596,7 +2599,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
     }
 }
 
-void CellScene::mapFailedToLoad(MapInfo *mapInfo)
+void CellScene::mapFailedToLoad(MapAsset *mapInfo)
 {
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
@@ -2699,11 +2702,11 @@ void AdjacentMap::cellLotAdded(WorldCell *_cell, int index)
     if (_cell != cell()) return;
 
     WorldCellLot *lot = cell()->lots().at(index);
-    MapInfo *subMapInfo = MapManager::instance().loadMap(
+    MapAsset *subMapInfo = MapManager::instance().loadMap(
                 lot->mapName(), QString(), true, MapManager::PriorityLow);
     if (subMapInfo && !alreadyLoading(lot)) {
         mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-        if (!subMapInfo->isLoading())
+        if (subMapInfo->isReady())
             mapLoaded(subMapInfo);
     }
 }
@@ -2849,7 +2852,7 @@ void AdjacentMap::cellObjectReordered(WorldCellObject *obj)
     setZOrder();
 }
 
-void AdjacentMap::mapLoaded(MapInfo *mapInfo)
+void AdjacentMap::mapLoaded(MapAsset *mapInfo)
 {
     if (mapInfo == mMapInfo) {
         int x = cell()->x() - scene()->cell()->x();
@@ -2859,11 +2862,11 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
         scene()->mapCompositeNeedsSynch();
 
         for (WorldCellLot *lot : cell()->lots()) {
-            MapInfo *subMapInfo = MapManager::instance().loadMap(
+            MapAsset *subMapInfo = MapManager::instance().loadMap(
                         lot->mapName(), QString(), true, MapManager::PriorityLow);
             if (subMapInfo && !alreadyLoading(lot)) {
                 mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-                if (!subMapInfo->isLoading())
+                if (subMapInfo->isReady())
                     mapLoaded(subMapInfo);
             }
         }
@@ -2911,7 +2914,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
     }
 }
 
-void AdjacentMap::mapFailedToLoad(MapInfo *mapInfo)
+void AdjacentMap::mapFailedToLoad(MapAsset *mapInfo)
 {
     if (mapInfo == mMapInfo)
         mMapInfo = 0;
@@ -2965,7 +2968,7 @@ void AdjacentMap::loadMap()
         mMapInfo = MapManager::instance().loadMap(cell()->mapFilePath(), QString(), true,
                                                    MapManager::PriorityMedium);
     }
-    if (mMapInfo && !mMapInfo->isLoading()) {
+    if (mMapInfo && mMapInfo->isReady()) {
         mapLoaded(mMapInfo);
     }
 

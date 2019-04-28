@@ -23,6 +23,7 @@
 #include "BuildingEditor/roofhiding.h"
 
 #include "map.h"
+#include "mapasset.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 

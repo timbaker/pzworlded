@@ -35,6 +35,7 @@
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
 #include "lotpackwindow.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
@@ -1112,7 +1113,7 @@ void MainWindow::FromToAux(bool selectedOnly)
     PROGRESS progress(tr("Making a mess of things"));
 
     foreach (QString fileName, fileNames) {
-        if (MapInfo *mapInfo = MapManager::instance().loadMap(fileName)) {
+        if (MapAsset *mapInfo = MapManager::instance().loadMap(fileName)) {
             QScopedPointer<Map> map(mapInfo->map()->clone());
 
             QMap<QString,TileLayer*> layerMapping;

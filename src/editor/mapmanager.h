@@ -19,67 +19,24 @@
 #define MAPMANAGER_H
 
 #include "assetmanager.h"
-#include "map.h"
-#include "mapinfo.h"
 #include "filesystemwatcher.h"
 #include "singleton.h"
 #include "threads.h"
+
+#include "map.h"
 
 #include <QDateTime>
 #include <QMap>
 #include <QTimer>
 
-class MapInfo;
-class AssetTask_LoadMapInfo;
+class MapAsset;
 
 namespace BuildingEditor {
 class Building;
 }
 
-#if 0
-class MapReaderWorker : public BaseWorker
-{
-    Q_OBJECT
-public:
-    MapReaderWorker(InterruptibleThread *thread, int id);
-    ~MapReaderWorker();
-
-    typedef Tiled::Map Map;
-    typedef BuildingEditor::Building Building;
-
-signals:
-    void loaded(Map *map, MapInfo *mapInfo);
-    void loaded(Building *building, MapInfo *mapInfo);
-    void failedToLoad(const QString error, MapInfo *mapInfo);
-
-public slots:
-    void work();
-    void addJob(MapInfo *mapInfo, int priority);
-    void possiblyRaisePriority(MapInfo *mapInfo, int priority);
-
-private:
-    Map *loadMap(MapInfo *mapInfo);
-    Building *loadBuilding(MapInfo *mapInfo);
-
-    class Job {
-    public:
-        Job(MapInfo *mapInfo, int priority) :
-            mapInfo(mapInfo),
-            priority(priority)
-        {
-        }
-
-        MapInfo *mapInfo;
-        int priority;
-    };
-    QList<Job> mJobs;
-
-    int mID;
-    void debugJobs(const char *msg);
-
-    QString mError;
-};
-#endif
+class AssetTask_LoadBuilding;
+class AssetTask_LoadMap;
 
 class MapManager : public AssetManager, public Singleton<MapManager>
 {
@@ -101,19 +58,17 @@ public:
         PriorityHigh
     };
 
-    MapInfo *loadMap(const QString &mapName,
+    MapAsset *loadMap(const QString &mapName,
                      const QString &relativeTo = QString(),
                      bool asynch = false, LoadPriority priority = PriorityHigh);
 
-    MapInfo *newFromMap(Tiled::Map *map, const QString &mapFilePath = QString());
-
-    MapInfo *mapInfo(const QString &mapFilePath);
+    MapAsset *newFromMap(Tiled::Map *map, const QString &mapFilePath = QString());
 
     /**
      * The "empty map" is used when a WorldCell has no map.
      * The user still needs to view the cell to place Lots etc.
      */
-    MapInfo *getEmptyMap();
+    MapAsset *getEmptyMap();
 
     /**
       * A "placeholder" map is used when a sub-map could not be loaded.
@@ -121,7 +76,7 @@ public:
       * A placeholder map may be updated to a real map when the
       * user changes the maptools directory.
       */
-    MapInfo *getPlaceholderMap(const QString &mapName, int width, int height);
+    MapAsset *getPlaceholderMap(const QString &mapName, int width, int height);
 
     /**
      * Converts a map to Isometric or LevelIsometric.
@@ -132,10 +87,10 @@ public:
     /**
       * Call this when the map's size or tile size changes.
       */
-    void mapParametersChanged(MapInfo *mapInfo);
+    void mapParametersChanged(MapAsset *mapAsset);
 #ifdef WORLDED
-    void addReferenceToMap(MapInfo *mapInfo);
-    void removeReferenceToMap(MapInfo *mapInfo);
+    void addReferenceToMap(MapAsset *mapAsset);
+    void removeReferenceToMap(MapAsset *mapAsset);
     void purgeUnreferencedMaps();
 
     void newMapFileCreated(const QString &path);
@@ -146,14 +101,14 @@ public:
     typedef BuildingEditor::Building Building;
 
 signals:
-    void mapAboutToChange(MapInfo *mapInfo);
-    void mapChanged(MapInfo *mapInfo);
-    void mapFileChanged(MapInfo *mapInfo);
+    void mapAboutToChange(MapAsset *mapInfo);
+    void mapChanged(MapAsset *mapInfo);
+    void mapFileChanged(MapAsset *mapInfo);
 #ifdef WORLDED
     void mapFileCreated(const QString &path);
 #endif
-    void mapLoaded(MapInfo *mapInfo);
-    void mapFailedToLoad(MapInfo *mapInfo);
+    void mapLoaded(MapAsset *mapInfo);
+    void mapFailedToLoad(MapAsset *mapInfo);
 
 private slots:
     void fileChanged(const QString &path);
@@ -162,22 +117,23 @@ private slots:
     void metaTilesetAdded(Tiled::Tileset *tileset);
     void metaTilesetRemoved(Tiled::Tileset *tileset);
 
-    void mapLoadedByThread(MapAsset *mapAsset, MapInfo *mapInfo);
-    void buildingLoadedByThread(MapAsset* mapAsset, MapInfo *mapInfo);
-    void failedToLoadByThread(const QString error, MapInfo *mapInfo);
-
-    void mapAssetFileTaskFinished(MapAsset* mapAsset);
-    void mapAssetStateChanged(MapInfo *mapInfo);
+    void mapLoadedByThread(MapAsset *mapAsset);
+    void buildingLoadedByThread(MapAsset* mapAsset);
+    void failedToLoadByThread(const QString error, MapAsset *mapAsset);
 
     void processDeferrals();
+
+protected:
+    friend class AssetTask_LoadBuilding;
+    friend class AssetTask_LoadMap;
+    void loadBuildingTaskFinished(AssetTask_LoadBuilding* task);
+    void loadMapTaskFinished(AssetTask_LoadMap* task);
 
 protected:
     Asset* createAsset(AssetPath path, AssetParams* params) override;
     void destroyAsset(Asset* asset) override;
     void startLoading(Asset* asset) override;
-
-    friend class AssetTask_LoadMapInfo;
-    void loadMapInfoTaskFinished(AssetTask_LoadMapInfo* task);
+    void unloadData(Asset* asset) override;
 
 private:
     Tiled::Internal::FileSystemWatcher *mFileSystemWatcher;
@@ -189,16 +145,14 @@ private:
     int mDeferralDepth;
     struct MapDeferral
     {
-        MapDeferral(MapInfo *mapInfo, MapAsset* mapAsset) :
-            mapInfo(mapInfo),
+        MapDeferral(MapAsset* mapAsset) :
             mapAsset(mapAsset)
         {}
 
-        MapInfo *mapInfo;
         MapAsset *mapAsset;
     };
     QList<MapDeferral> mDeferredMaps;
-    MapInfo *mWaitingForMapInfo;
+    MapAsset *mWaitingForMapInfo;
 
 #ifdef WORLDED
     int mReferenceEpoch;

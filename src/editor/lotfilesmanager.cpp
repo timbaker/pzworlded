@@ -19,6 +19,7 @@
 
 #include "bmpblender.h"
 #include "mainwindow.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mapobject.h"
@@ -184,7 +185,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     PROGRESS progress(tr("Loading maps (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 
-    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
+    MapAsset *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        QString(), true);
     if (!mapInfo) {
         mError = MapManager::instance().errorString();
@@ -195,7 +196,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     mapLoader.addMap(mapInfo);
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName(),
+        if (MapAsset *info = MapManager::instance().loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
@@ -207,7 +208,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapInfo->isLoading())
+    while (mapInfo->isEmpty())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
     MapComposite staticMapComposite(mapInfo);
@@ -220,7 +221,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     }
 
     for (WorldCellLot *lot : cell->lots()) {
-        MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
+        MapAsset *info = MapManager::instance().loadMap(lot->mapName());
         Q_ASSERT(info && info->map() && info->isReady());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }
@@ -1065,7 +1066,7 @@ DelayedMapLoader::DelayedMapLoader()
             SLOT(mapFailedToLoad(MapInfo*)));
 }
 
-void DelayedMapLoader::addMap(MapInfo *info)
+void DelayedMapLoader::addMap(MapAsset *info)
 {
     mLoading += new SubMapLoading(info);
 }
@@ -1073,13 +1074,13 @@ void DelayedMapLoader::addMap(MapInfo *info)
 bool DelayedMapLoader::isLoading()
 {
     for (int i = 0; i < mLoading.size(); i++) {
-        if (mLoading[i]->mapInfo->isLoading())
+        if (mLoading[i]->mapInfo->isEmpty())
             return true;
     }
     return false;
 }
 
-void DelayedMapLoader::mapLoaded(MapInfo *mapInfo)
+void DelayedMapLoader::mapLoaded(MapAsset *mapInfo)
 {
     for (int i = 0; i < mLoading.size(); i++) {
         SubMapLoading *sml = mLoading[i];
@@ -1092,7 +1093,7 @@ void DelayedMapLoader::mapLoaded(MapInfo *mapInfo)
     }
 }
 
-void DelayedMapLoader::mapFailedToLoad(MapInfo *mapInfo)
+void DelayedMapLoader::mapFailedToLoad(MapAsset *mapInfo)
 {
     for (int i = 0; i < mLoading.size(); i++) {
         if (mLoading[i]->mapInfo == mapInfo) {
@@ -1106,7 +1107,7 @@ void DelayedMapLoader::mapFailedToLoad(MapInfo *mapInfo)
 
 /////
 
-DelayedMapLoader::SubMapLoading::SubMapLoading(MapInfo *info) :
+DelayedMapLoader::SubMapLoading::SubMapLoading(MapAsset *info) :
     mapInfo(info), holdsReference(false)
 {
     if (mapInfo->map()) {

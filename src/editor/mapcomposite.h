@@ -31,7 +31,7 @@
 #include <QStringList>
 #include <QVector>
 
-class MapInfo;
+class MapAsset;
 #if 1 // ROAD_CRUD
 class Road;
 #endif // ROAD_CRUD
@@ -192,8 +192,8 @@ class MapComposite : public QObject
 {
     Q_OBJECT
 public:
-    MapComposite(MapInfo *mapInfo, Tiled::Map::Orientation orientRender = Tiled::Map::Unknown,
-                 MapComposite *parent = 0, const QPoint &positionInParent = QPoint(),
+    MapComposite(MapAsset *mapInfo, Tiled::Map::Orientation orientRender = Tiled::Map::Unknown,
+                 MapComposite *parent = nullptr, const QPoint &positionInParent = QPoint(),
                  int levelOffset = 0);
     ~MapComposite();
 
@@ -202,13 +202,13 @@ public:
     static QString layerNameWithoutPrefix(const QString &name);
     static QString layerNameWithoutPrefix(Tiled::Layer *layer);
 
-    MapComposite *addMap(MapInfo *mapInfo, const QPoint &pos, int levelOffset,
+    MapComposite *addMap(MapAsset *mapInfo, const QPoint &pos, int levelOffset,
                          bool creating = false);
     void removeMap(MapComposite *subMap);
     void moveSubMap(MapComposite *subMap, const QPoint &pos);
 
     Tiled::Map *map() const { return mMap; }
-    MapInfo *mapInfo() const { return mMapInfo; }
+    MapAsset *mapInfo() const { return mMapInfo; }
 
     void layerAdded(int index);
     void layerAboutToBeRemoved(int index);
@@ -282,8 +282,8 @@ public:
 
     QStringList getMapFileNames() const;
 
-    bool mapAboutToChange(MapInfo *mapInfo);
-    bool mapChanged(MapInfo *mapInfo);
+    bool mapAboutToChange(MapAsset *mapInfo);
+    bool mapChanged(MapAsset *mapInfo);
 
     bool isTilesetUsed(Tiled::Tileset *tileset, bool recurse = true);
     QList<Tiled::Tileset*> usedTilesets();
@@ -316,7 +316,7 @@ public:
     { return mBlendOverMap; }
 #endif // BUILDINGED
 
-    void setAdjacentMap(int x, int y, MapInfo *mapInfo);
+    void setAdjacentMap(int x, int y, MapAsset *mapInfo);
     MapComposite *adjacentMap(int x, int y);
     bool isAdjacentMap()/* const*/
     { return mIsAdjacentMap;/*mParent ? mParent->mAdjacentMaps.contains(this) : false;*/ }
@@ -346,8 +346,8 @@ signals:
 
 private slots:
     void bmpBlenderLayersRecreated();
-    void mapLoaded(MapInfo *mapInfo);
-    void mapFailedToLoad(MapInfo *mapInfo);
+    void mapLoaded(MapAsset *mapInfo);
+    void mapFailedToLoad(MapAsset *mapInfo);
 
 private:
     void addLayerToGroup(int index);
@@ -356,7 +356,7 @@ private:
     void recreate();
 
 private:
-    MapInfo *mMapInfo;
+    MapAsset *mMapInfo;
     Tiled::Map *mMap;
 #ifdef BUILDINGED
     MapComposite *mBlendOverMap;
@@ -389,10 +389,10 @@ private:
     QVector<MapComposite*> mAdjacentMaps;
 
     struct SubMapLoading {
-        SubMapLoading(MapInfo *info, const QPoint &pos, int level) :
+        SubMapLoading(MapAsset *info, const QPoint &pos, int level) :
             mapInfo(info), pos(pos), level(level)
         {}
-        MapInfo *mapInfo;
+        MapAsset *mapInfo;
         QPoint pos;
         int level;
     };

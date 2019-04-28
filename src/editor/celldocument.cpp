@@ -322,14 +322,14 @@ void CellDocument::objectGroupAboutToBeRemoved(int index)
 }
 
 // Called by MapManager when an already-loaded TMX changes on disk
-void CellDocument::mapAboutToChange(MapInfo *mapInfo)
+void CellDocument::mapAboutToChange(MapAsset *mapInfo)
 {
     if (scene()->mapAboutToChange(mapInfo))
         worldDocument()->emitCellMapFileAboutToChange(mCell);
 }
 
 // Called by MapManager when an already-loaded TMX changes on disk
-void CellDocument::mapChanged(MapInfo *mapInfo)
+void CellDocument::mapChanged(MapAsset *mapInfo)
 {
     if (scene()->mapChanged(mapInfo))
         worldDocument()->emitCellMapFileChanged(mCell);

@@ -15,53 +15,31 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAPINFO_H
-#define MAPINFO_H
+#ifndef MAPASSET_H
+#define MAPASSET_H
 
 #include "asset.h"
 
 #include "map.h"
 
-#include <QRect>
+class AssetManager;
 
-class MapInfo : public Asset
+namespace BuildingEditor {
+class Building;
+}
+
+class MapAsset : public Asset
 {
 public:
-    MapInfo(AssetPath path, AssetManager* manager)
+    MapAsset(AssetPath path, AssetManager* manager)
         : Asset(path, manager)
-        , mOrientation(Tiled::Map::Orientation::Unknown)
-        , mWidth(-1)
-        , mHeight(-1)
-        , mTileWidth(-1)
-        , mTileHeight(-1)
-        , mPlaceholder(false)
-        , mBeingEdited(false)
-#ifdef WORLDED
-        , mMapRefCount(0)
-        , mReferenceEpoch(0)
-#endif
-    {
+    {}
 
-    }
+    ~MapAsset() override;
 
-    MapInfo(Tiled::Map::Orientation orientation,
-            int width, int height,
-            int tileWidth, int tileHeight)
-        : Asset(AssetPath(), nullptr)
-        , mOrientation(orientation)
-        , mWidth(width)
-        , mHeight(height)
-        , mTileWidth(tileWidth)
-        , mTileHeight(tileHeight)
-        , mPlaceholder(false)
-        , mBeingEdited(false)
-#ifdef WORLDED
-        , mMapRefCount(0)
-        , mReferenceEpoch(0)
-#endif
-    {
-        onCreated(AssetState::READY);
-    }
+    MapAsset(Tiled::Map* map, AssetPath path, AssetManager* manager);
+
+    Tiled::Map* map() const { return mMap; }
 
     bool isValid() const { return mWidth > 0 && mHeight > 0; }
 
@@ -79,26 +57,23 @@ public:
     void setBeingEdited(bool edited) { mBeingEdited = edited; }
     bool isBeingEdited() const { return mBeingEdited; }
 
-    bool isLoading() const; // is *mMap* loading
-
-    void setFrom(MapInfo* other);
-
-private:
     Tiled::Map::Orientation mOrientation;
     int mWidth;
     int mHeight;
     int mTileWidth;
     int mTileHeight;
+    Tiled::Map* mMap = nullptr;
     QString mFilePath;
-    bool mPlaceholder;
-    bool mBeingEdited;
+    bool mPlaceholder = false;
+    bool mBeingEdited = false;
 #ifdef WORLDED
-    int mMapRefCount;
-    int mReferenceEpoch;
+    int mMapRefCount = 0;
+    int mReferenceEpoch = 0;
 #endif
 
-    friend class MapInfoManager;
-    friend class MapManager;
+    // Temporaries used during loading
+    BuildingEditor::Building* mLoadedBuilding = nullptr;
+    Tiled::Map* mLoadedMap = nullptr;
 };
 
-#endif // MAPINFO_H
+#endif // MAPASSET_H

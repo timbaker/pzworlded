@@ -20,6 +20,7 @@
 
 #include "bmptotmx.h"
 #include "lotfilesmanager.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "progress.h"
@@ -133,7 +134,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     PROGRESS progress(tr("Processing cell %1,%2")
                       .arg(cell->x()).arg(cell->y()));
 
-    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
+    MapAsset *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        QString(), true);
     if (!mapInfo) {
         mError = MapManager::instance().errorString();
@@ -144,7 +145,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     mapLoader.addMap(mapInfo);
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName(),
+        if (MapAsset *info = MapManager::instance().loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
@@ -156,7 +157,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapInfo->isLoading())
+    while (mapInfo->isEmpty())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
     MapComposite staticMapComposite(mapInfo);
@@ -169,7 +170,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     }
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
+        MapAsset *info = MapManager::instance().loadMap(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }

@@ -15,21 +15,16 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "assettask.h"
+#include "mapasset.h"
 
-void BaseAsyncAssetTask::execute()
+MapAsset::~MapAsset()
 {
-    mFuture = QtConcurrent::run(this, &BaseAsyncAssetTask::run);
-    mFutureWatcher.setFuture(mFuture);
+    int dbg = 1;
 }
 
-void BaseAsyncAssetTask::cancel()
+MapAsset::MapAsset(Tiled::Map *map, AssetPath path, AssetManager *manager)
+    : Asset(path, manager)
+    , mMap(map)
 {
-    bCancelled = true;
-    mFuture.cancel();
-}
-
-void BaseAsyncAssetTask::connect(QObject *receiver, std::function<void()> f)
-{
-    QObject::connect(&mFutureWatcher, &QFutureWatcher<void>::finished, receiver, f);
+    onCreated(AssetState::READY);
 }

@@ -25,6 +25,7 @@
 #include "buildingtmx.h"
 
 #include "bmpblender.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "tilemetainfomgr.h"
@@ -65,7 +66,7 @@ BuildingMap::BuildingMap(Building *building) :
 BuildingMap::~BuildingMap()
 {
     if (mMapComposite) {
-        MapInfo *mapInfo = mMapComposite->mapInfo();
+        MapAsset *mapInfo = mMapComposite->mapInfo();
         delete mMapComposite;
         TilesetManager::instance().removeReferences(mMap->tilesets());
         delete mMap;
@@ -518,7 +519,7 @@ void BuildingMap::BuildingToMap()
         }
     }
 
-    MapInfo *mapInfo = MapManager::instance().newFromMap(mMap);
+    MapAsset *mapInfo = MapManager::instance().newFromMap(mMap);
     mMapComposite = new MapComposite(mapInfo);
 
     // Synch layer opacity with the floor.

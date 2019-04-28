@@ -25,6 +25,7 @@
 class CellMiniMapItem;
 class CellScene;
 class CompositeLayerGroup;
+class MapAsset;
 class MapInfo;
 class World;
 class WorldCell;
@@ -110,8 +111,8 @@ signals:
     void currentObjectGroupChanged(WorldObjectGroup *og);
 
 private slots:
-    void mapAboutToChange(MapInfo *mapInfo);
-    void mapChanged(MapInfo *mapInfo);
+    void mapAboutToChange(MapAsset *mapInfo);
+    void mapChanged(MapAsset *mapInfo);
 
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);

@@ -26,6 +26,7 @@
 #include <QSet>
 
 class BMPToTMXImages;
+class MapAsset;
 class MapComposite;
 class MapInfo;
 class WorldBMP;
@@ -54,7 +55,7 @@ public:
 private:
     bool shouldGenerateCell(WorldCell *cell, int &bmpIndex);
     bool generateCell(WorldCell *cell);
-    bool doBuildings(WorldCell *cell, MapInfo *mapInfo);
+    bool doBuildings(WorldCell *cell, MapAsset *mapInfo);
     bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
     bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
 

@@ -23,6 +23,7 @@
 #include <QObject>
 
 class BMPToTMXImages;
+class MapAsset;
 class MapComposite;
 class MapInfo;
 class PropertyHolder;
@@ -278,22 +279,22 @@ public:
         qDeleteAll(mLoaded);
     }
 
-    void addMap(MapInfo *info);
+    void addMap(MapAsset *info);
     bool isLoading();
     const QString &errorString() const
     { return mError; }
 
 private slots:
-    void mapLoaded(MapInfo *info);
-    void mapFailedToLoad(MapInfo *info);
+    void mapLoaded(MapAsset *info);
+    void mapFailedToLoad(MapAsset *info);
 
 private:
     class SubMapLoading
     {
     public:
-        SubMapLoading(MapInfo *info);
+        SubMapLoading(MapAsset *info);
         ~SubMapLoading();
-        MapInfo *mapInfo;
+        MapAsset *mapInfo;
         bool holdsReference;
     private:
         Q_DISABLE_COPY(SubMapLoading)

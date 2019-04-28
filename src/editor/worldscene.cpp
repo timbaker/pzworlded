@@ -24,6 +24,7 @@
 #include "idletasks.h"
 #include "mapimage.h"
 #include "mapimagemanager.h"
+#include "mapinfomanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
 #include "scenetools.h"
@@ -845,7 +846,7 @@ void WorldScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
 
         if (info.suffix() != QLatin1String("tmx")) continue;
 
-        MapInfo *mapInfo = MapManager::instance().mapInfo(info.canonicalFilePath());
+        MapInfo *mapInfo = MapInfoManager::instance().mapInfo(info.canonicalFilePath());
         if (!mapInfo)
             continue;
 

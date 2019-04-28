@@ -20,6 +20,7 @@
 #include "bmptotmx.h"
 #include "lotfilesmanager.h"
 #include "mainwindow.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "progress.h"
@@ -252,7 +253,7 @@ bool TMXToBMP::generateCell(WorldCell *cell)
         return true;
     }
 
-    MapInfo *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
+    MapAsset *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        mWorldDoc->fileName());
     if (!mapInfo) {
         mError = MapManager::instance().errorString();
@@ -293,13 +294,13 @@ bool TMXToBMP::generateCell(WorldCell *cell)
     return ok;
 }
 
-bool TMXToBMP::doBuildings(WorldCell *cell, MapInfo *mapInfo)
+bool TMXToBMP::doBuildings(WorldCell *cell, MapAsset *mapInfo)
 {
     DelayedMapLoader mapLoader;
     mapLoader.addMap(mapInfo);
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        if (MapInfo *info = MapManager::instance().loadMap(lot->mapName(),
+        if (MapAsset *info = MapManager::instance().loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
@@ -311,7 +312,7 @@ bool TMXToBMP::doBuildings(WorldCell *cell, MapInfo *mapInfo)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapInfo->isLoading())
+    while (mapInfo->isEmpty())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
     MapComposite staticMapComposite(mapInfo);
@@ -324,7 +325,7 @@ bool TMXToBMP::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     }
 
     foreach (WorldCellLot *lot, cell->lots()) {
-        MapInfo *info = MapManager::instance().mapInfo(lot->mapName());
+        MapAsset *info = MapManager::instance().loadMap(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
     }

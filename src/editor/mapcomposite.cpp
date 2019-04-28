@@ -18,6 +18,7 @@
 #include "mapcomposite.h"
 
 #include "bmpblender.h"
+#include "mapasset.h"
 #include "mapmanager.h"
 #include "tilesetmanager.h"
 
@@ -802,7 +803,7 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer)
 ///// ///// ///// ///// /////
 
 // FIXME: If the MapDocument is saved to a new name, this MapInfo should be replaced with a new one
-MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
+MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
                            MapComposite *parent, const QPoint &positionInParent,
                            int levelOffset)
     : QObject()
@@ -871,7 +872,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
             for (MapObject *object : objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
 #if 1
-                    MapInfo *subMapInfo = MapManager::instance().loadMap(
+                    MapAsset *subMapInfo = MapManager::instance().loadMap(
                                 object->type(), QFileInfo(mMapInfo->path()).absolutePath(),
                                 true, MapManager::PriorityLow);
 
@@ -883,7 +884,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 #endif
                     }
                     if (subMapInfo) {
-                        if (subMapInfo->isLoading()) {
+                        if (subMapInfo->isEmpty()) {
                             connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
                                     SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
                             connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
@@ -993,7 +994,7 @@ bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
     return levelForLayer(layer->name(), levelPtr);
 }
 
-MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
+MapComposite *MapComposite::addMap(MapAsset *mapInfo, const QPoint &pos,
                                    int levelOffset, bool creating)
 {
     MapComposite *subMap = new MapComposite(mapInfo, mOrientRender, this, pos, levelOffset);
@@ -1350,7 +1351,7 @@ MapComposite::ZOrderList MapComposite::zOrder()
 // When 2 TileZeds are running, TZA has main map, TZB has lot map, and lot map
 // is saved, TZA MapImageManager puts up PROGRESS dialog, causing the scene to
 // be redrawn before the MapComposites have been updated.
-bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
+bool MapComposite::mapAboutToChange(MapAsset *mapInfo)
 {
     bool affected = false;
     if (mapInfo == mMapInfo) {
@@ -1379,7 +1380,7 @@ bool MapComposite::mapAboutToChange(MapInfo *mapInfo)
 // its file changing on disk or because a building's map was affected by
 // changing tilesets.
 // Returns true if this map or any sub-map is affected.
-bool MapComposite::mapChanged(MapInfo *mapInfo)
+bool MapComposite::mapChanged(MapAsset *mapInfo)
 {
     if (mapInfo == mMapInfo) {
         recreate();
@@ -1435,7 +1436,7 @@ void MapComposite::synch()
     }
 }
 
-void MapComposite::setAdjacentMap(int x, int y, MapInfo *mapInfo)
+void MapComposite::setAdjacentMap(int x, int y, MapAsset *mapInfo)
 {
     int index = (x + 1) + (y + 1) * 3;
     if (index < 0 || index == 4 || index > 8) {
@@ -1543,7 +1544,7 @@ void MapComposite::recreate()
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
-                    MapInfo *subMapInfo = MapManager::instance().loadMap(object->type(),
+                    MapAsset *subMapInfo = MapManager::instance().loadMap(object->type(),
                                                                           QFileInfo(mMapInfo->path()).absolutePath(),
                                                                           true, MapManager::PriorityLow);
                     if (!subMapInfo) {
@@ -1554,7 +1555,7 @@ void MapComposite::recreate()
 #endif
                     }
                     if (subMapInfo) {
-                        if (subMapInfo->isLoading()) {
+                        if (subMapInfo->isEmpty()) {
                             connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
                                     SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
                             connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
@@ -1646,7 +1647,7 @@ void MapComposite::bmpBlenderLayersRecreated()
     mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
 
-void MapComposite::mapLoaded(MapInfo *mapInfo)
+void MapComposite::mapLoaded(MapAsset *mapInfo)
 {
     bool synch = false;
 
@@ -1673,7 +1674,7 @@ void MapComposite::mapLoaded(MapInfo *mapInfo)
     }
 }
 
-void MapComposite::mapFailedToLoad(MapInfo *mapInfo)
+void MapComposite::mapFailedToLoad(MapAsset *mapInfo)
 {
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         if (mSubMapsLoading[i].mapInfo == mapInfo) {

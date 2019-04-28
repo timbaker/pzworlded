@@ -22,6 +22,7 @@
 #include "cellscene.h"
 #include "cellview.h"
 #include "documentmanager.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "preferences.h"

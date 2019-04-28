@@ -24,7 +24,7 @@
 #include "idletasks.h"
 #include "toolmanager.h"
 #include "preferences.h"
-#include "mapassetmanager.h"
+#include "mapinfomanager.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "tilemetainfomgr.h"
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     new IdleTasks();
     new AssetTaskManager();
     new TilesetManager(); // before MapManager()
-    new MapAssetManager();
+    new MapInfoManager();
     new MapManager();
     new MapImageManager();
 
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     Preferences::deleteInstance();
     MapImageManager::deleteInstance();
     MapManager::deleteInstance();
-    MapAssetManager::deleteInstance();
+    MapInfoManager::deleteInstance();
     TileMetaInfoMgr::deleteInstance();
     TilesetManager::deleteInstance();
 
