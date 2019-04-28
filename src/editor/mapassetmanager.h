@@ -40,6 +40,7 @@ public:
 
 class MapAssetManager : public AssetManager, public Singleton<MapAssetManager>
 {
+    Q_OBJECT
 public:
     MapAssetManager();
 
@@ -49,11 +50,15 @@ protected:
     void loadBuildingTaskFinished(AssetTask_LoadBuilding* task);
     void loadMapTaskFinished(AssetTask_LoadMap* task);
 
-protected:
+signals:
+    void fileTaskFinished(MapAsset* mapAsset);
+
 protected:
     Asset* createAsset(AssetPath path, AssetParams* params) override;
     void destroyAsset(Asset* asset) override;
     void startLoading(Asset* asset) override;
+
+    void unloadData(Asset* asset) override;
 };
 
 #endif // MAPINFOMANAGER_H

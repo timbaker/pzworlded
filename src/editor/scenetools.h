@@ -70,7 +70,7 @@ public:
                  const QIcon &icon,
                  const QKeySequence &shortcut,
                  ToolType type,
-                 QObject *parent = 0);
+                 QObject *parent = nullptr);
 
     virtual ~AbstractTool() {}
 
@@ -555,7 +555,7 @@ public:
     BaseWorldSceneTool(const QString &name,
                        const QIcon &icon,
                        const QKeySequence &shortcut,
-                       QObject *parent = 0);
+                       QObject *parent = nullptr);
     ~BaseWorldSceneTool();
 
     void setScene(BaseGraphicsScene *scene);

@@ -36,6 +36,7 @@ namespace BuildingEditor {
 class Building;
 }
 
+#if 0
 class MapReaderWorker : public BaseWorker
 {
     Q_OBJECT
@@ -78,6 +79,7 @@ private:
 
     QString mError;
 };
+#endif
 
 class MapManager : public AssetManager, public Singleton<MapManager>
 {
@@ -164,6 +166,7 @@ private slots:
     void buildingLoadedByThread(MapAsset* mapAsset, MapInfo *mapInfo);
     void failedToLoadByThread(const QString error, MapInfo *mapInfo);
 
+    void mapAssetFileTaskFinished(MapAsset* mapAsset);
     void mapAssetStateChanged(MapInfo *mapInfo);
 
     void processDeferrals();
@@ -195,12 +198,8 @@ private:
         MapAsset *mapAsset;
     };
     QList<MapDeferral> mDeferredMaps;
-    bool mDeferralQueued;
     MapInfo *mWaitingForMapInfo;
 
-    QVector<InterruptibleThread*> mMapReaderThread;
-    QVector<MapReaderWorker*> mMapReaderWorker;
-    int mNextThreadForJob;
 #ifdef WORLDED
     int mReferenceEpoch;
 #endif

@@ -23,6 +23,7 @@ public:
         , mPlaceholder(false)
         , mBeingEdited(false)
 #ifdef WORLDED
+        , mMapRefCount(0)
         , mReferenceEpoch(0)
 #endif
     {
@@ -42,6 +43,7 @@ public:
         , mPlaceholder(false)
         , mBeingEdited(false)
 #ifdef WORLDED
+        , mMapRefCount(0)
         , mReferenceEpoch(0)
 #endif
     {
@@ -81,6 +83,7 @@ private:
     bool mPlaceholder;
     bool mBeingEdited;
 #ifdef WORLDED
+    int mMapRefCount;
     int mReferenceEpoch;
 #endif
 

@@ -298,6 +298,26 @@ MapImageManager::ImageData MapImageManager::readImageData(const QFileInfo &image
     return data;
 }
 
+void MapImageManager::writeImageData(MapImageData imgData, MapImage* mapImage)
+{
+    ImageData data;
+    data.image = mapImage->image();
+    data.levelZeroBounds = mapImage->levelZeroBounds();
+    data.scale = mapImage->scale();
+    for (MapInfo *mapInfo : mapImage->sources())
+    {
+        data.sources += mapInfo->path();
+    }
+    data.missingTilesets = mapImage->isMissingTilesets();
+    data.mapSize = imgData.mapSize;
+    data.tileSize = imgData.tileSize;
+
+    QFileInfo imageInfo = imageFileInfo(mapImage->mapInfo()->path());
+    QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
+    data.image.save(imageInfo.absoluteFilePath());
+    writeImageData(imageDataInfo, data);
+}
+
 void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const MapImageManager::ImageData &data)
 {
     QFile file(imageDataFileInfo.absoluteFilePath());
@@ -312,8 +332,10 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     QRectF r = data.levelZeroBounds;
     out << r.x() << r.y() << r.width() << r.height();
     out << qint32(data.sources.length());
-    foreach (QString source, data.sources)
+    for (QString source : data.sources)
+    {
         out << source;
+    }
     out << data.missingTilesets;
     out << (qint32)data.mapSize.width() << (qint32)data.mapSize.height();
     out << (qint32)data.tileSize.width() << (qint32)data.tileSize.height();
@@ -388,11 +410,6 @@ void MapImageManager::imageLoadedByThread(QImage *image, MapImage *mapImage)
     mapImage->setImage(*image);
     onLoadingSucceeded(mapImage);
 //    delete image;
-
-    if (mDeferralDepth > 0)
-        mDeferredMapImages += mapImage;
-    else
-        emit mapImageChanged(mapImage);
 }
 
 void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapImage)
@@ -406,7 +423,7 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
     mapImage->mSources = imgData.sources;
     mapImage->mMapSize = imgData.mapSize;
     mapImage->mTileSize = imgData.tileSize;
-
+#if 0 // moved to thread
     ImageData data;
     data.image = mapImage->image();
     data.levelZeroBounds = mapImage->levelZeroBounds();
@@ -421,13 +438,8 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
     QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
     data.image.save(imageInfo.absoluteFilePath());
     writeImageData(imageDataInfo, data);
-
+#endif
     onLoadingSucceeded(mapImage);
-
-    if (mDeferralDepth > 0)
-        mDeferredMapImages += mapImage;
-    else
-        emit mapImageChanged(mapImage);
 }
 
 #include "mapobject.h"
@@ -751,6 +763,8 @@ public:
 
         // Set up file-modification tracking on each TMX that makes up this image.
         mMapImage->setSources(mMapImageData.sources);
+
+        MapImageManager::instance().writeImageData(mMapImageData, mMapImage);
 
         mState = State::GeneratedImage;
         bLoaded = true;
@@ -1217,6 +1231,21 @@ void MapImageManager::startLoading(Asset *asset)
     AssetTask_LoadMapImage* assetTask = new AssetTask_LoadMapImage(mapImage);
     setTask(asset, assetTask);
     AssetTaskManager::instance().submit(assetTask);
+}
+
+void MapImageManager::onStateChanged(AssetState old_state, AssetState new_state, Asset *asset)
+{
+    AssetManager::onStateChanged(old_state, new_state, asset);
+
+    // MapImage depends on MapInfo.  This handles MapInfo becoming READY.
+    MapImage* mapImage = static_cast<MapImage*>(asset);
+    if (new_state == AssetState::READY)
+    {
+        if (mDeferralDepth > 0)
+            mDeferredMapImages += mapImage;
+        else
+            emit mapImageChanged(mapImage);
+    }
 }
 
 ///// ///// ///// ///// /////

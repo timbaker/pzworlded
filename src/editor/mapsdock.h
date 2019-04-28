@@ -36,7 +36,7 @@ class MapsDock : public QDockWidget
     Q_OBJECT
 
 public:
-    MapsDock(QWidget *parent = 0);
+    MapsDock(QWidget *parent = nullptr);
 
 private slots:
     void browse();

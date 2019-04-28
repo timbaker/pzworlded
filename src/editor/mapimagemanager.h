@@ -103,6 +103,7 @@ protected:
 #endif
 
     ImageData readImageData(const QFileInfo &imageDataFileInfo);
+    void writeImageData(MapImageData imgData, MapImage *mapImage);
     void writeImageData(const QFileInfo &imageDataFileInfo, const ImageData &data);
 
 signals:
@@ -131,6 +132,9 @@ protected:
     void startLoading(Asset* asset) override;
 
     friend class AssetTask_LoadMapImage;
+
+public slots:
+    void onStateChanged(AssetState old_state, AssetState new_state, Asset* asset) override;
 
 private:
     QFileInfo imageFileInfo(const QString &mapFilePath);

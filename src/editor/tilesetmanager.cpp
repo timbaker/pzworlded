@@ -518,7 +518,8 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
             if (cached->isLoaded()) {
                 tileset->loadFromCache(cached);
                 tileset->setMissing(false);
-                tileset->onCreated(AssetState::READY);
+                if (tileset->isEmpty())
+                    tileset->onCreated(AssetState::READY);
                 emit tilesetChanged(tileset);
             } else {
                 changeTilesetSource(tileset, imageSource, false);

@@ -840,7 +840,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     }
 
     int index = 0;
-    foreach (Layer *layer, mMap->layers()) {
+    for (Layer *layer : mMap->layers()) {
         int level;
         if (levelForLayer(layer, &level)) {
             // FIXME: no changing of mMap should happen after it is loaded!
@@ -865,10 +865,10 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     // Load lots, but only if this is not the map being edited (that is handled
     // by the LotManager).
     if (!mapInfo->isBeingEdited()) {
-        foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
+        for (ObjectGroup *objectGroup : mMap->objectGroups()) {
             int levelOffset;
             (void) levelForLayer(objectGroup, &levelOffset);
-            foreach (MapObject *object, objectGroup->objects()) {
+            for (MapObject *object : objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
 #if 1
                     MapInfo *subMapInfo = MapManager::instance().loadMap(
@@ -892,10 +892,11 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
                                                              object->position().toPoint()
                                                              + mOrientAdjustPos * levelOffset,
                                                              levelOffset);
-                        } else
+                        } else {
                             addMap(subMapInfo, object->position().toPoint()
                                    + mOrientAdjustPos * levelOffset,
                                    levelOffset, true);
+                        }
                     }
 #else
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
@@ -925,7 +926,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     mMinLevel = 10000;
     mMaxLevel = 0;
 
-    foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
+    for (CompositeLayerGroup *layerGroup : mLayerGroups) {
         if (!mMapInfo->isBeingEdited())
             layerGroup->synch();
         if (layerGroup->level() < mMinLevel)
@@ -933,9 +934,11 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         if (layerGroup->level() > mMaxLevel)
             mMaxLevel = layerGroup->level();
     }
-    foreach (MapComposite *subMap, mSubMaps)
-        if (subMap->mLevelOffset + subMap->mMaxLevel > mMaxLevel)
+    for (MapComposite *subMap : mSubMaps) {
+        if (subMap->mLevelOffset + subMap->mMaxLevel > mMaxLevel) {
             mMaxLevel = subMap->mLevelOffset + subMap->mMaxLevel;
+        }
+    }
 
     if (mMinLevel == 10000)
         mMinLevel = 0;

@@ -4,6 +4,7 @@
 
 #include "assettask.h"
 #include "assettaskmanager.h"
+#include "tilesetmanager.h"
 
 #include "BuildingEditor/building.h"
 #include "BuildingEditor/buildingreader.h"
@@ -142,7 +143,9 @@ void MapAssetManager::loadBuildingTaskFinished(AssetTask_LoadBuilding *task)
     {
         mapAsset->mLoadedBuilding = task->mBuilding;
         task->mBuilding = nullptr;
-        onLoadingSucceeded(task->m_asset);
+        // Some fugliness here: MapManager will deal with setting state to READY.
+//        onLoadingSucceeded(task->m_asset);
+        emit fileTaskFinished(mapAsset);
     }
     else
     {
@@ -157,7 +160,9 @@ void MapAssetManager::loadMapTaskFinished(AssetTask_LoadMap *task)
     {
         mapAsset->mLoadedMap = task->mMap;
         task->mMap = nullptr;
-        onLoadingSucceeded(task->m_asset);
+        // Some fugliness here: MapManager will deal with setting state to READY.
+//        onLoadingSucceeded(task->m_asset);
+        emit fileTaskFinished(mapAsset);
     }
     else
     {
@@ -192,5 +197,20 @@ void MapAssetManager::startLoading(Asset *asset)
         AssetTask_LoadMap* assetTask = new AssetTask_LoadMap(mapAsset);
         setTask(asset, assetTask);
         AssetTaskManager::instance().submit(assetTask);
+    }
+}
+
+using namespace Tiled::Internal;
+
+void MapAssetManager::unloadData(Asset *asset)
+{
+    MapAsset* mapAsset = static_cast<MapAsset*>(asset);
+
+    if (mapAsset->mMap != nullptr)
+    {
+        TilesetManager& tilesetMgr = TilesetManager::instance();
+        tilesetMgr.removeReferences(mapAsset->mMap->tilesets());
+        delete mapAsset->mMap;
+        mapAsset->mMap = nullptr;
     }
 }

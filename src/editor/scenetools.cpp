@@ -82,20 +82,20 @@ bool AbstractTool::isCurrent() const
 
 BaseWorldSceneTool *AbstractTool::asWorldTool()
 {
-    return isWorldTool() ? static_cast<BaseWorldSceneTool*>(this) : 0;
+    return isWorldTool() ? static_cast<BaseWorldSceneTool*>(this) : nullptr;
 }
 
 BaseCellSceneTool *AbstractTool::asCellTool()
 {
-    return isCellTool() ? static_cast<BaseCellSceneTool*>(this) : 0;
+    return isCellTool() ? static_cast<BaseCellSceneTool*>(this) : nullptr;
 }
 
 /////
 
 BaseCellSceneTool::BaseCellSceneTool(const QString &name, const QIcon &icon, const QKeySequence &shortcut, QObject *parent)
     : AbstractTool(name, icon, shortcut, CellToolType, parent)
-    , mScene(0)
-    , mEventView(0)
+    , mScene(nullptr)
+    , mEventView(nullptr)
 {
 
 }
@@ -106,7 +106,7 @@ BaseCellSceneTool::~BaseCellSceneTool()
 
 void BaseCellSceneTool::setScene(BaseGraphicsScene *scene)
 {
-    mScene = scene ? scene->asCellScene() : 0;
+    mScene = scene ? scene->asCellScene() : nullptr;
 }
 
 BaseGraphicsScene *BaseCellSceneTool::scene() const
@@ -116,7 +116,7 @@ BaseGraphicsScene *BaseCellSceneTool::scene() const
 
 void BaseCellSceneTool::updateEnabledState()
 {
-    setEnabled(mScene != 0);
+    setEnabled(mScene != nullptr);
 }
 
 void BaseCellSceneTool::setEventView(BaseGraphicsView *view)
@@ -126,7 +126,7 @@ void BaseCellSceneTool::setEventView(BaseGraphicsView *view)
 
 /////
 
-CreateObjectTool *CreateObjectTool::mInstance = 0;
+CreateObjectTool *CreateObjectTool::mInstance = nullptr;
 
 CreateObjectTool *CreateObjectTool::instance()
 {
@@ -144,7 +144,7 @@ CreateObjectTool::CreateObjectTool()
     : BaseCellSceneTool(QLatin1String("Create Object"),
                         QIcon(QLatin1String(":/images/24x24/insert-object.png")),
                         QKeySequence(QLatin1String("O")))
-    , mItem(0)
+    , mItem(nullptr)
 {
 }
 
@@ -517,12 +517,12 @@ ObjectItem *SelectMoveObjectTool::topmostItemAt(const QPointF &scenePos)
                 return labelItem->objectItem();
         }
     }
-    return 0;
+    return nullptr;
 }
 
 /////
 
-SubMapTool *SubMapTool::mInstance = 0;
+SubMapTool *SubMapTool::mInstance = nullptr;
 
 SubMapTool *SubMapTool::instance()
 {
@@ -542,9 +542,9 @@ SubMapTool::SubMapTool()
                         QKeySequence())
     , mMode(NoMode)
     , mMousePressed(false)
-    , mClickedItem(0)
+    , mClickedItem(nullptr)
     , mMapHighlightItem(new QGraphicsPolygonItem)
-    , mHighlightedMap(0)
+    , mHighlightedMap(nullptr)
 {
     mMapHighlightItem->setPen(Qt::NoPen);
     mMapHighlightItem->setBrush(QColor(128, 128, 128, 128));
@@ -626,7 +626,7 @@ static MapComposite *mapUnderPoint(CellScene *scene, MapComposite *mc, MapRender
         if (scenePolygon.containsPoint(scenePos, Qt::WindingFill))
             return subMap;
     }
-    return 0;
+    return nullptr;
 }
 
 void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -896,7 +896,7 @@ LightSwitchOverlay *SubMapTool::topmostSwitchAt(const QPointF &scenePos)
         if (LightSwitchOverlay *switchItem = dynamic_cast<LightSwitchOverlay*>(item))
             return switchItem;
     }
-    return 0;
+    return nullptr;
 }
 
 /////
@@ -904,7 +904,7 @@ LightSwitchOverlay *SubMapTool::topmostSwitchAt(const QPointF &scenePos)
 class SpawnPointCursorItem : public QGraphicsItem
 {
 public:
-    SpawnPointCursorItem(CellScene *scene, QGraphicsItem *parent = 0);
+    SpawnPointCursorItem(CellScene *scene, QGraphicsItem *parent = nullptr);
 
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
@@ -1025,7 +1025,7 @@ void SpawnPointTool::activate()
 void SpawnPointTool::deactivate()
 {
     SpawnToolDialog::instance().hide();
-    SpawnToolDialog::instance().setDocument(0);
+    SpawnToolDialog::instance().setDocument(nullptr);
 
     delete mCursorItem;
 
@@ -1133,7 +1133,7 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void SpawnPointTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-    mCursorItem->setVisible(topmostItemAt(event->scenePos()) == 0);
+    mCursorItem->setVisible(topmostItemAt(event->scenePos()) == nullptr);
 
     QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(),
                                                               mScene->document()->currentLevel());
@@ -1174,12 +1174,12 @@ SpawnPointItem *SpawnPointTool::topmostItemAt(const QPointF &scenePos)
                 return spawnPtItem;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 /////
 
-CellCreateRoadTool *CellCreateRoadTool::mInstance = 0;
+CellCreateRoadTool *CellCreateRoadTool::mInstance = nullptr;
 
 CellCreateRoadTool *CellCreateRoadTool::instance()
 {
@@ -1317,14 +1317,14 @@ void CellCreateRoadTool::clearNewRoadItem()
 {
     mScene->removeItem(mRoadItem);
     delete mRoadItem;
-    mRoadItem = 0;
+    mRoadItem = nullptr;
 }
 
 void CellCreateRoadTool::cancelNewRoadItem()
 {
     clearNewRoadItem();
     delete mRoad;
-    mRoad = 0;
+    mRoad = nullptr;
 }
 
 void CellCreateRoadTool::finishNewRoadItem()
@@ -1335,12 +1335,12 @@ void CellCreateRoadTool::finishNewRoadItem()
     undoStack->push(new AddRoad(mScene->worldDocument(),
                                 mScene->world()->roads().count(),
                                 mRoad));
-    mRoad = 0;
+    mRoad = nullptr;
 }
 
 /////
 
-CellEditRoadTool *CellEditRoadTool::mInstance = 0;
+CellEditRoadTool *CellEditRoadTool::mInstance = nullptr;
 
 CellEditRoadTool *CellEditRoadTool::instance()
 {
@@ -1358,9 +1358,9 @@ CellEditRoadTool::CellEditRoadTool()
     : BaseCellSceneTool(tr("Edit Roads"),
                          QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                          QKeySequence())
-    , mSelectedRoadItem(0)
-    , mRoad(0)
-    , mRoadItem(0)
+    , mSelectedRoadItem(nullptr)
+    , mRoad(nullptr)
+    , mRoadItem(nullptr)
     , mMoving(false)
     , mStartHandle(new QGraphicsPolygonItem)
     , mEndHandle(new QGraphicsPolygonItem)
@@ -1388,7 +1388,7 @@ void CellEditRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene ? scene->asCellScene() : 0;
+    mScene = scene ? scene->asCellScene() : nullptr;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
@@ -1410,7 +1410,7 @@ void CellEditRoadTool::deactivate()
         mScene->removeItem(mEndHandle);
         mHandlesVisible = false;
     }
-    mSelectedRoadItem = 0;
+    mSelectedRoadItem = nullptr;
 
     BaseCellSceneTool::deactivate();
 }
@@ -1484,8 +1484,8 @@ void CellEditRoadTool::roadAboutToBeRemoved(int index)
             cancelMoving();
             mMoving = false;
         }
-        updateHandles(0);
-        mSelectedRoadItem = 0;
+        updateHandles(nullptr);
+        mSelectedRoadItem = nullptr;
     }
 }
 
@@ -1536,7 +1536,7 @@ void CellEditRoadTool::startMoving(const QPointF &scenePos)
             break;
         }
     }
-    updateHandles(mSelectedRoadItem ? mSelectedRoadItem->road() : 0);
+    updateHandles(mSelectedRoadItem ? mSelectedRoadItem->road() : nullptr);
 }
 
 void CellEditRoadTool::finishMoving()
@@ -1555,10 +1555,10 @@ void CellEditRoadTool::cancelMoving()
 
     mScene->removeItem(mRoadItem);
     delete mRoadItem;
-    mRoadItem = 0;
+    mRoadItem = nullptr;
 
     delete mRoad;
-    mRoad = 0;
+    mRoad = nullptr;
 }
 
 void CellEditRoadTool::updateHandles(Road *road)
@@ -1580,7 +1580,7 @@ void CellEditRoadTool::updateHandles(Road *road)
 
 /////
 
-CellSelectMoveRoadTool *CellSelectMoveRoadTool::mInstance = 0;
+CellSelectMoveRoadTool *CellSelectMoveRoadTool::mInstance = nullptr;
 
 CellSelectMoveRoadTool *CellSelectMoveRoadTool::instance()
 {
@@ -1617,7 +1617,7 @@ void CellSelectMoveRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene ? scene->asCellScene() : 0;
+    mScene = scene ? scene->asCellScene() : nullptr;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
@@ -1730,7 +1730,7 @@ void CellSelectMoveRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 
     mMousePressed = false;
-    mClickedItem = 0;
+    mClickedItem = nullptr;
 }
 
 void CellSelectMoveRoadTool::roadAboutToBeRemoved(int index)
@@ -1837,7 +1837,7 @@ CellRoadItem *CellSelectMoveRoadTool::topmostItemAt(const QPointF &scenePos)
         if (CellRoadItem *roadItem = dynamic_cast<CellRoadItem*>(item))
             return roadItem;
     }
-    return 0;
+    return nullptr;
 }
 
 /////
@@ -1846,8 +1846,8 @@ CellRoadItem *CellSelectMoveRoadTool::topmostItemAt(const QPointF &scenePos)
 
 BaseWorldSceneTool::BaseWorldSceneTool(const QString &name, const QIcon &icon, const QKeySequence &shortcut, QObject *parent)
     : AbstractTool(name, icon, shortcut, WorldToolType, parent)
-    , mScene(0)
-    , mEventView(0)
+    , mScene(nullptr)
+    , mEventView(nullptr)
 {
 
 }
@@ -1858,7 +1858,7 @@ BaseWorldSceneTool::~BaseWorldSceneTool()
 
 void BaseWorldSceneTool::setScene(BaseGraphicsScene *scene)
 {
-    mScene = scene ? scene->asWorldScene() : 0;
+    mScene = scene ? scene->asWorldScene() : nullptr;
 }
 
 BaseGraphicsScene *BaseWorldSceneTool::scene() const
@@ -1876,7 +1876,7 @@ void BaseWorldSceneTool::deactivate()
 
 void BaseWorldSceneTool::updateEnabledState()
 {
-    setEnabled(mScene != 0);
+    setEnabled(mScene != nullptr);
 }
 
 void BaseWorldSceneTool::setEventView(BaseGraphicsView *view)
@@ -1949,7 +1949,7 @@ QPointF BaseWorldSceneTool::restrictDragging(const QVector<QPoint> &cellPosition
 
 /////
 
-WorldCellTool *WorldCellTool::mInstance = 0;
+WorldCellTool *WorldCellTool::mInstance = nullptr;
 
 WorldCellTool *WorldCellTool::instance()
 {
@@ -2095,7 +2095,7 @@ void WorldCellTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 
     mMousePressed = false;
-    mClickedItem = 0;
+    mClickedItem = nullptr;
 }
 
 void WorldCellTool::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
@@ -2283,12 +2283,12 @@ void WorldCellTool::showContextMenu(const QPointF &scenePos, const QPoint &scree
 WorldCellItem *WorldCellTool::topmostItemAt(const QPointF &scenePos)
 {
     WorldCell *cell = mScene->pointToCell(scenePos);
-    return cell ? mScene->itemForCell(cell) : 0;
+    return cell ? mScene->itemForCell(cell) : nullptr;
 }
 
 /////
 
-PasteCellsTool *PasteCellsTool::mInstance = 0;
+PasteCellsTool *PasteCellsTool::mInstance = nullptr;
 
 PasteCellsTool *PasteCellsTool::instance()
 {
@@ -2333,7 +2333,7 @@ void PasteCellsTool::setScene(BaseGraphicsScene *scene)
         mScene->disconnect(this);
     }
 
-    mScene = scene ? scene->asWorldScene() : 0;
+    mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
         connect(Clipboard::instance(), SIGNAL(clipboardChanged()),
@@ -2487,7 +2487,7 @@ void PasteCellsTool::cancelMoving()
 
 /////
 
-WorldCreateRoadTool *WorldCreateRoadTool::mInstance = 0;
+WorldCreateRoadTool *WorldCreateRoadTool::mInstance = nullptr;
 
 WorldCreateRoadTool *WorldCreateRoadTool::instance()
 {
@@ -2611,14 +2611,14 @@ void WorldCreateRoadTool::clearNewRoadItem()
 {
     mScene->removeItem(mRoadItem);
     delete mRoadItem;
-    mRoadItem = 0;
+    mRoadItem = nullptr;
 }
 
 void WorldCreateRoadTool::cancelNewRoadItem()
 {
     clearNewRoadItem();
     delete mRoad;
-    mRoad = 0;
+    mRoad = nullptr;
 }
 
 void WorldCreateRoadTool::finishNewRoadItem()
@@ -2629,7 +2629,7 @@ void WorldCreateRoadTool::finishNewRoadItem()
     undoStack->push(new AddRoad(mScene->worldDocument(),
                                 mScene->world()->roads().count(),
                                 mRoad));
-    mRoad = 0;
+    mRoad = nullptr;
 }
 
 #if 0
@@ -2742,7 +2742,7 @@ void RoadPointHandle::paint(QPainter *painter,
 
 /////
 
-WorldEditRoadTool *WorldEditRoadTool::mInstance = 0;
+WorldEditRoadTool *WorldEditRoadTool::mInstance = nullptr;
 
 WorldEditRoadTool *WorldEditRoadTool::instance()
 {
@@ -2760,10 +2760,10 @@ WorldEditRoadTool::WorldEditRoadTool()
     : BaseWorldSceneTool(tr("Edit Roads"),
                          QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                          QKeySequence())
-    , mSelectedRoad(0)
-    , mSelectedRoadItem(0)
-    , mRoad(0)
-    , mRoadItem(0)
+    , mSelectedRoad(nullptr)
+    , mSelectedRoadItem(nullptr)
+    , mRoad(nullptr)
+    , mRoadItem(nullptr)
     , mMoving(false)
     , mStartHandle(new QGraphicsPolygonItem)
     , mEndHandle(new QGraphicsPolygonItem)
@@ -2791,7 +2791,7 @@ void WorldEditRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene ? scene->asWorldScene() : 0;
+    mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadCoordsChanged(int)),
@@ -2881,13 +2881,13 @@ void WorldEditRoadTool::roadAboutToBeRemoved(int index)
     Road *road = mScene->world()->roads().at(index);
     if (mSelectedRoad && road == mSelectedRoad) {
         if (mMoving) {
-            mSelectedRoadItem = 0; // could have been deleted by WorldScene already
+            mSelectedRoadItem = nullptr; // could have been deleted by WorldScene already
             cancelMoving();
             mMoving = false;
         }
-        updateHandles(0);
-        mSelectedRoadItem = 0;
-        mSelectedRoad = 0;
+        updateHandles(nullptr);
+        mSelectedRoadItem = nullptr;
+        mSelectedRoad = nullptr;
     }
 }
 
@@ -2911,8 +2911,8 @@ void WorldEditRoadTool::startMoving(const QPointF &scenePos)
             mSelectedRoadItem->setZValue(mSelectedRoadItem->isSelected() ?
                                              WorldScene::ZVALUE_ROADITEM_SELECTED :
                                              WorldScene::ZVALUE_ROADITEM_UNSELECTED);
-            mSelectedRoadItem = 0;
-            mSelectedRoad = 0;
+            mSelectedRoadItem = nullptr;
+            mSelectedRoad = nullptr;
         }
         if (mSelectedRoadItem) {
             mMoving = true;
@@ -2940,7 +2940,7 @@ void WorldEditRoadTool::startMoving(const QPointF &scenePos)
             break;
         }
     }
-    updateHandles(mSelectedRoadItem ? mSelectedRoadItem->road() : 0);
+    updateHandles(mSelectedRoadItem ? mSelectedRoadItem->road() : nullptr);
 }
 
 void WorldEditRoadTool::finishMoving()
@@ -2958,14 +2958,14 @@ void WorldEditRoadTool::cancelMoving()
         mSelectedRoadItem->setVisible(true);
         updateHandles(mSelectedRoadItem->road());
     } else
-        updateHandles(0);
+        updateHandles(nullptr);
 
     mScene->removeItem(mRoadItem);
     delete mRoadItem;
-    mRoadItem = 0;
+    mRoadItem = nullptr;
 
     delete mRoad;
-    mRoad = 0;
+    mRoad = nullptr;
 }
 
 void WorldEditRoadTool::updateHandles(Road *road)
@@ -2987,7 +2987,7 @@ void WorldEditRoadTool::updateHandles(Road *road)
 
 /////
 
-WorldSelectMoveRoadTool *WorldSelectMoveRoadTool::mInstance = 0;
+WorldSelectMoveRoadTool *WorldSelectMoveRoadTool::mInstance = nullptr;
 
 WorldSelectMoveRoadTool *WorldSelectMoveRoadTool::instance()
 {
@@ -3024,7 +3024,7 @@ void WorldSelectMoveRoadTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene ? scene->asWorldScene() : 0;
+    mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
@@ -3128,7 +3128,7 @@ void WorldSelectMoveRoadTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 
     mMousePressed = false;
-    mClickedItem = 0;
+    mClickedItem = nullptr;
 }
 
 void WorldSelectMoveRoadTool::roadAboutToBeRemoved(int index)
@@ -3245,12 +3245,12 @@ WorldRoadItem *WorldSelectMoveRoadTool::topmostItemAt(const QPointF &scenePos)
         if (WorldRoadItem *roadItem = dynamic_cast<WorldRoadItem*>(item))
             return roadItem;
     }
-    return 0;
+    return nullptr;
 }
 
 /////
 
-WorldBMPTool *WorldBMPTool::mInstance = 0;
+WorldBMPTool *WorldBMPTool::mInstance = nullptr;
 
 WorldBMPTool *WorldBMPTool::instance()
 {
@@ -3286,7 +3286,7 @@ void WorldBMPTool::setScene(BaseGraphicsScene *scene)
     if (mScene)
         mScene->worldDocument()->disconnect(this);
 
-    mScene = scene ? scene->asWorldScene() : 0;
+    mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
         connect(mScene->worldDocument(), SIGNAL(bmpAboutToBeRemoved(int)),
@@ -3390,7 +3390,7 @@ void WorldBMPTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 
     mMousePressed = false;
-    mClickedItem = 0;
+    mClickedItem = nullptr;
 }
 
 void WorldBMPTool::bmpAboutToBeRemoved(int index)
@@ -3501,14 +3501,14 @@ void WorldBMPTool::cancelMoving()
         foreach (WorldBMP *bmp, mMovingBMPs)
             mScene->itemForBMP(bmp)->setDragging(false);
         mMovingBMPs.clear();
-        mClickedItem = 0;
+        mClickedItem = nullptr;
     }
 }
 
 WorldBMPItem *WorldBMPTool::topmostItemAt(const QPointF &scenePos)
 {
     WorldBMP *bmp = mScene->pointToBMP(scenePos);
-    return bmp ? mScene->itemForBMP(bmp) : 0;
+    return bmp ? mScene->itemForBMP(bmp) : nullptr;
 }
 
 /////
