@@ -50,7 +50,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
             mExportDir = info.canonicalFilePath();
     }
     ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
-    connect(ui->exportBrowse, SIGNAL(clicked()), SLOT(exportBrowse()));
+    connect(ui->exportBrowse, &QAbstractButton::clicked, this, &BMPToTMXDialog::exportBrowse);
 
     // Rules.txt
     mRulesFile = settings.rulesFile;
@@ -61,7 +61,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
             mRulesFile = info.canonicalFilePath();
     }
     ui->rulesEdit->setText(QDir::toNativeSeparators(mRulesFile));
-    connect(ui->rulesBrowse, SIGNAL(clicked()), SLOT(rulesBrowse()));
+    connect(ui->rulesBrowse, &QAbstractButton::clicked, this, &BMPToTMXDialog::rulesBrowse);
 
     // Blends.txt
     mBlendsFile = settings.blendsFile;
@@ -72,7 +72,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
             mBlendsFile = info.canonicalFilePath();
     }
     ui->blendsEdit->setText(QDir::toNativeSeparators(mBlendsFile));
-    connect(ui->blendsBrowse, SIGNAL(clicked()), SLOT(blendsBrowse()));
+    connect(ui->blendsBrowse, &QAbstractButton::clicked, this, &BMPToTMXDialog::blendsBrowse);
 
     // MapBaseXML.txt
     mMapBaseFile = settings.mapbaseFile;
@@ -83,7 +83,7 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
             mMapBaseFile = info.canonicalFilePath();
     }
     ui->mapbaseEdit->setText(QDir::toNativeSeparators(mMapBaseFile));
-    connect(ui->mapbaseBrowse, SIGNAL(clicked()), SLOT(mapbaseBrowse()));
+    connect(ui->mapbaseBrowse, &QAbstractButton::clicked, this, &BMPToTMXDialog::mapbaseBrowse);
 
     ui->assignMapCheckBox->setChecked(settings.assignMapsToWorld);
     ui->warnUnknownColors->setChecked(settings.warnUnknownColors);
@@ -92,8 +92,8 @@ BMPToTMXDialog::BMPToTMXDialog(WorldDocument *worldDoc, QWidget *parent) :
     ui->replaceExisting->setChecked(!settings.updateExisting);
     ui->updateExisting->setChecked(settings.updateExisting);
 
-    connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
-            SLOT(apply()));
+    connect(ui->buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked,
+            this, &BMPToTMXDialog::apply);
 }
 
 BMPToTMXDialog::~BMPToTMXDialog()

@@ -36,6 +36,7 @@ class Map;
 
 class ObjectsModel;
 class ObjectsView;
+class ObjectsViewDelegate;
 
 class ObjectsDock : public QDockWidget
 {
@@ -84,6 +85,7 @@ private slots:
     void selectedCellsChanged();
     void selectedObjectsChanged();
     void modelSynched();
+    friend class ObjectsViewDelegate;
     void closeComboBoxEditor();
 
 private:

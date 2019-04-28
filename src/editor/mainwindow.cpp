@@ -173,7 +173,7 @@ MainWindow::MainWindow(QWidget *parent)
     undoAction->setShortcuts(QKeySequence::Undo);
     redoAction->setIconText(tr("Redo"));
     redoAction->setShortcuts(QKeySequence::Redo);
-    connect(undoGroup, SIGNAL(cleanChanged(bool)), SLOT(updateWindowTitle()));
+    connect(undoGroup, &QUndoGroup::cleanChanged, this, &MainWindow::updateWindowTitle);
     QAction *separator = ui->editMenu->actions().first();
     ui->editMenu->insertAction(separator, undoAction);
     ui->editMenu->insertAction(separator, redoAction);
@@ -225,86 +225,86 @@ MainWindow::MainWindow(QWidget *parent)
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
-    connect(ui->actionNew, SIGNAL(triggered()), SLOT(newWorld()));
-    connect(ui->actionOpen, SIGNAL(triggered()), SLOT(openFile()));
-    connect(ui->actionEditCell, SIGNAL(triggered()), SLOT(editCell()));
-    connect(ui->actionGoToXY, SIGNAL(triggered()), SLOT(goToXY()));
-    connect(ui->actionSave, SIGNAL(triggered()), SLOT(saveFile()));
-    connect(ui->actionSaveAs, SIGNAL(triggered()), SLOT(saveFileAs()));
-    connect(ui->actionClose, SIGNAL(triggered()), SLOT(closeFile()));
-    connect(ui->actionCloseAll, SIGNAL(triggered()), SLOT(closeAllFiles()));
-    connect(ui->actionGenerateLotsAll, SIGNAL(triggered()),
-            SLOT(generateLotsAll()));
-    connect(ui->actionGenerateLotsSelected, SIGNAL(triggered()),
-            SLOT(generateLotsSelected()));
-    connect(ui->actionBMPToTMXAll, SIGNAL(triggered()),
-            SLOT(BMPToTMXAll()));
-    connect(ui->actionBMPToTMXSelected, SIGNAL(triggered()),
-            SLOT(BMPToTMXSelected()));
-    connect(ui->actionTMXToBMPAll, SIGNAL(triggered()),
-            SLOT(TMXToBMPAll()));
-    connect(ui->actionTMXToBMPSelected, SIGNAL(triggered()),
-            SLOT(TMXToBMPSelected()));
-    connect(ui->actionLUAObjectDump, SIGNAL(triggered()), SLOT(WriteSpawnPoints()));
-    connect(ui->actionWriteObjects, SIGNAL(triggered()), SLOT(WriteWorldObjects()));
-    connect(ui->actionFromToAll, SIGNAL(triggered()),
-            SLOT(FromToAll()));
-    connect(ui->actionFromToSelected, SIGNAL(triggered()),
-            SLOT(FromToSelected()));
-    connect(ui->actionBuildingsToPNG, SIGNAL(triggered()), SLOT(BuildingsToPNG()));
-    connect(ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
+    connect(ui->actionNew, &QAction::triggered, this, &MainWindow::newWorld);
+    connect(ui->actionOpen, &QAction::triggered, this, qOverload<>(&MainWindow::openFile));
+    connect(ui->actionEditCell, &QAction::triggered, this, &MainWindow::editCell);
+    connect(ui->actionGoToXY, &QAction::triggered, this, &MainWindow::goToXY);
+    connect(ui->actionSave, &QAction::triggered, this, qOverload<>(&MainWindow::saveFile));
+    connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::saveFileAs);
+    connect(ui->actionClose, &QAction::triggered, this, &MainWindow::closeFile);
+    connect(ui->actionCloseAll, &QAction::triggered, this, &MainWindow::closeAllFiles);
+    connect(ui->actionGenerateLotsAll, &QAction::triggered,
+            this, &MainWindow::generateLotsAll);
+    connect(ui->actionGenerateLotsSelected, &QAction::triggered,
+            this, &MainWindow::generateLotsSelected);
+    connect(ui->actionBMPToTMXAll, &QAction::triggered,
+            this, &MainWindow::BMPToTMXAll);
+    connect(ui->actionBMPToTMXSelected, &QAction::triggered,
+            this, &MainWindow::BMPToTMXSelected);
+    connect(ui->actionTMXToBMPAll, &QAction::triggered,
+            this, &MainWindow::TMXToBMPAll);
+    connect(ui->actionTMXToBMPSelected, &QAction::triggered,
+            this, &MainWindow::TMXToBMPSelected);
+    connect(ui->actionLUAObjectDump, &QAction::triggered, this, &MainWindow::WriteSpawnPoints);
+    connect(ui->actionWriteObjects, &QAction::triggered, this, &MainWindow::WriteWorldObjects);
+    connect(ui->actionFromToAll, &QAction::triggered,
+            this, &MainWindow::FromToAll);
+    connect(ui->actionFromToSelected, &QAction::triggered,
+            this, &MainWindow::FromToSelected);
+    connect(ui->actionBuildingsToPNG, &QAction::triggered, this, &MainWindow::BuildingsToPNG);
+    connect(ui->actionQuit, &QAction::triggered, this, &QWidget::close);
 
-    connect(ui->actionCopy, SIGNAL(triggered()), SLOT(copy()));
-    connect(ui->actionPaste, SIGNAL(triggered()), SLOT(paste()));
-    connect(ui->actionClipboard, SIGNAL(triggered()), SLOT(showClipboard()));
+    connect(ui->actionCopy, &QAction::triggered, this, &MainWindow::copy);
+    connect(ui->actionPaste, &QAction::triggered, this, &MainWindow::paste);
+    connect(ui->actionClipboard, &QAction::triggered, this, &MainWindow::showClipboard);
 
-    connect(ui->actionPreferences, SIGNAL(triggered()), SLOT(preferencesDialog()));
+    connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::preferencesDialog);
 
-    connect(ui->actionResizeWorld, SIGNAL(triggered()), SLOT(resizeWorld()));
-    connect(ui->actionObjectGroups, SIGNAL(triggered()), SLOT(objectGroupsDialog()));
-    connect(ui->actionObjectTypes, SIGNAL(triggered()), SLOT(objectTypesDialog()));
-    connect(ui->actionEnums, SIGNAL(triggered()), SLOT(propertyEnumsDialog()));
-    connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
-    connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
+    connect(ui->actionResizeWorld, &QAction::triggered, this, &MainWindow::resizeWorld);
+    connect(ui->actionObjectGroups, &QAction::triggered, this, &MainWindow::objectGroupsDialog);
+    connect(ui->actionObjectTypes, &QAction::triggered, this, &MainWindow::objectTypesDialog);
+    connect(ui->actionEnums, &QAction::triggered, this, &MainWindow::propertyEnumsDialog);
+    connect(ui->actionProperties, &QAction::triggered, this, &MainWindow::properyDefinitionsDialog);
+    connect(ui->actionTemplates, &QAction::triggered, this, &MainWindow::templatesDialog);
 #ifdef ROAD_UI
     connect(ui->actionRemoveRoad, SIGNAL(triggered()), SLOT(removeRoad()));
 #else
     ui->actionRemoveRoad->setVisible(false);
 #endif
-    connect(ui->actionRemoveBMP, SIGNAL(triggered()), SLOT(removeBMP()));
+    connect(ui->actionRemoveBMP, &QAction::triggered, this, &MainWindow::removeBMP);
 
-    connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
-    connect(ui->actionRemoveObject, SIGNAL(triggered()), SLOT(removeObject()));
-    connect(ui->actionExtractLots, SIGNAL(triggered()), SLOT(extractLots()));
-    connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
-    connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
-    connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
+    connect(ui->actionRemoveLot, &QAction::triggered, this, &MainWindow::removeLot);
+    connect(ui->actionRemoveObject, &QAction::triggered, this, &MainWindow::removeObject);
+    connect(ui->actionExtractLots, &QAction::triggered, this, &MainWindow::extractLots);
+    connect(ui->actionExtractObjects, &QAction::triggered, this, &MainWindow::extractObjects);
+    connect(ui->actionClearCell, &QAction::triggered, this, &MainWindow::clearCells);
+    connect(ui->actionClearMapOnly, &QAction::triggered, this, &MainWindow::clearMapOnly);
 
-    connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
-    connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
-    connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
-    connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)), prefs, SLOT(setShowMiniMap(bool)));
-    connect(ui->actionShowObjects, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjects(bool)));
-    connect(ui->actionShowObjectNames, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjectNames(bool)));
-    connect(ui->actionShowOtherWorlds, SIGNAL(toggled(bool)), prefs, SLOT(setShowOtherWorlds(bool)));
-    connect(ui->actionShowBMP, SIGNAL(toggled(bool)), prefs, SLOT(setShowBMPs(bool)));
-    connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
-    connect(ui->actionHighlightRoomUnderPointer, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightRoomUnderPointer(bool)));
-    connect(ui->actionLevelAbove, SIGNAL(triggered()), SLOT(selectLevelAbove()));
-    connect(ui->actionLevelBelow, SIGNAL(triggered()), SLOT(selectLevelBelow()));
-    connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
-    connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
-    connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+    connect(ui->actionSnapToGrid, &QAction::toggled, prefs, &Preferences::setSnapToGrid);
+    connect(ui->actionShowCoordinates, &QAction::toggled, prefs, &Preferences::setShowCoordinates);
+    connect(ui->actionShowGrid, &QAction::toggled, this, &MainWindow::setShowGrid);
+    connect(ui->actionShowMiniMap, &QAction::toggled, prefs, &Preferences::setShowMiniMap);
+    connect(ui->actionShowObjects, &QAction::toggled, prefs, &Preferences::setShowObjects);
+    connect(ui->actionShowObjectNames, &QAction::toggled, prefs, &Preferences::setShowObjectNames);
+    connect(ui->actionShowOtherWorlds, &QAction::toggled, prefs, &Preferences::setShowOtherWorlds);
+    connect(ui->actionShowBMP, &QAction::toggled, prefs, &Preferences::setShowBMPs);
+    connect(ui->actionHighlightCurrentLevel, &QAction::toggled, prefs, &Preferences::setHighlightCurrentLevel);
+    connect(ui->actionHighlightRoomUnderPointer, &QAction::toggled, prefs, &Preferences::setHighlightRoomUnderPointer);
+    connect(ui->actionLevelAbove, &QAction::triggered, this, &MainWindow::selectLevelAbove);
+    connect(ui->actionLevelBelow, &QAction::triggered, this, &MainWindow::selectLevelBelow);
+    connect(ui->actionZoomIn, &QAction::triggered, this, &MainWindow::zoomIn);
+    connect(ui->actionZoomOut, &QAction::triggered, this, &MainWindow::zoomOut);
+    connect(ui->actionZoomNormal, &QAction::triggered, this, &MainWindow::zoomNormal);
 
-    connect(ui->actionLotPackViewer, SIGNAL(triggered()), SLOT(lotpackviewer()));
-    connect(ui->actionLootInspector, SIGNAL(triggered()), SLOT(lootInspector()));
+    connect(ui->actionLotPackViewer, &QAction::triggered, this, &MainWindow::lotpackviewer);
+    connect(ui->actionLootInspector, &QAction::triggered, this, &MainWindow::lootInspector);
 //    connect(ui->actionReadOldWaterDotLua, &QAction::triggered, this, &MainWindow::readOldWaterDotLua);
 
-    connect(ui->actionAboutQt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+    connect(ui->actionAboutQt, &QAction::triggered, qApp, &QApplication::aboutQt);
 
-    connect(docman(), SIGNAL(documentAdded(Document*)), SLOT(documentAdded(Document*)));
-    connect(docman(), SIGNAL(documentAboutToClose(int,Document*)), SLOT(documentAboutToClose(int,Document*)));
-    connect(docman(), SIGNAL(currentDocumentChanged(Document*)), SLOT(currentDocumentChanged(Document*)));
+    connect(docman(), &DocumentManager::documentAdded, this, &MainWindow::documentAdded);
+    connect(docman(), &DocumentManager::documentAboutToClose, this, &MainWindow::documentAboutToClose);
+    connect(docman(), &DocumentManager::currentDocumentChanged, this, &MainWindow::currentDocumentChanged);
 
     ToolManager *toolManager = ToolManager::instance();
     toolManager->registerTool(WorldCellTool::instance());
@@ -329,23 +329,23 @@ MainWindow::MainWindow(QWidget *parent)
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
-    connect(mCurrentLevelMenu, SIGNAL(aboutToShow()), SLOT(aboutToShowCurrentLevelMenu()));
-    connect(mCurrentLevelMenu, SIGNAL(triggered(QAction*)), SLOT(currentLevelMenuTriggered(QAction*)));
+    connect(mCurrentLevelMenu, &QMenu::aboutToShow, this, &MainWindow::aboutToShowCurrentLevelMenu);
+    connect(mCurrentLevelMenu, &QMenu::triggered, this, &MainWindow::currentLevelMenuTriggered);
 
     ui->objectGroupButton->setMenu(mObjectGroupMenu);
-    connect(mObjectGroupMenu, SIGNAL(aboutToShow()),
-            SLOT(aboutToShowObjGrpMenu()));
-    connect(mObjectGroupMenu, SIGNAL(triggered(QAction*)),
-            SLOT(objGrpMenuTriggered(QAction*)));
+    connect(mObjectGroupMenu, &QMenu::aboutToShow,
+            this, &MainWindow::aboutToShowObjGrpMenu);
+    connect(mObjectGroupMenu, &QMenu::triggered,
+            this, &MainWindow::objGrpMenuTriggered);
 
     ui->documentTabWidget->clear(); // TODO: remove tabs from .ui
     ui->documentTabWidget->setDocumentMode(true);
     ui->documentTabWidget->setTabsClosable(true);
 
-    connect(ui->documentTabWidget, SIGNAL(currentChanged(int)),
-            SLOT(currentDocumentTabChanged(int)));
-    connect(ui->documentTabWidget, SIGNAL(tabCloseRequested(int)),
-            SLOT(documentCloseRequested(int)));
+    connect(ui->documentTabWidget, &QTabWidget::currentChanged,
+            this, &MainWindow::currentDocumentTabChanged);
+    connect(ui->documentTabWidget, &QTabWidget::tabCloseRequested,
+            this, &MainWindow::documentCloseRequested);
 
     enableDeveloperFeatures();
 
@@ -550,18 +550,18 @@ void MainWindow::currentDocumentChanged(Document *doc)
 
     if (mCurrentDocument) {
         if (CellDocument *cellDoc = doc->asCellDocument()) {
-            connect(cellDoc, SIGNAL(currentLevelChanged(int)), SLOT(updateActions()));
-            connect(cellDoc, SIGNAL(selectedLotsChanged()), SLOT(updateActions()));
-            connect(cellDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
-            connect(cellDoc, SIGNAL(currentObjectGroupChanged(WorldObjectGroup*)),
-                    SLOT(updateActions()));
-            connect(cellDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
-                    SLOT(setStatusBarCoords(int,int)));
+            connect(cellDoc, &CellDocument::currentLevelChanged, this, &MainWindow::updateActions);
+            connect(cellDoc, &CellDocument::selectedLotsChanged, this, &MainWindow::updateActions);
+            connect(cellDoc, &CellDocument::selectedObjectsChanged, this, &MainWindow::updateActions);
+            connect(cellDoc, &CellDocument::currentObjectGroupChanged,
+                    this, &MainWindow::updateActions);
+            connect(cellDoc->view(), &BaseGraphicsView::statusBarCoordinatesChanged,
+                    this, &MainWindow::setStatusBarCoords);
             connect(cellDoc->worldDocument(),
-                    SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
-                    SLOT(updateActions()));
-            connect(cellDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
-                    SLOT(generateLotSettingsChanged()));
+                    &WorldDocument::objectGroupNameChanged,
+                    this, &MainWindow::updateActions);
+            connect(cellDoc->worldDocument(), &WorldDocument::generateLotSettingsChanged,
+                    this, &MainWindow::generateLotSettingsChanged);
 #ifdef ROAD_UI
             connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
@@ -569,19 +569,19 @@ void MainWindow::currentDocumentChanged(Document *doc)
         }
 
         if (WorldDocument *worldDoc = doc->asWorldDocument()) {
-            connect(worldDoc, SIGNAL(selectedCellsChanged()), SLOT(updateActions()));
-            connect(worldDoc, SIGNAL(selectedLotsChanged()), SLOT(updateActions()));
-            connect(worldDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
-            connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
-                    SLOT(setStatusBarCoords(int,int)));
-            connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
-                    SLOT(generateLotSettingsChanged()));
+            connect(worldDoc, &WorldDocument::selectedCellsChanged, this, &MainWindow::updateActions);
+            connect(worldDoc, &WorldDocument::selectedLotsChanged, this, &MainWindow::updateActions);
+            connect(worldDoc, &WorldDocument::selectedObjectsChanged, this, &MainWindow::updateActions);
+            connect(worldDoc->view(), &BaseGraphicsView::statusBarCoordinatesChanged,
+                    this, &MainWindow::setStatusBarCoords);
+            connect(worldDoc, &WorldDocument::generateLotSettingsChanged,
+                    this, &MainWindow::generateLotSettingsChanged);
 #ifdef ROAD_UI
             connect(worldDoc, SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
 #endif
-            connect(worldDoc, SIGNAL(selectedBMPsChanged()),
-                    SLOT(updateActions()));
+            connect(worldDoc, &WorldDocument::selectedBMPsChanged,
+                    this, &MainWindow::updateActions);
         }
 
         mLotsDock->setDocument(doc);
@@ -593,7 +593,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
 
         mZoomable = mCurrentDocument->view()->zoomable();
         mZoomable->connectToComboBox(mZoomComboBox);
-        connect(mZoomable, SIGNAL(scaleChanged(qreal)), SLOT(updateZoom()));
+        connect(mZoomable, &Zoomable::scaleChanged, this, &MainWindow::updateZoom);
 
         // May be a WorldDocument, that's ok
         CellDocument *cellDoc = mCurrentDocument->asCellDocument();
@@ -1113,13 +1113,13 @@ void MainWindow::FromToAux(bool selectedOnly)
     PROGRESS progress(tr("Making a mess of things"));
 
     foreach (QString fileName, fileNames) {
-        if (MapAsset *mapInfo = MapManager::instance().loadMap(fileName)) {
-            QScopedPointer<Map> map(mapInfo->map()->clone());
+        if (MapAsset *mapAsset = MapManager::instance().loadMap(fileName)) {
+            QScopedPointer<Map> map(mapAsset->map()->clone());
 
             QMap<QString,TileLayer*> layerMapping;
             foreach (FromToFile::FromTo fromto, file.fromtos) {
                 foreach (QString layerName, fromto.layers) {
-                    int index = mapInfo->map()->indexOfLayer(layerName, Layer::TileLayerType);
+                    int index = mapAsset->map()->indexOfLayer(layerName, Layer::TileLayerType);
                     if (index == -1) continue;
                     TileLayer *tl = map->layerAt(index)->asTileLayer();
                     layerMapping[layerName] = tl;
@@ -1208,7 +1208,7 @@ void MainWindow::FromToAux(bool selectedOnly)
                 format = MapWriter::Base64Zlib;
             writer.setLayerDataFormat(format);
             writer.setDtdEnabled(false);
-            if (!writer.writeMap(map.data(), mapInfo->path())) {
+            if (!writer.writeMap(map.data(), mapAsset->path())) {
                 QMessageBox::warning(this, tr("Error writing TMX"), writer.errorString());
                 return;
             }
@@ -1671,7 +1671,7 @@ void MainWindow::extractLots()
     Q_ASSERT(mCurrentDocument);
     Q_ASSERT(mCurrentDocument->isCellDocument());
     CellDocument *cellDoc = mCurrentDocument->asCellDocument();
-    QFileInfo info(cellDoc->scene()->mapComposite()->mapInfo()->path());
+    QFileInfo info(cellDoc->scene()->mapComposite()->mapAsset()->path());
     QString message = tr("This command will create a new Lot for each 'lot' object " \
                          "that is in the cell's map \"%1\".  You should then " \
                          "remove those objects from the map using the TileZed " \
@@ -1712,7 +1712,7 @@ void MainWindow::extractObjects()
     Q_ASSERT(mCurrentDocument);
     Q_ASSERT(mCurrentDocument->isCellDocument());
     CellDocument *cellDoc = mCurrentDocument->asCellDocument();
-    QFileInfo info(cellDoc->scene()->mapComposite()->mapInfo()->path());
+    QFileInfo info(cellDoc->scene()->mapComposite()->mapAsset()->path());
     QString message = tr("This command will create a new Object for each object " \
                          "that is in the cell's map \"%1\" (except 'lot' objects).  "
                          "You should then remove those objects from the map using "

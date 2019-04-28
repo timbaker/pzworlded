@@ -19,14 +19,14 @@ TMXToBMPDialog::TMXToBMPDialog(WorldDocument *worldDoc, QWidget *parent) :
 
     mBldgFile = settings.buildingsFile;
     ui->buildingEdit->setText(QDir::toNativeSeparators(mBldgFile));
-    connect(ui->buildingBrowse, SIGNAL(clicked()), SLOT(buildingBrowse()));
+    connect(ui->buildingBrowse, &QAbstractButton::clicked, this, &TMXToBMPDialog::buildingBrowse);
 
     ui->updateMain->setChecked(settings.doMain);
     ui->updateVeg->setChecked(settings.doVegetation);
     ui->buildingGroupBox->setChecked(settings.doBuildings);
 
-    connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
-            SLOT(apply()));
+    connect(ui->buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked,
+            this, &TMXToBMPDialog::apply);
 }
 
 TMXToBMPDialog::~TMXToBMPDialog()

@@ -61,10 +61,10 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     , mGridItem(new WorldGridItem(this))
     , mCoordItem(new WorldCoordItem(this))
     , mSelectionItem(new WorldSelectionItem(this))
-    , mPasteCellsTool(0)
-    , mActiveTool(0)
-    , mDragMapImageItem(0)
-    , mDragBMPItem(0)
+    , mPasteCellsTool(nullptr)
+    , mActiveTool(nullptr)
+    , mDragMapImageItem(nullptr)
+    , mDragBMPItem(nullptr)
     , mBMPToolActive(false)
 
 {
@@ -79,46 +79,46 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     mCoordItem->setZValue(ZVALUE_COORDITEM);
     addItem(mCoordItem);
 
-    connect(mWorldDoc, SIGNAL(worldAboutToResize(QSize)),
-            SLOT(worldAboutToResize(QSize)));
-    connect(mWorldDoc, SIGNAL(worldResized(QSize)),
-            SLOT(worldResized(QSize)));
+    connect(mWorldDoc, &WorldDocument::worldAboutToResize,
+            this, &WorldScene::worldAboutToResize);
+    connect(mWorldDoc, &WorldDocument::worldResized,
+            this, &WorldScene::worldResized);
 
-    connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
-            SLOT(selectedCellsChanged()));
-    connect(mWorldDoc, SIGNAL(cellMapFileChanged(WorldCell*)),
-            SLOT(cellMapFileChanged(WorldCell*)));
-    connect(mWorldDoc, SIGNAL(cellLotAdded(WorldCell*,int)),
-            SLOT(cellLotAdded(WorldCell*,int)));
-    connect(mWorldDoc, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
-            SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(mWorldDoc, SIGNAL(cellLotMoved(WorldCellLot*)),
-            SLOT(cellLotMoved(WorldCellLot*)));
-    connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
-            SLOT(cellContentsChanged(WorldCell*)));
+    connect(mWorldDoc, &WorldDocument::selectedCellsChanged,
+            this, &WorldScene::selectedCellsChanged);
+    connect(mWorldDoc, &WorldDocument::cellMapFileChanged,
+            this, &WorldScene::cellMapFileChanged);
+    connect(mWorldDoc, &WorldDocument::cellLotAdded,
+            this, &WorldScene::cellLotAdded);
+    connect(mWorldDoc, &WorldDocument::cellLotAboutToBeRemoved,
+            this, &WorldScene::cellLotAboutToBeRemoved);
+    connect(mWorldDoc, &WorldDocument::cellLotMoved,
+            this, &WorldScene::cellLotMoved);
+    connect(mWorldDoc, &WorldDocument::cellContentsChanged,
+            this, &WorldScene::cellContentsChanged);
 
-    connect(mWorldDoc, SIGNAL(generateLotSettingsChanged()),
-            SLOT(generateLotsSettingsChanged()));
+    connect(mWorldDoc, &WorldDocument::generateLotSettingsChanged,
+            this, &WorldScene::generateLotsSettingsChanged);
 
-    connect(mWorldDoc, SIGNAL(selectedRoadsChanged()),
-            SLOT(selectedRoadsChanged()));
-    connect(mWorldDoc, SIGNAL(roadAdded(int)),
-            SLOT(roadAdded(int)));
-    connect(mWorldDoc, SIGNAL(roadAboutToBeRemoved(int)),
-            SLOT(roadAboutToBeRemoved(int)));
-    connect(mWorldDoc, SIGNAL(roadCoordsChanged(int)),
-            SLOT(roadCoordsChanged(int)));
-    connect(mWorldDoc, SIGNAL(roadWidthChanged(int)),
-            SLOT(roadWidthChanged(int)));
+    connect(mWorldDoc, &WorldDocument::selectedRoadsChanged,
+            this, &WorldScene::selectedRoadsChanged);
+    connect(mWorldDoc, &WorldDocument::roadAdded,
+            this, &WorldScene::roadAdded);
+    connect(mWorldDoc, &WorldDocument::roadAboutToBeRemoved,
+            this, &WorldScene::roadAboutToBeRemoved);
+    connect(mWorldDoc, &WorldDocument::roadCoordsChanged,
+            this, &WorldScene::roadCoordsChanged);
+    connect(mWorldDoc, &WorldDocument::roadWidthChanged,
+            this, &WorldScene::roadWidthChanged);
 
-    connect(mWorldDoc, SIGNAL(selectedBMPsChanged()),
-            SLOT(selectedBMPsChanged()));
-    connect(mWorldDoc, SIGNAL(bmpAdded(int)),
-            SLOT(bmpAdded(int)));
-    connect(mWorldDoc, SIGNAL(bmpCoordsChanged(int)),
-            SLOT(bmpCoordsChanged(int)));
-    connect(mWorldDoc, SIGNAL(bmpAboutToBeRemoved(int)),
-            SLOT(bmpAboutToBeRemoved(int)));
+    connect(mWorldDoc, &WorldDocument::selectedBMPsChanged,
+            this, &WorldScene::selectedBMPsChanged);
+    connect(mWorldDoc, &WorldDocument::bmpAdded,
+            this, &WorldScene::bmpAdded);
+    connect(mWorldDoc, &WorldDocument::bmpCoordsChanged,
+            this, &WorldScene::bmpCoordsChanged);
+    connect(mWorldDoc, &WorldDocument::bmpAboutToBeRemoved,
+            this, &WorldScene::bmpAboutToBeRemoved);
 
     mGridItem->updateBoundingRect();
     setSceneRect(mGridItem->boundingRect());
@@ -180,13 +180,13 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     Preferences *prefs = Preferences::instance();
     mGridItem->setVisible(prefs->showWorldGrid());
     mCoordItem->setVisible(prefs->showCoordinates());
-    connect(prefs, SIGNAL(showWorldGridChanged(bool)), SLOT(setShowGrid(bool)));
-    connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
-    connect(prefs, SIGNAL(showBMPsChanged(bool)),
-            SLOT(setShowBMPs(bool)));
-    connect(prefs, SIGNAL(showOtherWorldsChanged(bool)), SLOT(setShowOtherWorlds(bool)));
-    connect(prefs, SIGNAL(worldThumbnailsChanged(bool)),
-            SLOT(worldThumbnailsChanged(bool)));
+    connect(prefs, &Preferences::showWorldGridChanged, this, &WorldScene::setShowGrid);
+    connect(prefs, &Preferences::showCoordinatesChanged, this, &WorldScene::setShowCoordinates);
+    connect(prefs, &Preferences::showBMPsChanged,
+            this, &WorldScene::setShowBMPs);
+    connect(prefs, &Preferences::showOtherWorldsChanged, this, &WorldScene::setShowOtherWorlds);
+    connect(prefs, &Preferences::worldThumbnailsChanged,
+            this, &WorldScene::worldThumbnailsChanged);
 
     mPasteCellsTool = PasteCellsTool::instance();
 
@@ -196,11 +196,11 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
         mBMPItems += item;
     }
 
-    connect(MapManager::instancePtr(), SIGNAL(mapFileCreated(QString)),
-            SLOT(mapFileCreated(QString)));
+    connect(MapManager::instancePtr(), &MapManager::mapFileCreated,
+            this, &WorldScene::mapFileCreated);
 
-    connect(MapImageManager::instancePtr(), SIGNAL(mapImageChanged(MapImage*)),
-            SLOT(mapImageChanged(MapImage*)));
+    connect(MapImageManager::instancePtr(), &MapImageManager::mapImageChanged,
+            this, &WorldScene::mapImageChanged);
 
     connect(IdleTasks::instancePtr(), &IdleTasks::idleTime, this, &WorldScene::handlePendingThumbnails);
 
@@ -1506,7 +1506,7 @@ WorldSelectionItem::WorldSelectionItem(WorldScene *scene)
     , mHighlightedCellDuringDnD(-1, -1)
 {
     setFlag(ItemUsesExtendedStyleOption);
-    connect(mScene->worldDocument(), SIGNAL(selectedCellsChanged()), SLOT(selectedCellsChanged()));
+    connect(mScene->worldDocument(), &WorldDocument::selectedCellsChanged, this, &WorldSelectionItem::selectedCellsChanged);
     updateBoundingRect();
 }
 

@@ -185,15 +185,15 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     PROGRESS progress(tr("Loading maps (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 
-    MapAsset *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
+    MapAsset *mapAsset = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        QString(), true);
-    if (!mapInfo) {
+    if (!mapAsset) {
         mError = MapManager::instance().errorString();
         return false;
     }
 
     DelayedMapLoader mapLoader;
-    mapLoader.addMap(mapInfo);
+    mapLoader.addMap(mapAsset);
 
     foreach (WorldCellLot *lot, cell->lots()) {
         if (MapAsset *info = MapManager::instance().loadMap(lot->mapName(),
@@ -208,10 +208,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapInfo->isEmpty())
+    while (mapAsset->isEmpty())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    MapComposite staticMapComposite(mapInfo);
+    MapComposite staticMapComposite(mapAsset);
     MapComposite *mapComposite = &staticMapComposite;
     while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
@@ -263,7 +263,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     foreach (MapComposite *mc, mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
             mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
-                    .arg(cell->x()).arg(cell->y()).arg(mc->mapInfo()->path());
+                    .arg(cell->x()).arg(cell->y()).arg(mc->mapAsset()->path());
             return false;
         }
     }
@@ -284,8 +284,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     MaxLevel = 15;
 
-    int mapWidth = mapInfo->width();
-    int mapHeight = mapInfo->height();
+    int mapWidth = mapAsset->width();
+    int mapHeight = mapAsset->height();
 
     // Resize the grid and cleanup data from the previous cell.
     mGridData.resize(mapWidth);
@@ -299,7 +299,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     QVector<const Tiled::Cell *> cells(40);
     foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
         lg->prepareDrawing2();
-        int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
+        int d = (mapAsset->orientation() == Map::Isometric) ? -3 : 0;
         d *= lg->level();
         for (int y = d; y < mapHeight; y++) {
             for (int x = d; x < mapWidth; x++) {
@@ -308,7 +308,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                 foreach (const Tiled::Cell *cell, cells) {
                     if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;
-                    if (mapInfo->orientation() == Map::Isometric) {
+                    if (mapAsset->orientation() == Map::Isometric) {
                         lx = x + lg->level() * 3;
                         ly = y + lg->level() * 3;
                     }
@@ -354,8 +354,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     QList<qint64> PositionMap;
 
-    for (int x = 0; x < mapInfo->width() / CHUNK_WIDTH; x++) {
-        for (int y = 0; y < mapInfo->height() / CHUNK_HEIGHT; y++) {
+    for (int x = 0; x < mapAsset->width() / CHUNK_WIDTH; x++) {
+        for (int y = 0; y < mapAsset->height() / CHUNK_HEIGHT; y++) {
             PositionMap += file.pos();
             if (!generateChunk(out, cell, mapComposite, x, y))
                 return false;
@@ -1060,10 +1060,10 @@ void LotFilesManager::resolveProperties(PropertyHolder *ph, PropertyList &result
 
 DelayedMapLoader::DelayedMapLoader()
 {
-    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instancePtr(), &MapManager::mapLoaded,
+            this, &DelayedMapLoader::mapLoaded);
+    connect(MapManager::instancePtr(), &MapManager::mapFailedToLoad,
+            this, &DelayedMapLoader::mapFailedToLoad);
 }
 
 void DelayedMapLoader::addMap(MapAsset *info)
@@ -1074,18 +1074,18 @@ void DelayedMapLoader::addMap(MapAsset *info)
 bool DelayedMapLoader::isLoading()
 {
     for (int i = 0; i < mLoading.size(); i++) {
-        if (mLoading[i]->mapInfo->isEmpty())
+        if (mLoading[i]->mapAsset->isEmpty())
             return true;
     }
     return false;
 }
 
-void DelayedMapLoader::mapLoaded(MapAsset *mapInfo)
+void DelayedMapLoader::mapLoaded(MapAsset *mapAsset)
 {
     for (int i = 0; i < mLoading.size(); i++) {
         SubMapLoading *sml = mLoading[i];
-        if (sml->mapInfo == mapInfo) {
-            mLoaded += new SubMapLoading(mapInfo); // add reference
+        if (sml->mapAsset == mapAsset) {
+            mLoaded += new SubMapLoading(mapAsset); // add reference
             delete mLoading.takeAt(i);
             --i;
             // Keep going, could be duplicate submaps to load
@@ -1093,10 +1093,10 @@ void DelayedMapLoader::mapLoaded(MapAsset *mapInfo)
     }
 }
 
-void DelayedMapLoader::mapFailedToLoad(MapAsset *mapInfo)
+void DelayedMapLoader::mapFailedToLoad(MapAsset *mapAsset)
 {
     for (int i = 0; i < mLoading.size(); i++) {
-        if (mLoading[i]->mapInfo == mapInfo) {
+        if (mLoading[i]->mapAsset == mapAsset) {
             mError = MapManager::instance().errorString();
             delete mLoading.takeAt(i);
             --i;
@@ -1108,10 +1108,10 @@ void DelayedMapLoader::mapFailedToLoad(MapAsset *mapInfo)
 /////
 
 DelayedMapLoader::SubMapLoading::SubMapLoading(MapAsset *info) :
-    mapInfo(info), holdsReference(false)
+    mapAsset(info), holdsReference(false)
 {
-    if (mapInfo->map()) {
-        MapManager::instance().addReferenceToMap(mapInfo);
+    if (mapAsset->map()) {
+        MapManager::instance().addReferenceToMap(mapAsset);
         holdsReference = true;
     }
 }
@@ -1119,5 +1119,5 @@ DelayedMapLoader::SubMapLoading::SubMapLoading(MapAsset *info) :
 DelayedMapLoader::SubMapLoading::~SubMapLoading()
 {
     if (holdsReference)
-        MapManager::instance().removeReferenceToMap(mapInfo);
+        MapManager::instance().removeReferenceToMap(mapAsset);
 }

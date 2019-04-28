@@ -30,10 +30,10 @@ FileSystemWatcher::FileSystemWatcher(QObject *parent) :
     QObject(parent),
     mWatcher(new QFileSystemWatcher(this))
 {
-    connect(mWatcher, SIGNAL(fileChanged(QString)),
-            SIGNAL(fileChanged(QString)));
-    connect(mWatcher, SIGNAL(directoryChanged(QString)),
-            SIGNAL(directoryChanged(QString)));
+    connect(mWatcher, &QFileSystemWatcher::fileChanged,
+            this, &FileSystemWatcher::fileChanged);
+    connect(mWatcher, &QFileSystemWatcher::directoryChanged,
+            this, &FileSystemWatcher::directoryChanged);
 }
 
 void FileSystemWatcher::addPath(const QString &path)

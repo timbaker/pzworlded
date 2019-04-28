@@ -19,6 +19,7 @@
 
 #include "basegraphicsview.h"
 #include "cellscene.h"
+#include "mapasset.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "world.h"
@@ -74,22 +75,22 @@ void CellDocument::setScene(CellScene *scene)
     if (mCurrentLayerIndex == -1)
         setCurrentLevel(0);
 
-    connect(mWorldDocument, SIGNAL(cellContentsAboutToChange(WorldCell*)), SLOT(cellContentsAboutToChange(WorldCell*)));
-    connect(mWorldDocument, SIGNAL(cellContentsChanged(WorldCell*)), SLOT(cellContentsChanged(WorldCell*)));
-    connect(mWorldDocument, SIGNAL(cellMapFileAboutToChange(WorldCell*)), SLOT(cellMapFileAboutToChange(WorldCell*)));
-    connect(mWorldDocument, SIGNAL(cellMapFileChanged(WorldCell*)), SLOT(cellMapFileChanged(WorldCell*)));
+    connect(mWorldDocument, &WorldDocument::cellContentsAboutToChange, this, qOverload<WorldCell*>(&CellDocument::cellContentsAboutToChange));
+    connect(mWorldDocument, &WorldDocument::cellContentsChanged, this, qOverload<WorldCell*>(&CellDocument::cellContentsChanged));
+    connect(mWorldDocument, &WorldDocument::cellMapFileAboutToChange, this, qOverload<WorldCell*>(&CellDocument::cellMapFileAboutToChange));
+    connect(mWorldDocument, &WorldDocument::cellMapFileChanged, this, qOverload<WorldCell*>(&CellDocument::cellMapFileChanged));
 
-    connect(mWorldDocument, SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
-    connect(mWorldDocument, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(mWorldDocument, SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
+    connect(mWorldDocument, &WorldDocument::cellLotAdded, this, &CellDocument::cellLotAdded);
+    connect(mWorldDocument, &WorldDocument::cellLotAboutToBeRemoved, this, &CellDocument::cellLotAboutToBeRemoved);
+    connect(mWorldDocument, &WorldDocument::cellLotMoved, this, &CellDocument::cellLotMoved);
 
-    connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
-            SLOT(objectGroupAboutToBeRemoved(int)));
+    connect(mWorldDocument, &WorldDocument::objectGroupAboutToBeRemoved,
+            this, &CellDocument::objectGroupAboutToBeRemoved);
 
-    connect(MapManager::instancePtr(), SIGNAL(mapAboutToChange(MapInfo*)),
-            SLOT(mapAboutToChange(MapInfo*)));
-    connect(MapManager::instancePtr(), SIGNAL(mapChanged(MapInfo*)),
-            SLOT(mapChanged(MapInfo*)));
+    connect(MapManager::instancePtr(), &MapManager::mapAboutToChange,
+            this, &CellDocument::mapAboutToChange);
+    connect(MapManager::instancePtr(), &MapManager::mapChanged,
+            this, &CellDocument::mapChanged);
 }
 
 void CellDocument::setSelectedLots(const QList<WorldCellLot *> &selected)
@@ -322,15 +323,15 @@ void CellDocument::objectGroupAboutToBeRemoved(int index)
 }
 
 // Called by MapManager when an already-loaded TMX changes on disk
-void CellDocument::mapAboutToChange(MapAsset *mapInfo)
+void CellDocument::mapAboutToChange(MapAsset *mapAsset)
 {
-    if (scene()->mapAboutToChange(mapInfo))
+    if (scene()->mapAboutToChange(mapAsset))
         worldDocument()->emitCellMapFileAboutToChange(mCell);
 }
 
 // Called by MapManager when an already-loaded TMX changes on disk
-void CellDocument::mapChanged(MapAsset *mapInfo)
+void CellDocument::mapChanged(MapAsset *mapAsset)
 {
-    if (scene()->mapChanged(mapInfo))
+    if (scene()->mapChanged(mapAsset))
         worldDocument()->emitCellMapFileChanged(mCell);
 }

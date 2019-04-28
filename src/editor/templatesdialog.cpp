@@ -39,32 +39,32 @@ TemplatesDialog::TemplatesDialog(WorldDocument *worldDoc, QWidget *parent)
     setList();
 
     QListWidget *view = ui->templatesView;
-    connect(view->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
+    connect(view->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &TemplatesDialog::selectionChanged);
 
-    connect(ui->propertiesView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(displayDescription()));
-    connect(ui->propertiesView, SIGNAL(closeItem(QModelIndex)),
-            SLOT(closeItem(QModelIndex)));
+    connect(ui->propertiesView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &TemplatesDialog::displayDescription);
+    connect(ui->propertiesView, &PropertiesView::closeItem,
+            this, &TemplatesDialog::closeItem);
 
-    connect(ui->clearTemplate, SIGNAL(clicked()),
-            SLOT(clearTemplate()));
-    connect(ui->addTemplate, SIGNAL(clicked()),
-            SLOT(addTemplate()));
-    connect(ui->removeTemplate, SIGNAL(clicked()),
-            SLOT(removeSelectedTemplate()));
-    connect(ui->updateTemplate, SIGNAL(clicked()),
-            SLOT(updateSelectedTemplate()));
+    connect(ui->clearTemplate, &QAbstractButton::clicked,
+            this, &TemplatesDialog::clearTemplate);
+    connect(ui->addTemplate, &QAbstractButton::clicked,
+            this, &TemplatesDialog::addTemplate);
+    connect(ui->removeTemplate, &QAbstractButton::clicked,
+            this, &TemplatesDialog::removeSelectedTemplate);
+    connect(ui->updateTemplate, &QAbstractButton::clicked,
+            this, &TemplatesDialog::updateSelectedTemplate);
 
-    connect(ui->templateName, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
-    connect(ui->templateDesc, SIGNAL(textChanged()), SLOT(synchButtons()));
+    connect(ui->templateName, &QLineEdit::textChanged, this, &TemplatesDialog::synchButtons);
+    connect(ui->templateDesc, &QPlainTextEdit::textChanged, this, &TemplatesDialog::synchButtons);
 
-    connect(mWorldDoc, SIGNAL(templateAboutToBeRemoved(int)),
-            SLOT(templateAboutToBeRemoved(int)));
-    connect(mWorldDoc, SIGNAL(templateAdded(int)),
-            SLOT(templateAdded(int)));
-    connect(mWorldDoc, SIGNAL(templateChanged(PropertyTemplate*)),
-            SLOT(templateChanged(PropertyTemplate*)));
+    connect(mWorldDoc, qOverload<int>(&WorldDocument::templateAboutToBeRemoved),
+            this, qOverload<int>(&TemplatesDialog::templateAboutToBeRemoved));
+    connect(mWorldDoc, qOverload<int>(&WorldDocument::templateAdded),
+            this, &TemplatesDialog::templateAdded);
+    connect(mWorldDoc, &WorldDocument::templateChanged,
+            this, &TemplatesDialog::templateChanged);
 
     synchButtons();
 }

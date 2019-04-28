@@ -50,11 +50,13 @@ using namespace SharedTools;
 #include <QFile>
 #include <QFileInfo>
 
+namespace {
 #ifdef QT_NO_DEBUG
 inline QNoDebug noise() { return QNoDebug(); }
 #else
 inline QDebug noise() { return QDebug(QtDebugMsg); }
 #endif
+}
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -70,13 +72,13 @@ MapInfoManager::MapInfoManager() :
     mReferenceEpoch(0)
 #endif
 {
-    connect(mFileSystemWatcher, SIGNAL(fileChanged(QString)),
-            SLOT(fileChanged(QString)));
+    connect(mFileSystemWatcher, &FileSystemWatcher::fileChanged,
+            this, &MapInfoManager::fileChanged);
 
     mChangedFilesTimer.setInterval(500);
     mChangedFilesTimer.setSingleShot(true);
-    connect(&mChangedFilesTimer, SIGNAL(timeout()),
-            SLOT(fileChangedTimeout()));
+    connect(&mChangedFilesTimer, &QTimer::timeout,
+            this, &MapInfoManager::fileChangedTimeout);
 
     qRegisterMetaType<MapInfo*>("MapInfo*");
 
@@ -370,12 +372,12 @@ void MapInfoManager::fileChangedTimeout()
 void MapInfoManager::mapLoadedByThread(MapInfo *mapInfo)
 {
     if (mapInfo != mWaitingForMapInfo && mDeferralDepth > 0) {
-        noise() << "MAP LOADED BY THREAD - DEFERR" << mapInfo->path();
+        noise() << "MAPINFO LOADED BY THREAD - DEFERR" << mapInfo->path();
         mDeferredMaps += MapDeferral(mapInfo);
         return;
     }
 
-    noise() << "MAP LOADED BY THREAD" << mapInfo->path();
+    noise() << "MAPINFO LOADED BY THREAD" << mapInfo->path();
 
     MapInfoManagerDeferral deferral;
 
@@ -415,7 +417,7 @@ void MapInfoManager::deferThreadResults(bool defer)
 void MapInfoManager::processDeferrals()
 {
     if (mDeferralDepth > 0) {
-        noise() << "processDeferrals deferred - FML";
+        noise() << "MapInfoManager::processDeferrals deferred - FML";
         return;
     }
     QList<MapDeferral> deferrals = mDeferredMaps;

@@ -116,7 +116,7 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 #endif
     ZTileLayerGroup::addTileLayer(layer, index);
 #ifndef WORLDED
-    if (!mOwner->mapInfo()->isBeingEdited())
+    if (!mOwner->mapAsset()->isBeingEdited())
         layer->setGroup(oldGroup);
 #endif
 
@@ -126,13 +126,13 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 
     index = mLayers.indexOf(layer);
     mVisibleLayers.insert(index, layer->isVisible());
-    mLayerOpacity.insert(index, mOwner->mapInfo()->isBeingEdited()
+    mLayerOpacity.insert(index, mOwner->mapAsset()->isBeingEdited()
                          ? layer->opacity() : 1.0f);
 
     // To optimize drawing of submaps, remember which layers are totally empty.
     // But don't do this for the top-level map (the one being edited).
     // TileLayer::isEmpty() is SLOW, it's why I'm caching it.
-    bool empty = mOwner->mapInfo()->isBeingEdited()
+    bool empty = mOwner->mapAsset()->isBeingEdited()
             ? false
             : layer->isEmpty() || layer->name().contains(QLatin1String("NoRender"));
     mEmptyLayers.insert(index, empty);
@@ -173,7 +173,7 @@ void CompositeLayerGroup::removeTileLayer(TileLayer *layer)
 #endif
     ZTileLayerGroup::removeTileLayer(layer);
 #ifndef WORLDED
-    if (!mOwner->mapInfo()->isBeingEdited())
+    if (!mOwner->mapAsset()->isBeingEdited())
         layer->setGroup(oldGroup);
 #endif
 
@@ -322,7 +322,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
 
     // Overwrite map cells with sub-map cells at this location.
     // Chop off sub-map cells that aren't in the root- or adjacent-map's bounds.
-    QRect rootBounds(root->originRecursive(), root->mapInfo()->size());
+    QRect rootBounds(root->originRecursive(), root->mapAsset()->size());
     bool inRoot = (rootBounds.size() != QSize(300, 300)) || rootBounds.contains(rootPos);
     foreach (const SubMapLayers& subMapLayer, mPreparedSubMapLayers) {
         if (!inRoot && !subMapLayer.mSubMap->isAdjacentMap())
@@ -802,13 +802,13 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer)
 
 ///// ///// ///// ///// /////
 
-// FIXME: If the MapDocument is saved to a new name, this MapInfo should be replaced with a new one
-MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
+// FIXME: If the MapDocument is saved to a new name, this MapAsset should be replaced with a new one
+MapComposite::MapComposite(MapAsset *mapAsset, Map::Orientation orientRender,
                            MapComposite *parent, const QPoint &positionInParent,
                            int levelOffset)
     : QObject()
-    , mMapInfo(mapInfo)
-    , mMap(mapInfo->map())
+    , mMapAsset(mapAsset)
+    , mMap(mapAsset->map())
 #ifdef BUILDINGED
     , mBlendOverMap(nullptr)
 #endif
@@ -828,7 +828,7 @@ MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
     , mSuppressLevel(0)
 {
 #ifdef WORLDED
-    MapManager::instance().addReferenceToMap(mMapInfo);
+    MapManager::instance().addReferenceToMap(mMapAsset);
 #endif
     if (mOrientRender == Map::Unknown)
         mOrientRender = mMap->orientation();
@@ -851,7 +851,7 @@ MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
                 if (!mLayerGroups.contains(level))
                     mLayerGroups[level] = new CompositeLayerGroup(this, level);
                 mLayerGroups[level]->addTileLayer(tl, index);
-                if (!mapInfo->isBeingEdited())
+                if (!mapAsset->isBeingEdited())
                     mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
             }
         }
@@ -865,36 +865,36 @@ MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
 
     // Load lots, but only if this is not the map being edited (that is handled
     // by the LotManager).
-    if (!mapInfo->isBeingEdited()) {
+    if (!mapAsset->isBeingEdited()) {
         for (ObjectGroup *objectGroup : mMap->objectGroups()) {
             int levelOffset;
             (void) levelForLayer(objectGroup, &levelOffset);
             for (MapObject *object : objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
 #if 1
-                    MapAsset *subMapInfo = MapManager::instance().loadMap(
-                                object->type(), QFileInfo(mMapInfo->path()).absolutePath(),
+                    MapAsset *subMapAsset = MapManager::instance().loadMap(
+                                object->type(), QFileInfo(mMapAsset->path()).absolutePath(),
                                 true, MapManager::PriorityLow);
 
-                    if (!subMapInfo) {
-                        qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
+                    if (!subMapAsset) {
+                        qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapAsset->path();
 #if 1 // FIXME: attempt to load this if mapsDirectory changes
-                        subMapInfo = MapManager::instance().getPlaceholderMap(
+                        subMapAsset = MapManager::instance().getPlaceholderMap(
                                     object->type(), 32, 32); // FIXME: calculate map size
 #endif
                     }
-                    if (subMapInfo) {
-                        if (subMapInfo->isEmpty()) {
-                            connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
-                                    SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
-                            connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
-                                    SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
-                            mSubMapsLoading += SubMapLoading(subMapInfo,
+                    if (subMapAsset) {
+                        if (subMapAsset->isEmpty()) {
+                            connect(MapManager::instancePtr(), &MapManager::mapLoaded,
+                                    this, &MapComposite::mapLoaded, Qt::UniqueConnection);
+                            connect(MapManager::instancePtr(), &MapManager::mapFailedToLoad,
+                                    this, &MapComposite::mapFailedToLoad, Qt::UniqueConnection);
+                            mSubMapsLoading += SubMapLoading(subMapAsset,
                                                              object->position().toPoint()
                                                              + mOrientAdjustPos * levelOffset,
                                                              levelOffset);
                         } else {
-                            addMap(subMapInfo, object->position().toPoint()
+                            addMap(subMapAsset, object->position().toPoint()
                                    + mOrientAdjustPos * levelOffset,
                                    levelOffset, true);
                         }
@@ -928,7 +928,7 @@ MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
     mMaxLevel = 0;
 
     for (CompositeLayerGroup *layerGroup : mLayerGroups) {
-        if (!mMapInfo->isBeingEdited())
+        if (!mMapAsset->isBeingEdited())
             layerGroup->synch();
         if (layerGroup->level() < mMinLevel)
             mMinLevel = layerGroup->level();
@@ -944,7 +944,7 @@ MapComposite::MapComposite(MapAsset *mapInfo, Map::Orientation orientRender,
     if (mMinLevel == 10000)
         mMinLevel = 0;
 #ifdef WORLDED
-    if (!mParent && !mMapInfo->isBeingEdited())
+    if (!mParent && !mMapAsset->isBeingEdited())
         mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVELS - 1);
 #endif // WORLDED
 
@@ -969,8 +969,8 @@ MapComposite::~MapComposite()
     qDeleteAll(mSubMaps);
     qDeleteAll(mLayerGroups);
 #ifdef WORLDED
-    if (mMapInfo)
-        MapManager::instance().removeReferenceToMap(mMapInfo);
+    if (mMapAsset)
+        MapManager::instance().removeReferenceToMap(mMapAsset);
 #endif
 }
 
@@ -994,10 +994,10 @@ bool MapComposite::levelForLayer(Layer *layer, int *levelPtr)
     return levelForLayer(layer->name(), levelPtr);
 }
 
-MapComposite *MapComposite::addMap(MapAsset *mapInfo, const QPoint &pos,
+MapComposite *MapComposite::addMap(MapAsset *mapAsset, const QPoint &pos,
                                    int levelOffset, bool creating)
 {
-    MapComposite *subMap = new MapComposite(mapInfo, mOrientRender, this, pos, levelOffset);
+    MapComposite *subMap = new MapComposite(mapAsset, mOrientRender, this, pos, levelOffset);
     mSubMaps.append(subMap);
 
     if (creating)
@@ -1125,7 +1125,7 @@ void MapComposite::removeLayerFromGroup(int index)
     if (TileLayer *tl = layer->asTileLayer()) {
 #if 1
         // Unused hack for MiniMapScene
-        if (!mMapInfo->isBeingEdited()) {
+        if (!mMapAsset->isBeingEdited()) {
             if (CompositeLayerGroup *layerGroup = tileLayersForLevel(tl->level()))
                 layerGroup->removeTileLayer(tl);
             return;
@@ -1212,7 +1212,7 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
         // When setting the bounds of the scene, make sure the highest level is included
         // in the sceneRect() so the grid won't be cut off.
         int maxLevel = levelRecursive() + mMaxLevel;
-        if (mParent /*!mMapInfo->isBeingEdited()*/) {
+        if (mParent /*!mMapAsset->isBeingEdited()*/) {
             maxLevel = levelRecursive();
             foreach (CompositeLayerGroup *layerGroup, mSortedLayerGroups) {
                 if (!layerGroup->bounds().isEmpty())
@@ -1351,10 +1351,10 @@ MapComposite::ZOrderList MapComposite::zOrder()
 // When 2 TileZeds are running, TZA has main map, TZB has lot map, and lot map
 // is saved, TZA MapImageManager puts up PROGRESS dialog, causing the scene to
 // be redrawn before the MapComposites have been updated.
-bool MapComposite::mapAboutToChange(MapAsset *mapInfo)
+bool MapComposite::mapAboutToChange(MapAsset *mapAsset)
 {
     bool affected = false;
-    if (mapInfo == mMapInfo) {
+    if (mapAsset == mMapAsset) {
         foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
             while (layerGroup->layerCount())
                 layerGroup->removeTileLayer(layerGroup->layers().first());
@@ -1362,7 +1362,7 @@ bool MapComposite::mapAboutToChange(MapAsset *mapInfo)
         affected = true;
     }
     foreach (MapComposite *subMap, mSubMaps) {
-        if (subMap->mapAboutToChange(mapInfo)) {
+        if (subMap->mapAboutToChange(mapAsset)) {
             affected = true;
         }
     }
@@ -1380,16 +1380,16 @@ bool MapComposite::mapAboutToChange(MapAsset *mapInfo)
 // its file changing on disk or because a building's map was affected by
 // changing tilesets.
 // Returns true if this map or any sub-map is affected.
-bool MapComposite::mapChanged(MapAsset *mapInfo)
+bool MapComposite::mapChanged(MapAsset *mapAsset)
 {
-    if (mapInfo == mMapInfo) {
+    if (mapAsset == mMapAsset) {
         recreate();
         return true;
     }
 
     bool changed = false;
     foreach (MapComposite *subMap, mSubMaps) {
-        if (subMap->mapChanged(mapInfo)) {
+        if (subMap->mapChanged(mapAsset)) {
             ensureMaxLevels(subMap->levelOffset() + subMap->maxLevel());
             if (!changed) {
                 foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
@@ -1436,7 +1436,7 @@ void MapComposite::synch()
     }
 }
 
-void MapComposite::setAdjacentMap(int x, int y, MapAsset *mapInfo)
+void MapComposite::setAdjacentMap(int x, int y, MapAsset *mapAsset)
 {
     int index = (x + 1) + (y + 1) * 3;
     if (index < 0 || index == 4 || index > 8) {
@@ -1449,18 +1449,18 @@ void MapComposite::setAdjacentMap(int x, int y, MapAsset *mapInfo)
         removeMap(mAdjacentMaps[index]);
         mAdjacentMaps[index] = 0;
     }
-    if (!mapInfo)
+    if (!mapAsset)
         return;
     QPoint pos;
     switch (x) {
-    case -1: pos.setX(-mapInfo->width()); break;
-    case 1: pos.setX(mMapInfo->width()); break;
+    case -1: pos.setX(-mapAsset->width()); break;
+    case 1: pos.setX(mMapAsset->width()); break;
     }
     switch (y) {
-    case -1: pos.setY(-mapInfo->height()); break;
-    case 1: pos.setY(mMapInfo->height()); break;
+    case -1: pos.setY(-mapAsset->height()); break;
+    case 1: pos.setY(mMapAsset->height()); break;
     }
-    mAdjacentMaps[index] = addMap(mapInfo, pos, 0, false);
+    mAdjacentMaps[index] = addMap(mapAsset, pos, 0, false);
     mAdjacentMaps[index]->mIsAdjacentMap = true;
 }
 
@@ -1497,7 +1497,7 @@ void MapComposite::recreate()
     delete mRoadLayer0;
     delete mRoadLayer1;
 #endif // ROAD_CRUD
-    mMap = mMapInfo->map();
+    mMap = mMapAsset->map();
     mOrientAdjustPos = mOrientAdjustTiles = QPoint();
     mAdjacentMaps.clear();
 
@@ -1522,7 +1522,7 @@ void MapComposite::recreate()
                 if (!mLayerGroups.contains(level))
                     mLayerGroups[level] = new CompositeLayerGroup(this, level);
                 mLayerGroups[level]->addTileLayer(tl, index);
-                if (!mMapInfo->isBeingEdited())
+                if (!mMapAsset->isBeingEdited())
                     mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
             }
         }
@@ -1536,7 +1536,7 @@ void MapComposite::recreate()
 
     // Load lots, but only if this is not the map being edited (that is handled
     // by the LotManager).
-    if (!mMapInfo->isBeingEdited()) {
+    if (!mMapAsset->isBeingEdited()) {
         foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
             int levelOffset;
             (void) levelForLayer(objectGroup, &levelOffset);
@@ -1544,28 +1544,28 @@ void MapComposite::recreate()
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,
                     // then any sub-maps of its own will lose their level offsets.
-                    MapAsset *subMapInfo = MapManager::instance().loadMap(object->type(),
-                                                                          QFileInfo(mMapInfo->path()).absolutePath(),
+                    MapAsset *subMapAsset = MapManager::instance().loadMap(object->type(),
+                                                                          QFileInfo(mMapAsset->path()).absolutePath(),
                                                                           true, MapManager::PriorityLow);
-                    if (!subMapInfo) {
-                        qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapInfo->path();
+                    if (!subMapAsset) {
+                        qDebug() << "failed to find sub-map" << object->type() << "inside map" << mMapAsset->path();
 #if 1 // FIXME: attempt to load this if mapsDirectory changes
-                        subMapInfo = MapManager::instance().getPlaceholderMap(object->type(),
+                        subMapAsset = MapManager::instance().getPlaceholderMap(object->type(),
                                                                                32, 32); // FIXME: calculate map size
 #endif
                     }
-                    if (subMapInfo) {
-                        if (subMapInfo->isEmpty()) {
-                            connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
-                                    SLOT(mapLoaded(MapInfo*)), Qt::UniqueConnection);
-                            connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
-                                    SLOT(mapFailedToLoad(MapInfo*)), Qt::UniqueConnection);
-                            mSubMapsLoading += SubMapLoading(subMapInfo,
+                    if (subMapAsset) {
+                        if (subMapAsset->isEmpty()) {
+                            connect(MapManager::instancePtr(), &MapManager::mapLoaded,
+                                    this, &MapComposite::mapLoaded, Qt::UniqueConnection);
+                            connect(MapManager::instancePtr(), &MapManager::mapFailedToLoad,
+                                    this, &MapComposite::mapFailedToLoad, Qt::UniqueConnection);
+                            mSubMapsLoading += SubMapLoading(subMapAsset,
                                                              object->position().toPoint()
                                                              + mOrientAdjustPos * levelOffset,
                                                              levelOffset);
                         } else {
-                            addMap(subMapInfo, object->position().toPoint()
+                            addMap(subMapAsset, object->position().toPoint()
                                    + mOrientAdjustPos * levelOffset,
                                    levelOffset, true);
                         }
@@ -1579,7 +1579,7 @@ void MapComposite::recreate()
     mMaxLevel = 0;
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
-        if (!mMapInfo->isBeingEdited())
+        if (!mMapAsset->isBeingEdited())
             layerGroup->synch();
         if (layerGroup->level() < mMinLevel)
             mMinLevel = layerGroup->level();
@@ -1593,7 +1593,7 @@ void MapComposite::recreate()
     if (mMinLevel == 10000)
         mMinLevel = 0;
 #ifdef WORLDED
-    if (!mParent && !mMapInfo->isBeingEdited())
+    if (!mParent && !mMapAsset->isBeingEdited())
         mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVELS - 1);
 #endif
 
@@ -1633,7 +1633,7 @@ QStringList MapComposite::getMapFileNames() const
 {
     QStringList result;
 
-    result += mMapInfo->path();
+    result += mMapAsset->path();
     foreach (MapComposite *subMap, mSubMaps)
         foreach (QString path, subMap->getMapFileNames())
             if (!result.contains(path))
@@ -1647,13 +1647,13 @@ void MapComposite::bmpBlenderLayersRecreated()
     mLayerGroups[0]->setBmpBlendLayers(mBmpBlender->tileLayers());
 }
 
-void MapComposite::mapLoaded(MapAsset *mapInfo)
+void MapComposite::mapLoaded(MapAsset *mapAsset)
 {
     bool synch = false;
 
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
-        if (mSubMapsLoading[i].mapInfo == mapInfo) {
-            addMap(mapInfo, mSubMapsLoading[i].pos, mSubMapsLoading[i].level);
+        if (mSubMapsLoading[i].mapAsset == mapAsset) {
+            addMap(mapAsset, mSubMapsLoading[i].pos, mSubMapsLoading[i].level);
             mSubMapsLoading.removeAt(i);
             --i;
             // Keep going, could be duplicate submaps to load
@@ -1674,10 +1674,10 @@ void MapComposite::mapLoaded(MapAsset *mapInfo)
     }
 }
 
-void MapComposite::mapFailedToLoad(MapAsset *mapInfo)
+void MapComposite::mapFailedToLoad(MapAsset *mapAsset)
 {
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
-        if (mSubMapsLoading[i].mapInfo == mapInfo) {
+        if (mSubMapsLoading[i].mapAsset == mapAsset) {
             mSubMapsLoading.removeAt(i);
             --i;
             // Keep going, could be duplicate submaps to load

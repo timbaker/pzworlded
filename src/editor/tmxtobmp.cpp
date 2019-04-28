@@ -253,28 +253,28 @@ bool TMXToBMP::generateCell(WorldCell *cell)
         return true;
     }
 
-    MapAsset *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
+    MapAsset *mapAsset = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        mWorldDoc->fileName());
-    if (!mapInfo) {
+    if (!mapAsset) {
         mError = MapManager::instance().errorString();
         return false;
     }
 
-    MapManager::instance().addReferenceToMap(mapInfo);
+    MapManager::instance().addReferenceToMap(mapAsset);
 
     QRgb black = qRgba(0, 0, 0, 255);
     QRgb transparent = qRgba(0, 0, 0, 0);
 
     if (mDoMain) {
         QPainter painter(&images->mBmp);
-        painter.drawImage((cell->pos() - images->mBounds.topLeft()) * 300, mapInfo->map()->bmpMain().image());
+        painter.drawImage((cell->pos() - images->mBounds.topLeft()) * 300, mapAsset->map()->bmpMain().image());
         mModifiedImages.insert(images);
     }
 
     if (mDoVeg) {
         QPainter painter(&images->mBmpVeg);
         QPoint p = (cell->pos() - images->mBounds.topLeft()) * 300;
-        painter.drawImage(p, mapInfo->map()->bmpVeg().image());
+        painter.drawImage(p, mapAsset->map()->bmpVeg().image());
         for (int y = 0; y < 300; y++) {
             for (int x = 0; x < 300; x++) {
                 if (images->mBmpVeg.pixel(p + QPoint(x, y)) == black)
@@ -286,18 +286,18 @@ bool TMXToBMP::generateCell(WorldCell *cell)
 
     bool ok = true;
     if (mDoBldg) {
-        ok = doBuildings(cell, mapInfo);
+        ok = doBuildings(cell, mapAsset);
     }
 
-    MapManager::instance().removeReferenceToMap(mapInfo);
+    MapManager::instance().removeReferenceToMap(mapAsset);
 
     return ok;
 }
 
-bool TMXToBMP::doBuildings(WorldCell *cell, MapAsset *mapInfo)
+bool TMXToBMP::doBuildings(WorldCell *cell, MapAsset *mapAsset)
 {
     DelayedMapLoader mapLoader;
-    mapLoader.addMap(mapInfo);
+    mapLoader.addMap(mapAsset);
 
     foreach (WorldCellLot *lot, cell->lots()) {
         if (MapAsset *info = MapManager::instance().loadMap(lot->mapName(),
@@ -312,10 +312,10 @@ bool TMXToBMP::doBuildings(WorldCell *cell, MapAsset *mapInfo)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapInfo->isEmpty())
+    while (mapAsset->isEmpty())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    MapComposite staticMapComposite(mapInfo);
+    MapComposite staticMapComposite(mapAsset);
     MapComposite *mapComposite = &staticMapComposite;
     while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);

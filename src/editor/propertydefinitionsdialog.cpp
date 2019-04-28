@@ -39,32 +39,32 @@ PropertyDefinitionsDialog::PropertyDefinitionsDialog(WorldDocument *worldDoc, QW
     ui->buttonsLayout->insertWidget(0, mUndoRedoButtons->undoButton());
     ui->buttonsLayout->insertWidget(1, mUndoRedoButtons->redoButton());
 
-    connect(ui->definitionsList, SIGNAL(itemSelectionChanged()), SLOT(definitionSelected()));
-    connect(ui->addDefButton, SIGNAL(clicked()), SLOT(addDefinition()));
-    connect(ui->updateDefButton, SIGNAL(clicked()), SLOT(updateDefinition()));
-    connect(ui->removeDefButton, SIGNAL(clicked()), SLOT(removeDefinition()));
-    connect(ui->clearDefButton, SIGNAL(clicked()), SLOT(clearUI()));
+    connect(ui->definitionsList, &QTreeWidget::itemSelectionChanged, this, &PropertyDefinitionsDialog::definitionSelected);
+    connect(ui->addDefButton, &QAbstractButton::clicked, this, &PropertyDefinitionsDialog::addDefinition);
+    connect(ui->updateDefButton, &QAbstractButton::clicked, this, &PropertyDefinitionsDialog::updateDefinition);
+    connect(ui->removeDefButton, &QAbstractButton::clicked, this, &PropertyDefinitionsDialog::removeDefinition);
+    connect(ui->clearDefButton, &QAbstractButton::clicked, this, &PropertyDefinitionsDialog::clearUI);
 
-    connect(ui->defNameEdit, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
-    connect(ui->defDefaultEdit, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
-    connect(ui->defDescEdit, SIGNAL(textChanged()), SLOT(synchButtons()));
+    connect(ui->defNameEdit, &QLineEdit::textChanged, this, &PropertyDefinitionsDialog::synchButtons);
+    connect(ui->defDefaultEdit, &QLineEdit::textChanged, this, &PropertyDefinitionsDialog::synchButtons);
+    connect(ui->defDescEdit, &QPlainTextEdit::textChanged, this, &PropertyDefinitionsDialog::synchButtons);
 
-    connect(ui->enumCombo, SIGNAL(currentIndexChanged(int)), SLOT(currentEnumChanged()));
-    connect(ui->enumEdit, SIGNAL(clicked()), SLOT(editEnums()));
+    connect(ui->enumCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this]{ currentEnumChanged(); });
+    connect(ui->enumEdit, &QAbstractButton::clicked, this, &PropertyDefinitionsDialog::editEnums);
 
-    connect(mWorldDoc, SIGNAL(propertyDefinitionAdded(PropertyDef*,int)),
-            SLOT(propertyDefinitionAdded(PropertyDef*,int)));
-    connect(mWorldDoc, SIGNAL(propertyDefinitionAboutToBeRemoved(int)),
-            SLOT(propertyDefinitionAboutToBeRemoved(int)));
-    connect(mWorldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
-            SLOT(propertyDefinitionChanged(PropertyDef*)));
+    connect(mWorldDoc, &WorldDocument::propertyDefinitionAdded,
+            this, &PropertyDefinitionsDialog::propertyDefinitionAdded);
+    connect(mWorldDoc, &WorldDocument::propertyDefinitionAboutToBeRemoved,
+            this, &PropertyDefinitionsDialog::propertyDefinitionAboutToBeRemoved);
+    connect(mWorldDoc, &WorldDocument::propertyDefinitionChanged,
+            this, &PropertyDefinitionsDialog::propertyDefinitionChanged);
 
-    connect(mWorldDoc, SIGNAL(propertyEnumAdded(int)),
-            SLOT(propertyEnumAdded(int)));
-    connect(mWorldDoc, SIGNAL(propertyEnumChanged(PropertyEnum*)),
-            SLOT(propertyEnumChanged(PropertyEnum*)));
-    connect(mWorldDoc, SIGNAL(propertyEnumAboutToBeRemoved(int)),
-            SLOT(propertyEnumAboutToBeRemoved(int)));
+    connect(mWorldDoc, &WorldDocument::propertyEnumAdded,
+            this, &PropertyDefinitionsDialog::propertyEnumAdded);
+    connect(mWorldDoc, &WorldDocument::propertyEnumChanged,
+            this, &PropertyDefinitionsDialog::propertyEnumChanged);
+    connect(mWorldDoc, &WorldDocument::propertyEnumAboutToBeRemoved,
+            this, &PropertyDefinitionsDialog::propertyEnumAboutToBeRemoved);
 
     setEnums();
     setList();

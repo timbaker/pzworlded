@@ -74,17 +74,17 @@ WorldMiniMapItem::WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent) :
         }
     }
 
-    connect(mScene->worldDocument(), SIGNAL(worldResized(QSize)),
-            SLOT(worldResized()));
-    connect(mScene->worldDocument(), SIGNAL(bmpAdded(int)),
-            SLOT(bmpAdded(int)));
-    connect(mScene->worldDocument(), SIGNAL(bmpAboutToBeRemoved(int)),
-            SLOT(bmpAboutToBeRemoved(int)));
-    connect(mScene->worldDocument(), SIGNAL(bmpCoordsChanged(int)),
-            SLOT(bmpCoordsChanged(int)));
+    connect(mScene->worldDocument(), &WorldDocument::worldResized,
+            this, &WorldMiniMapItem::worldResized);
+    connect(mScene->worldDocument(), &WorldDocument::bmpAdded,
+            this, &WorldMiniMapItem::bmpAdded);
+    connect(mScene->worldDocument(), &WorldDocument::bmpAboutToBeRemoved,
+            this, &WorldMiniMapItem::bmpAboutToBeRemoved);
+    connect(mScene->worldDocument(), &WorldDocument::bmpCoordsChanged,
+            this, &WorldMiniMapItem::bmpCoordsChanged);
 
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(showOtherWorldsChanged(bool)), SLOT(showOtherWorlds(bool)));
+    connect(prefs, &Preferences::showOtherWorldsChanged, this, &WorldMiniMapItem::showOtherWorlds);
 }
 
 QRectF WorldMiniMapItem::boundingRect() const

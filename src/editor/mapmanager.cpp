@@ -52,11 +52,13 @@ using namespace SharedTools;
 #include <QFile>
 #include <QFileInfo>
 
+namespace {
 #ifdef QT_NO_DEBUG
 inline QNoDebug noise() { return QNoDebug(); }
 #else
 inline QDebug noise() { return QDebug(QtDebugMsg); }
 #endif
+}
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -72,20 +74,20 @@ MapManager::MapManager() :
     mReferenceEpoch(0)
 #endif
 {
-    connect(mFileSystemWatcher, SIGNAL(fileChanged(QString)),
-            SLOT(fileChanged(QString)));
+    connect(mFileSystemWatcher, &FileSystemWatcher::fileChanged,
+            this, &MapManager::fileChanged);
 
     mChangedFilesTimer.setInterval(500);
     mChangedFilesTimer.setSingleShot(true);
-    connect(&mChangedFilesTimer, SIGNAL(timeout()),
-            SLOT(fileChangedTimeout()));
+    connect(&mChangedFilesTimer, &QTimer::timeout,
+            this, &MapManager::fileChangedTimeout);
 
     qRegisterMetaType<MapInfo*>("MapInfo*");
 
-    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetAdded(Tiled::Tileset*)),
-            SLOT(metaTilesetAdded(Tiled::Tileset*)));
-    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetRemoved(Tiled::Tileset*)),
-            SLOT(metaTilesetRemoved(Tiled::Tileset*)));
+    connect(TileMetaInfoMgr::instance(), &TileMetaInfoMgr::tilesetAdded,
+            this, &MapManager::metaTilesetAdded);
+    connect(TileMetaInfoMgr::instance(), &TileMetaInfoMgr::tilesetRemoved,
+            this, &MapManager::metaTilesetRemoved);
 
     connect(IdleTasks::instancePtr(), &IdleTasks::idleTime, this, &MapManager::processDeferrals);
 }
@@ -95,8 +97,8 @@ MapManager::~MapManager()
     TilesetManager *tilesetManager = TilesetManager::instancePtr();
 
     for (Asset* asset : m_assets) {
-        MapAsset *mapInfo = static_cast<MapAsset*>(asset);
-        if (Tiled::Map *map = mapInfo->map()) {
+        MapAsset *mapAsset = static_cast<MapAsset*>(asset);
+        if (Tiled::Map *map = mapAsset->map()) {
             tilesetManager->removeReferences(map->tilesets());
             delete map;
         }
@@ -157,77 +159,82 @@ MapAsset *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
         return nullptr;
     }
 
-    MapAsset* mapInfo = static_cast<MapAsset*>(get(mapFilePath));
-    if (mapInfo != nullptr) {
-        if (mapInfo->isReady()) {
-            return mapInfo;
+    MapAsset* mapAsset = static_cast<MapAsset*>(get(mapFilePath));
+    if (mapAsset != nullptr) {
+        if (mapAsset->isReady()) {
+            return mapAsset;
+        }
+        if (mapAsset->isFailure()) {
+            return nullptr;
         }
     }
 
-    QFileInfo fileInfoMap(mapFilePath);
+    // getRefCount() is zero if the asset was previously loaded, then unloaded
+    if (mapAsset == nullptr || mapAsset->getRefCount() == 0)
+    {
+        mapAsset = static_cast<MapAsset*>(load(mapFilePath));
+    }
 
-    if (mapInfo == nullptr || mapInfo->isFailure())
-        return nullptr;
-
-    if (mapInfo->isEmpty()) {
+    if (mapAsset->isEmpty()) {
         if (!asynch) {
             noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
             Q_ASSERT(mWaitingForMapInfo == nullptr);
-            mWaitingForMapInfo = mapInfo;
+            mWaitingForMapInfo = mapAsset;
             for (int i = 0; i < mDeferredMaps.size(); i++) {
                 MapDeferral md = mDeferredMaps[i];
-                if (md.mapAsset == mapInfo) {
+                if (md.mapAsset == mapAsset) {
                     mDeferredMaps.removeAt(i);
                     mapLoadedByThread(md.mapAsset);
                     break;
                 }
             }
             IdleTasks::instance().blockTasks(true);
-            while ( mapInfo->isEmpty()) {
+            while ( mapAsset->isEmpty()) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
                 AssetTaskManager::instance().updateAsyncTransactions();
             }
             IdleTasks::instance().blockTasks(false);
             mWaitingForMapInfo = nullptr;
-            if (!mapInfo->map())
+            if (!mapAsset->map())
                 return nullptr;
         }
-        return mapInfo;
+        return mapAsset;
     }
 
-    Q_ASSERT(mapInfo->mMap == nullptr);
+    Q_ASSERT(mapAsset->mMap == nullptr);
 
     if (asynch)
-        return mapInfo;
+        return mapAsset;
 
     // Wow.  Had a map *finish loading* after the PROGRESS call below displayed
     // the dialog and started processing events but before the qApp->processEvents()
     // call below, resulting in a hang because mWaitingForMapInfo wasn't set till
     // after the PROGRESS call.
     Q_ASSERT(mWaitingForMapInfo == nullptr);
-    mWaitingForMapInfo = mapInfo;
+    mWaitingForMapInfo = mapAsset;
 
+    QFileInfo fileInfoMap(mapFilePath);
     PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
 
     noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
     for (int i = 0; i < mDeferredMaps.size(); i++) {
         MapDeferral md = mDeferredMaps[i];
-        if (md.mapAsset == mapInfo) {
+        if (md.mapAsset == mapAsset) {
             mDeferredMaps.removeAt(i);
             mapLoadedByThread(md.mapAsset);
             break;
         }
     }
     IdleTasks::instance().blockTasks(true);
-    while (mapInfo->isEmpty()) {
+    while (mapAsset->isEmpty()) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         AssetTaskManager::instance().updateAsyncTransactions();
     }
     IdleTasks::instance().blockTasks(false);
 
     mWaitingForMapInfo = nullptr;
-    if (mapInfo->map())
-        return mapInfo;
+    if (mapAsset->map())
+        return mapAsset;
     return nullptr;
 }
 
@@ -254,9 +261,9 @@ MapAsset *MapManager::newFromMap(Tiled::Map *map, const QString &mapFilePath)
 MapAsset *MapManager::getEmptyMap()
 {
     QString mapFilePath(QLatin1String("<empty>"));
-    if (MapAsset *mapInfo = static_cast<MapAsset*>(get(mapFilePath)))
+    if (MapAsset *mapAsset = static_cast<MapAsset*>(get(mapFilePath)))
     {
-        return mapInfo;
+        return mapAsset;
     }
 
     Map *map = new Map(Map::LevelIsometric, 300, 300, 64, 32);
@@ -368,13 +375,13 @@ void MapManager::newMapFileCreated(const QString &path)
     // read the new map and allow the cell-scene to update itself.
     // This code is 90% the same as fileChangedTimeout().
     for (Asset* asset : m_assets) {
-        MapAsset* mapInfo = static_cast<MapAsset*>(asset);
-        if (!mapInfo->mPlaceholder || !mapInfo->mMap)
+        MapAsset* mapAsset = static_cast<MapAsset*>(asset);
+        if (!mapAsset->mPlaceholder || !mapAsset->mMap)
             continue;
-        if (QFileInfo(mapInfo->path()) != QFileInfo(path))
+        if (QFileInfo(mapAsset->path()) != QFileInfo(path))
             continue;
-        mFileSystemWatcher->addPath(mapInfo->path()); // FIXME: make canonical?
-        fileChanged(mapInfo->path());
+        mFileSystemWatcher->addPath(mapAsset->path()); // FIXME: make canonical?
+        fileChanged(mapAsset->path());
     }
 
     emit mapFileCreated(path);
@@ -462,11 +469,11 @@ void MapManager::metaTilesetRemoved(Tileset *tileset)
 {
     for (Asset* asset : m_assets)
     {
-        MapAsset *mapInfo = static_cast<MapAsset*>(asset);
-        if (mapInfo->map() && mapInfo->path().endsWith(QLatin1String(".tbx"))
-                && mapInfo->map()->usedTilesets().contains(tileset))
+        MapAsset *mapAsset = static_cast<MapAsset*>(asset);
+        if (mapAsset->map() && mapAsset->path().endsWith(QLatin1String(".tbx"))
+                && mapAsset->map()->usedTilesets().contains(tileset))
         {
-            fileChanged(mapInfo->path());
+            fileChanged(mapAsset->path());
         }
     }
 }
@@ -583,7 +590,7 @@ void MapManager::deferThreadResults(bool defer)
 void MapManager::processDeferrals()
 {
     if (mDeferralDepth > 0) {
-        noise() << "processDeferrals deferred - FML";
+        noise() << "MapManager::processDeferrals deferred - FML";
         return;
     }
     QList<MapDeferral> deferrals = mDeferredMaps;

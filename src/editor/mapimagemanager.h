@@ -112,8 +112,8 @@ signals:
     void mapImageFailedToLoad(MapImage *mapImage);
     
 private slots:
-    void mapAboutToChange(MapAsset *mapInfo);
-    void mapChanged(MapAsset *mapInfo);
+    void mapAboutToChange(MapInfo *mapInfo);
+    void mapChanged(MapInfo *mapInfo);
     void mapFileChanged(MapInfo *mapInfo);
 
 private slots:
@@ -121,8 +121,8 @@ private slots:
 
     void imageRenderedByThread(MapImageData imgData, MapImage *mapImage);
 
-    void mapLoaded(MapAsset *mapInfo);
-    void mapFailedToLoad(MapAsset *mapInfo);
+    void mapLoaded(MapAsset *mapAsset);
+    void mapFailedToLoad(MapAsset *mapAsset);
 
     void processDeferrals();
     void processWaitingTasks();

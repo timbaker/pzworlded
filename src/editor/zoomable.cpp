@@ -152,13 +152,13 @@ void Zoomable::connectToComboBox(QComboBox *comboBox)
         foreach (qreal scale, mZoomFactors)
             mComboBox->addItem(scaleToString(scale), scale);
         syncComboBox();
-        connect(mComboBox, SIGNAL(activated(int)),
-                this, SLOT(comboActivated(int)));
+        connect(mComboBox, qOverload<int>(&QComboBox::activated),
+                this, &Zoomable::comboActivated);
 
         mComboBox->setEditable(true);
         mComboBox->setInsertPolicy(QComboBox::NoInsert);
-        connect(mComboBox->lineEdit(), SIGNAL(editingFinished()),
-                this, SLOT(comboEdited()));
+        connect(mComboBox->lineEdit(), &QLineEdit::editingFinished,
+                this, &Zoomable::comboEdited);
 
         if (!mComboValidator)
             mComboValidator = new QRegExpValidator(mComboRegExp, this);

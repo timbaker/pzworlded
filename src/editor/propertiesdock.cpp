@@ -100,12 +100,12 @@ PropertiesModel::PropertiesModel(QObject *parent)
     , mAddTemplateMenu(new QMenu)
     , mAddPropertyMenu(new QMenu)
 {
-    connect(mAddTemplateMenu, SIGNAL(triggered(QAction*)), SLOT(addTemplate(QAction*)));
-    connect(mAddPropertyMenu, SIGNAL(triggered(QAction*)), SLOT(addProperty(QAction*)));
+    connect(mAddTemplateMenu, &QMenu::triggered, this, qOverload<QAction*>(&PropertiesModel::addTemplate));
+    connect(mAddPropertyMenu, &QMenu::triggered, this, qOverload<QAction*>(&PropertiesModel::addProperty));
 
     mTimer.setInterval(1);
     mTimer.setSingleShot(true);
-    connect(&mTimer, SIGNAL(timeout()), SLOT(updateMenus()));
+    connect(&mTimer, &QTimer::timeout, this, &PropertiesModel::updateMenus);
 }
 
 PropertiesModel::~PropertiesModel()
@@ -529,40 +529,40 @@ void PropertiesModel::setDocument(WorldDocument *worldDoc)
     setModelData();
 
     if (mWorldDoc) {
-        connect(mWorldDoc, SIGNAL(propertyDefinitionAdded(PropertyDef*,int)),
-                SLOT(updateMenusLater()));
-        connect(mWorldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
-                SLOT(propertyDefinitionChanged(PropertyDef*)));
-        connect(mWorldDoc, SIGNAL(propertyDefinitionAboutToBeRemoved(int)),
-                SLOT(updateMenusLater()));
+        connect(mWorldDoc, &WorldDocument::propertyDefinitionAdded,
+                this, &PropertiesModel::updateMenusLater);
+        connect(mWorldDoc, &WorldDocument::propertyDefinitionChanged,
+                this, &PropertiesModel::propertyDefinitionChanged);
+        connect(mWorldDoc, &WorldDocument::propertyDefinitionAboutToBeRemoved,
+                this, &PropertiesModel::updateMenusLater);
 
-        connect(mWorldDoc, SIGNAL(propertyAdded(PropertyHolder*,int)),
-                SLOT(propertyAdded(PropertyHolder*,int)));
-        connect(mWorldDoc, SIGNAL(propertyAboutToBeRemoved(PropertyHolder*,int)),
-                SLOT(propertyAboutToBeRemoved(PropertyHolder*,int)));
+        connect(mWorldDoc, &WorldDocument::propertyAdded,
+                this, &PropertiesModel::propertyAdded);
+        connect(mWorldDoc, &WorldDocument::propertyAboutToBeRemoved,
+                this, &PropertiesModel::propertyAboutToBeRemoved);
 
-        connect(mWorldDoc, SIGNAL(propertyValueChanged(PropertyHolder*,int)),
-                SLOT(propertyValueChanged(PropertyHolder*,int)));
+        connect(mWorldDoc, &WorldDocument::propertyValueChanged,
+                this, &PropertiesModel::propertyValueChanged);
 
-        connect(mWorldDoc, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
-                SLOT(propertyEnumChoicesChanged(PropertyEnum*)));
+        connect(mWorldDoc, &WorldDocument::propertyEnumChoicesChanged,
+                this, &PropertiesModel::propertyEnumChoicesChanged);
 
-        connect(mWorldDoc, SIGNAL(templateAdded(int)),
-                SLOT(updateMenusLater()));
-        connect(mWorldDoc, SIGNAL(templateAboutToBeRemoved(int)),
-                SLOT(templateAboutToBeRemoved(int)));
-        connect(mWorldDoc, SIGNAL(templateChanged(PropertyTemplate*)),
-                SLOT(templateChanged(PropertyTemplate*)));
+        connect(mWorldDoc, qOverload<int>(&WorldDocument::templateAdded),
+                this, [this]{ updateMenusLater(); });
+        connect(mWorldDoc, qOverload<int>(&WorldDocument::templateAboutToBeRemoved),
+                this, qOverload<int>(&PropertiesModel::templateAboutToBeRemoved));
+        connect(mWorldDoc, &WorldDocument::templateChanged,
+                this, &PropertiesModel::templateChanged);
 
-        connect(mWorldDoc, SIGNAL(templateAdded(PropertyHolder*,int)),
-                SLOT(templateAdded(PropertyHolder*,int)));
-        connect(mWorldDoc, SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)),
-                SLOT(templateAboutToBeRemoved(PropertyHolder*,int)));
+        connect(mWorldDoc, qOverload<PropertyHolder*,int>(&WorldDocument::templateAdded),
+                this, &PropertiesModel::templateAdded);
+        connect(mWorldDoc, qOverload<PropertyHolder*,int>(&WorldDocument::templateAboutToBeRemoved),
+                this, qOverload<PropertyHolder*,int>(&PropertiesModel::templateAboutToBeRemoved));
 
-        connect(mWorldDoc, SIGNAL(cellContentsAboutToChange(WorldCell*)),
-                SLOT(cellContentsAboutToChange(WorldCell*)));
-        connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
-                SLOT(cellContentsChanged(WorldCell*)));
+        connect(mWorldDoc, &WorldDocument::cellContentsAboutToChange,
+                this, &PropertiesModel::cellContentsAboutToChange);
+        connect(mWorldDoc, &WorldDocument::cellContentsChanged,
+                this, &PropertiesModel::cellContentsChanged);
     }
 }
 
@@ -992,12 +992,12 @@ PropertiesDock::PropertiesDock(QWidget *parent)
     setWidget(frame);
     retranslateUi();
 
-    connect(mView, SIGNAL(closeItem(QModelIndex)), SLOT(closeItem(QModelIndex)));
+    connect(mView, &PropertiesView::closeItem, this, &PropertiesDock::closeItem);
 
-    connect(mView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
-    connect(mView->model(), SIGNAL(theModelWasReset()),
-            SLOT(selectionChanged()));
+    connect(mView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &PropertiesDock::selectionChanged);
+    connect(mView->model(), &PropertiesModel::theModelWasReset,
+            this, &PropertiesDock::selectionChanged);
 }
 
 void PropertiesDock::changeEvent(QEvent *e)
@@ -1036,11 +1036,11 @@ void PropertiesDock::setDocument(Document *doc)
     if (mCellDoc) {
         mPropertyHolder = mCellDoc->cell();
         mView->setPropertyHolder(mCellDoc->worldDocument(), mPropertyHolder);
-        connect(mCellDoc, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+        connect(mCellDoc, &CellDocument::selectedObjectsChanged, this, &PropertiesDock::selectedObjectsChanged);
         worldDoc = mCellDoc->worldDocument();
     } else if (mWorldDoc) {
-        connect(mWorldDoc, SIGNAL(selectedCellsChanged()), SLOT(selectedCellsChanged()));
-        connect(mWorldDoc, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+        connect(mWorldDoc, &WorldDocument::selectedCellsChanged, this, &PropertiesDock::selectedCellsChanged);
+        connect(mWorldDoc, &WorldDocument::selectedObjectsChanged, this, &PropertiesDock::selectedObjectsChanged);
         worldDoc = mWorldDoc;
         selectedCellsChanged();
     } else {
@@ -1048,12 +1048,12 @@ void PropertiesDock::setDocument(Document *doc)
         mView->clearPropertyHolder();
     }
     if (worldDoc) {
-        connect(worldDoc, SIGNAL(cellObjectNameChanged(WorldCellObject*)),
-                SLOT(objectNameChanged(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
-                SLOT(selectionChanged()));
-        connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
-                SLOT(updateLabel()));
+        connect(worldDoc, &WorldDocument::cellObjectNameChanged,
+                this, &PropertiesDock::objectNameChanged);
+        connect(worldDoc, &WorldDocument::propertyDefinitionChanged,
+                this, &PropertiesDock::selectionChanged);
+        connect(worldDoc, &WorldDocument::generateLotSettingsChanged,
+                this, &PropertiesDock::updateLabel);
     }
     setLabel(mPropertyHolder);
 }

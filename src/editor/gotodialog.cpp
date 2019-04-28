@@ -57,12 +57,12 @@ GoToDialog::GoToDialog(World *world, const QPoint &initial, QWidget *parent) :
     ui->posY->setValue(NMOD(p.y(), 300.0));
     mSynching--;
 
-    connect(ui->worldX, SIGNAL(valueChanged(int)), SLOT(worldXChanged(int)));
-    connect(ui->worldY, SIGNAL(valueChanged(int)), SLOT(worldYChanged(int)));
-    connect(ui->cellX, SIGNAL(valueChanged(int)), SLOT(cellXChanged(int)));
-    connect(ui->cellY, SIGNAL(valueChanged(int)), SLOT(cellYChanged(int)));
-    connect(ui->posX, SIGNAL(valueChanged(int)), SLOT(posXChanged(int)));
-    connect(ui->posY, SIGNAL(valueChanged(int)), SLOT(posYChanged(int)));
+    connect(ui->worldX, qOverload<int>(&QSpinBox::valueChanged), this, &GoToDialog::worldXChanged);
+    connect(ui->worldY, qOverload<int>(&QSpinBox::valueChanged), this, &GoToDialog::worldYChanged);
+    connect(ui->cellX, qOverload<int>(&QSpinBox::valueChanged), this, &GoToDialog::cellXChanged);
+    connect(ui->cellY, qOverload<int>(&QSpinBox::valueChanged), this, &GoToDialog::cellYChanged);
+    connect(ui->posX, qOverload<int>(&QSpinBox::valueChanged), this, &GoToDialog::posXChanged);
+    connect(ui->posY, qOverload<int>(&QSpinBox::valueChanged), this, &GoToDialog::posYChanged);
 }
 
 GoToDialog::~GoToDialog()

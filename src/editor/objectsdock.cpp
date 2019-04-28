@@ -62,18 +62,18 @@ ObjectsDock::ObjectsDock(QWidget *parent)
     setWidget(widget);
     retranslateUi();
 
-    connect(mView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
-    connect(mView, SIGNAL(clicked(QModelIndex)),
-            SLOT(itemClicked(QModelIndex)));
-    connect(mView, SIGNAL(doubleClicked(QModelIndex)),
-            SLOT(itemDoubleClicked(QModelIndex)));
-    connect(mView, SIGNAL(trashItem(QModelIndex)), SLOT(trashItem(QModelIndex)));
+    connect(mView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &ObjectsDock::selectionChanged);
+    connect(mView, &QAbstractItemView::clicked,
+            this, &ObjectsDock::itemClicked);
+    connect(mView, &QAbstractItemView::doubleClicked,
+            this, &ObjectsDock::itemDoubleClicked);
+    connect(mView, &ObjectsView::trashItem, this, &ObjectsDock::trashItem);
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mView, &QWidget::setVisible);
 }
 
 void ObjectsDock::changeEvent(QEvent *e)
@@ -223,8 +223,8 @@ QWidget *ObjectsViewDelegate::createEditor(QWidget *parent, const QStyleOptionVi
 {
     if (index.column() == mModel->typeColumn()) {
         QComboBox *editor = new QComboBox(parent);
-        connect(editor, SIGNAL(activated(int)),
-                mView, SLOT(closeComboBoxEditor()));
+        connect(editor, qOverload<int>(&QComboBox::activated),
+                mView, &ObjectsView::closeComboBoxEditor);
         return editor;
     }
     return QStyledItemDelegate::createEditor(parent, option, index);
@@ -339,9 +339,9 @@ ObjectsView::ObjectsView(QWidget *parent)
         level.expanded = true;
     }
 
-    connect(mModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
-            SLOT(rowsInserted(QModelIndex,int,int)));
-    connect(mModel, SIGNAL(synched()), SLOT(modelSynched()));
+    connect(mModel, &QAbstractItemModel::rowsInserted,
+            this, &ObjectsView::rowsInserted);
+    connect(mModel, &ObjectsModel::synched, this, &ObjectsView::modelSynched);
 }
 
 void ObjectsView::mousePressEvent(QMouseEvent *event)
@@ -384,12 +384,12 @@ void ObjectsView::setDocument(Document *doc)
     restoreExpandedLevels();
 
     if (mWorldDoc) {
-        connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
-                SLOT(selectedCellsChanged()));
+        connect(mWorldDoc, &WorldDocument::selectedCellsChanged,
+                this, &ObjectsView::selectedCellsChanged);
     }
     if (mCellDoc) {
-        connect(mCellDoc, SIGNAL(selectedObjectsChanged()),
-                SLOT(selectedObjectsChanged()));
+        connect(mCellDoc, &CellDocument::selectedObjectsChanged,
+                this, &ObjectsView::selectedObjectsChanged);
     }
 }
 
@@ -1018,50 +1018,50 @@ void ObjectsModel::setDocument(Document *doc)
         cell = mCellDoc->cell();
         worldDoc = mCellDoc->worldDocument();
 
-        connect(mCellDoc, SIGNAL(layerGroupAdded(int)),
-                SLOT(layerGroupAdded(int)));
+        connect(mCellDoc, &CellDocument::layerGroupAdded,
+                this, &ObjectsModel::layerGroupAdded);
     }
 
     if (worldDoc) {
-        connect(worldDoc, SIGNAL(objectTypeNameChanged(ObjectType*)),
-                SLOT(objectTypeNameChanged(ObjectType*)));
+        connect(worldDoc, &WorldDocument::objectTypeNameChanged,
+                this, &ObjectsModel::objectTypeNameChanged);
 
-        connect(worldDoc, SIGNAL(objectGroupAdded(int)),
-                SLOT(objectGroupAdded(int)));
-        connect(worldDoc, SIGNAL(objectGroupAboutToBeRemoved(int)),
-                SLOT(objectGroupAboutToBeRemoved(int)));
-        connect(worldDoc, SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
-                SLOT(objectGroupNameChanged(WorldObjectGroup*)));
-        connect(worldDoc, SIGNAL(objectGroupReordered(int)),
-                SLOT(objectGroupReordered(int)));
+        connect(worldDoc, &WorldDocument::objectGroupAdded,
+                this, &ObjectsModel::objectGroupAdded);
+        connect(worldDoc, &WorldDocument::objectGroupAboutToBeRemoved,
+                this, &ObjectsModel::objectGroupAboutToBeRemoved);
+        connect(worldDoc, &WorldDocument::objectGroupNameChanged,
+                this, &ObjectsModel::objectGroupNameChanged);
+        connect(worldDoc, &WorldDocument::objectGroupReordered,
+                this, &ObjectsModel::objectGroupReordered);
 
-        connect(worldDoc, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
-                SLOT(cellContentsAboutToChange(WorldCell*)));
-        connect(worldDoc, SIGNAL(cellMapFileChanged(WorldCell*)),
-                SLOT(cellContentsChanged(WorldCell*)));
-        connect(worldDoc, SIGNAL(cellContentsAboutToChange(WorldCell*)),
-                SLOT(cellContentsAboutToChange(WorldCell*)));
-        connect(worldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
-                SLOT(cellContentsChanged(WorldCell*)));
+        connect(worldDoc, &WorldDocument::cellMapFileAboutToChange,
+                this, &ObjectsModel::cellContentsAboutToChange);
+        connect(worldDoc, &WorldDocument::cellMapFileChanged,
+                this, &ObjectsModel::cellContentsChanged);
+        connect(worldDoc, &WorldDocument::cellContentsAboutToChange,
+                this, &ObjectsModel::cellContentsAboutToChange);
+        connect(worldDoc, &WorldDocument::cellContentsChanged,
+                this, &ObjectsModel::cellContentsChanged);
 
-        connect(worldDoc, SIGNAL(cellObjectAdded(WorldCell*,int)),
-                SLOT(cellObjectAdded(WorldCell*,int)));
-        connect(worldDoc, SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)),
-                SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
-        connect(worldDoc, SIGNAL(cellObjectNameChanged(WorldCellObject*)),
-                SLOT(cellObjectXXXXChanged(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(cellObjectTypeChanged(WorldCellObject*)),
-                SLOT(cellObjectXXXXChanged(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(cellObjectGroupAboutToChange(WorldCellObject*)),
-                SLOT(cellObjectGroupAboutToChange(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-                SLOT(cellObjectGroupChanged(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(objectLevelAboutToChange(WorldCellObject*)),
-                SLOT(objectLevelAboutToChange(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(objectLevelChanged(WorldCellObject*)),
-                SLOT(objectLevelChanged(WorldCellObject*)));
-        connect(worldDoc, SIGNAL(cellObjectReordered(WorldCellObject*)),
-                SLOT(cellObjectReordered(WorldCellObject*)));
+        connect(worldDoc, &WorldDocument::cellObjectAdded,
+                this, &ObjectsModel::cellObjectAdded);
+        connect(worldDoc, &WorldDocument::cellObjectAboutToBeRemoved,
+                this, &ObjectsModel::cellObjectAboutToBeRemoved);
+        connect(worldDoc, &WorldDocument::cellObjectNameChanged,
+                this, &ObjectsModel::cellObjectXXXXChanged);
+        connect(worldDoc, &WorldDocument::cellObjectTypeChanged,
+                this, &ObjectsModel::cellObjectXXXXChanged);
+        connect(worldDoc, &WorldDocument::cellObjectGroupAboutToChange,
+                this, &ObjectsModel::cellObjectGroupAboutToChange);
+        connect(worldDoc, &WorldDocument::cellObjectGroupChanged,
+                this, &ObjectsModel::cellObjectGroupChanged);
+        connect(worldDoc, &WorldDocument::objectLevelAboutToChange,
+                this, &ObjectsModel::objectLevelAboutToChange);
+        connect(worldDoc, &WorldDocument::objectLevelChanged,
+                this, &ObjectsModel::objectLevelChanged);
+        connect(worldDoc, &WorldDocument::cellObjectReordered,
+                this, &ObjectsModel::cellObjectReordered);
     }
 
     setCell(cell);

@@ -51,11 +51,13 @@
 #include <QImageReader>
 #include <QMessageBox>
 
+namespace {
 #ifdef QT_NO_DEBUG
 inline QNoDebug noise() { return QNoDebug(); }
 #else
 inline QDebug noise() { return QDebug(QtDebugMsg); }
 #endif
+}
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -71,12 +73,13 @@ MapImageManager::MapImageManager()
     qRegisterMetaType<MapImage*>("MapImage*");
     qRegisterMetaType<MapComposite*>("MapComposite*");
 
-    connect(MapManager::instancePtr(), &MapManager::mapAboutToChange,
+    connect(MapInfoManager::instancePtr(), &MapInfoManager::mapAboutToChange,
             this, &MapImageManager::mapAboutToChange);
-    connect(MapManager::instancePtr(), &MapManager::mapChanged,
+    connect(MapInfoManager::instancePtr(), &MapInfoManager::mapChanged,
             this, &MapImageManager::mapChanged);
-    connect(MapManager::instancePtr(), &MapManager::mapFileChanged,
+    connect(MapInfoManager::instancePtr(), &MapInfoManager::mapFileChanged,
             this, &MapImageManager::mapFileChanged);
+
     connect(MapManager::instancePtr(), &MapManager::mapLoaded,
             this, &MapImageManager::mapLoaded);
     connect(MapManager::instancePtr(), &MapManager::mapFailedToLoad,
@@ -345,7 +348,7 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     out << (qint32)data.tileSize.width() << (qint32)data.tileSize.height();
 }
 
-void MapImageManager::mapAboutToChange(MapAsset *mapInfo)
+void MapImageManager::mapAboutToChange(MapInfo *mapInfo)
 {
     // FIXME: need to wait or interrupt AssetTask_LoadMapImage
 #if 0
@@ -364,7 +367,7 @@ void MapImageManager::mapAboutToChange(MapAsset *mapInfo)
 #endif
 }
 
-void MapImageManager::mapChanged(MapAsset *mapInfo)
+void MapImageManager::mapChanged(MapInfo *mapInfo)
 {
     // FIXME: need to wait or interrupt AssetTask_LoadMapImage
 #if 0
@@ -395,14 +398,6 @@ void MapImageManager::mapFileChanged(MapInfo *mapInfo)
         MapImage *mapImage = static_cast<MapImage*>(asset);
         if (mapImage->sources().contains(mapInfo)) {
             if (mapImage->isEmpty() == false) {
-#if 0
-                bool force = true;
-                ImageData data = generateMapImage(mapImage->mapInfo()->path(), force);
-                paintDummyImage(data, mapInfo);
-                mapImage->mapFileChanged(data.image, data.scale,
-                                         data.levelZeroBounds,
-                                         data.mapSize, data.tileSize);
-#endif
                 recreateImage(mapImage->mapInfo()->path());
             }
         }
@@ -448,11 +443,11 @@ void MapImageManager::imageRenderedByThread(MapImageData imgData, MapImage *mapI
 
 #include "mapobject.h"
 
-QStringList getSubMapFileNames(const MapAsset *mapInfo)
+QStringList getSubMapFileNames(const MapAsset *mapAsset)
 {
     QStringList ret;
-    const QString relativeTo = QFileInfo(mapInfo->path()).absolutePath();
-    foreach (ObjectGroup *objectGroup, mapInfo->map()->objectGroups()) {
+    const QString relativeTo = QFileInfo(mapAsset->path()).absolutePath();
+    foreach (ObjectGroup *objectGroup, mapAsset->map()->objectGroups()) {
         foreach (MapObject *object, objectGroup->objects()) {
             if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                 QString path = MapManager::instance().pathForMap(object->type(), relativeTo);
@@ -577,6 +572,10 @@ public:
             Q_ASSERT(false);
             break;
         case State::GeneratedImage:
+            for (MapComposite *mc : mMapComposite->maps())
+            {
+                mMapImageData.sources += MapInfoManager::instance().mapInfo( mc->mapAsset()->path() );
+            }
             MapImageManager::instance().imageRenderedByThread(mMapImageData, mMapImage);
             break;
         }
@@ -592,6 +591,8 @@ public:
             delete this;
             break;
         case State::FailedCache:
+            if (mMapAsset == nullptr)
+                delete this;
             break;
         case State::WaitForMaps:
             break;
@@ -728,16 +729,16 @@ public:
         mState = State::GenerateImage;
     }
 
-    void mapLoaded(MapAsset *mapInfo)
+    void mapLoaded(MapAsset *mapAsset)
     {
         Q_ASSERT(mMapAsset != nullptr);
-        if (mMapAsset == mapInfo)
+        if (mMapAsset == mapAsset)
         {
 #ifdef WORLDED
-            MapManager::instance().addReferenceToMap(mapInfo);
-            mReferencedMaps += mapInfo;
+            MapManager::instance().addReferenceToMap(mapAsset);
+            mReferencedMaps += mapAsset;
 #endif
-            for (const QString &path : getSubMapFileNames(mapInfo))
+            for (const QString &path : getSubMapFileNames(mapAsset))
             {
                 bool async = true;
                 if (MapAsset *subMapInfo = MapManager::instance().loadMap(path, QString(), async,
@@ -758,14 +759,14 @@ public:
                 }
             }
         }
-        else if (mExpectSubMaps.contains(mapInfo))
+        else if (mExpectSubMaps.contains(mapAsset))
         {
 #ifdef WORLDED
-            MapManager::instance().addReferenceToMap(mapInfo);
-            mReferencedMaps += mapInfo;
+            MapManager::instance().addReferenceToMap(mapAsset);
+            mReferencedMaps += mapAsset;
 #endif
-            mExpectSubMaps.removeAll(mapInfo);
-            for (const QString &path : getSubMapFileNames(mapInfo))
+            mExpectSubMaps.removeAll(mapAsset);
+            for (const QString &path : getSubMapFileNames(mapAsset))
             {
                 bool async = true;
                 if (MapAsset *subMapInfo = MapManager::instance().loadMap(path, QString(), async, MapManager::PriorityLow))
@@ -798,20 +799,20 @@ public:
         allMapsLoaded();
     }
 
-    void mapFailedToLoad(MapAsset *mapInfo)
+    void mapFailedToLoad(MapAsset *mapAsset)
     {
         // Failing to load a submap of the one we want to paint doesn't stop us
         // creating the map image.
-        if (mExpectSubMaps.contains(mapInfo))
-            mExpectSubMaps.removeAll(mapInfo);
+        if (mExpectSubMaps.contains(mapAsset))
+            mExpectSubMaps.removeAll(mapAsset);
 
         // The top-level map failed to load, don't create an image.
-        if (mapInfo == mMapAsset)
+        if (mapAsset == mMapAsset)
         {
 #ifdef WORLDED
-            for (MapAsset *mapInfo : mReferencedMaps)
+            for (MapAsset *mapAsset : mReferencedMaps)
             {
-                MapManager::instance().removeReferenceToMap(mapInfo);
+                MapManager::instance().removeReferenceToMap(mapAsset);
             }
             mReferencedMaps.clear();
 #endif
@@ -834,9 +835,9 @@ public:
         Q_ASSERT(mMapComposite->waitingForMapsToLoad() == false);
 #ifdef WORLDED
         // Now that mapComposite is referencing the maps...
-        for (MapAsset *mapInfo : mReferencedMaps)
+        for (MapAsset *mapAsset : mReferencedMaps)
         {
-            MapManager::instance().removeReferenceToMap(mapInfo);
+            MapManager::instance().removeReferenceToMap(mapAsset);
         }
 #endif
         mState = State::WaitForTilesets;
@@ -982,8 +983,10 @@ public:
         data.scale = scale;
         data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
         data.levelZeroBounds.translate(-sceneRect.topLeft());
+#if 0 // moved to main thread
         for (MapComposite *mc : mapComposite->maps())
             data.sources += mc->mapInfo();
+#endif
 
         for (MapComposite *mc : mapComposite->maps())
         {
@@ -1078,19 +1081,19 @@ void MapImageManager::processWaitingTasks()
     }
 }
 
-void MapImageManager::mapLoaded(MapAsset *mapInfo)
+void MapImageManager::mapLoaded(MapAsset *mapAsset)
 {
     for (AssetTask* task : mWaitingTasks)
     {
-        static_cast<AssetTask_LoadMapImage*>(task)->mapLoaded(mapInfo);
+        static_cast<AssetTask_LoadMapImage*>(task)->mapLoaded(mapAsset);
     }
 }
 
-void MapImageManager::mapFailedToLoad(MapAsset *mapInfo)
+void MapImageManager::mapFailedToLoad(MapAsset *mapAsset)
 {
     for (AssetTask* task : mWaitingTasks)
     {
-        static_cast<AssetTask_LoadMapImage*>(task)->mapFailedToLoad(mapInfo);
+        static_cast<AssetTask_LoadMapImage*>(task)->mapFailedToLoad(mapAsset);
     }
 }
 

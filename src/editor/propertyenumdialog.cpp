@@ -37,33 +37,33 @@ PropertyEnumDialog::PropertyEnumDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->buttonsLayout->insertWidget(0, mUndoRedoButtons->undoButton());
     ui->buttonsLayout->insertWidget(1, mUndoRedoButtons->redoButton());
 
-    connect(ui->enumList, SIGNAL(currentRowChanged(int)), SLOT(currentEnumChanged(int)));
-    connect(ui->enumList, SIGNAL(itemChanged(QListWidgetItem*)), SLOT(enumItemChanged(QListWidgetItem*)));
-    connect(ui->addEnum, SIGNAL(clicked()), SLOT(addEnum()));
-    connect(ui->removeEnum, SIGNAL(clicked()), SLOT(removeEnum()));
+    connect(ui->enumList, &QListWidget::currentRowChanged, this, &PropertyEnumDialog::currentEnumChanged);
+    connect(ui->enumList, &QListWidget::itemChanged, this, &PropertyEnumDialog::enumItemChanged);
+    connect(ui->addEnum, &QAbstractButton::clicked, this, &PropertyEnumDialog::addEnum);
+    connect(ui->removeEnum, &QAbstractButton::clicked, this, &PropertyEnumDialog::removeEnum);
 
-    connect(ui->choiceList, SIGNAL(currentRowChanged(int)), SLOT(currentChoiceChanged(int)));
-    connect(ui->choiceList, SIGNAL(itemChanged(QListWidgetItem*)), SLOT(choiceItemChanged(QListWidgetItem*)));
-    connect(ui->addChoice, SIGNAL(clicked()), SLOT(addChoice()));
-    connect(ui->removeChoice, SIGNAL(clicked()), SLOT(removeChoice()));
+    connect(ui->choiceList, &QListWidget::currentRowChanged, this, &PropertyEnumDialog::currentChoiceChanged);
+    connect(ui->choiceList, &QListWidget::itemChanged, this, &PropertyEnumDialog::choiceItemChanged);
+    connect(ui->addChoice, &QAbstractButton::clicked, this, &PropertyEnumDialog::addChoice);
+    connect(ui->removeChoice, &QAbstractButton::clicked, this, &PropertyEnumDialog::removeChoice);
 
-    connect(ui->multiCheckBox, SIGNAL(toggled(bool)), SLOT(multiToggled(bool)));
+    connect(ui->multiCheckBox, &QAbstractButton::toggled, this, &PropertyEnumDialog::multiToggled);
 
-    connect(mDocument, SIGNAL(propertyEnumAdded(int)), SLOT(setEnumsList()));
-    connect(mDocument, SIGNAL(propertyEnumAboutToBeRemoved(int)),
-            SLOT(propertyEnumAboutToBeRemoved(int)));
-    connect(mDocument, SIGNAL(propertyEnumChanged(PropertyEnum*)),
-            SLOT(propertyEnumChanged(PropertyEnum*)));
-    connect(mDocument, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
-            SLOT(setChoicesList()));
+    connect(mDocument, &WorldDocument::propertyEnumAdded, this, &PropertyEnumDialog::setEnumsList);
+    connect(mDocument, &WorldDocument::propertyEnumAboutToBeRemoved,
+            this, &PropertyEnumDialog::propertyEnumAboutToBeRemoved);
+    connect(mDocument, &WorldDocument::propertyEnumChanged,
+            this, &PropertyEnumDialog::propertyEnumChanged);
+    connect(mDocument, &WorldDocument::propertyEnumChoicesChanged,
+            this, &PropertyEnumDialog::setChoicesList);
 #if 0
     connect(mDocument->undoStack(), SIGNAL(canUndoChanged(bool)),
             ui->undo, SLOT(setEnabled(bool)));
     connect(mDocument->undoStack(), SIGNAL(canRedoChanged(bool)),
             ui->redo, SLOT(setEnabled(bool)));
 #endif
-    connect(mDocument->undoStack(), SIGNAL(indexChanged(int)),
-            SLOT(updateActions()));
+    connect(mDocument->undoStack(), &QUndoStack::indexChanged,
+            this, &PropertyEnumDialog::updateActions);
 
     setEnumsList();
     updateActions();

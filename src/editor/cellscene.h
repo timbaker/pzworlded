@@ -55,6 +55,7 @@ class WorldObjectGroup;
 namespace Tiled {
 class MapRenderer;
 class Layer;
+class Tileset;
 class ZTileLayerGroup;
 }
 
@@ -240,10 +241,13 @@ private:
 /**
  * Item that represents a map during drag-and-drop.
  */
-class DnDItem : public QGraphicsItem
+class DnDItem : public QObject, public QGraphicsItem
 {
+    Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
+
 public:
-    DnDItem(const QString &path, Tiled::MapRenderer *renderer, int level, QGraphicsItem *parent = 0);
+    DnDItem(const QString &path, Tiled::MapRenderer *renderer, int level, QGraphicsItem *parent = nullptr);
 
     QRectF boundingRect() const;
 
@@ -260,6 +264,9 @@ public:
     QPoint dropPosition();
 
     MapInfo *mapInfo();
+
+private slots:
+    void mapImageChanged(MapImage* mapImage);
 
 private:
     MapImage *mMapImage;
@@ -386,8 +393,8 @@ private slots:
     void cellObjectGroupChanged(WorldCellObject *obj);
     void cellObjectReordered(WorldCellObject *obj);
 
-    void mapLoaded(MapAsset *mapInfo);
-    void mapFailedToLoad(MapAsset *mapInfo);
+    void mapLoaded(MapAsset *mapAsset);
+    void mapFailedToLoad(MapAsset *mapAsset);
 
     void sceneRectChanged();
 
@@ -401,12 +408,12 @@ private:
     bool shouldObjectItemBeVisible(ObjectItem *item);
 
     struct LoadingSubMap {
-        LoadingSubMap(WorldCellLot *lot, MapAsset *mapInfo) :
+        LoadingSubMap(WorldCellLot *lot, MapAsset *mapAsset) :
             lot(lot),
-            mapInfo(mapInfo)
+            mapAsset(mapAsset)
         {}
         WorldCellLot *lot;
-        MapAsset *mapInfo;
+        MapAsset *mapAsset;
     };
     QList<LoadingSubMap> mSubMapsLoading;
 
@@ -443,7 +450,7 @@ public:
 
     SubMapItem *itemForLot(WorldCellLot *lot);
     WorldCellLot *lotForItem(SubMapItem *item);
-    QList<SubMapItem*> subMapItemsUsingMapInfo(MapAsset *mapInfo);
+    QList<SubMapItem*> subMapItemsUsingMapInfo(MapAsset *mapAsset);
 
     ObjectItem *itemForObject(WorldCellObject *obj);
 
@@ -503,17 +510,16 @@ protected:
     bool shouldObjectItemBeVisible(ObjectItem *item);
     void synchAdjacentMapObjectItemVisibility();
 
-    typedef Tiled::Tileset Tileset;
 signals:
     void mapContentsChanged();
 
 public slots:
-    void tilesetChanged(Tileset *tileset);
+    void tilesetChanged(Tiled::Tileset *tileset);
 
-    bool mapAboutToChange(MapAsset *mapInfo);
-    bool mapChanged(MapAsset *mapInfo);
-    void mapLoaded(MapAsset *mapInfo);
-    void mapFailedToLoad(MapAsset *mapInfo);
+    bool mapAboutToChange(MapAsset *mapAsset);
+    bool mapChanged(MapAsset *mapAsset);
+    void mapLoaded(MapAsset *mapAsset);
+    void mapFailedToLoad(MapAsset *mapAsset);
 
     void cellAdded(WorldCell *cell);
     void cellAboutToBeRemoved(WorldCell *cell);
@@ -584,12 +590,12 @@ private:
     void synchLayerGroupsLater();
 
     struct LoadingSubMap {
-        LoadingSubMap(WorldCellLot *lot, MapAsset *mapInfo) :
+        LoadingSubMap(WorldCellLot *lot, MapAsset *mapAsset) :
             lot(lot),
-            mapInfo(mapInfo)
+            mapAsset(mapAsset)
         {}
         WorldCellLot *lot;
-        MapAsset *mapInfo;
+        MapAsset *mapAsset;
     };
     QList<LoadingSubMap> mSubMapsLoading;
 

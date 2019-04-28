@@ -66,17 +66,17 @@ BuildingMap::BuildingMap(Building *building) :
 BuildingMap::~BuildingMap()
 {
     if (mMapComposite) {
-        MapAsset *mapInfo = mMapComposite->mapInfo();
+        MapAsset *mapAsset = mMapComposite->mapAsset();
         delete mMapComposite;
         TilesetManager::instance().removeReferences(mMap->tilesets());
         delete mMap;
-        delete mapInfo;
+        delete mapAsset;
 
-        mapInfo = mBlendMapComposite->mapInfo();
+        mapAsset = mBlendMapComposite->mapAsset();
         delete mBlendMapComposite;
         TilesetManager::instance().removeReferences(mBlendMap->tilesets());
         delete mBlendMap;
-        delete mapInfo;
+        delete mapAsset;
 
         delete mMapRenderer;
     }
@@ -453,12 +453,12 @@ void BuildingMap::buildingResized()
 void BuildingMap::BuildingToMap()
 {
     if (mMapComposite) {
-        delete mMapComposite->mapInfo();
+        delete mMapComposite->mapAsset();
         delete mMapComposite;
         TilesetManager::instance().removeReferences(mMap->tilesets());
         delete mMap;
 
-        delete mBlendMapComposite->mapInfo();
+        delete mBlendMapComposite->mapAsset();
         delete mBlendMapComposite;
         TilesetManager::instance().removeReferences(mBlendMap->tilesets());
         delete mBlendMap;
@@ -519,8 +519,8 @@ void BuildingMap::BuildingToMap()
         }
     }
 
-    MapAsset *mapInfo = MapManager::instance().newFromMap(mMap);
-    mMapComposite = new MapComposite(mapInfo);
+    MapAsset *mapAsset = MapManager::instance().newFromMap(mMap);
+    mMapComposite = new MapComposite(mapAsset);
 
     // Synch layer opacity with the floor.
     for (CompositeLayerGroup *layerGroup : mMapComposite->layerGroups()) {
@@ -534,8 +534,8 @@ void BuildingMap::BuildingToMap()
     // This map displays the automatically-generated tiles from the building.
     mBlendMap = mMap->clone();
     TilesetManager::instance().addReferences(mBlendMap->tilesets());
-    mapInfo = MapManager::instance().newFromMap(mBlendMap);
-    mBlendMapComposite = new MapComposite(mapInfo);
+    mapAsset = MapManager::instance().newFromMap(mBlendMap);
+    mBlendMapComposite = new MapComposite(mapAsset);
     mMapComposite->setBlendOverMap(mBlendMapComposite);
 
     // Set the automatically-generated tiles.
@@ -880,14 +880,14 @@ void BuildingMap::handlePending()
             layer->resize(QSize(width, height), QPoint());
         mMap->setWidth(width);
         mMap->setHeight(height);
-        MapManager::instance().mapParametersChanged(mMapComposite->mapInfo());
+        MapManager::instance().mapParametersChanged(mMapComposite->mapAsset());
         mMapComposite->bmpBlender()->recreate();
 
         foreach (Layer *layer, mBlendMap->layers())
             layer->resize(QSize(width, height), QPoint());
         mBlendMap->setWidth(width);
         mBlendMap->setHeight(height);
-        MapManager::instance().mapParametersChanged(mBlendMapComposite->mapInfo());
+        MapManager::instance().mapParametersChanged(mBlendMapComposite->mapAsset());
         mBlendMapComposite->bmpBlender()->recreate();
 
         foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups())

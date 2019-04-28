@@ -33,7 +33,7 @@ WriteWorldObjectsDialog::WriteWorldObjectsDialog(WorldDocument *worldDoc, QWidge
 
     mFileName = mDocument->world()->getLuaSettings().worldObjectsFile;
     ui->fileName->setText(QDir::toNativeSeparators(mFileName));
-    connect(ui->browse, SIGNAL(clicked()), SLOT(browse()));
+    connect(ui->browse, &QAbstractButton::clicked, this, &WriteWorldObjectsDialog::browse);
 }
 
 WriteWorldObjectsDialog::~WriteWorldObjectsDialog()

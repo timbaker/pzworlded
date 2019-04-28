@@ -77,25 +77,25 @@ MapsDock::MapsDock(QWidget *parent)
     setWidget(widget);
     retranslateUi();
 
-    connect(button, SIGNAL(clicked()), this, SLOT(browse()));
+    connect(button, &QAbstractButton::clicked, this, &MapsDock::browse);
 
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(mapsDirectoryChanged()), this, SLOT(onMapsDirectoryChanged()));
+    connect(prefs, &Preferences::mapsDirectoryChanged, this, &MapsDock::onMapsDirectoryChanged);
     edit->setText(QDir::toNativeSeparators(prefs->mapsDirectory()));
-    connect(edit, SIGNAL(returnPressed()), this, SLOT(editedMapsDirectory()));
+    connect(edit, &QLineEdit::returnPressed, this, &MapsDock::editedMapsDirectory);
 
-    connect(mMapsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
+    connect(mMapsView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MapsDock::selectionChanged);
 
-    connect(MapImageManager::instancePtr(), SIGNAL(mapImageChanged(MapImage*)),
-            SLOT(onMapImageChanged(MapImage*)));
-    connect(MapImageManager::instancePtr(), SIGNAL(mapImageFailedToLoad(MapImage*)),
-            SLOT(mapImageFailedToLoad(MapImage*)));
+    connect(MapImageManager::instancePtr(), &MapImageManager::mapImageChanged,
+            this, &MapsDock::onMapImageChanged);
+    connect(MapImageManager::instancePtr(), &MapImageManager::mapImageFailedToLoad,
+            this, &MapsDock::mapImageFailedToLoad);
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mMapsView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mMapsView, &QWidget::setVisible);
 }
 
 void MapsDock::browse()
@@ -193,7 +193,7 @@ MapsView::MapsView(QWidget *parent)
     setDefaultDropAction(Qt::MoveAction);
 
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(mapsDirectoryChanged()), this, SLOT(onMapsDirectoryChanged()));
+    connect(prefs, &Preferences::mapsDirectoryChanged, this, &MapsView::onMapsDirectoryChanged);
 
     QDir mapsDir(prefs->mapsDirectory());
     if (!mapsDir.exists())
@@ -230,7 +230,7 @@ MapsView::MapsView(QWidget *parent)
     header()->setResizeMode(1, QHeaderView::ResizeToContents);
 #endif
 
-    connect(this, SIGNAL(activated(QModelIndex)), SLOT(onActivated(QModelIndex)));
+    connect(this, &QAbstractItemView::activated, this, &MapsView::onActivated);
 }
 
 QSize MapsView::sizeHint() const

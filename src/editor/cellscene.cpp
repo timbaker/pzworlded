@@ -42,6 +42,7 @@
 #include "mapobject.h"
 #include "objectgroup.h"
 #include "tilelayer.h"
+#include "tileset.h"
 #include "zlevelrenderer.h"
 
 #include <qmath.h>
@@ -124,9 +125,9 @@ CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
 
     updateBoundingRect();
 
-    connect(MapImageManager::instancePtr(), SIGNAL(mapImageChanged(MapImage*)),
-            SLOT(mapImageChanged(MapImage*)));
-    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
+    connect(MapImageManager::instancePtr(), &MapImageManager::mapImageChanged,
+            this, &CellMiniMapItem::mapImageChanged);
+    connect(mScene, &QGraphicsScene::sceneRectChanged, this, &CellMiniMapItem::sceneRectChanged);
 }
 
 QRectF CellMiniMapItem::boundingRect() const
@@ -833,7 +834,7 @@ SubMapItem::SubMapItem(MapComposite *map, WorldCellLot *lot, MapRenderer *render
     setAcceptHoverEvents(true);
     mBoundingRect = mMap->boundingRect(mRenderer);
 
-    QString mapFileName = mMap->mapInfo()->path();
+    QString mapFileName = mMap->mapAsset()->path();
 #if 0
     if (!lot->cell()->mapFilePath().isEmpty()) {
         QDir mapDir = QFileInfo(lot->cell()->mapFilePath()).absoluteDir();
@@ -1062,7 +1063,9 @@ DnDItem::DnDItem(const QString &path, MapRenderer *renderer, int level, QGraphic
     , mRenderer(renderer)
     , mLevel(level)
 {
-    setHotSpot(mMapImage->mapInfo()->width() / 2, mMapImage->mapInfo()->height() / 2);
+    connect(MapImageManager::instancePtr(), &MapImageManager::mapImageChanged, this, &DnDItem::mapImageChanged);
+    if (mMapImage->isReady())
+        setHotSpot(mMapImage->mapInfo()->width() / 2, mMapImage->mapInfo()->height() / 2);
 }
 
 QRectF DnDItem::boundingRect() const
@@ -1097,6 +1100,9 @@ void DnDItem::setTilePosition(QPoint tilePos)
 {
     mPositionInMap = tilePos;
 
+    if (mMapImage->isReady() == false)
+        return;
+
     qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
     QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
     QRectF bounds = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale,
@@ -1125,6 +1131,15 @@ QPoint DnDItem::dropPosition()
 MapInfo *DnDItem::mapInfo()
 {
     return mMapImage->mapInfo();
+}
+
+void DnDItem::mapImageChanged(MapImage *mapImage)
+{
+    if (mapImage == mMapImage && mapImage->isReady())
+    {
+        setTilePosition(mPositionInMap);
+        setHotSpot(mMapImage->mapInfo()->width() / 2, mMapImage->mapInfo()->height() / 2);
+    }
 }
 
 /////
@@ -1191,12 +1206,12 @@ CellScene::CellScene(QObject *parent)
 
     // These signals are handled even when the document isn't current
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(showCellGridChanged(bool)), SLOT(setGridVisible(bool)));
-    connect(prefs, SIGNAL(highlightCurrentLevelChanged(bool)), SLOT(setHighlightCurrentLevel(bool)));
+    connect(prefs, &Preferences::showCellGridChanged, this, &CellScene::setGridVisible);
+    connect(prefs, &Preferences::highlightCurrentLevelChanged, this, &CellScene::setHighlightCurrentLevel);
     setGridVisible(prefs->showCellGrid());
-    connect(prefs, SIGNAL(gridColorChanged(QColor)), SLOT(update()));
-    connect(prefs, SIGNAL(showObjectsChanged(bool)), SLOT(showObjectsChanged(bool)));
-    connect(prefs, SIGNAL(showObjectNamesChanged(bool)), SLOT(showObjectNamesChanged(bool)));
+    connect(prefs, &Preferences::gridColorChanged, this, [this]{ update(); });
+    connect(prefs, &Preferences::showObjectsChanged, this, &CellScene::showObjectsChanged);
+    connect(prefs, &Preferences::showObjectNamesChanged, this, &CellScene::showObjectNamesChanged);
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
 
@@ -1269,48 +1284,48 @@ void CellScene::setDocument(CellDocument *doc)
 {
     mDocument = doc;
 
-    connect(worldDocument(), SIGNAL(cellAdded(WorldCell*)),
-            SLOT(cellAdded(WorldCell*)));
-    connect(worldDocument(), SIGNAL(cellAboutToBeRemoved(WorldCell*)),
-            SLOT(cellAboutToBeRemoved(WorldCell*)));
+    connect(worldDocument(), &WorldDocument::cellAdded,
+            this, &CellScene::cellAdded);
+    connect(worldDocument(), &WorldDocument::cellAboutToBeRemoved,
+            this, &CellScene::cellAboutToBeRemoved);
 
-    connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
-    connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)), SLOT(lotLevelChanged(WorldCellLot*)));
-    connect(mDocument, SIGNAL(selectedLotsChanged()), SLOT(selectedLotsChanged()));
+    connect(worldDocument(), &WorldDocument::cellLotAdded, this, &CellScene::cellLotAdded);
+    connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved, this, &CellScene::cellLotAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved, this, &CellScene::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::lotLevelChanged, this, &CellScene::lotLevelChanged);
+    connect(mDocument, &CellDocument::selectedLotsChanged, this, &CellScene::selectedLotsChanged);
 
-    connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectMoved(WorldCellObject*)), SLOT(cellObjectMoved(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectResized(WorldCellObject*)), SLOT(cellObjectResized(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-            SLOT(cellObjectGroupChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
-            SLOT(cellObjectReordered(WorldCellObject*)));
-    connect(mDocument, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+    connect(worldDocument(), &WorldDocument::cellObjectAdded, this, &CellScene::cellObjectAdded);
+    connect(worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved, this, &CellScene::cellObjectAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellObjectMoved, this, &CellScene::cellObjectMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectResized, this, &CellScene::cellObjectResized);
+    connect(worldDocument(), &WorldDocument::objectLevelChanged, this, &CellScene::objectLevelChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectNameChanged, this, &CellScene::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectTypeChanged, this, &CellScene::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectGroupChanged,
+            this, &CellScene::cellObjectGroupChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectReordered,
+            this, &CellScene::cellObjectReordered);
+    connect(mDocument, &CellDocument::selectedObjectsChanged, this, &CellScene::selectedObjectsChanged);
 
-    connect(worldDocument(), SIGNAL(objectGroupReordered(int)),
-            SLOT(objectGroupReordered(int)));
-    connect(worldDocument(), SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
-            SLOT(objectGroupColorChanged(WorldObjectGroup*)));
+    connect(worldDocument(), &WorldDocument::objectGroupReordered,
+            this, &CellScene::objectGroupReordered);
+    connect(worldDocument(), &WorldDocument::objectGroupColorChanged,
+            this, &CellScene::objectGroupColorChanged);
 
-    connect(mDocument, SIGNAL(cellMapFileChanged()), SLOT(cellMapFileChanged()));
-    connect(mDocument, SIGNAL(cellContentsChanged()), SLOT(cellContentsChanged()));
-    connect(mDocument, SIGNAL(layerVisibilityChanged(Tiled::Layer*)),
-            SLOT(layerVisibilityChanged(Tiled::Layer*)));
-    connect(mDocument, SIGNAL(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)),
-            SLOT(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)));
-    connect(mDocument, SIGNAL(lotLevelVisibilityChanged(int)),
-            SLOT(lotLevelVisibilityChanged(int)));
-    connect(mDocument, SIGNAL(objectLevelVisibilityChanged(int)),
-            SLOT(objectLevelVisibilityChanged(int)));
-    connect(mDocument, SIGNAL(objectGroupVisibilityChanged(WorldObjectGroup*,int)),
-            SLOT(objectGroupVisibilityChanged(WorldObjectGroup*,int)));
-    connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
+    connect(mDocument, qOverload<>(&CellDocument::cellMapFileChanged), this, &CellScene::cellMapFileChanged);
+    connect(mDocument, qOverload<>(&CellDocument::cellContentsChanged), this, &CellScene::cellContentsChanged);
+    connect(mDocument, &CellDocument::layerVisibilityChanged,
+            this, &CellScene::layerVisibilityChanged);
+    connect(mDocument, &CellDocument::layerGroupVisibilityChanged,
+            this, &CellScene::layerGroupVisibilityChanged);
+    connect(mDocument, &CellDocument::lotLevelVisibilityChanged,
+            this, &CellScene::lotLevelVisibilityChanged);
+    connect(mDocument, &CellDocument::objectLevelVisibilityChanged,
+            this, &CellScene::objectLevelVisibilityChanged);
+    connect(mDocument, &CellDocument::objectGroupVisibilityChanged,
+            this, &CellScene::objectGroupVisibilityChanged);
+    connect(mDocument, &CellDocument::currentLevelChanged, this, &CellScene::currentLevelChanged);
 
     // These are to update ObjectLabelItem
     connect(worldDocument(), &WorldDocument::propertyAdded, this, &CellScene::propertiesChanged);
@@ -1319,33 +1334,33 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
 
-    connect(worldDocument(), SIGNAL(roadAdded(int)),
-           SLOT(roadAdded(int)));
-    connect(worldDocument(), SIGNAL(roadRemoved(Road*)),
-           SLOT(roadRemoved(Road*)));
-    connect(worldDocument(), SIGNAL(roadCoordsChanged(int)),
-           SLOT(roadCoordsChanged(int)));
-    connect(worldDocument(), SIGNAL(roadWidthChanged(int)),
-           SLOT(roadWidthChanged(int)));
-    connect(worldDocument(), SIGNAL(roadTileNameChanged(int)),
-            SLOT(roadsChanged()));
-    connect(worldDocument(), SIGNAL(roadLinesChanged(int)),
-            SLOT(roadsChanged()));
-    connect(worldDocument(), SIGNAL(selectedRoadsChanged()),
-            SLOT(selectedRoadsChanged()));
+    connect(worldDocument(), &WorldDocument::roadAdded,
+           this, &CellScene::roadAdded);
+    connect(worldDocument(), &WorldDocument::roadRemoved,
+           this, &CellScene::roadRemoved);
+    connect(worldDocument(), &WorldDocument::roadCoordsChanged,
+           this, &CellScene::roadCoordsChanged);
+    connect(worldDocument(), &WorldDocument::roadWidthChanged,
+           this, &CellScene::roadWidthChanged);
+    connect(worldDocument(), &WorldDocument::roadTileNameChanged,
+            this, &CellScene::roadsChanged);
+    connect(worldDocument(), &WorldDocument::roadLinesChanged,
+            this, &CellScene::roadsChanged);
+    connect(worldDocument(), &WorldDocument::selectedRoadsChanged,
+            this, &CellScene::selectedRoadsChanged);
 
-    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instancePtr(), &MapManager::mapLoaded,
+            this, &CellScene::mapLoaded);
+    connect(MapManager::instancePtr(), &MapManager::mapFailedToLoad,
+            this, &CellScene::mapFailedToLoad);
 
     loadMap();
 
-    connect(Tiled::Internal::TilesetManager::instancePtr(), SIGNAL(tilesetChanged(Tileset*)),
-            SLOT(tilesetChanged(Tileset*)));
+    connect(Tiled::Internal::TilesetManager::instancePtr(), &Tiled::Internal::TilesetManager::tilesetChanged,
+            this, &CellScene::tilesetChanged);
 
-    connect(Preferences::instance(), SIGNAL(highlightRoomUnderPointerChanged(bool)),
-            SLOT(highlightRoomUnderPointerChanged(bool)));
+    connect(Preferences::instance(), &Preferences::highlightRoomUnderPointerChanged,
+            this, &CellScene::highlightRoomUnderPointerChanged);
 }
 
 WorldDocument *CellScene::worldDocument() const
@@ -1377,11 +1392,11 @@ WorldCellLot *CellScene::lotForItem(SubMapItem *item)
     return item->lot();
 }
 
-QList<SubMapItem *> CellScene::subMapItemsUsingMapInfo(MapAsset *mapInfo)
+QList<SubMapItem *> CellScene::subMapItemsUsingMapInfo(MapAsset *mapAsset)
 {
     QList<SubMapItem *> ret;
     foreach (SubMapItem *item, mSubMapItems) {
-        if (item->subMap()->mapInfo() == mapInfo)
+        if (item->subMap()->mapAsset() == mapAsset)
             ret += item;
     }
     return ret;
@@ -1630,12 +1645,12 @@ void CellScene::loadMap()
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
 
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
-    connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
-            SLOT(layerGroupAdded(int)));
-    connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
-            mDocument, SIGNAL(layerGroupAdded(int)));
-    connect(mMapComposite, SIGNAL(needsSynch()),
-            SLOT(mapCompositeNeedsSynch()));
+    connect(mMapComposite, &MapComposite::layerGroupAdded,
+            this, &CellScene::layerGroupAdded);
+    connect(mMapComposite, &MapComposite::layerGroupAdded,
+            mDocument, &CellDocument::layerGroupAdded);
+    connect(mMapComposite, &MapComposite::needsSynch,
+            this, &CellScene::mapCompositeNeedsSynch);
 
     for (int i = 0; i < cell()->lots().size(); i++)
         cellLotAdded(cell(), i);
@@ -2339,20 +2354,20 @@ void CellScene::tilesetChanged(Tileset *tileset)
         update();
 }
 
-bool CellScene::mapAboutToChange(MapAsset *mapInfo)
+bool CellScene::mapAboutToChange(MapAsset *mapAsset)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
     // inside loadMap().
     if (!mMapComposite)
         return false;
 
-    if (mMapComposite->mapAboutToChange(mapInfo)) {
+    if (mMapComposite->mapAboutToChange(mapAsset)) {
     }
 
     // Recreating the cell's MapComposite will delete all the submaps, so delete
     // all the SubMapItems.  Loading the map may put up a PROGRESS dialog which
     // causes repainting of the scene.
-    if (mapInfo == mMapComposite->mapInfo()) {
+    if (mapAsset == mMapComposite->mapAsset()) {
         foreach (SubMapItem *item, mSubMapItems) {
             mSubMapItems.removeAll(item);
             mSelectedSubMapItems.remove(item);
@@ -2363,19 +2378,19 @@ bool CellScene::mapAboutToChange(MapAsset *mapInfo)
 
     // If the cell's map changed, other classes (like LayersModel) need to know.
     // If only a Lot map changed, other classes don't need to know.
-    return (mapInfo == mMapComposite->mapInfo());
+    return (mapAsset == mMapComposite->mapAsset());
 }
 
-bool CellScene::mapChanged(MapAsset *mapInfo)
+bool CellScene::mapChanged(MapAsset *mapAsset)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
     // inside loadMap().
     if (!mMapComposite)
         return false;
 
-    if (mMapComposite->mapChanged(mapInfo)) {
-        if (mapInfo != mMapComposite->mapInfo()) {
-            for (SubMapItem *item : subMapItemsUsingMapInfo(mapInfo))
+    if (mMapComposite->mapChanged(mapAsset)) {
+        if (mapAsset != mMapComposite->mapAsset()) {
+            for (SubMapItem *item : subMapItemsUsingMapInfo(mapAsset))
             {
                 item->subMapMoved(); // update bounds, check valid position
             }
@@ -2384,7 +2399,7 @@ bool CellScene::mapChanged(MapAsset *mapInfo)
         }
     }
 
-    if (mapInfo == mMapComposite->mapInfo()) {
+    if (mapAsset == mMapComposite->mapAsset()) {
 //        loadMap();
         return true; // CellDocument::cellMapFileChanged -> CellScene::cellMapFileChanged
     }
@@ -2563,12 +2578,12 @@ void CellScene::initAdjacentMaps()
     }
 }
 
-void CellScene::mapLoaded(MapAsset *mapInfo)
+void CellScene::mapLoaded(MapAsset *mapAsset)
 {
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
-        if (sm.mapInfo == mapInfo) {
-            MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, sm.lot->pos(),
+        if (sm.mapAsset == mapAsset) {
+            MapComposite *subMap = mMapComposite->addMap(sm.mapAsset, sm.lot->pos(),
                                                          sm.lot->level());
 
             SubMapItem *item = new SubMapItem(subMap, sm.lot, mRenderer);
@@ -2581,9 +2596,9 @@ void CellScene::mapLoaded(MapAsset *mapInfo)
             mSubMapItems = zzz.values();
 
             // Update with most-recent information
-            sm.lot->setMapName(sm.mapInfo->path());
-            sm.lot->setWidth(sm.mapInfo->width());
-            sm.lot->setHeight(sm.mapInfo->height());
+            sm.lot->setMapName(sm.mapAsset->path());
+            sm.lot->setWidth(sm.mapAsset->width());
+            sm.lot->setHeight(sm.mapAsset->height());
 
             mSubMapsLoading.removeAt(i);
 
@@ -2599,11 +2614,11 @@ void CellScene::mapLoaded(MapAsset *mapInfo)
     }
 }
 
-void CellScene::mapFailedToLoad(MapAsset *mapInfo)
+void CellScene::mapFailedToLoad(MapAsset *mapAsset)
 {
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
-        if (sm.mapInfo == mapInfo) {
+        if (sm.mapAsset == mapAsset) {
             mSubMapsLoading.removeAt(i);
             --i;
         }
@@ -2622,38 +2637,38 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
 {
     mScene->addItem(mObjectItemParent);
 
-    connect(worldDocument(), SIGNAL(cellMapFileChanged(WorldCell*)),
-            SLOT(cellMapFileChanged(WorldCell*)));
-    connect(worldDocument(), SIGNAL(cellContentsChanged(WorldCell*)),
-            SLOT(cellContentsChanged(WorldCell*)));
+    connect(worldDocument(), &WorldDocument::cellMapFileChanged,
+            this, &AdjacentMap::cellMapFileChanged);
+    connect(worldDocument(), &WorldDocument::cellContentsChanged,
+            this, &AdjacentMap::cellContentsChanged);
 
-    connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)),
-            SLOT(cellLotAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
-            SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)),
-            SLOT(cellLotMoved(WorldCellLot*)));
-    connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)),
-            SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotAdded,
+            this, &AdjacentMap::cellLotAdded);
+    connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved,
+            this, &AdjacentMap::cellLotAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved,
+            this, &AdjacentMap::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::lotLevelChanged,
+            this, &AdjacentMap::lotLevelChanged);
 
-    connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectMoved(WorldCellObject*)), SLOT(cellObjectMoved(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectResized(WorldCellObject*)), SLOT(cellObjectResized(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-            SLOT(cellObjectGroupChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
-            SLOT(cellObjectReordered(WorldCellObject*)));
+    connect(worldDocument(), &WorldDocument::cellObjectAdded, this, &AdjacentMap::cellObjectAdded);
+    connect(worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved, this, &AdjacentMap::cellObjectAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellObjectMoved, this, &AdjacentMap::cellObjectMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectResized, this, &AdjacentMap::cellObjectResized);
+    connect(worldDocument(), &WorldDocument::objectLevelChanged, this, &AdjacentMap::objectLevelChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectNameChanged, this, &AdjacentMap::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectTypeChanged, this, &AdjacentMap::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectGroupChanged,
+            this, &AdjacentMap::cellObjectGroupChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectReordered,
+            this, &AdjacentMap::cellObjectReordered);
 
-    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged()));
+    connect(mScene, &QGraphicsScene::sceneRectChanged, this, &AdjacentMap::sceneRectChanged);
 
-    connect(MapManager::instancePtr(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instancePtr(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instancePtr(), &MapManager::mapLoaded,
+            this, &AdjacentMap::mapLoaded);
+    connect(MapManager::instancePtr(), &MapManager::mapFailedToLoad,
+            this, &AdjacentMap::mapFailedToLoad);
 
     loadMap();
 }
@@ -2852,9 +2867,9 @@ void AdjacentMap::cellObjectReordered(WorldCellObject *obj)
     setZOrder();
 }
 
-void AdjacentMap::mapLoaded(MapAsset *mapInfo)
+void AdjacentMap::mapLoaded(MapAsset *mapAsset)
 {
-    if (mapInfo == mMapInfo) {
+    if (mapAsset == mMapInfo) {
         int x = cell()->x() - scene()->cell()->x();
         int y = cell()->y() - scene()->cell()->y();
         scene()->mapComposite()->setAdjacentMap(x, y, mMapInfo);
@@ -2891,15 +2906,15 @@ void AdjacentMap::mapLoaded(MapAsset *mapInfo)
 
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
-        if (sm.mapInfo == mapInfo) {
+        if (sm.mapAsset == mapAsset) {
 
             // Update with most-recent information
-            sm.lot->setMapName(sm.mapInfo->path());
-            sm.lot->setWidth(sm.mapInfo->width());
-            sm.lot->setHeight(sm.mapInfo->height());
+            sm.lot->setMapName(sm.mapAsset->path());
+            sm.lot->setWidth(sm.mapAsset->width());
+            sm.lot->setHeight(sm.mapAsset->height());
 
             if (mMapComposite) {
-                MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, sm.lot->pos(),
+                MapComposite *subMap = mMapComposite->addMap(sm.mapAsset, sm.lot->pos(),
                                                              sm.lot->level());
 
                 mLotToMC[sm.lot] = subMap;
@@ -2914,14 +2929,14 @@ void AdjacentMap::mapLoaded(MapAsset *mapInfo)
     }
 }
 
-void AdjacentMap::mapFailedToLoad(MapAsset *mapInfo)
+void AdjacentMap::mapFailedToLoad(MapAsset *mapAsset)
 {
-    if (mapInfo == mMapInfo)
+    if (mapAsset == mMapInfo)
         mMapInfo = 0;
 
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
-        if (sm.mapInfo == mapInfo) {
+        if (sm.mapAsset == mapAsset) {
             mSubMapsLoading.removeAt(i);
             --i;
         }

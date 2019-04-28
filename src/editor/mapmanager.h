@@ -101,14 +101,14 @@ public:
     typedef BuildingEditor::Building Building;
 
 signals:
-    void mapAboutToChange(MapAsset *mapInfo);
-    void mapChanged(MapAsset *mapInfo);
-    void mapFileChanged(MapAsset *mapInfo);
+    void mapAboutToChange(MapAsset *mapAsset);
+    void mapChanged(MapAsset *mapAsset);
+    void mapFileChanged(MapAsset *mapAsset);
 #ifdef WORLDED
     void mapFileCreated(const QString &path);
 #endif
-    void mapLoaded(MapAsset *mapInfo);
-    void mapFailedToLoad(MapAsset *mapInfo);
+    void mapLoaded(MapAsset *mapAsset);
+    void mapFailedToLoad(MapAsset *mapAsset);
 
 private slots:
     void fileChanged(const QString &path);

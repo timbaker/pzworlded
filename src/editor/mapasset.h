@@ -33,6 +33,7 @@ class MapAsset : public Asset
 public:
     MapAsset(AssetPath path, AssetManager* manager)
         : Asset(path, manager)
+        , mFilePath(path.getString())
     {}
 
     ~MapAsset() override;

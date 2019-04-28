@@ -161,7 +161,7 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
                                 x + ox, y + oy,
                                 level + rootLevel,
                                 w, h);
-                    rr->buildingName = QFileInfo(mc->mapInfo()->path()).fileName();
+                    rr->buildingName = QFileInfo(mc->mapAsset()->path()).fileName();
                     mRoomRectsByLevel[level + rootLevel] += rr;
                 }
             }

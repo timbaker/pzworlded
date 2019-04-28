@@ -22,6 +22,7 @@
 #include "documentmanager.h"
 #include "layersmodel.h"
 #include "mapcomposite.h"
+#include "worldcell.h"
 #include "worlddocument.h"
 
 #include "map.h"
@@ -53,8 +54,8 @@ LayersDock::LayersDock(QWidget *parent)
     opacityLayout->addWidget(mOpacitySlider);
     mOpacityLabel->setBuddy(mOpacitySlider);
 
-    connect(mOpacitySlider, SIGNAL(valueChanged(int)),
-            SLOT(opacitySliderValueChanged(int)));
+    connect(mOpacitySlider, &QAbstractSlider::valueChanged,
+            this, &LayersDock::opacitySliderValueChanged);
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
@@ -67,11 +68,11 @@ LayersDock::LayersDock(QWidget *parent)
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mView, &QWidget::setVisible);
 
-    connect(DocumentManager::instance(), SIGNAL(documentAboutToClose(int,Document*)),
-            SLOT(documentAboutToClose(int,Document*)));
+    connect(DocumentManager::instance(), &DocumentManager::documentAboutToClose,
+            this, &LayersDock::documentAboutToClose);
 }
 
 void LayersDock::setCellDocument(CellDocument *doc)
@@ -86,14 +87,14 @@ void LayersDock::setCellDocument(CellDocument *doc)
     mView->setCellDocument(mCellDocument);
 
     if (mCellDocument) {
-        connect(mCellDocument, SIGNAL(currentLevelChanged(int)),
-                SLOT(updateOpacitySlider()));
+        connect(mCellDocument, &CellDocument::currentLevelChanged,
+                this, &LayersDock::updateOpacitySlider);
 
         // These connections won't break until the document is closed
-        connect(mCellDocument->worldDocument(), SIGNAL(cellMapFileAboutToChange(WorldCell*)),
-                SLOT(cellMapFileAboutToChange(WorldCell*)), Qt::UniqueConnection);
-        connect(mCellDocument->worldDocument(), SIGNAL(cellContentsAboutToChange(WorldCell*)),
-                SLOT(cellMapFileAboutToChange(WorldCell*)), Qt::UniqueConnection);
+        connect(mCellDocument->worldDocument(), &WorldDocument::cellMapFileAboutToChange,
+                this, &LayersDock::cellMapFileAboutToChange, Qt::UniqueConnection);
+        connect(mCellDocument->worldDocument(), &WorldDocument::cellContentsAboutToChange,
+                this, &LayersDock::cellMapFileAboutToChange, Qt::UniqueConnection);
         restoreExpandedLevels(mCellDocument);
     }
 
@@ -198,7 +199,7 @@ LayersView::LayersView(QWidget *parent)
     setSelectionBehavior(QAbstractItemView::SelectRows);
 //    setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-    connect(this, SIGNAL(activated(QModelIndex)), SLOT(onActivated(QModelIndex)));
+    connect(this, &QAbstractItemView::activated, this, &LayersView::onActivated);
 }
 
 QSize LayersView::sizeHint() const
@@ -226,8 +227,8 @@ void LayersView::setCellDocument(CellDocument *doc)
         header()->setResizeMode(0, QHeaderView::Stretch); // 2 equal-sized columns, user can't adjust
 #endif
 
-        connect(mCellDocument, SIGNAL(currentLevelChanged(int)),
-                SLOT(currentLevelOrLayerIndexChanged(int)));
+        connect(mCellDocument, &CellDocument::currentLevelChanged,
+                this, &LayersView::currentLevelOrLayerIndexChanged);
 
         mSynching = true;
         if (TileLayer *tl = mCellDocument->currentTileLayer())

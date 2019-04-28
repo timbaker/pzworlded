@@ -33,7 +33,7 @@ WriteSpawnPointsDialog::WriteSpawnPointsDialog(WorldDocument *worldDoc, QWidget 
 
     mSpawnPointsFileName = mDocument->world()->getLuaSettings().spawnPointsFile;
     ui->fileName->setText(QDir::toNativeSeparators(mSpawnPointsFileName));
-    connect(ui->browse, SIGNAL(clicked()), SLOT(browse()));
+    connect(ui->browse, &QAbstractButton::clicked, this, &WriteSpawnPointsDialog::browse);
 }
 
 WriteSpawnPointsDialog::~WriteSpawnPointsDialog()

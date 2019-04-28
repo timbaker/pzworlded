@@ -62,17 +62,17 @@ LootWindow::LootWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->actionClose, SIGNAL(triggered()), SLOT(close()));
-    connect(ui->gameDirBrowse, SIGNAL(clicked()), SLOT(chooseGameDirectory()));
-    connect(ui->treeWidget->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
+    connect(ui->actionClose, &QAction::triggered, this, &QWidget::close);
+    connect(ui->gameDirBrowse, &QAbstractButton::clicked, this, &LootWindow::chooseGameDirectory);
+    connect(ui->treeWidget->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &LootWindow::selectionChanged);
 
     QSettings settings;
     QString d = settings.value(QLatin1String("LootWindow/GameDirectory")).toString();
     ui->gameDirectory->setText(QDir::toNativeSeparators(d));
 
-    connect(DocumentManager::instance(), SIGNAL(currentDocumentChanged(Document*)),
-            SLOT(setDocument(Document*)));
+    connect(DocumentManager::instance(), &DocumentManager::currentDocumentChanged,
+            this, &LootWindow::setDocument);
 
     if (QFileInfo(d).exists()) {
         readTileProperties(QDir(d).filePath(QLatin1String("media/newtiledefinitions.tiles")));
@@ -80,7 +80,7 @@ LootWindow::LootWindow(QWidget *parent) :
     }
 
     mTimer.setSingleShot(true);
-    connect(&mTimer, SIGNAL(timeout()), SLOT(updateNow()));
+    connect(&mTimer, &QTimer::timeout, this, &LootWindow::updateNow);
 }
 
 LootWindow::~LootWindow()
@@ -97,8 +97,8 @@ void LootWindow::setDocument(Document *doc)
     mDocument = doc ? doc->asCellDocument() : 0;
 
     if (mDocument) {
-        connect(mDocument->scene(), SIGNAL(mapContentsChanged()),
-                SLOT(mapContentsChanged()));
+        connect(mDocument->scene(), &CellScene::mapContentsChanged,
+                this, &LootWindow::mapContentsChanged);
     }
 
     if (mDocument && mShowing)
@@ -176,8 +176,8 @@ void LootWindow::examineMapComposite(MapComposite *mc)
     static QVector<const Tiled::Cell*> cells(40);
     foreach (CompositeLayerGroup *lg, mc->sortedLayerGroups()) {
         lg->prepareDrawing2();
-        for (int y = 0; y < mc->mapInfo()->height(); y++) {
-            for (int x = 0; x < mc->mapInfo()->width(); x++) {
+        for (int y = 0; y < mc->mapAsset()->height(); y++) {
+            for (int x = 0; x < mc->mapAsset()->width(); x++) {
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
                 foreach (const Tiled::Cell *cell, cells) {

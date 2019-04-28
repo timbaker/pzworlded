@@ -285,8 +285,8 @@ public:
     { return mError; }
 
 private slots:
-    void mapLoaded(MapAsset *info);
-    void mapFailedToLoad(MapAsset *info);
+    void mapLoaded(MapAsset *mapAsset);
+    void mapFailedToLoad(MapAsset *mapAsset);
 
 private:
     class SubMapLoading
@@ -294,7 +294,7 @@ private:
     public:
         SubMapLoading(MapAsset *info);
         ~SubMapLoading();
-        MapAsset *mapInfo;
+        MapAsset *mapAsset;
         bool holdsReference;
     private:
         Q_DISABLE_COPY(SubMapLoading)

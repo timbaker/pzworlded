@@ -111,8 +111,8 @@ signals:
     void currentObjectGroupChanged(WorldObjectGroup *og);
 
 private slots:
-    void mapAboutToChange(MapAsset *mapInfo);
-    void mapChanged(MapAsset *mapInfo);
+    void mapAboutToChange(MapAsset *mapAsset);
+    void mapChanged(MapAsset *mapAsset);
 
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);

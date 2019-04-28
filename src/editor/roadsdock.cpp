@@ -131,8 +131,8 @@ RoadsDock::RoadsDock(QWidget *parent)
     hlayout->addWidget(label);
     hlayout->addWidget(mRoadWidthSpinBox);
 
-    connect(mRoadWidthSpinBox, SIGNAL(valueChanged(int)),
-            SLOT(roadWidthSpinBoxValueChanged(int)));
+    connect(mRoadWidthSpinBox, qOverload<int>(&QSpinBox::valueChanged),
+            this, &RoadsDock::roadWidthSpinBoxValueChanged);
 
     /////
 
@@ -148,15 +148,15 @@ RoadsDock::RoadsDock(QWidget *parent)
     hlayout2->addWidget(label);
     hlayout2->addWidget(mTrafficLineComboBox);
 
-    connect(mTrafficLineComboBox, SIGNAL(currentIndexChanged(int)),
-            SLOT(trafficLineComboBoxActivated(int)));
+    connect(mTrafficLineComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, &RoadsDock::trafficLineComboBoxActivated);
 
     /////
 
     mRoadTypeView = new RoadTypeView(w);
 
-    connect(mRoadTypeView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-            SLOT(roadTypeSelected()));
+    connect(mRoadTypeView->selectionModel(), &QItemSelectionModel::currentChanged,
+            this, &RoadsDock::roadTypeSelected);
 
     /////
 
@@ -210,14 +210,14 @@ void RoadsDock::setDocument(Document *doc)
 
     if (worldDoc) {
         mRoadWidthSpinBox->setValue(WorldCreateRoadTool::instance()->currentRoadWidth());
-        connect(worldDoc, SIGNAL(selectedRoadsChanged()),
-                SLOT(selectedRoadsChanged()));
-        connect(worldDoc, SIGNAL(roadWidthChanged(int)),
-                SLOT(selectedRoadsChanged()));
-        connect(worldDoc, SIGNAL(roadTileNameChanged(int)),
-                SLOT(selectedRoadsChanged()));
-        connect(worldDoc, SIGNAL(roadLinesChanged(int)),
-                SLOT(selectedRoadsChanged()));
+        connect(worldDoc, &WorldDocument::selectedRoadsChanged,
+                this, &RoadsDock::selectedRoadsChanged);
+        connect(worldDoc, &WorldDocument::roadWidthChanged,
+                this, &RoadsDock::selectedRoadsChanged);
+        connect(worldDoc, &WorldDocument::roadTileNameChanged,
+                this, &RoadsDock::selectedRoadsChanged);
+        connect(worldDoc, &WorldDocument::roadLinesChanged,
+                this, &RoadsDock::selectedRoadsChanged);
     }
 }
 

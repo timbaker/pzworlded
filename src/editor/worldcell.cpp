@@ -29,6 +29,7 @@ WorldCellLot::WorldCellLot(WorldCell *cell, const QString &name, int x, int y,
     , mHeight(height)
     , mCell(cell)
 {
+    Q_ASSERT(!mName.isEmpty());
 }
 
 WorldCellLot::WorldCellLot(WorldCell *cell, WorldCellLot *other)
@@ -40,6 +41,13 @@ WorldCellLot::WorldCellLot(WorldCell *cell, WorldCellLot *other)
     , mHeight(other->height())
     , mCell(cell)
 {
+    Q_ASSERT(!mName.isEmpty());
+}
+
+void WorldCellLot::setMapName(const QString &mapName)
+{
+    mName = mapName;
+    Q_ASSERT(!mName.isEmpty());
 }
 
 /////
@@ -65,6 +73,12 @@ QPoint WorldCell::displayPos() const
 void WorldCell::setMapFilePath(const QString &path)
 {
     mMapFilePath = path;
+}
+
+void WorldCell::addLot(const QString &name, int x, int y, int z, int width, int height)
+{
+    Q_ASSERT(!name.isEmpty());
+    mLots.append(new WorldCellLot(this, name, x, y, z, width, height));
 }
 
 void WorldCell::insertLot(int index, WorldCellLot *lot)

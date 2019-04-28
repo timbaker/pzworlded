@@ -25,6 +25,7 @@ MapAsset::~MapAsset()
 MapAsset::MapAsset(Tiled::Map *map, AssetPath path, AssetManager *manager)
     : Asset(path, manager)
     , mMap(map)
+    , mFilePath(path)
 {
     onCreated(AssetState::READY);
 }

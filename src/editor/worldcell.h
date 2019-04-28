@@ -42,7 +42,7 @@ public:
     WorldCellLot(WorldCell *cell, const QString &name, int x, int y, int z, int width, int height);
     WorldCellLot(WorldCell *cell, WorldCellLot *other);
 
-    void setMapName(const QString &mapName) { mName = mapName; }
+    void setMapName(const QString &mapName);
     const QString &mapName() const { return mName; }
 
     int x() const { return mX; }
@@ -286,10 +286,7 @@ public:
     void setMapFilePath(const QString &path);
     QString mapFilePath() const { return mMapFilePath; }
 
-    void addLot(const QString &name, int x, int y, int z, int width, int height)
-    {
-        mLots.append(new WorldCellLot(this, name, x, y, z, width, height));
-    }
+    void addLot(const QString &name, int x, int y, int z, int width, int height);
 
     void insertLot(int index, WorldCellLot *lot);
     WorldCellLot *removeLot(int index);

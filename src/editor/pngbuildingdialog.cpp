@@ -50,7 +50,7 @@ PNGBuildingDialog::PNGBuildingDialog(World *world, QWidget *parent) :
     mColor = Qt::red;
     ui->color->setColor(mColor);
 
-    connect(ui->pngBrowse, SIGNAL(clicked()), SLOT(browse()));
+    connect(ui->pngBrowse, &QAbstractButton::clicked, this, &PNGBuildingDialog::browse);
 
     QSettings settings;
     ui->pngEdit->setText(settings.value(QLatin1String("PNGBuildingDialog/FileName")).toString());
@@ -134,15 +134,15 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     PROGRESS progress(tr("Processing cell %1,%2")
                       .arg(cell->x()).arg(cell->y()));
 
-    MapAsset *mapInfo = MapManager::instance().loadMap(cell->mapFilePath(),
+    MapAsset *mapAsset = MapManager::instance().loadMap(cell->mapFilePath(),
                                                        QString(), true);
-    if (!mapInfo) {
+    if (!mapAsset) {
         mError = MapManager::instance().errorString();
         return false;
     }
 
     DelayedMapLoader mapLoader;
-    mapLoader.addMap(mapInfo);
+    mapLoader.addMap(mapAsset);
 
     foreach (WorldCellLot *lot, cell->lots()) {
         if (MapAsset *info = MapManager::instance().loadMap(lot->mapName(),
@@ -157,10 +157,10 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapInfo->isEmpty())
+    while (mapAsset->isEmpty())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    MapComposite staticMapComposite(mapInfo);
+    MapComposite staticMapComposite(mapAsset);
     MapComposite *mapComposite = &staticMapComposite;
     while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
@@ -179,15 +179,15 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
 
     CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(0);
     QList<Tileset*> tilesets;
-    foreach (Tileset *ts, mapInfo->map()->tilesets())
+    foreach (Tileset *ts, mapAsset->map()->tilesets())
         if (ts->name().startsWith(QLatin1String("vegetation_trees_")))
             tilesets += ts;
     if (layerGroup && !tilesets.isEmpty()) {
         QVector<const Cell*> cells(40);
         layerGroup->prepareDrawing2();
         QRgb treeColor = qRgb(47, 76, 64); // same dark green as MapImageManager uses
-        for (int y = 0; y < mapInfo->map()->height(); y++) {
-            for (int x = 0; x < mapInfo->map()->width(); x++) {
+        for (int y = 0; y < mapAsset->map()->height(); y++) {
+            for (int x = 0; x < mapAsset->map()->width(); x++) {
                 cells.resize(0);
                 if (layerGroup->orderedCellsAt2(QPoint(x, y), cells)) {
                     foreach (const Cell *tileCell, cells) {

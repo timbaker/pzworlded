@@ -612,7 +612,7 @@ static MapComposite *mapUnderPoint(CellScene *scene, MapComposite *mc, MapRender
         }
 
         bool ignore = false;
-        QList<SubMapItem*> items = scene->subMapItemsUsingMapInfo(subMap->mapInfo());
+        QList<SubMapItem*> items = scene->subMapItemsUsingMapInfo(subMap->mapAsset());
         foreach (SubMapItem *item, items) {
             if (item->subMap() == subMap) {
                 ignore = true;
@@ -622,7 +622,7 @@ static MapComposite *mapUnderPoint(CellScene *scene, MapComposite *mc, MapRender
         if (ignore)
             continue;
 
-        QRect tileBounds = subMap->mapInfo()->bounds().translated(subMap->originRecursive());
+        QRect tileBounds = subMap->mapAsset()->bounds().translated(subMap->originRecursive());
         QPolygonF scenePolygon = renderer->tileToPixelCoords(tileBounds);
         if (scenePolygon.containsPoint(scenePos, Qt::WindingFill))
             return subMap;
@@ -644,10 +644,10 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     }
     if (highlight != mHighlightedMap) {
         if (highlight) {
-            QRect tileBounds = highlight->mapInfo()->bounds().translated(highlight->originRecursive());
+            QRect tileBounds = highlight->mapAsset()->bounds().translated(highlight->originRecursive());
             QPolygonF polygon = mScene->renderer()->tileToPixelCoords(tileBounds);
             mMapHighlightItem->setPolygon(polygon);
-            mMapHighlightItem->setToolTip(QDir::toNativeSeparators(highlight->mapInfo()->path()));
+            mMapHighlightItem->setToolTip(QDir::toNativeSeparators(highlight->mapAsset()->path()));
         }
         mMapHighlightItem->setVisible(highlight != nullptr);
         mHighlightedMap = highlight;
@@ -742,7 +742,7 @@ void SubMapTool::startMoving()
 
     foreach (SubMapItem *item, mMovingItems) {
         item->subMap()->setHiddenDuringDrag(true);
-        QString path = item->subMap()->mapInfo()->path();
+        QString path = item->subMap()->mapAsset()->path();
         DnDItem *dndItem = new DnDItem(path, mScene->renderer(), item->subMap()->levelOffset());
         dndItem->setHotSpot(0, 0);
         mDnDItems.append(dndItem);
@@ -823,7 +823,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
                                              mScene->renderer(),
                                              scenePos);
         QPoint tilePos(mScene->renderer()->pixelToTileCoordsInt(scenePos));
-        if (!subMap && mScene->mapComposite()->mapInfo()->bounds().contains(tilePos))
+        if (!subMap && mScene->mapComposite()->mapAsset()->bounds().contains(tilePos))
             subMap = mScene->mapComposite();
         if (subMap) {
             QMenu menu;
@@ -831,7 +831,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
             QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
             QAction *action = menu.exec(screenPos);
             if (action == openAction) {
-                QUrl url = QUrl::fromLocalFile(subMap->mapInfo()->path());
+                QUrl url = QUrl::fromLocalFile(subMap->mapAsset()->path());
                 QDesktopServices::openUrl(url);
             }
         }
@@ -855,7 +855,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
                                                  tr("Hide lights in rooms called %1").arg(roomName));
     }
     QAction *lightbulbMapAction = nullptr;
-    QString mapName = QFileInfo(item->subMap()->mapInfo()->path()).fileName();
+    QString mapName = QFileInfo(item->subMap()->mapAsset()->path()).fileName();
     if (LightbulbsMgr::instance().maps().contains(mapName))
         lightbulbMapAction = menu.addAction(lightIcon, tr("Show lights in %1").arg(mapName));
     else
@@ -877,7 +877,7 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
         mScene->worldDocument()->removeCellLot(mScene->cell(), lotIndex);
     }
     if (action == openAction) {
-        QUrl url = QUrl::fromLocalFile(item->subMap()->mapInfo()->path());
+        QUrl url = QUrl::fromLocalFile(item->subMap()->mapAsset()->path());
         QDesktopServices::openUrl(url);
     }
 }
@@ -1392,10 +1392,10 @@ void CellEditRoadTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asCellScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
-                SLOT(roadAboutToBeRemoved(int)));
-        connect(mScene->worldDocument(), SIGNAL(roadCoordsChanged(int)),
-                SLOT(roadCoordsChanged(int)));
+        connect(mScene->worldDocument(), &WorldDocument::roadAboutToBeRemoved,
+                this, &CellEditRoadTool::roadAboutToBeRemoved);
+        connect(mScene->worldDocument(), &WorldDocument::roadCoordsChanged,
+                this, &CellEditRoadTool::roadCoordsChanged);
     }
 }
 
@@ -1621,8 +1621,8 @@ void CellSelectMoveRoadTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asCellScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
-                SLOT(roadAboutToBeRemoved(int)));
+        connect(mScene->worldDocument(), &WorldDocument::roadAboutToBeRemoved,
+                this, &CellSelectMoveRoadTool::roadAboutToBeRemoved);
     }
 }
 
@@ -2337,8 +2337,8 @@ void PasteCellsTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
-        connect(Clipboard::instance(), SIGNAL(clipboardChanged()),
-                SLOT(updateEnabledState()));
+        connect(Clipboard::instance(), &Clipboard::clipboardChanged,
+                this, &PasteCellsTool::updateEnabledState);
     }
 }
 
@@ -2795,10 +2795,10 @@ void WorldEditRoadTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(roadCoordsChanged(int)),
-                SLOT(roadCoordsChanged(int)));
-        connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
-                SLOT(roadAboutToBeRemoved(int)));
+        connect(mScene->worldDocument(), &WorldDocument::roadCoordsChanged,
+                this, &WorldEditRoadTool::roadCoordsChanged);
+        connect(mScene->worldDocument(), &WorldDocument::roadAboutToBeRemoved,
+                this, &WorldEditRoadTool::roadAboutToBeRemoved);
     }
 }
 
@@ -3028,8 +3028,8 @@ void WorldSelectMoveRoadTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(roadAboutToBeRemoved(int)),
-                SLOT(roadAboutToBeRemoved(int)));
+        connect(mScene->worldDocument(), &WorldDocument::roadAboutToBeRemoved,
+                this, &WorldSelectMoveRoadTool::roadAboutToBeRemoved);
     }
 }
 
@@ -3290,8 +3290,8 @@ void WorldBMPTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(bmpAboutToBeRemoved(int)),
-                SLOT(bmpAboutToBeRemoved(int)));
+        connect(mScene->worldDocument(), &WorldDocument::bmpAboutToBeRemoved,
+                this, &WorldBMPTool::bmpAboutToBeRemoved);
     }
 }
 
