@@ -96,6 +96,8 @@ private:
     int mMapRefCount;
     int mReferenceEpoch;
 #endif
+    // Temporary used during loading.
+    MapInfo* mLoaded = nullptr;
 
     friend class MapInfoManager;
     friend class MapManager;

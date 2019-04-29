@@ -157,13 +157,13 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
 
     // The cell map must be loaded before creating the MapComposite, which will
     // possibly load embedded lots.
-    while (mapAsset->isEmpty())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    MapManager::instance().processEventsWhile([&]{ return mapAsset->isEmpty(); });
 
     MapComposite staticMapComposite(mapAsset);
     MapComposite *mapComposite = &staticMapComposite;
-    while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    MapManager::instance().processEventsWhile([&]{ return mapComposite->waitingForMapsToLoad() || mapLoader.isLoading(); });
+
     if (!mapLoader.errorString().isEmpty()) {
         mError = mapLoader.errorString();
         return false;

@@ -338,6 +338,10 @@ void MapImageManager::writeImageData(const QFileInfo &imageDataFileInfo, const M
     out << data.scale;
     QRectF r = data.levelZeroBounds;
     out << r.x() << r.y() << r.width() << r.height();
+if (data.sources.isEmpty())
+{
+    int dbg = 1;
+}
     out << qint32(data.sources.length());
     for (QString source : data.sources)
     {
@@ -369,6 +373,9 @@ void MapImageManager::mapAboutToChange(MapInfo *mapInfo)
 
 void MapImageManager::mapChanged(MapInfo *mapInfo)
 {
+    // This signal used to be emitted by MapInfoManager.
+    mapFileChanged(mapInfo);
+
     // FIXME: need to wait or interrupt AssetTask_LoadMapImage
 #if 0
     if (!mRenderMapComposite)
@@ -390,17 +397,28 @@ void MapImageManager::mapChanged(MapInfo *mapInfo)
 
 void MapImageManager::mapFileChanged(MapInfo *mapInfo)
 {
-    MapImageManagerDeferral deferral; // FIXME: optimized out?
-
+    MapImageManagerDeferral deferral;
+bool found = false;
     AssetTable assets = m_assets;
     for (Asset* asset : assets)
     {
         MapImage *mapImage = static_cast<MapImage*>(asset);
+        if (mapImage->mapInfo()->path().contains(QStringLiteral("motel_02")))
+        {
+            qDebug() << "found" << mapImage->mapInfo()->path();
+            for (MapInfo* mapInfo : mapImage->sources())
+                qDebug() << "    source" << mapInfo->path();
+        }
         if (mapImage->sources().contains(mapInfo)) {
+            found = true;
             if (mapImage->isEmpty() == false) {
                 recreateImage(mapImage->mapInfo()->path());
             }
         }
+    }
+    if (!found)
+    {
+        qDebug() << "MapImageManager::mapFileChanged NOT FOUND";
     }
 }
 
@@ -572,10 +590,6 @@ public:
             Q_ASSERT(false);
             break;
         case State::GeneratedImage:
-            for (MapComposite *mc : mMapComposite->maps())
-            {
-                mMapImageData.sources += MapInfoManager::instance().mapInfo( mc->mapAsset()->path() );
-            }
             MapImageManager::instance().imageRenderedByThread(mMapImageData, mMapImage);
             break;
         }
@@ -671,6 +685,10 @@ public:
             {
                 sources += sourceInfo;
             }
+        }
+        if (sources.isEmpty())
+        {
+            qDebug() << "MapImage sources is EMPTY" << mMapImage->mapInfo()->path();
         }
         mMapImage->setSources(sources);
 
@@ -840,6 +858,10 @@ public:
             MapManager::instance().removeReferenceToMap(mapAsset);
         }
 #endif
+        for (MapComposite* mc : mMapComposite->maps())
+        {
+            mMapInfos += MapInfoManager::instance().mapInfo(mc->mapAsset()->path());
+        }
         mState = State::WaitForTilesets;
         handleWaitForTilesets();
     }
@@ -983,7 +1005,9 @@ public:
         data.scale = scale;
         data.levelZeroBounds = renderer->boundingRect(QRect(0, 0, map->width(), map->height()));
         data.levelZeroBounds.translate(-sceneRect.topLeft());
-#if 0 // moved to main thread
+#if 1
+        data.sources = mMapInfos;
+#else
         for (MapComposite *mc : mapComposite->maps())
             data.sources += mc->mapInfo();
 #endif
@@ -1061,6 +1085,7 @@ public:
     MapImageManager::ImageData mImageData;
 
     MapAsset* mMapAsset = nullptr;
+    QList<MapInfo*> mMapInfos;
     MapComposite* mMapComposite = nullptr;
     MapImageData mMapImageData;
     QList<MapAsset*> mExpectSubMaps;

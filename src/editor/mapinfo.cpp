@@ -33,8 +33,9 @@ void MapInfo::setFrom(MapInfo *other)
     mTileWidth = other->mTileWidth;
     mTileHeight = other->mTileHeight;
     mFilePath = other->mFilePath;
-//    mMap = other->mMap; // FIXME: addDepency()
     mPlaceholder = other->mPlaceholder;
     mBeingEdited = other->mBeingEdited;
+#ifdef WORLDED
     mReferenceEpoch = other->mReferenceEpoch;
+#endif
 }

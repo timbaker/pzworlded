@@ -20,6 +20,7 @@
 #include "bmpblender.h"
 #include "bmptotmxconfirmdialog.h"
 #include "mainwindow.h"
+#include "mapinfomanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
 #include "progress.h"
@@ -199,7 +200,10 @@ bool BMPToTMX::generateWorld(WorldDocument *worldDoc, BMPToTMX::GenerateMode mod
         assignMapsToCells(worldDoc, mode);
 
     foreach (QString path, mNewFiles)
+    {
         MapManager::instance().newMapFileCreated(path);
+        MapInfoManager::instance().newMapFileCreated(path);
+    }
 
     // While displaying this, the MapManager's FileSystemWatcher might see some
     // changed .tmx files, which results in the PROGRESS dialog being displayed.

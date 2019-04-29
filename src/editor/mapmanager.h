@@ -95,6 +95,9 @@ public:
 
     void newMapFileCreated(const QString &path);
 #endif
+
+    void processEventsWhile(std::function<bool()> predicate);
+
     QString errorString() const
     { return mError; }
 

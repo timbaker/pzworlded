@@ -188,12 +188,7 @@ MapAsset *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
                     break;
                 }
             }
-            IdleTasks::instance().blockTasks(true);
-            while ( mapAsset->isEmpty()) {
-                qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-                AssetTaskManager::instance().updateAsyncTransactions();
-            }
-            IdleTasks::instance().blockTasks(false);
+            processEventsWhile([&]{ return mapAsset->isEmpty(); });
             mWaitingForMapInfo = nullptr;
             if (!mapAsset->map())
                 return nullptr;
@@ -225,12 +220,8 @@ MapAsset *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
             break;
         }
     }
-    IdleTasks::instance().blockTasks(true);
-    while (mapAsset->isEmpty()) {
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-        AssetTaskManager::instance().updateAsyncTransactions();
-    }
-    IdleTasks::instance().blockTasks(false);
+
+    processEventsWhile([&]{ return mapAsset->isEmpty(); });
 
     mWaitingForMapInfo = nullptr;
     if (mapAsset->map())
@@ -386,6 +377,18 @@ void MapManager::newMapFileCreated(const QString &path)
 
     emit mapFileCreated(path);
 }
+
+void MapManager::processEventsWhile(std::function<bool()> predicate)
+{
+    IdleTasks::instance().blockTasks(true);
+    while (predicate())
+    {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        AssetTaskManager::instance().updateAsyncTransactions();
+        processDeferrals();
+    }
+    IdleTasks::instance().blockTasks(false);
+}
 #endif // WORLDED
 
 Tiled::Map *MapManager::convertOrientation(Tiled::Map *map, Tiled::Map::Orientation orient)
@@ -436,13 +439,20 @@ void MapManager::fileChangedTimeout()
     PROGRESS progress(tr("Examining changed maps..."));
 #endif
 
+    MapManagerDeferral deferral;
+
     foreach (const QString &path, mChangedFiles) {
         if (MapAsset* mapAsset = static_cast<MapAsset*>(get(path))) {
             noise() << "MapManager::fileChanged" << path;
             mFileSystemWatcher->removePath(path);
             QFileInfo info(path);
             if (info.exists()) {
+                Q_ASSERT(!mapAsset->isBeingEdited());
+                emit mapAboutToChange(mapAsset);
                 reload(mapAsset);
+                if (mapAsset->mMap == nullptr)
+                    mapAsset->mMap = new Map(Map::LevelIsometric, mapAsset->width(), mapAsset->height(), 64, 32);;
+                emit mapChanged(mapAsset);
 //                mFileSystemWatcher->addPath(path);
             }
         }

@@ -603,7 +603,7 @@ private:
     void initAdjacentMaps();
 
     Tiled::Map *mMap;
-    MapAsset *mMapInfo;
+    MapAsset *mMapAsset;
     MapComposite *mMapComposite;
     QVector<QGraphicsItem*> mLayerItems;
     QMap<int,CompositeLayerGroupItem*> mTileLayerGroupItems;

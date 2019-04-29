@@ -32,55 +32,6 @@
 class MapInfo;
 class AssetTask_LoadMapInfo;
 
-namespace BuildingEditor {
-class Building;
-}
-
-#if 0
-class MapReaderWorker : public BaseWorker
-{
-    Q_OBJECT
-public:
-    MapReaderWorker(InterruptibleThread *thread, int id);
-    ~MapReaderWorker();
-
-    typedef Tiled::Map Map;
-    typedef BuildingEditor::Building Building;
-
-signals:
-    void loaded(Map *map, MapInfo *mapInfo);
-    void loaded(Building *building, MapInfo *mapInfo);
-    void failedToLoad(const QString error, MapInfo *mapInfo);
-
-public slots:
-    void work();
-    void addJob(MapInfo *mapInfo, int priority);
-    void possiblyRaisePriority(MapInfo *mapInfo, int priority);
-
-private:
-    Map *loadMap(MapInfo *mapInfo);
-    Building *loadBuilding(MapInfo *mapInfo);
-
-    class Job {
-    public:
-        Job(MapInfo *mapInfo, int priority) :
-            mapInfo(mapInfo),
-            priority(priority)
-        {
-        }
-
-        MapInfo *mapInfo;
-        int priority;
-    };
-    QList<Job> mJobs;
-
-    int mID;
-    void debugJobs(const char *msg);
-
-    QString mError;
-};
-#endif
-
 class MapInfoManager : public AssetManager, public Singleton<MapInfoManager>
 {
     Q_OBJECT
@@ -88,36 +39,19 @@ public:
     MapInfoManager();
     ~MapInfoManager() override;
 
-    /**
-     * Returns the canonical (absolute) path for a map file.
-     * \a mapName may or may not include .tmx extension.
-     * \a mapName may be relative or absolute.
-     */
-    QString pathForMap(const QString &mapName, const QString &relativeTo);
-
-    enum LoadPriority {
-        PriorityLow,
-        PriorityMedium,
-        PriorityHigh
-    };
-
     MapInfo *mapInfo(const QString &mapFilePath);
 
     /**
       * Call this when the map's size or tile size changes.
       */
     void mapParametersChanged(MapInfo *mapInfo);
-#ifdef WORLDED
-    void addReferenceToMap(MapInfo *mapInfo);
-    void removeReferenceToMap(MapInfo *mapInfo);
-    void purgeUnreferencedMaps();
 
+#ifdef WORLDED
     void newMapFileCreated(const QString &path);
 #endif
+
     QString errorString() const
     { return mError; }
-
-    typedef BuildingEditor::Building Building;
 
 signals:
     void mapAboutToChange(MapInfo *mapInfo);
@@ -165,9 +99,6 @@ private:
     QList<MapDeferral> mDeferredMaps;
     MapInfo *mWaitingForMapInfo;
 
-#ifdef WORLDED
-    int mReferenceEpoch;
-#endif
     QString mError;
 };
 

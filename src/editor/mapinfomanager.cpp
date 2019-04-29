@@ -45,10 +45,12 @@ using namespace SharedTools;
 #include "BuildingEditor/buildingtiles.h"
 #include "BuildingEditor/furnituregroups.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QXmlStreamReader>
 
 namespace {
 #ifdef QT_NO_DEBUG
@@ -67,10 +69,7 @@ SINGLETON_IMPL(MapInfoManager)
 MapInfoManager::MapInfoManager() :
     mFileSystemWatcher(new FileSystemWatcher(this)),
     mDeferralDepth(0),
-    mWaitingForMapInfo(nullptr),
-#ifdef WORLDED
-    mReferenceEpoch(0)
-#endif
+    mWaitingForMapInfo(nullptr)
 {
     connect(mFileSystemWatcher, &FileSystemWatcher::fileChanged,
             this, &MapInfoManager::fileChanged);
@@ -93,31 +92,6 @@ MapInfoManager::~MapInfoManager()
         MapInfo *mapInfo = static_cast<MapInfo*>(asset);
     }
 }
-
-// mapName could be "Lot_Foo", "../Lot_Foo", "C:/maptools/Lot_Foo" with/without ".tmx"
-QString MapInfoManager::pathForMap(const QString &mapName, const QString &relativeTo)
-{
-    QString mapFilePath = mapName;
-
-    if (QDir::isRelativePath(mapName)) {
-        Q_ASSERT(!relativeTo.isEmpty());
-        Q_ASSERT(!QDir::isRelativePath(relativeTo));
-        mapFilePath = relativeTo + QLatin1Char('/') + mapName;
-    }
-
-    if (!mapFilePath.endsWith(QLatin1String(".tmx")) &&
-            !mapFilePath.endsWith(QLatin1String(".tbx")))
-        mapFilePath += QLatin1String(".tmx");
-
-    QFileInfo fileInfo(mapFilePath);
-    if (fileInfo.exists())
-        return fileInfo.canonicalFilePath();
-
-    return QString();
-}
-
-#include <QCoreApplication>
-#include <QXmlStreamReader>
 
 class MapInfoReader
 {
@@ -268,8 +242,21 @@ public:
 
 MapInfo *MapInfoManager::mapInfo(const QString &mapFilePath)
 {
+    // Caller must ensure mapFilePath is the canonical path as returned by MapManager::pathForMap()
 #if 1
-    MapInfo* mapInfo = static_cast<MapInfo*>(load(AssetPath(mapFilePath)));
+    if (mapFilePath.isEmpty())
+    {
+        qDebug() << "MapInfoManager::mapInfo EMPTY path given";
+    }
+    MapInfo* mapInfo = static_cast<MapInfo*>(get(mapFilePath));
+    if (mapInfo == nullptr)
+    {
+        mapInfo = static_cast<MapInfo*>(load(mapFilePath));
+    }
+    if (mapInfo->isFailure())
+    {
+        return nullptr;
+    }
     return mapInfo;
 #elif 0
     if (mapInfo == nullptr)
@@ -354,8 +341,9 @@ void MapInfoManager::fileChangedTimeout()
 #endif
 
     foreach (const QString &path, mChangedFiles) {
+        qDebug() << "MapInfoManager::fileChangedTimeOut" << path << "exists=" << QFileInfo(path).exists();
         if (MapInfo* mapInfo = static_cast<MapInfo*>(get(path))) {
-            noise() << "MapInfoManager::fileChanged" << path;
+            noise() << "MapInfoManager::fileChangedTimeout" << path;
             mFileSystemWatcher->removePath(path);
             QFileInfo info(path);
             if (info.exists()) {
@@ -381,13 +369,17 @@ void MapInfoManager::mapLoadedByThread(MapInfo *mapInfo)
 
     MapInfoManagerDeferral deferral;
 
-    bool replace = true; // FIXME
+    bool replace = mapInfo->orientation() != Tiled::Map::Orientation::Unknown;
     if (replace) {
         Q_ASSERT(!mapInfo->isBeingEdited());
         emit mapAboutToChange(mapInfo);
     }
 
-    // nothing changed here, it was loaded from disk
+    mapInfo->setFrom(mapInfo->mLoaded);
+    delete mapInfo->mLoaded;
+    mapInfo->mLoaded = nullptr;
+
+    onLoadingSucceeded(mapInfo);
 
     if (replace)
         emit mapChanged(mapInfo);
@@ -479,6 +471,8 @@ public:
 void MapInfoManager::startLoading(Asset *asset)
 {
     MapInfo* mapInfo = static_cast<MapInfo*>(asset);
+    mapInfo->setFilePath(asset->getPath().getString()); // canonical, hopefully
+
     AssetTask_LoadMapInfo* assetTask = new AssetTask_LoadMapInfo(mapInfo);
     setTask(asset, assetTask);
     AssetTaskManager::instance().submit(assetTask);
@@ -489,9 +483,12 @@ void MapInfoManager::loadMapInfoTaskFinished(AssetTask_LoadMapInfo *task)
     if (task->bLoaded)
     {
         MapInfo* mapInfo = static_cast<MapInfo*>(task->m_asset);
-        mapInfo->setFrom(task->mMapInfo);
+        mapInfo->mLoaded = task->mMapInfo;
+        task->mMapInfo = nullptr;
         mFileSystemWatcher->addPath(task->m_asset->getPath().getString());
-        onLoadingSucceeded(mapInfo);
+        mapLoadedByThread(mapInfo);
+        // Could be deferred
+        // onLoadingSucceeded(mapInfo);
     }
     else
     {

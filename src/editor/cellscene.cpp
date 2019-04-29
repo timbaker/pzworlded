@@ -1604,7 +1604,7 @@ void CellScene::loadMap()
 
         // mMap, mMapInfo are shared, don't destroy
         mMap = nullptr;
-        mMapInfo = nullptr;
+        mMapAsset = nullptr;
         mMapComposite = nullptr;
         mRenderer = nullptr;
     }
@@ -1612,18 +1612,18 @@ void CellScene::loadMap()
     PROGRESS progress(tr("Loading cell %1,%2").arg(cell()->x()).arg(cell()->y()));
 
     if (cell()->mapFilePath().isEmpty())
-        mMapInfo = MapManager::instance().getEmptyMap();
+        mMapAsset = MapManager::instance().getEmptyMap();
     else
     {
-        mMapInfo = MapManager::instance().loadMap(cell()->mapFilePath());
-        if (mMapInfo == nullptr)
+        mMapAsset = MapManager::instance().loadMap(cell()->mapFilePath());
+        if (mMapAsset == nullptr)
         {
             // There's no map currently, but it might get created later.
             qDebug() << "failed to load cell map" << cell()->mapFilePath();
-            mMapInfo = MapManager::instance().getPlaceholderMap(cell()->mapFilePath(), 300, 300);
+            mMapAsset = MapManager::instance().getPlaceholderMap(cell()->mapFilePath(), 300, 300);
         }
     }
-    if (mMapInfo == nullptr)
+    if (mMapAsset == nullptr)
     {
         QMessageBox::warning(MainWindow::instance(), tr("Error Loading Map"),
                              tr("%1\nCouldn't load the map for cell %2,%3.\nTry setting the maptools folder and try again.")
@@ -1631,7 +1631,7 @@ void CellScene::loadMap()
         return; // TODO: Add error handling
     }
 
-    mMap = mMapInfo->map();
+    mMap = mMapAsset->map();
 
     switch (mMap->orientation()) {
     case Map::Isometric:
@@ -1642,7 +1642,7 @@ void CellScene::loadMap()
         return; // TODO: Add error handling
     }
 
-    mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
+    mMapComposite = new MapComposite(mMapAsset, Map::LevelIsometric);
 
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
     connect(mMapComposite, &MapComposite::layerGroupAdded,
@@ -1680,7 +1680,7 @@ void CellScene::loadMap()
     initAdjacentMaps();
     QPolygonF polygon;
     QRectF rect(0 - 0.5, 0 - 0.5,
-                mMapInfo->width() + 1.0, mMapInfo->height() + 1.0);
+                mMapAsset->width() + 1.0, mMapAsset->height() + 1.0);
     polygon << QPointF(mRenderer->tileToPixelCoords(rect.topLeft()));
     polygon << QPointF(mRenderer->tileToPixelCoords(rect.topRight()));
     polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomRight()));
@@ -1746,7 +1746,7 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
         MapAsset *subMapInfo = MapManager::instance().loadMap(
                     lot->mapName(), QString(), true, MapManager::PriorityLow);
         if (!subMapInfo || subMapInfo->isFailure()) {
-            qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
+            qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapAsset->path();
             subMapInfo = MapManager::instance().getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
