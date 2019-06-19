@@ -182,11 +182,13 @@ protected:
 class WorldCellItem : public BaseCellItem
 {
 public:
-    WorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *parent = 0);
+    WorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *parent = nullptr);
 
-    QPoint cellPos() const { return mCell->pos(); }
-    QString mapFilePath() const { return mCell->mapFilePath(); }
-    const QList<WorldCellLot*> &lots() const { return mCell->lots(); }
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+
+    QPoint cellPos() const override { return mCell->pos(); }
+    QString mapFilePath() const override { return mCell->mapFilePath(); }
+    const QList<WorldCellLot*> &lots() const override { return mCell->lots(); }
 
     WorldCell *cell() const { return mCell; }
 
@@ -198,8 +200,12 @@ public:
     int thumbnailsAreGo();
     void thumbnailsAreFail();
 
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
+
 protected:
     WorldCell *mCell;
+    int mHoverRefCount = 0;
 };
 
 /**

@@ -962,7 +962,7 @@ void BaseCellItem::paint(QPainter *painter,
         painter->drawImage(target, lotImage.mMapImage->image(), source);
     }
 
-#if _DEBUG
+#ifndef QT_NO_DEBUG
     painter->drawRect(mBoundingRect);
 #endif
 }
@@ -1134,9 +1134,29 @@ WorldCellItem::WorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *
     : BaseCellItem(scene, parent)
     , mCell(cell)
 {
+    setAcceptHoverEvents(true);
     setFlag(ItemIsSelectable);
     mWantsImages = false;
     initialize();
+}
+
+void WorldCellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    BaseCellItem::paint(painter, option, widget);
+
+    if (mHoverRefCount > 0)
+    {
+//        QPen pen(Qt::darkGray);
+//        pen.setWidth(2);
+//        pen.setCosmetic(true);
+        // Use no pen to avoid clipping by adjacent cells to the south/east.
+        painter->setPen(Qt::NoPen);
+        QColor color = QColor(Qt::darkGray).lighter();
+        color.setAlpha(50);
+        painter->setBrush(QBrush(color));
+        QPolygonF poly = mScene->cellRectToPolygon(cell());
+        painter->drawPolygon(poly);
+    }
 }
 
 void WorldCellItem::lotAdded(int index)
@@ -1196,6 +1216,25 @@ void WorldCellItem::thumbnailsAreFail()
     if (mWantsImages) {
         mWantsImages = false;
         cellContentsChanged();
+    }
+}
+
+void WorldCellItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+{
+    Q_UNUSED(event)
+    if (++mHoverRefCount == 1)
+    {
+        update();
+    }
+}
+
+void WorldCellItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+{
+    Q_UNUSED(event)
+    Q_ASSERT(mHoverRefCount > 0);
+    if (--mHoverRefCount == 0)
+    {
+        update();
     }
 }
 
@@ -1504,7 +1543,8 @@ void WorldSelectionItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
 {
     Q_UNUSED(option)
     QPen pen(Qt::blue);
-//    pen.setWidth(4);
+    pen.setWidth(2);
+    pen.setCosmetic(true);
     painter->setPen(pen);
     painter->setBrush(QBrush(QColor(0x33,0x99,0xff,255/8)));
     foreach (WorldCell *cell, mScene->worldDocument()->selectedCells()) {
