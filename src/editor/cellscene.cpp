@@ -40,6 +40,8 @@
 #include "tilelayer.h"
 #include "zlevelrenderer.h"
 
+#include "BuildingEditor/buildingtmx.h"
+
 #include <qmath.h>
 #include <QApplication>
 #include <QDebug>
@@ -1596,6 +1598,30 @@ void CellScene::loadMap()
     }
 
     mMap = mMapInfo->map();
+
+#if 1
+    // Add any missing default tile layers so the user can hide/show them in the Layers Dock.
+    // FIXME: mMap is shared, is this safe?
+    for (int level = 0; level < MAX_WORLD_LEVELS; level++)
+    {
+        QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
+        for (QString layerName : defaultLayerNames) {
+            QString withoutPrefix = MapComposite::layerNameWithoutPrefix(layerName);
+            QString withPrefix = QStringLiteral("%1_%2").arg(level).arg(withoutPrefix);
+            bool exists = false;
+            for (TileLayer* layer : mMap->tileLayers()) {
+                if (layer->name() == withPrefix) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (exists)
+                continue;
+            TileLayer* layer = new TileLayer(withPrefix, 0, 0, 300, 300);
+            mMap->insertLayer(mMap->layerCount(), layer);
+        }
+    }
+#endif
 
     switch (mMap->orientation()) {
     case Map::Isometric:
