@@ -302,3 +302,57 @@ template
 
 
 
+
+property
+{
+    name = Female
+    default = true
+}
+
+enum
+{
+    name = Pose
+    values = [
+        pose01
+        pose02
+        pose03
+    ]
+    multi = false
+}
+
+property
+{
+    name = Pose
+    default = pose01
+    enum = Pose
+}
+
+enum
+{
+    name = Skin
+    values = [
+        White
+        Black
+    ]
+    multi = false
+}
+
+property
+{
+    name = Skin
+    default = White
+    enum = Skin
+}
+
+objecttype
+{
+    name = Mannequin
+}
+
+objectgroup
+{
+    name = Mannequin
+    color = #0000ff
+    defaulttype = Mannequin
+}
+
