@@ -191,7 +191,7 @@ bool DefaultsFile::read(const QString &fileName)
             if (block.keyValue("values", kv))
                 values = kv.values();
             PropertyEnum* propEnum = new PropertyEnum(block.value("name"), values,
-                                                      block.value("multi").compare(QLatin1String("true"), Qt::CaseInsensitive));
+                                                      block.value("multi").compare(QLatin1String("true"), Qt::CaseInsensitive) == 0);
             mEnums += propEnum;
         } else if (block.name == QLatin1String("objecttype")) {
             QString name = block.value("name");
