@@ -54,6 +54,7 @@ RCC_DIR = .rcc
 OBJECTS_DIR = .obj
 
 SOURCES += main.cpp\
+    generatelotsfailuredialog.cpp \
         mainwindow.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -148,6 +149,7 @@ SOURCES += main.cpp\
     waterflow.cpp
 
 HEADERS  += mainwindow.h \
+    generatelotsfailuredialog.h \
     worldview.h \
     worldscene.h \
     world.h \
@@ -240,6 +242,7 @@ HEADERS  += mainwindow.h \
     waterflow.h
 
 FORMS    += mainwindow.ui \
+    generatelotsfailuredialog.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \

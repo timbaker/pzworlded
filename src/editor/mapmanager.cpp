@@ -56,7 +56,7 @@ using namespace Tiled;
 using namespace Tiled::Internal;
 using namespace BuildingEditor;
 
-MapManager *MapManager::mInstance = NULL;
+MapManager *MapManager::mInstance = nullptr;
 
 MapManager *MapManager::instance()
 {
@@ -68,14 +68,14 @@ MapManager *MapManager::instance()
 void MapManager::deleteInstance()
 {
     delete mInstance;
-    mInstance = 0;
+    mInstance = nullptr;
 }
 
 MapManager::MapManager() :
     mFileSystemWatcher(new FileSystemWatcher(this)),
     mDeferralDepth(0),
     mDeferralQueued(false),
-    mWaitingForMapInfo(0),
+    mWaitingForMapInfo(nullptr),
     mNextThreadForJob(0)
 #ifdef WORLDED
     , mReferenceEpoch(0)
@@ -187,7 +187,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
     QString mapFilePath = pathForMap(mapName, relativeTo);
     if (mapFilePath.isEmpty()) {
         mError = tr("A map file couldn't be found!\n%1").arg(mapName);
-        return 0;
+        return nullptr;
     }
 
     if (mMapInfo.contains(mapFilePath) && mMapInfo[mapFilePath]->map()) {
@@ -198,7 +198,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
 
     MapInfo *mapInfo = this->mapInfo(mapFilePath);
     if (!mapInfo)
-        return 0;
+        return nullptr;
     if (mapInfo->mLoading) {
         foreach (MapReaderWorker *w, mMapReaderWorker)
             QMetaObject::invokeMethod(w, "possiblyRaisePriority",
@@ -206,7 +206,7 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
                                       Q_ARG(int,priority));
         if (!asynch) {
             noise() << "WAITING FOR MAP" << mapName << "with priority" << priority;
-            Q_ASSERT(mWaitingForMapInfo == 0);
+            Q_ASSERT(mWaitingForMapInfo == nullptr);
             mWaitingForMapInfo = mapInfo;
             for (int i = 0; i < mDeferredMaps.size(); i++) {
                 MapDeferral md = mDeferredMaps[i];
@@ -219,9 +219,9 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
             while (mapInfo->mLoading) {
                 qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
             }
-            mWaitingForMapInfo = 0;
+            mWaitingForMapInfo = nullptr;
             if (!mapInfo->map())
-                return 0;
+                return nullptr;
         }
         return mapInfo;
     }
@@ -236,9 +236,9 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
 
     // Wow.  Had a map *finish loading* after the PROGRESS call below displayed
     // the dialog and started processing events but before the qApp->processEvents()
-    // call below, resulting in a hang because mWaitingForMapInfo wasn't set till
+    // call below, resulting in a hang because mWaitingForMapInfo wasn't set until
     // after the PROGRESS call.
-    Q_ASSERT(mWaitingForMapInfo == 0);
+    Q_ASSERT(mWaitingForMapInfo == nullptr);
     mWaitingForMapInfo = mapInfo;
 
     PROGRESS progress(tr("Reading %1").arg(fileInfoMap.completeBaseName()));
@@ -258,10 +258,10 @@ MapInfo *MapManager::loadMap(const QString &mapName, const QString &relativeTo,
     while (mapInfo->mLoading) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
-    mWaitingForMapInfo = 0;
+    mWaitingForMapInfo = nullptr;
     if (mapInfo->map())
         return mapInfo;
-    return 0;
+    return nullptr;
 }
 
 MapInfo *MapManager::newFromMap(Map *map, const QString &mapFilePath)

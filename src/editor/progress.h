@@ -53,8 +53,8 @@ private:
 class PROGRESS
 {
 public:
-    PROGRESS(const QString &text, QWidget *parent = 0) :
-        mMainWindow(0)
+    PROGRESS(const QString &text, QWidget *parent = nullptr) :
+        mMainWindow(nullptr)
     {
         if (parent) {
             mMainWindow = Progress::instance()->mainWindow();
@@ -68,14 +68,26 @@ public:
         Progress::instance()->update(text);
     }
 
-    ~PROGRESS()
+    void release()
     {
+        if (mReleased) {
+            return;
+        }
+        mReleased = true;
         Progress::instance()->end();
-        if (mMainWindow)
+        if (mMainWindow != nullptr) {
             Progress::instance()->setMainWindow(mMainWindow);
+        }
     }
 
+    ~PROGRESS()
+    {
+        release();
+    }
+
+private:
     QWidget *mMainWindow;
+    bool mReleased = false;
 };
 
 #endif // PROGRESS_H

@@ -93,7 +93,7 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
         }
     }
 
-    delete bitsArray;
+    delete[] bitsArray;
 
     file.close();
 }

@@ -18,6 +18,7 @@
 #include "lotfilesmanager.h"
 
 #include "bmpblender.h"
+#include "generatelotsfailuredialog.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
@@ -81,6 +82,20 @@ LotFilesManager::~LotFilesManager()
 {
 }
 
+namespace {
+struct GenerateCellFailure
+{
+    WorldCell* cell;
+    QString error;
+
+    GenerateCellFailure(WorldCell* cell, const QString& error)
+        : cell(cell)
+        , error(error)
+    {
+    }
+};
+}
+
 bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
     mWorldDoc = worldDoc;
@@ -125,17 +140,36 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 
     World *world = worldDoc->world();
 
+    QList<GenerateCellFailure> failures;
+
     if (mode == GenerateSelected) {
-        foreach (WorldCell *cell, worldDoc->selectedCells())
-            if (!generateCell(cell))
-                return false;
+        for (WorldCell *cell : worldDoc->selectedCells()) {
+            if (!generateCell(cell)) {
+                failures += GenerateCellFailure(cell, mError);
+//                return false;
+            }
+        }
     } else {
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
-                if (!generateCell(world->cellAt(x, y)))
-                    return false;
+                WorldCell* cell = world->cellAt(x, y);
+                if (!generateCell(cell)) {
+                    failures += GenerateCellFailure(cell, mError);
+//                    return false;
+                }
             }
         }
+    }
+
+    progress.release();
+
+    if (!failures.isEmpty()) {
+        QStringList errorList;
+        for (GenerateCellFailure failure : failures) {
+            errorList += QString(QStringLiteral("Cell %1,%2: %3")).arg(failure.cell->x()).arg(failure.cell->y()).arg(failure.error);
+        }
+        GenerateLotsFailureDialog dialog(errorList, MainWindow::instance());
+        dialog.exec();
     }
 
     QString stats = tr("Finished!\n\nBuildings: %1\nRooms: %2\nRoom rects: %3\nRoom objects: %4")
@@ -194,7 +228,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     DelayedMapLoader mapLoader;
     mapLoader.addMap(mapInfo);
 
-    foreach (WorldCellLot *lot, cell->lots()) {
+    for (WorldCellLot *lot : cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
@@ -219,7 +253,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
     }
 
-    foreach (WorldCellLot *lot, cell->lots()) {
+    for (WorldCellLot *lot : cell->lots()) {
         MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
@@ -259,7 +293,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
 
     // Check for missing tilesets.
-    foreach (MapComposite *mc, mapComposite->maps()) {
+    for (MapComposite *mc : mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
             mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
                     .arg(cell->x()).arg(cell->y()).arg(mc->mapInfo()->path());
@@ -272,7 +306,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     bool chunkDataOnly = false;
     if (chunkDataOnly) {
-        foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+        for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
             lg->prepareDrawing2();
         }
         const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
@@ -296,7 +330,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     Tile *missingTile = Tiled::Internal::TilesetManager::instance()->missingTile();
     QVector<const Tiled::Cell *> cells(40);
-    foreach (CompositeLayerGroup *lg, mapComposite->layerGroups()) {
+    for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
         lg->prepareDrawing2();
         int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
         d *= lg->level();
@@ -304,7 +338,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             for (int x = d; x < mapWidth; x++) {
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
-                foreach (const Tiled::Cell *cell, cells) {
+                for (const Tiled::Cell *cell : cells) {
                     if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;
                     if (mapInfo->orientation() == Map::Isometric) {
@@ -390,11 +424,11 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
     // Create the set of all tilesets used by the map and its sub-maps.
     QList<Tileset*> tilesets;
-    foreach (MapComposite *mc, mapComposite->maps())
+    for (MapComposite *mc : mapComposite->maps())
         tilesets += mc->map()->tilesets();
 
-    mJumboTreeTileset = 0;
-    if (mJumboTreeTileset == 0) {
+    mJumboTreeTileset = nullptr;
+    if (mJumboTreeTileset == nullptr) {
         mJumboTreeTileset = new Tiled::Tileset(QLatin1Literal("jumbo_tree_01"), 64, 128);
         mJumboTreeTileset->loadFromNothing(QSize(64, 128), QLatin1String("jumbo_tree_01"));
     }
@@ -407,7 +441,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
     mTilesetToFirstGid.clear();
     uint firstGid = 1;
-    foreach (Tileset *tileset, tilesets) {
+    for (Tileset *tileset : tilesets) {
         if (!handleTileset(tileset, firstGid))
             return false;
     }
@@ -417,10 +451,10 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
-    foreach (int level, mRoomRectByLevel.keys()) {
+    for (int level : mRoomRectByLevel.keys()) {
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
-        foreach (LotFile::RoomRect *rr, rrList) {
-            if (rr->room == 0) {
+        for (LotFile::RoomRect *rr : rrList) {
+            if (rr->room == nullptr) {
                 rr->room = new LotFile::Room(rr->nameWithoutSuffix(),
                                              rr->floor);
                 rr->room->rects += rr;
@@ -428,15 +462,15 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             }
             if (!rr->name.contains(QLatin1Char('#')))
                 continue;
-            foreach (LotFile::RoomRect *comp, rrList) {
+            for (LotFile::RoomRect *comp : rrList) {
                 if (comp == rr)
                     continue;
                 if (comp->room == rr->room)
                     continue;
                 if (rr->inSameRoom(comp)) {
-                    if (comp->room != 0) {
+                    if (comp->room != nullptr) {
                         LotFile::Room *room = comp->room;
-                        foreach (LotFile::RoomRect *rr2, room->rects) {
+                        for (LotFile::RoomRect *rr2 : room->rects) {
                             Q_ASSERT(rr2->room == room);
                             Q_ASSERT(!rr->room->rects.contains(rr2));
                             rr2->room = rr->room;
@@ -461,22 +495,22 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     // Merge adjacent rooms into buildings.
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
-    foreach (LotFile::Room *r, roomList) {
-        if (r->building == 0) {
+    for (LotFile::Room *r : roomList) {
+        if (r->building == nullptr) {
             r->building = new LotFile::Building();
             buildingList += r->building;
             r->building->RoomList += r;
         }
-        foreach (LotFile::Room *comp, roomList) {
+        for (LotFile::Room *comp : roomList) {
             if (comp == r)
                 continue;
             if (r->building == comp->building)
                 continue;
 
             if (r->inSameBuilding(comp)) {
-                if (comp->building != 0) {
+                if (comp->building != nullptr) {
                     LotFile::Building *b = comp->building;
-                    foreach (LotFile::Room *r2, b->RoomList) {
+                    for (LotFile::Room *r2 : b->RoomList) {
                         Q_ASSERT(r2->building == b);
                         Q_ASSERT(!r->building->RoomList.contains(r2));
                         r2->building = r->building;
@@ -521,7 +555,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     out << qint32(Version);
 
     int tilecount = 0;
-    foreach (LotFile::Tile *tile, TileMap) {
+    for (LotFile::Tile *tile : TileMap) {
         if (tile->used) {
             tile->id = tilecount;
             tilecount++;
@@ -532,7 +566,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     }
     out << qint32(tilecount);
 
-    foreach (LotFile::Tile *tile, TileMap) {
+    for (LotFile::Tile *tile : TileMap) {
         if (tile->used) {
             SaveString(out, tile->name);
         }
@@ -544,12 +578,12 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     out << qint32(MaxLevel);
 
     out << qint32(roomList.count());
-    foreach (LotFile::Room *room, roomList) {
+    for (LotFile::Room *room : roomList) {
         SaveString(out, room->name);
         out << qint32(room->floor);
 
         out << qint32(room->rects.size());
-        foreach (LotFile::RoomRect *rr, room->rects) {
+        for (LotFile::RoomRect *rr : room->rects) {
             out << qint32(rr->x);
             out << qint32(rr->y);
             out << qint32(rr->w);
@@ -557,7 +591,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         }
 
         out << qint32(room->objects.size());
-        foreach (const LotFile::RoomObject &object, room->objects) {
+        for (const LotFile::RoomObject &object : room->objects) {
             out << qint32(object.metaEnum);
             out << qint32(object.x);
             out << qint32(object.y);
@@ -565,9 +599,9 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     }
 
     out << qint32(buildingList.count());
-    foreach (LotFile::Building *building, buildingList) {
+    for (LotFile::Building *building : buildingList) {
         out << qint32(building->RoomList.count());
-        foreach (LotFile::Room *room, building->RoomList) {
+        for (LotFile::Room *room : building->RoomList) {
             out << qint32(room->ID);
         }
     }

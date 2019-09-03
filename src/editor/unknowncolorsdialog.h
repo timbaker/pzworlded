@@ -12,7 +12,7 @@ class UnknownColorsDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit UnknownColorsDialog(const QString &path, const QStringList &colors, QWidget *parent = 0);
+    explicit UnknownColorsDialog(const QString &path, const QStringList &colors, QWidget *parent = nullptr);
     ~UnknownColorsDialog();
     
 private:
