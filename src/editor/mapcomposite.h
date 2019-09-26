@@ -60,7 +60,7 @@ public:
     QRect bounds() const;
     QMargins drawMargins() const;
 
-    QRectF boundingRect(const Tiled::MapRenderer *renderer);
+    QRectF boundingRect(const Tiled::MapRenderer *renderer) const;
 
     void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
