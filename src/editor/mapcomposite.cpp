@@ -224,6 +224,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     const QPoint rootPos = pos + mOwner->originRecursive();
 
     QVector<const Cell*> aboveLotCells;
+    QVector<qreal> aboveLotOpacities;
 
     bool cleared = false;
     const Cell emptyCell;
@@ -287,6 +288,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             cell = &emptyCell;
         if (!cell->isEmpty() && (root == mOwner) && tl->name().contains(sAboveLot)) {
             aboveLotCells += cell;
+            aboveLotOpacities += mLayerOpacity[index];
             cell = &emptyCell;
         }
         if (!cell->isEmpty()) {
@@ -340,6 +342,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     }
 
     cells += aboveLotCells;
+    opacities += aboveLotOpacities;
 
     return !cells.isEmpty();
 }
