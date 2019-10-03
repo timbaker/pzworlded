@@ -176,6 +176,8 @@ public:
     { return mReloadTilesetsOnChange; }
 
 #ifdef ZOMBOID
+    bool getTilesetFileName(const QString &tilesetName, QString &path1x, QString &path2x);
+
     void changeTilesetSource(Tileset *tileset, const QString &source, bool missing);
 
     Tile *missingTile() const

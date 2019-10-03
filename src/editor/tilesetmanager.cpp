@@ -230,6 +230,50 @@ void TilesetManager::setReloadTilesetsOnChange(bool enabled)
     // TODO: Clear the file system watcher when disabled
 }
 
+bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &path1x, QString &path2x)
+{
+    QString tiles1xDir = Preferences::instance()->tilesDirectory();
+    QString tiles2xDir = Preferences::instance()->tiles2xDirectory();
+
+    QDir dir1x(tiles1xDir);
+    QDir dir2x(tiles2xDir);
+
+    QString fileName = tilesetName + QLatin1Literal(".png");
+    path1x = dir1x.filePath(fileName);
+    path2x = dir2x.filePath(fileName);
+
+    if (QImageReader(path2x).size().isValid()) {
+        return true;
+    }
+    if (QImageReader(path1x).size().isValid()) {
+        return true;
+    }
+
+    QFileInfoList infoList = dir2x.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo &dirInfo : infoList) {
+        QDir dir = QDir(dirInfo.filePath());
+        QString try2x = dir.filePath(fileName);
+        if (QImageReader(try2x).size().isValid()) {
+            path1x = QDir(dir1x.filePath(dirInfo.fileName())).filePath(fileName);
+            path2x = try2x;
+            return true;
+        }
+    }
+
+    infoList = dir1x.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo &dirInfo : infoList) {
+        QDir dir = QDir(dirInfo.filePath());
+        QString try1x = dir.filePath(fileName);
+        if (QImageReader(try1x).size().isValid()) {
+            path1x = try1x;
+            path2x = QDir(dir2x.filePath(dirInfo.fileName())).filePath(fileName);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void TilesetManager::fileChanged(const QString &path)
 {
 #ifndef ZOMBOID
@@ -366,10 +410,8 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
         return;
 
     if (!tileset->isLoaded() /*&& !tileset->isMissing()*/) {
-        QString tilesDir = Preferences::instance()->tilesDirectory();
-        QString tiles2xDir = Preferences::instance()->tiles2xDirectory();
-        QString imageSource = QDir(tilesDir).filePath(tileset->name() + QLatin1Literal(".png"));
-        QString imageSource2x = QDir(tiles2xDir).filePath(tileset->name() + QLatin1Literal(".png"));
+        QString imageSource, imageSource2x;
+        getTilesetFileName(tileset->name(), imageSource, imageSource2x);
         if (Tileset *cached = mTilesetImageCache->findMatch(tileset, imageSource, imageSource2x)) {
             // If it !isLoaded(), a thread is reading the image.
             // FIXME: 1) load TMX with tilesets from not-TilesDirectory -> no 2x images loaded

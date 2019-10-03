@@ -34,7 +34,7 @@ using namespace Tiled::Internal;
 
 static const char *TXT_FILE = "Tilesets.txt";
 
-TileMetaInfoMgr* TileMetaInfoMgr::mInstance = 0;
+TileMetaInfoMgr* TileMetaInfoMgr::mInstance = nullptr;
 
 TileMetaInfoMgr* TileMetaInfoMgr::instance()
 {
@@ -46,19 +46,17 @@ TileMetaInfoMgr* TileMetaInfoMgr::instance()
 void TileMetaInfoMgr::deleteInstance()
 {
     delete mInstance;
-    mInstance = 0;
+    mInstance = nullptr;
 }
 
 void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
 {
     Preferences::instance()->setTilesDirectory(path); // must be done before loading tilesets
-    QString tilesDir = tilesDirectory();
-    QString tiles2xDir = tiles2xDirectory();
     foreach (Tileset *ts, tilesets()) {
         if (ts->isMissing())
             continue; // keep the relative path
-        QString imageSource = QDir(tilesDir).filePath(ts->name() + QLatin1Literal(".png"));
-        QString imageSource2x = QDir(tiles2xDir).filePath(ts->name() + QLatin1Literal(".png"));
+        QString imageSource, imageSource2x;
+        TilesetManager::instance()->getTilesetFileName(ts->name(), imageSource, imageSource2x);
         QImageReader reader2x(imageSource2x);
         if (reader2x.size().isValid()) {
             // can't use canonicalFilePath since the 1x tileset may not exist
@@ -383,15 +381,15 @@ Tileset *TileMetaInfoMgr::loadTileset(const QString &source)
     Tileset *ts = new Tileset(info.completeBaseName(), 64, 128);
     if (!loadTilesetImage(ts, source)) {
         delete ts;
-        return 0;
+        return nullptr;
     }
     return ts;
 }
 
 bool TileMetaInfoMgr::loadTilesetImage(Tileset *ts, const QString &source)
 {
-    QString imageSource = QDir(tilesDirectory()).filePath(ts->name() + QLatin1Literal(".png"));
-    QString imageSource2x = QDir(tiles2xDirectory()).filePath(ts->name() + QLatin1Literal(".png"));
+    QString imageSource, imageSource2x;
+    TilesetManager::instance()->getTilesetFileName(ts->name(), imageSource, imageSource2x);
 
     QImageReader ir2x(imageSource2x);
     if (ir2x.size().isValid()) {
@@ -443,10 +441,8 @@ void TileMetaInfoMgr::loadTilesets(const QList<Tileset *> &tilesets, bool proces
 
     foreach (Tileset *ts, _tilesets) {
         if (ts->isMissing()) {
-            QString tilesDir = Preferences::instance()->tilesDirectory();
-            QString tiles2xDir = Preferences::instance()->tiles2xDirectory();
-            QString imageSource = QDir(tilesDir).filePath(ts->name() + QLatin1Literal(".png"));
-            QString imageSource2x = QDir(tiles2xDir).filePath(ts->name() + QLatin1Literal(".png"));
+            QString imageSource,imageSource2x;
+            TilesetManager::instance()->getTilesetFileName(ts->name(), imageSource, imageSource2x);
             QImageReader ir2x(imageSource2x);
             if (ir2x.size().isValid()) {
                 ts->loadFromNothing(ir2x.size() / 2, imageSource);
