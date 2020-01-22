@@ -359,11 +359,22 @@
     <addaction name="actionBuildingsToPNG"/>
     <addaction name="actionLootInspector"/>
    </widget>
+   <widget class="QMenu" name="menuMapbox">
+    <property name="title">
+     <string>Mapbox</string>
+    </property>
+    <addaction name="actionMapboxPreview"/>
+    <addaction name="actionGenerateMapboxBuildingFeatures"/>
+    <addaction name="actionGenerateMapboxWaterFeatures"/>
+    <addaction name="actionMapboxReadFeaturesXML"/>
+    <addaction name="actionMapboxWriteFeaturesXML"/>
+   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
+   <addaction name="menuMapbox"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
@@ -833,6 +844,34 @@
    </property>
    <property name="text">
     <string>Show Other Worlds</string>
+   </property>
+  </action>
+  <action name="actionMapboxWriteFeaturesXML">
+   <property name="text">
+    <string>Write Features XML...</string>
+   </property>
+   <property name="toolTip">
+    <string>Don't forget to do this!</string>
+   </property>
+  </action>
+  <action name="actionGenerateMapboxBuildingFeatures">
+   <property name="text">
+    <string>Generate Mapbox Building Features</string>
+   </property>
+  </action>
+  <action name="actionGenerateMapboxWaterFeatures">
+   <property name="text">
+    <string>Generate Mapbox Water Features</string>
+   </property>
+  </action>
+  <action name="actionMapboxPreview">
+   <property name="text">
+    <string>Preview</string>
+   </property>
+  </action>
+  <action name="actionMapboxReadFeaturesXML">
+   <property name="text">
+    <string>Read Features XML...</string>
    </property>
   </action>
  </widget>

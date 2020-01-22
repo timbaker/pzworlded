@@ -72,6 +72,14 @@
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
 
+#include "mapbox/mapboxbuildings.h"
+#include "mapbox/mapboxdock.h"
+#include "mapbox/mapboxgeojsongenerator.h"
+#include "mapbox/mapboxreader.h"
+#include "mapbox/mapboxscene.h"
+#include "mapbox/mapboxwindow.h"
+#include "mapbox/mapboxwriter.h"
+
 #include "layer.h"
 #include "mapobject.h"
 #include "maprenderer.h"
@@ -109,6 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
     , mSearchDock(new SearchDock(this))
+    , mMapboxDock(new MapboxDock(this))
 #ifdef ROAD_UI
     , mRoadsDock(new RoadsDock(this))
 #endif
@@ -201,6 +210,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->menuView->addAction(mLayersDock->toggleViewAction());
     ui->menuView->addAction(mLotsDock->toggleViewAction());
+    ui->menuView->addAction(mMapboxDock->toggleViewAction());
     ui->menuView->addAction(mMapsDock->toggleViewAction());
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
@@ -209,6 +219,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mRoadsDock->toggleViewAction());
 #endif
 
+    addDockWidget(Qt::LeftDockWidgetArea, mMapboxDock);
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mSearchDock);
@@ -221,6 +232,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabifyDockWidget(mPropertiesDock, mLayersDock);
     tabifyDockWidget(mLayersDock, mMapsDock);
     tabifyDockWidget(mObjectsDock, mLotsDock);
+    tabifyDockWidget(mLotsDock, mMapboxDock);
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
@@ -279,6 +291,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
+    connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showMapboxPreviewWindow);
+    connect(ui->actionGenerateMapboxBuildingFeatures, &QAction::triggered, this, &MainWindow::generateMapboxBuildingFeatures);
+    connect(ui->actionGenerateMapboxWaterFeatures, &QAction::triggered, this, &MainWindow::generateMapboxWaterFeatures);
+    connect(ui->actionMapboxReadFeaturesXML, SIGNAL(triggered()), SLOT(mapboxReadFeaturesXML()));
+    connect(ui->actionMapboxWriteFeaturesXML, SIGNAL(triggered()), SLOT(mapboxWriteFeaturesXML()));
+
     connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
     connect(ui->actionShowGrid, SIGNAL(toggled(bool)), SLOT(setShowGrid(bool)));
@@ -325,6 +343,14 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
 #endif
+    new CreateMapboxPointTool;
+    new CreateMapboxPolygonTool;
+    new CreateMapboxPolylineTool;
+    new EditMapboxFeatureTool;
+    toolManager->registerTool(CreateMapboxPointTool::instancePtr());
+    toolManager->registerTool(CreateMapboxPolygonTool::instancePtr());
+    toolManager->registerTool(CreateMapboxPolylineTool::instancePtr());
+    toolManager->registerTool(EditMapboxFeatureTool::instancePtr());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -584,6 +610,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         }
 
         mLotsDock->setDocument(doc);
+        mMapboxDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
         mSearchDock->setDocument(doc);
 #ifdef ROAD_UI
@@ -600,6 +627,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
     } else {
         mLayersDock->setCellDocument(0);
         mLotsDock->clearDocument();
+        mMapboxDock->clearDocument();
         mObjectsDock->clearDocument();
         mSearchDock->clearDocument();
 #ifdef ROAD_UI
@@ -688,13 +716,15 @@ void MainWindow::openFile()
             QFileDialog::getOpenFileNames(this, tr("Open World"),
                                           Preferences::instance()->openFileDirectory(),
                                           filter, &selectedFilter);
-    if (fileNames.isEmpty())
+    if (fileNames.isEmpty()) {
         return;
+    }
 
     Preferences::instance()->setOpenFileDirectory(QFileInfo(fileNames[0]).absolutePath());
 
-    foreach (const QString &fileName, fileNames)
+    foreach (const QString &fileName, fileNames) {
         openFile(fileName/*, mapReader*/);
+    }
 }
 
 bool MainWindow::openFile(const QString &fileName)
@@ -1236,7 +1266,7 @@ WorldDocument *MainWindow::currentWorldDocument()
             return cellDoc->worldDocument();
         return mCurrentDocument->asWorldDocument();
     }
-    return 0;
+    return nullptr;
 }
 
 bool MainWindow::saveFile()
@@ -1759,8 +1789,10 @@ void MainWindow::extractObjects()
                 height = qMax(MIN_OBJECT_SIZE, qreal(height));
 
                 // Adjust for map orientation
-                if (map->orientation() == Map::Isometric)
-                    x += 3 * og->level(), y += 3 * og->level();
+                if (map->orientation() == Map::Isometric) {
+                    x += 3 * og->level();
+                    y += 3 * og->level();
+                }
 
                 WorldCellObject *obj = new WorldCellObject(cell, o->type(),
                                                            type, group, x, y,
@@ -1774,10 +1806,80 @@ void MainWindow::extractObjects()
     worldDoc->undoStack()->endMacro();
 }
 
+void MainWindow::generateMapboxBuildingFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        MapboxBuildings generator;
+        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureBuilding);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        MapboxBuildings generator;
+        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureBuilding);
+    }
+}
+
+void MainWindow::generateMapboxWaterFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        MapboxBuildings generator;
+        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureWater);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        MapboxBuildings generator;
+        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureWater);
+    }
+}
+
+void MainWindow::mapboxReadFeaturesXML()
+{
+    WorldDocument* worldDoc = currentWorldDocument();
+    World* world = worldDoc->world();
+
+    QString filter = tr("All Files (*)");
+    filter += QLatin1String(";;");
+
+    QString selectedFilter = tr("XML files (*.xml)");
+    filter += selectedFilter;
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Read Features XML"),
+                                                    Preferences::instance()->worldMapXMLFile(),
+                                                    filter, &selectedFilter);
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absolutePath());
+
+    worldDoc->undoStack()->beginMacro(tr("Read WorldMap XML"));
+    for (auto* cell : world->cells()) {
+        for (int i = cell->mapBox().features().size() - 1; i >= 0; i--) {
+            worldDoc->removeMapboxFeature(cell, i);
+        }
+    }
+
+    MapBoxReader mbreader;
+    mbreader.readWorld(fileName, world);
+
+    for (auto* cell : world->cells()) {
+        MapBoxFeatures features = cell->mapBox().features();
+        cell->mapBox().mFeatures.clear();
+        for (int i = 0, n = features.size(); i < n; i++) {
+            worldDoc->addMapboxFeature(cell, i, features.at(i));
+        }
+        features.clear();
+    }
+
+    worldDoc->undoStack()->endMacro();
+}
+
 void MainWindow::clearCells()
 {
     Q_ASSERT(mCurrentDocument);
-    WorldDocument *worldDoc = 0;
+    WorldDocument *worldDoc = nullptr;
     QList<WorldCell*> cells;
     if ((worldDoc = mCurrentDocument->asWorldDocument())) {
         Q_ASSERT(worldDoc->selectedCellCount());
@@ -1800,7 +1902,7 @@ void MainWindow::clearCells()
 void MainWindow::clearMapOnly()
 {
     Q_ASSERT(mCurrentDocument);
-    WorldDocument *worldDoc = 0;
+    WorldDocument *worldDoc = nullptr;
     QList<WorldCell*> cells;
     if ((worldDoc = mCurrentDocument->asWorldDocument())) {
         Q_ASSERT(worldDoc->selectedCellCount());
@@ -1818,6 +1920,50 @@ void MainWindow::clearMapOnly()
     foreach (WorldCell *cell, cells)
         worldDoc->setCellMapName(cell, QString());
     undoStack->endMacro();
+}
+
+void MainWindow::showMapboxPreviewWindow()
+{
+    if (mMapboxWindow == nullptr)
+        mMapboxWindow = new MapboxWindow(this);
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    mMapboxWindow->setDocument(worldDoc);
+    mMapboxWindow->showNormal();
+    mMapboxWindow->activateWindow();
+    mMapboxWindow->raise();
+}
+
+void MainWindow::mapboxWriteFeaturesXML()
+{
+    WorldDocument *worldDoc = currentWorldDocument();
+
+    QString suggestedFileName = Preferences::instance()->worldMapXMLFile();
+    if (suggestedFileName.isEmpty() || !QFileInfo(suggestedFileName).exists()) {
+        if (worldDoc->fileName().isEmpty()) {
+            suggestedFileName = QDir::currentPath();
+            suggestedFileName += QLatin1String("/worldmap.xml");
+        } else {
+            const QFileInfo fileInfo(worldDoc->fileName());
+            suggestedFileName = fileInfo.path();
+            suggestedFileName += QLatin1String("/worldmap.xml");
+        }
+    }
+
+    const QString fileName = QFileDialog::getSaveFileName(this, QString(), suggestedFileName, tr("XML files (*.xml)"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absolutePath());
+
+    MapboxWriter writer;
+    if (!writer.writeWorld(worldDoc->world(), fileName)) {
+        qWarning("Failed to write worldmap.xml.");
+        return;
+    }
+    QMessageBox::information(MainWindow::instance(), tr("Mapbox"), tr("Finished!"));
 }
 
 bool MainWindow::confirmSave()
@@ -2003,6 +2149,13 @@ void MainWindow::updateActions()
     ui->actionExtractObjects->setEnabled(cellDoc != 0);
     ui->actionClearCell->setEnabled(false);
     ui->actionClearMapOnly->setEnabled(false);
+
+    ui->actionMapboxPreview->setEnabled(hasDoc);
+    bool selectedCells = (cellDoc != nullptr) || (worldDoc != nullptr && !worldDoc->selectedCells().isEmpty());
+    ui->actionGenerateMapboxBuildingFeatures->setEnabled(selectedCells);
+    ui->actionGenerateMapboxWaterFeatures->setEnabled(selectedCells);
+    ui->actionMapboxReadFeaturesXML->setEnabled(hasDoc);
+    ui->actionMapboxWriteFeaturesXML->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);

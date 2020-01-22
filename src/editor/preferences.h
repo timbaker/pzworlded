@@ -79,6 +79,9 @@ public:
     QString openFileDirectory() const;
     void setOpenFileDirectory(const QString &path);
 
+    QString worldMapXMLFile() const;
+    void setWorldMapXMLFile(const QString &path);
+
     bool showAdjacentMaps() const { return mShowAdjacentMaps; }
     void setShowAdjacentMaps(bool show);
 
@@ -146,6 +149,7 @@ private:
     QString mMapsDirectory;
     QString mTilesDirectory;
     QString mOpenFileDirectory;
+    QString mWorldMapXMLFile;
     bool mShowAdjacentMaps;
     bool mHighlightRoomUnderPointer;
     bool mShowOtherWorlds;

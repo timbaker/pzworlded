@@ -51,6 +51,9 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
+class MapBoxFeature;
+class MapboxFeatureItem;
+
 namespace Tiled {
 class MapRenderer;
 class Layer;
@@ -445,6 +448,7 @@ public:
     QList<SubMapItem*> subMapItemsUsingMapInfo(MapInfo *mapInfo);
 
     ObjectItem *itemForObject(WorldCellObject *obj);
+    MapboxFeatureItem* itemForMapboxFeature(MapBoxFeature* feature);
 
     void setSelectedSubMapItems(const QSet<SubMapItem*> &selected);
     const QSet<SubMapItem*> &selectedSubMapItems() const
@@ -454,10 +458,15 @@ public:
     const QSet<ObjectItem*> &selectedObjectItems() const
     { return mSelectedObjectItems; }
 
+    void setSelectedMapboxFeatureItems(const QSet<MapboxFeatureItem*> &selected);
+    const QSet<MapboxFeatureItem*> &selectedMapboxFeatureItems() const
+    { return mSelectedFeatureItems; }
+
     void setGraphicsSceneZOrder();
 
     void setSubMapVisible(WorldCellLot *lot, bool visible);
     void setObjectVisible(WorldCellObject *obj, bool visible);
+    void setMapboxFeatureVisible(MapBoxFeature *feature, bool visible);
 
     void setLevelOpacity(int level, qreal opacity);
     qreal levelOpacity(int level);
@@ -557,6 +566,12 @@ public slots:
 
     void propertiesChanged(PropertyHolder* ph);
 
+    void mapboxFeatureAdded(WorldCell* cell, int index);
+    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void mapboxGeometryChanged(WorldCell* cell, int featureIndex);
+    void selectedMapboxFeaturesChanged();
+
     void roadAdded(int index);
     void roadRemoved(Road *road);
     void roadCoordsChanged(int index);
@@ -609,6 +624,8 @@ private:
     QSet<ObjectItem*> mSelectedObjectItems;
     QList<CellRoadItem*> mRoadItems;
     QSet<CellRoadItem*> mSelectedRoadItems;
+    QList<MapboxFeatureItem*> mFeatureItems;
+    QSet<MapboxFeatureItem*> mSelectedFeatureItems;
     QGraphicsRectItem *mDarkRectangle;
     CellGridItem *mGridItem;
     bool mHighlightCurrentLevel;

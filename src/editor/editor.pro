@@ -56,6 +56,17 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
+    mapbox/mapboxbuildings.cpp \
+    mapbox/mapboxdock.cpp \
+    mapbox/mapboxglwidget.cpp \
+    mapbox/mapboxpropertiesform.cpp \
+    mapbox/mapboxpropertydialog.cpp \
+    mapbox/mapboxreader.cpp \
+    mapbox/mapboxscene.cpp \
+    mapbox/mapboxundo.cpp \
+    mapbox/mapboxwindow.cpp \
+    mapbox/mapboxwriter.cpp \
+    mapbox/worldcellmapbox.cpp \
     worldview.cpp \
     worldscene.cpp \
     world.cpp \
@@ -150,6 +161,18 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
+    mapbox/mapboxbuildings.h \
+    mapbox/mapboxcoordinate.h \
+    mapbox/mapboxdock.h \
+    mapbox/mapboxglwidget.h \
+    mapbox/mapboxpropertiesform.h \
+    mapbox/mapboxpropertydialog.h \
+    mapbox/mapboxreader.h \
+    mapbox/mapboxscene.h \
+    mapbox/mapboxundo.h \
+    mapbox/mapboxwindow.h \
+    mapbox/mapboxwriter.h \
+    mapbox/worldcellmapbox.h \
     worldview.h \
     worldscene.h \
     world.h \
@@ -243,6 +266,9 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     generatelotsfailuredialog.ui \
+    mapbox/mapboxpropertiesform.ui \
+    mapbox/mapboxpropertydialog.ui \
+    mapbox/mapboxwindow.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \

@@ -86,6 +86,8 @@ void CellDocument::setScene(CellScene *scene)
     connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
             SLOT(objectGroupAboutToBeRemoved(int)));
 
+    connect(mWorldDocument, &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellDocument::mapboxFeatureAboutToBeRemoved);
+
     connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
     connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
@@ -120,6 +122,20 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
             setCurrentLevel(obj->level());
         setCurrentObjectGroup(obj->group());
     }
+}
+
+void CellDocument::setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selected)
+{
+    mSelectedMapboxFeatures.clear();
+
+    for (MapBoxFeature* feature : selected) {
+        if (!mSelectedMapboxFeatures.contains(feature))
+            mSelectedMapboxFeatures.append(feature);
+        else
+            qWarning("duplicate features passed to setSelectedMapboxFeatures");
+    }
+
+    emit selectedMapboxFeaturesChanged();
 }
 
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
@@ -312,6 +328,15 @@ void CellDocument::cellLotMoved(WorldCellLot *lot)
         int index = mCell->lots().indexOf(lot);
         mMiniMapItem->lotMoved(index);
     }
+}
+
+void CellDocument::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != mCell)
+        return;
+    QList<MapBoxFeature*> selection = mSelectedMapboxFeatures;
+    selection.removeAll(cell->mapBox().features().at(index));
+    setSelectedMapboxFeatures(selection);
 }
 
 void CellDocument::objectGroupAboutToBeRemoved(int index)

@@ -33,6 +33,8 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include "mapbox/mapboxscene.h"
+
 #include "isometricrenderer.h"
 #include "map.h"
 #include "mapobject.h"
@@ -1238,6 +1240,11 @@ void CellScene::setTool(AbstractTool *tool)
     if (mActiveTool != CellSelectMoveRoadTool::instance())
         worldDocument()->setSelectedRoads(QList<Road*>());
 
+    if (mActiveTool != EditMapboxFeatureTool::instancePtr()) {
+        for (MapboxFeatureItem* item : mFeatureItems)
+            item->setEditable(false);
+    }
+
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
@@ -1303,6 +1310,12 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), &WorldDocument::propertyValueChanged, this, &CellScene::propertiesChanged);
     connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
+
+    connect(worldDocument(), &WorldDocument::mapboxFeatureAdded, this, &CellScene::mapboxFeatureAdded);
+    connect(worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellScene::mapboxFeatureAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::mapboxPointMoved, this, &CellScene::mapboxPointMoved);
+    connect(worldDocument(), &WorldDocument::mapboxGeometryChanged, this, &CellScene::mapboxGeometryChanged);
+    connect(mDocument, &CellDocument::selectedMapboxFeaturesChanged, this, &CellScene::selectedMapboxFeaturesChanged);
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
@@ -1381,6 +1394,15 @@ ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
     return 0;
 }
 
+MapboxFeatureItem *CellScene::itemForMapboxFeature(MapBoxFeature *feature)
+{
+    foreach (auto* item, mFeatureItems) {
+        if (item->feature() == feature)
+            return item;
+    }
+    return nullptr;
+}
+
 void CellScene::setSelectedSubMapItems(const QSet<SubMapItem *> &selected)
 {
     QList<WorldCellLot*> selection;
@@ -1397,6 +1419,15 @@ void CellScene::setSelectedObjectItems(const QSet<ObjectItem *> &selected)
         selection << item->object();
     }
     document()->setSelectedObjects(selection);
+}
+
+void CellScene::setSelectedMapboxFeatureItems(const QSet<MapboxFeatureItem *>& selected)
+{
+    QList<MapBoxFeature*> selection;
+    for (MapboxFeatureItem *item : selected) {
+        selection << item->feature();
+    }
+    document()->setSelectedMapboxFeatures(selection);
 }
 
 // Determine sane Z-order for layers in and out of TileLayerGroups
@@ -1465,6 +1496,13 @@ void CellScene::setObjectVisible(WorldCellObject *obj, bool visible)
     if (ObjectItem *item = itemForObject(obj)) {
         item->object()->setVisible(visible);
         item->setVisible(shouldObjectItemBeVisible(item));
+    }
+}
+
+void CellScene::setMapboxFeatureVisible(MapBoxFeature *feature, bool visible)
+{
+    if (MapboxFeatureItem* item = itemForMapboxFeature(feature)) {
+        item->setVisible(visible);
     }
 }
 
@@ -1661,6 +1699,13 @@ void CellScene::loadMap()
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
         mRoadItems += item;
+    }
+
+    for (auto* feature : cell()->mapBox().mFeatures) {
+        MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
+        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+        addItem(item);
+        mFeatureItems += item;
     }
 
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
@@ -1917,6 +1962,78 @@ void CellScene::propertiesChanged(PropertyHolder* ph)
     if (ObjectItem *item = itemForObject(obj)) {
         item->synchWithObject();
     }
+}
+
+void CellScene::mapboxFeatureAdded(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature* feature = cell->mapBox().mFeatures[index];
+    MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
+    item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
+    addItem(item);
+    mFeatureItems += item;
+    doLater(ZOrder);
+}
+
+void CellScene::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature *feature = cell->mapBox().mFeatures.at(index);
+    if (auto* item = itemForMapboxFeature(feature)) {
+        mFeatureItems.removeAll(item);
+        mSelectedFeatureItems.remove(item);
+        removeItem(item);
+        delete item;
+        doLater(ZOrder);
+    }
+
+}
+
+void CellScene::mapboxPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature *feature = cell->mapBox().mFeatures.at(featureIndex);
+    if (auto* item = itemForMapboxFeature(feature)) {
+        item->synchWithFeature();
+    }
+}
+
+void CellScene::mapboxGeometryChanged(WorldCell *cell, int featureIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    MapBoxFeature *feature = cell->mapBox().mFeatures.at(featureIndex);
+    if (auto* item = itemForMapboxFeature(feature)) {
+        item->synchWithFeature();
+        item->update();
+    }
+}
+
+void CellScene::selectedMapboxFeaturesChanged()
+{
+    auto& selected = document()->selectedMapboxFeatures();
+
+    QSet<MapboxFeatureItem*> items;
+    for (auto* feature : selected) {
+        items.insert(itemForMapboxFeature(feature));
+    }
+
+    for (auto* item : mSelectedFeatureItems - items) {
+        item->setSelected(false);
+    }
+
+    for (auto* item : items - mSelectedFeatureItems) {
+        item->setSelected(true);
+    }
+
+    mSelectedFeatureItems = items;
 }
 
 void CellScene::cellObjectGroupChanged(WorldCellObject *obj)

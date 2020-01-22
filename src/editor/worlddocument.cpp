@@ -28,6 +28,8 @@
 #include "worldview.h"
 #include "worldwriter.h"
 
+#include "mapbox/mapboxundo.h"
+
 #include <QDebug>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -148,6 +150,17 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(objectLevelChanged(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
             SIGNAL(cellObjectReordered(WorldCellObject*)));
+
+    connect(&mUndoRedo, SIGNAL(mapboxFeatureAdded(WorldCell*,int)),
+            SIGNAL(mapboxFeatureAdded(WorldCell*,int)));
+    connect(&mUndoRedo, SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)),
+            SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)));
+    connect(&mUndoRedo, SIGNAL(mapboxPointMoved(WorldCell*,int,int)),
+            SIGNAL(mapboxPointMoved(WorldCell*,int,int)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::mapboxPropertiesChanged,
+            this, &WorldDocument::mapboxPropertiesChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::mapboxGeometryChanged,
+            this, &WorldDocument::mapboxGeometryChanged);
 
     connect(&mUndoRedo, SIGNAL(roadAdded(int)),
             SIGNAL(roadAdded(int)));
@@ -321,6 +334,19 @@ void WorldDocument::setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs)
     emit selectedBMPsChanged();
 }
 
+void WorldDocument::setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selected)
+{
+    QList<MapBoxFeature*> selection;
+    foreach (auto *feature, selected) {
+        if (!selection.contains(feature))
+            selection.append(feature);
+        else
+            qWarning("duplicate features passed to setSelectedMapboxFeatures");
+    }
+    mSelectedMapboxFeatures = selection;
+    emit selectedMapboxFeaturesChanged();
+}
+
 void WorldDocument::removeRoadFromSelection(Road *road)
 {
     if (mSelectedRoads.contains(road)) {
@@ -455,6 +481,55 @@ void WorldDocument::reorderCellObject(WorldCellObject *obj, WorldCellObject *ins
     undoStack()->push(new ReorderCellObject(this, obj, index));
 }
 
+void WorldDocument::addMapboxFeature(WorldCell *cell, int index, MapBoxFeature *feature)
+{
+    Q_ASSERT(!cell->mapBox().mFeatures.contains(feature));
+    Q_ASSERT(index >= 0 && index <= cell->mapBox().mFeatures.size());
+    undoStack()->push(new AddMapboxFeature(this, cell, index, feature));
+}
+
+void WorldDocument::removeMapboxFeature(WorldCell *cell, int index)
+{
+    Q_ASSERT(index >= 0 && index < cell->mapBox().mFeatures.size());
+    undoStack()->push(new RemoveMapboxFeature(this, cell, index));
+}
+
+void WorldDocument::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new MoveMapboxPoint(this, cell, featureIndex, pointIndex, point));
+}
+
+void WorldDocument::addMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new AddMapboxProperty(this, cell, featureIndex, propertyIndex, property));
+}
+
+void WorldDocument::removeMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new RemoveMapboxProperty(this, cell, featureIndex, propertyIndex));
+}
+
+void WorldDocument::setMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new SetMapboxProperty(this, cell, featureIndex, propertyIndex, property));
+}
+
+void WorldDocument::setMapboxProperties(WorldCell *cell, int featureIndex, const MapBoxProperties &properties)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new SetMapboxProperties(this, cell, featureIndex, properties));
+}
+
+void WorldDocument::setMapboxCoordinates(WorldCell *cell, int featureIndex, int coordsIndex, const MapBoxCoordinates &coords)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
+    undoStack()->push(new SetMapboxCoordinates(this, cell, featureIndex, coordsIndex, coords));
+}
+
 void WorldDocument::insertRoad(int index, Road *road)
 {
     Q_ASSERT(!world()->roads().contains(road));
@@ -537,7 +612,8 @@ void WorldDocument::addTemplate(const QString &name, const QString &desc)
 {
     int index = mWorld->propertyTemplates().size();
     PropertyTemplate *pt = new PropertyTemplate;
-    pt->mName = name, pt->mDescription = desc;
+    pt->mName = name;
+    pt->mDescription = desc;
     undoStack()->push(new AddTemplateToWorld(this, index, pt));
 }
 
@@ -1304,6 +1380,73 @@ int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
     Q_ASSERT(cell->objects().indexOf(obj) == index);
     emit cellObjectReordered(obj);
     return oldIndex;
+}
+
+void WorldDocumentUndoRedo::addMapboxFeature(WorldCell *cell, int index, MapBoxFeature *feature)
+{
+    cell->mapBox().mFeatures.insert(index, feature);
+    emit mapboxFeatureAdded(cell, index);
+}
+
+MapBoxFeature *WorldDocumentUndoRedo::removeMapboxFeature(WorldCell *cell, int index)
+{
+    MapBoxFeature* feature = cell->mapBox().features().at(index);
+    mWorldDoc->mSelectedMapboxFeatures.removeAll(feature); // FIXME: no signal?
+
+    emit mapboxFeatureAboutToBeRemoved(cell, index);
+    return cell->mapBox().features().takeAt(index);
+}
+
+MapBoxPoint WorldDocumentUndoRedo::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    MapBoxCoordinates& coords = feature->mGeometry.mCoordinates[0];
+    MapBoxPoint old = coords[pointIndex];
+    coords[pointIndex] = point;
+    emit mapboxPointMoved(cell, featureIndex, pointIndex);
+    return old;
+}
+
+void WorldDocumentUndoRedo::addMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    feature->properties().insert(propertyIndex, property);
+    emit mapboxPropertiesChanged(cell, featureIndex);
+}
+
+MapBoxProperty WorldDocumentUndoRedo::removeMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    MapBoxProperty old = feature->properties().takeAt(propertyIndex);
+    emit mapboxPropertiesChanged(cell, featureIndex);
+    return old;
+}
+
+MapBoxProperty WorldDocumentUndoRedo::setMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    MapBoxProperty old = feature->properties().at(propertyIndex);
+    feature->properties().replace(propertyIndex, property);
+    emit mapboxPropertiesChanged(cell, featureIndex);
+    return old;
+}
+
+MapBoxProperties WorldDocumentUndoRedo::setMapboxProperties(WorldCell *cell, int featureIndex, const MapBoxProperties &properties)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    MapBoxProperties old = feature->properties();
+    feature->properties() = properties;
+    emit mapboxPropertiesChanged(cell, featureIndex);
+    return old;
+}
+
+MapBoxCoordinates WorldDocumentUndoRedo::setMapboxCoordinates(WorldCell *cell, int featureIndex, int coordsIndex, const MapBoxCoordinates &coords)
+{
+    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    MapBoxCoordinates old = feature->mGeometry.mCoordinates[coordsIndex];
+    feature->mGeometry.mCoordinates[coordsIndex] = coords;
+    emit mapboxGeometryChanged(cell, featureIndex);
+    return old;
 }
 
 void WorldDocumentUndoRedo::insertRoad(int index, Road *road)

@@ -19,6 +19,7 @@
 #define WORLDCELL_H
 
 #include "worldproperties.h"
+#include "mapbox/worldcellmapbox.h"
 
 #include <QColor>
 #include <QPoint>
@@ -301,6 +302,8 @@ public:
     const WorldCellObjectList &objects() const { return mObjects; }
     int indexOf(WorldCellObject *obj) { return mObjects.indexOf(obj); }
 
+    WorldCellMapBox& mapBox() { return mMapBox; }
+
     bool isEmpty() const;
 
 private:
@@ -309,6 +312,7 @@ private:
     QString mMapFilePath;
     WorldCellLotList mLots;
     WorldCellObjectList mObjects;
+    WorldCellMapBox mMapBox;
 
     friend class WorldCellContents;
 };

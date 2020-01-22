@@ -31,6 +31,8 @@ class LayersDock;
 class LotsDock;
 class LotPackWindow;
 class MapsDock;
+class MapboxDock;
+class MapboxWindow;
 class ObjectsDock;
 class PropertiesDock;
 class RoadsDock;
@@ -134,6 +136,12 @@ public slots:
     void clearCells();
     void clearMapOnly();
 
+    void showMapboxPreviewWindow();
+    void generateMapboxBuildingFeatures();
+    void generateMapboxWaterFeatures();
+    void mapboxReadFeaturesXML();
+    void mapboxWriteFeaturesXML();
+
     void setStatusBarCoords(int x, int y);
 
     void aboutToShowCurrentLevelMenu();
@@ -190,6 +198,7 @@ private:
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
     SearchDock* mSearchDock;
+    MapboxDock* mMapboxDock;
 #ifdef ROAD_UI
     RoadsDock *mRoadsDock;
 #endif
@@ -200,6 +209,7 @@ private:
     Zoomable *mZoomable;
     QSettings mSettings;
     LotPackWindow *mLotPackWindow;
+    MapboxWindow* mMapboxWindow = nullptr;
 
     static MainWindow *mInstance;
 };
