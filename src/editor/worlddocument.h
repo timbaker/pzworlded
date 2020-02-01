@@ -492,6 +492,7 @@ signals:
     void cellObjectReordered(WorldCellObject *object);
 
     void selectedMapboxFeaturesChanged();
+    void selectedMapboxPointsChanged();
     void mapboxFeatureAdded(WorldCell* cell, int index);
     void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
     void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);

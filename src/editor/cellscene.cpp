@@ -1316,6 +1316,7 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), &WorldDocument::mapboxPointMoved, this, &CellScene::mapboxPointMoved);
     connect(worldDocument(), &WorldDocument::mapboxGeometryChanged, this, &CellScene::mapboxGeometryChanged);
     connect(mDocument, &CellDocument::selectedMapboxFeaturesChanged, this, &CellScene::selectedMapboxFeaturesChanged);
+    connect(mDocument, &CellDocument::selectedMapboxPointsChanged, this, &CellScene::selectedMapboxPointsChanged);
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
@@ -2034,6 +2035,13 @@ void CellScene::selectedMapboxFeaturesChanged()
     }
 
     mSelectedFeatureItems = items;
+}
+
+void CellScene::selectedMapboxPointsChanged()
+{
+    for (auto featureItem : mSelectedFeatureItems) {
+        featureItem->update();
+    }
 }
 
 void CellScene::cellObjectGroupChanged(WorldCellObject *obj)

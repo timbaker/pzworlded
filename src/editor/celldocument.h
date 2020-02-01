@@ -73,6 +73,9 @@ public:
     void setSelectedMapboxFeatures(const QList<MapBoxFeature*>& selected);
     const QList<MapBoxFeature*>& selectedMapboxFeatures() const { return mSelectedMapboxFeatures; }
 
+    void setSelectedMapboxPoints(const QList<int>& selected);
+    const QList<int>& selectedMapboxPoints() const { return mSelectedMapboxPoints; }
+
     void setLayerVisibility(Tiled::Layer *layer, bool visible);
     void setLayerGroupVisibility(Tiled::ZTileLayerGroup *layerGroup, bool visible);
 
@@ -107,6 +110,7 @@ signals:
     void selectedLotsChanged();
     void selectedObjectsChanged();
     void selectedMapboxFeaturesChanged();
+    void selectedMapboxPointsChanged();
     void cellContentsAboutToChange();
     void cellContentsChanged();
     void cellMapFileAboutToChange();
@@ -139,6 +143,7 @@ private:
     QList<WorldCellLot*> mSelectedLots;
     QList<WorldCellObject*> mSelectedObjects;
     QList<MapBoxFeature*> mSelectedMapboxFeatures;
+    QList<int> mSelectedMapboxPoints;
     int mCurrentLayerIndex;
     int mCurrentLevel;
     WorldObjectGroup *mCurrentObjectGroup;

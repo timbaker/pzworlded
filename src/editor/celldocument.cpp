@@ -138,6 +138,20 @@ void CellDocument::setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selec
     emit selectedMapboxFeaturesChanged();
 }
 
+void CellDocument::setSelectedMapboxPoints(const QList<int> &selected)
+{
+    mSelectedMapboxPoints.clear();
+
+    for (int point : selected) {
+        if (!mSelectedMapboxPoints.contains(point))
+            mSelectedMapboxPoints.append(point);
+        else
+            qWarning("duplicate points passed to setSelectedMapboxPoints");
+    }
+
+    emit selectedMapboxPointsChanged();
+}
+
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
 {
     if (TileLayer *tl = layer->asTileLayer()) {

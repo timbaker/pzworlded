@@ -363,9 +363,13 @@
     <property name="title">
      <string>Mapbox</string>
     </property>
-    <addaction name="actionMapboxPreview"/>
+    <addaction name="actionMapboxRemovePoints"/>
+    <addaction name="actionMapboxSplitPolygon"/>
+    <addaction name="separator"/>
     <addaction name="actionGenerateMapboxBuildingFeatures"/>
     <addaction name="actionGenerateMapboxWaterFeatures"/>
+    <addaction name="actionMapboxPreview"/>
+    <addaction name="separator"/>
     <addaction name="actionMapboxReadFeaturesXML"/>
     <addaction name="actionMapboxWriteFeaturesXML"/>
    </widget>
@@ -872,6 +876,16 @@
   <action name="actionMapboxReadFeaturesXML">
    <property name="text">
     <string>Read Features XML...</string>
+   </property>
+  </action>
+  <action name="actionMapboxSplitPolygon">
+   <property name="text">
+    <string>Split Polygon</string>
+   </property>
+  </action>
+  <action name="actionMapboxRemovePoints">
+   <property name="text">
+    <string>Remove Selected Points</string>
    </property>
   </action>
  </widget>

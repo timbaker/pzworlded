@@ -150,6 +150,7 @@ public:
     CreateMapboxPointTool()
         : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Point)
     {
+        setIcon(QIcon(QLatin1Literal(":/images/22x22/road-tool-edit.png")));
     }
 };
 
@@ -161,6 +162,7 @@ public:
     CreateMapboxPolygonTool()
         : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Polygon)
     {
+        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
     }
 };
 
@@ -172,6 +174,7 @@ public:
     CreateMapboxPolylineTool()
         : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Polyline)
     {
+        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polyline.png")));
     }
 };
 

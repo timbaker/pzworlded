@@ -139,6 +139,8 @@ public slots:
     void showMapboxPreviewWindow();
     void generateMapboxBuildingFeatures();
     void generateMapboxWaterFeatures();
+    void splitMapboxPolygon();
+    void removeMapboxPoint();
     void mapboxReadFeaturesXML();
     void mapboxWriteFeaturesXML();
 
@@ -173,6 +175,9 @@ private:
     void enableDeveloperFeatures();
 
     WorldDocument *currentWorldDocument();
+
+    bool canSplitMapBoxPolygon();
+    bool canRemoveMapBoxPoint();
 
     struct ViewHint
     {

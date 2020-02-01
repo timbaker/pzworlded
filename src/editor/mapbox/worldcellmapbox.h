@@ -76,6 +76,15 @@ public:
 class MapBoxGeometry
 {
 public:
+    bool isLineString() const
+    { return mType == QLatin1Literal("LineString"); }
+
+    bool isPoint() const
+    { return mType == QLatin1Literal("Point"); }
+
+    bool isPolygon() const
+    { return mType == QLatin1Literal("Polygon"); }
+
     QString mType;
     QList<MapBoxCoordinates> mCoordinates;
 };
