@@ -1908,6 +1908,7 @@ void MainWindow::splitMapboxPolygon()
     geom.mCoordinates << coords2;
     feature2->mProperties = feature->properties();
 
+
     worldDoc->undoStack()->beginMacro(tr("Split Polygon"));
     worldDoc->setMapboxCoordinates(cellDoc->cell(), feature->index(), 0, coords1);
     worldDoc->addMapboxFeature(cellDoc->cell(), cellDoc->cell()->mapBox().features().size(), feature2);
