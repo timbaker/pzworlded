@@ -128,8 +128,12 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
     connect(LightbulbsMgr::instancePtr(), SIGNAL(changed()), SLOT(update()));
 }
 
+#include <QElapsedTimer>
+
 void LightSwitchOverlays::update()
 {
+    QElapsedTimer elapsed;
+    elapsed.start();
     qDebug() << "CellSceneOverlays update...";
 
     qDeleteAll(mOverlays);
@@ -167,7 +171,7 @@ void LightSwitchOverlays::update()
             bool hasSwitch = false;
             CompositeLayerGroup *lg = mScene->mapComposite()->layerGroupForLevel(room->floor);
             if (!lg) continue;
-            lg->prepareDrawing(mScene->renderer(), mScene->renderer()->boundingRect(building->region().boundingRect(), lg->level()));
+            lg->prepareDrawingNoBmpBlender(mScene->renderer(), mScene->renderer()->boundingRect(building->region().boundingRect(), lg->level()));
             QRectF biggestRoomRect;
             foreach (MapBuildingsNS::RoomRect *rect, room->rects) {
                 if (ignoreBuildings.contains(rect->buildingName)) continue; // FIXME: check this sooner
@@ -204,7 +208,7 @@ void LightSwitchOverlays::update()
 
     updateCurrentLevelHighlight();
 
-    qDebug() << "CellSceneOverlays update DONE";
+    qDebug() << "CellSceneOverlays update DONE in" << elapsed.elapsed() << "ms";
 }
 
 void LightSwitchOverlays::updateCurrentLevelHighlight()

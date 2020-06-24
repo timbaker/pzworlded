@@ -37,25 +37,34 @@ MapBuildings::MapBuildings()
 
 MapBuildings::~MapBuildings()
 {
-    foreach (int level, mRoomRectsByLevel.keys())
-        qDeleteAll(mRoomRectsByLevel[level]);
+    qDeleteAll(mRoomRectsByLevel);
     qDeleteAll(mBuildings);
     qDeleteAll(mRooms);
 }
 
+#include <QDebug>
+#include <QElapsedTimer>
+
 void MapBuildings::calculate(MapComposite *mc)
 {
+    QElapsedTimer elapsed;
+
+    elapsed.start();
     extractRoomRects(mc);
+    qDebug() << "MapBuildings: extractRoomRects took" << elapsed.elapsed() << "ms";
 
     qDeleteAll(mRooms);
     mRooms.clear();
 
+    elapsed.restart();
+
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
-    foreach (int level, mRoomRectsByLevel.keys()) {
-        QList<MapBuildingsNS::RoomRect*> rrList = mRoomRectsByLevel[level];
-        foreach (MapBuildingsNS::RoomRect *rr, rrList) {
-            if (rr->room == 0) {
+    QList<MapBuildingsNS::RoomRect*> overlapping;
+    for (MapBuildingsNS::RoomRectsForLevel* rr4L : mRoomRectsByLevel) {
+        const QList<MapBuildingsNS::RoomRect*>& rrList = rr4L->mRects;
+        for (MapBuildingsNS::RoomRect *rr : rrList) {
+            if (rr->room == nullptr) {
                 rr->room = new MapBuildingsNS::Room(rr->nameWithoutSuffix(),
                                                     rr->floor);
                 rr->room->rects += rr;
@@ -63,15 +72,17 @@ void MapBuildings::calculate(MapComposite *mc)
             }
             if (!rr->name.contains(QLatin1Char('#')))
                 continue;
-            foreach (MapBuildingsNS::RoomRect *comp, rrList) {
+            overlapping.clear();
+            rr4L->overlapping(rr->bounds().adjusted(-1, -1, 1, 1), overlapping);
+            for (MapBuildingsNS::RoomRect *comp : overlapping) {
                 if (comp == rr)
                     continue;
                 if (comp->room == rr->room)
                     continue;
                 if (rr->inSameRoom(comp)) {
-                    if (comp->room != 0) {
+                    if (comp->room != nullptr) {
                         MapBuildingsNS::Room *room = comp->room;
-                        foreach (MapBuildingsNS::RoomRect *rr2, room->rects) {
+                        for (MapBuildingsNS::RoomRect *rr2 : room->rects) {
                             Q_ASSERT(rr2->room == room);
                             Q_ASSERT(!rr->room->rects.contains(rr2));
                             rr2->room = rr->room;
@@ -89,28 +100,42 @@ void MapBuildings::calculate(MapComposite *mc)
         }
     }
 
+    qDebug() << "MapBuildings: merge took" << elapsed.elapsed() << "ms";
+    elapsed.restart();
+
+    mRoomLookup.clear();
+    for (MapBuildingsNS::Room* r : mRooms) {
+        mRoomLookup.addRoom(r);
+    }
+
+    qDebug() << "MapBuildings: mRoomLookup.addRoom() took" << elapsed.elapsed() << "ms";
+    elapsed.restart();
+
     qDeleteAll(mBuildings);
     mBuildings.clear();
 
     // Merge adjacent rooms into buildings.
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
-    foreach (MapBuildingsNS::Room *r, mRooms) {
-        if (r->building == 0) {
+    QList<MapBuildingsNS::Room*> overlappingRooms;
+    for (MapBuildingsNS::Room *r : mRooms) {
+        if (r->building == nullptr) {
             r->building = new MapBuildingsNS::Building();
             mBuildings += r->building;
             r->building->RoomList += r;
         }
-        foreach (MapBuildingsNS::Room *comp, mRooms) {
+        overlappingRooms.clear();
+        mRoomLookup.overlapping(r->bounds().adjusted(-1, -1, 1, 1), overlappingRooms);
+        for (MapBuildingsNS::Room *comp : overlappingRooms) {
             if (comp == r)
                 continue;
             if (r->building == comp->building)
                 continue;
 
             if (r->inSameBuilding(comp)) {
-                if (comp->building != 0) {
+                if (comp->building != nullptr) {
                     MapBuildingsNS::Building *b = comp->building;
-                    foreach (MapBuildingsNS::Room *r2, b->RoomList) {
+                    for (MapBuildingsNS::Room *r2 : b->RoomList) {
                         Q_ASSERT(r2->building == b);
                         Q_ASSERT(!r->building->RoomList.contains(r2));
                         r2->building = r->building;
@@ -126,15 +151,30 @@ void MapBuildings::calculate(MapComposite *mc)
             }
         }
     }
+
+    qDebug() << "MapBuildings: merge rooms into buildings took" << elapsed.elapsed() << "ms";
+    elapsed.restart();
+}
+
+namespace {
+    bool isAdjacentMap(MapComposite* mc)
+    {
+        if (mc == nullptr)
+            return false;
+        if (mc->isAdjacentMap())
+            return true;
+        return isAdjacentMap(mc->parent());
+    };
 }
 
 void MapBuildings::extractRoomRects(MapComposite *mapComposite)
 {
-    foreach (int level, mRoomRectsByLevel.keys())
-        qDeleteAll(mRoomRectsByLevel[level]);
+    qDeleteAll(mRoomRectsByLevel);
     mRoomRectsByLevel.clear();
 
-    foreach (MapComposite *mc, mapComposite->maps()) {
+    for (MapComposite *mc : mapComposite->maps()) {
+        if (isAdjacentMap(mc))
+            continue;
         if (!mc->isGroupVisible() || !mc->isVisible())
             continue;
         int ox = mc->originRecursive().x();
@@ -144,8 +184,8 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
             QString layerName = QString::fromLatin1("%1_RoomDefs").arg(level);
             int index = mc->map()->indexOfLayer(layerName, Layer::ObjectGroupType);
             if (index >= 0) {
-                QList<MapObject*> mapObjects = mc->map()->layerAt(index)->asObjectGroup()->objects();
-                foreach (MapObject *mapObject, mapObjects) {
+                const QList<MapObject*> mapObjects = mc->map()->layerAt(index)->asObjectGroup()->objects();
+                for (MapObject *mapObject : mapObjects) {
                     if (BuildingEditor::RoofHiding::isEmptyOutside(mapObject->name()))
                         continue;
                     int x = qFloor(mapObject->x());
@@ -161,18 +201,57 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
                                 level + rootLevel,
                                 w, h);
                     rr->buildingName = QFileInfo(mc->mapInfo()->path()).fileName();
-                    mRoomRectsByLevel[level + rootLevel] += rr;
+                    if (mRoomRectsByLevel[level + rootLevel] == nullptr) {
+                        mRoomRectsByLevel[level + rootLevel] = new MapBuildingsNS::RoomRectsForLevel();
+                    }
+                    mRoomRectsByLevel[level + rootLevel]->mRects += rr;
                 }
             }
+        }
+    }
+
+    for (MapBuildingsNS::RoomRectsForLevel* rr4L : mRoomRectsByLevel) {
+        for (MapBuildingsNS::RoomRect *rr : rr4L->mRects) {
+            rr4L->addRect(rr);
         }
     }
 }
 
 MapBuildingsNS::Room *MapBuildings::roomAt(const QPoint &pos, int level)
 {
-    foreach (MapBuildingsNS::RoomRect *rr, mRoomRectsByLevel[level]) {
-        if (rr->bounds().contains(pos))
-            return rr->room;
+    int x = pos.x() / 10;
+    int y = pos.y() / 10;
+    x = clamp(x, 0, 30-1);
+    y = clamp(y, 0, 30-1);
+
+    for (MapBuildingsNS::Room* r : mRoomLookup.mGrid[x + y * 30]) {
+        if ((r->floor == level) && r->contains(pos)) {
+            return r;
+        }
     }
-    return 0;
+    /*
+    for (MapBuildingsNS::Room *r : mRooms) {
+        if (r->floor != level) {
+            continue;
+        }
+        for (MapBuildingsNS::RoomRect *rr : r->rects) {
+            if (rr->bounds().contains(pos)) {
+                return rr->room;
+            }
+        }
+    }
+    */
+    /*
+    MapBuildingsNS::RoomRectsForLevel* rr4L = mRoomRectsByLevel[level];
+    if (rr4L == nullptr) {
+        return nullptr;
+    }
+
+    for (MapBuildingsNS::RoomRect *rr : mRoomRectsByLevel[level]->mRects) {
+        if (rr->bounds().contains(pos)) {
+            return rr->room;
+        }
+    }
+    */
+    return nullptr;
 }

@@ -435,6 +435,23 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
     return !cells.isEmpty();
 }
 
+void CompositeLayerGroup::prepareDrawingNoBmpBlender(const MapRenderer *renderer, const QRect &rect)
+{
+    mPreparedSubMapLayers.resize(0);
+    for (MapComposite *subMap : mOwner->subMaps()) {
+        int levelOffset = subMap->levelOffset();
+        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
+        if (layerGroup == nullptr) {
+            continue;
+        }
+        QRectF bounds = layerGroup->boundingRect(renderer);
+        if ((bounds & rect).isValid()) {
+            mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
+            layerGroup->prepareDrawingNoBmpBlender(renderer, rect);
+        }
+    }
+}
+
 bool CompositeLayerGroup::isLayerEmpty(int index) const
 {
     if (!mVisibleLayers[index])

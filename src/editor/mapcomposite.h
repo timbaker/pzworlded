@@ -65,6 +65,8 @@ public:
     void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
 
+    void prepareDrawingNoBmpBlender(const Tiled::MapRenderer *renderer, const QRect &rect);
+
     bool setLayerVisibility(const QString &layerName, bool visible);
     bool setLayerVisibility(Tiled::TileLayer *tl, bool visible);
     bool isLayerVisible(Tiled::TileLayer *tl);

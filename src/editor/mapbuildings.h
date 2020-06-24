@@ -21,8 +21,15 @@
 #include <QList>
 #include <QMap>
 #include <QRegion>
+#include <qmath.h>
 
 class MapComposite;
+
+template<typename T>
+T clamp(T v, T min, T max)
+{
+    return qMin(qMax(v, min), max);
+};
 
 namespace MapBuildingsNS {
 
@@ -39,7 +46,7 @@ public:
         , h(h)
         , floor(level)
         , name(name)
-        , room(0)
+        , room(nullptr)
     {
     }
 
@@ -99,7 +106,7 @@ public:
     Room(const QString &name, int level)
         : floor(level)
         , name(name)
-        , building(0)
+        , building(nullptr)
     {
 
     }
@@ -110,8 +117,8 @@ public:
 
     bool inSameBuilding(Room *comp)
     {
-        foreach (RoomRect *rr, rects) {
-            foreach (RoomRect *rr2, comp->rects) {
+        for (RoomRect *rr : rects) {
+            for (RoomRect *rr2 : comp->rects) {
                 if (rr->isAdjacent(rr2))
                     return true;
             }
@@ -119,12 +126,32 @@ public:
         return false;
     }
 
+    QRect bounds()
+    {
+        QRect r;
+        for (RoomRect *rr : rects) {
+            r |= rr->bounds();
+        }
+        return r;
+    }
+
     QRegion region()
     {
         QRegion ret;
-        foreach (RoomRect *rr, rects)
+        for (RoomRect *rr : rects) {
             ret += rr->bounds();
+        }
         return ret;
+    }
+
+    bool contains(const QPoint& pos)
+    {
+        for (RoomRect *rr : rects) {
+            if (rr->bounds().contains(pos)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     int floor;
@@ -143,14 +170,111 @@ public:
     QRegion region()
     {
         QRegion ret;
-        foreach (Room *room, RoomList) {
-            foreach (RoomRect *rr, room->rects)
+        for (Room *room : RoomList) {
+            for (RoomRect *rr : room->rects)
                 ret += rr->bounds().adjusted(0, 0, 1, 1);
         }
         return ret;
     }
 
     QList<Room*> RoomList;
+};
+
+class RoomRectsForLevel
+{
+public:
+    void addRect(RoomRect* rr)
+    {
+        int xMin = rr->x / 10;
+        int yMin = rr->y / 10;
+        int xMax = qCeil((rr->x + rr->w) / 10.0);
+        int yMax = qCeil((rr->y + rr->h) / 10.0);
+        xMin = clamp(xMin, 0, 30-1);
+        yMin = clamp(yMin, 0, 30-1);
+        xMax = clamp(xMax, 0, 30-1);
+        yMax = clamp(yMax, 0, 30-1);
+        for (int y = yMin; y <= yMax; y++) {
+            for (int x = xMin; x <= xMax; x++) {
+                mLookup[x + y * 30] += rr;
+            }
+        }
+    }
+
+    void overlapping(const QRect& rect, QList<RoomRect*>& rects)
+    {
+        int xMin = rect.x() / 10;
+        int yMin = rect.y() / 10;
+        int xMax = qCeil((rect.x() + rect.width()) / 10.0);
+        int yMax = qCeil((rect.y() + rect.height()) / 10.0);
+        xMin = clamp(xMin, 0, 30-1);
+        yMin = clamp(yMin, 0, 30-1);
+        xMax = clamp(xMax, 0, 30-1);
+        yMax = clamp(yMax, 0, 30-1);
+        for (int y = yMin; y <= yMax; y++) {
+            for (int x = xMin; x <= xMax; x++) {
+                for (RoomRect* rr : mLookup[x + y * 30]) {
+                    if (rects.contains(rr) == false) {
+                        rects += rr;
+                    }
+                }
+            }
+        }
+    }
+
+    QList<RoomRect*> mRects;
+    QList<RoomRect*> mLookup[30 * 30];
+};
+
+class RoomLookup
+{
+public:
+    void clear()
+    {
+        for (int i = 0; i < 30 * 30; i++) {
+            mGrid[i].clear();
+        }
+    }
+
+    void addRoom(Room* r)
+    {
+        QRect bounds = r->bounds();
+        int xMin = bounds.x() / 10;
+        int yMin = bounds.y() / 10;
+        int xMax = qCeil((bounds.x() + bounds.width()) / 10.0);
+        int yMax = qCeil((bounds.y() + bounds.height()) / 10.0);
+        xMin = clamp(xMin, 0, 30-1);
+        yMin = clamp(yMin, 0, 30-1);
+        xMax = clamp(xMax, 0, 30-1);
+        yMax = clamp(yMax, 0, 30-1);
+        for (int y = yMin; y <= yMax; y++) {
+            for (int x = xMin; x <= xMax; x++) {
+                mGrid[x + y * 30] += r;
+            }
+        }
+    }
+
+    void overlapping(const QRect& rect, QList<Room*>& rooms)
+    {
+        int xMin = rect.x() / 10;
+        int yMin = rect.y() / 10;
+        int xMax = qCeil((rect.x() + rect.width()) / 10.0);
+        int yMax = qCeil((rect.y() + rect.height()) / 10.0);
+        xMin = clamp(xMin, 0, 30-1);
+        yMin = clamp(yMin, 0, 30-1);
+        xMax = clamp(xMax, 0, 30-1);
+        yMax = clamp(yMax, 0, 30-1);
+        for (int y = yMin; y <= yMax; y++) {
+            for (int x = xMin; x <= xMax; x++) {
+                for (Room* r : mGrid[x + y * 30]) {
+                    if (rooms.contains(r) == false) {
+                        rooms += r;
+                    }
+                }
+            }
+        }
+    }
+
+    QList<MapBuildingsNS::Room*> mGrid[30 * 30];
 };
 
 } // MapBuildingsNS
@@ -172,7 +296,8 @@ public:
 private:
     QList<MapBuildingsNS::Building*> mBuildings;
     QList<MapBuildingsNS::Room*> mRooms;
-    QMap<int,QList<MapBuildingsNS::RoomRect*> > mRoomRectsByLevel;
+    MapBuildingsNS::RoomLookup mRoomLookup;
+    QMap<int, MapBuildingsNS::RoomRectsForLevel*> mRoomRectsByLevel;
 };
 
 #endif // MAPBUILDINGS_H
