@@ -136,10 +136,10 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
             : layer->isEmpty() || layer->name().contains(QLatin1String("NoRender"));
     mEmptyLayers.insert(index, empty);
 
-    mBmpBlendLayers.insert(index, 0);
-    mNoBlends.insert(index, 0);
+    mBmpBlendLayers.insert(index, nullptr);
+    mNoBlends.insert(index, nullptr);
 #ifdef BUILDINGED
-    mBlendOverLayers.insert(index, 0);
+    mBlendOverLayers.insert(index, nullptr);
     mToolLayers.insert(index, ToolLayer());
     mToolNoBlends.insert(index, ToolNoBlend());
     mForceNonEmpty.insert(index, false);
@@ -378,6 +378,9 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
         ++index;
         TileLayer *tlBmpBlend = mBmpBlendLayers[index];
         MapNoBlend *noBlend = mNoBlends[index];
+#ifdef BUILDINGED
+        const TileLayer *tlBlendOver = mBlendOverLayers[index];
+#endif // BUILDINGED
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
 #if WORLDED // ROAD_CRUD
@@ -405,6 +408,11 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                     cell = &tlBmpBlend->cellAt(subPos);
                 }
             }
+#ifdef BUILDINGED
+            if (cell->isEmpty() && tlBlendOver && tlBlendOver->contains(subPos)) {
+                cell = &tlBlendOver->cellAt(subPos);
+            }
+#endif // BUILDINGED
             if (!cell->isEmpty() && (root == mOwner) && tl->name().contains(sAboveLot)) {
                 aboveLotCells += cell;
                 continue;
@@ -651,7 +659,7 @@ bool CompositeLayerGroup::setBmpBlendLayers(const QList<TileLayer *> &layers)
 {
     QVector<TileLayer*> old = mBmpBlendLayers;
 
-    mBmpBlendLayers.fill(0);
+    mBmpBlendLayers.fill(nullptr);
     foreach (TileLayer *tl, layers) {
         for (int i = 0; i < mLayers.size(); i++) {
             if (mLayers[i]->name() == tl->name()) {

@@ -619,6 +619,10 @@ void MapWriterPrivate::writeBmpSettings(QXmlStreamWriter &w,
     w.writeAttribute(QLatin1String("file"), fileName);
     w.writeEndElement(); // <blends-file>
 
+    w.writeStartElement(QLatin1Literal("edges-everywhere"));
+    w.writeAttribute(QLatin1Literal("value"), QLatin1Literal(settings->isBlendEdgesEverywhere() ? "true" : "false"));
+    w.writeEndElement(); // <edges-everywhere>
+
     w.writeStartElement(QLatin1String("aliases"));
     foreach (BmpAlias *alias, settings->aliases()) {
         w.writeStartElement(QLatin1String("alias"));
