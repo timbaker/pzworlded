@@ -575,13 +575,27 @@ bool LotsModel::dropMimeData(const QMimeData *data,
 
      // Note: parentItem may be destroyed by setCell()
      int level = parentItem->level->level;
-     int count = lots.size();
-     if (count > 1)
-         worldDoc->undoStack()->beginMacro(tr("Change %1 Lots' Level").arg(count));
-     foreach (WorldCellLot *lot, lots)
+
+     WorldCellLot *insertBefore = nullptr;
+     if ((row == -1) || parentItem->children.isEmpty()) {
+        // Drop on parent
+     } else if (row >= parentItem->children.size()) {
+         // Drop after last row
+         insertBefore = parentItem->children.last()->lot;
+     } else {
+         WorldCellLot *prev = parentItem->children.at(row)->lot;
+         int index = mCell->lots().indexOf(prev) + 1;
+         if (index < mCell->lots().size())
+             insertBefore = mCell->lots().at(index);
+     }
+
+     worldDoc->undoStack()->beginMacro(tr("Reorder %1 Lots").arg(lots.size()));
+     for (WorldCellLot *lot : lots) {
+         worldDoc->reorderCellLot(lot, insertBefore);
+         insertBefore = lot;
          worldDoc->setLotLevel(lot, level);
-     if (count > 1)
-         worldDoc->undoStack()->endMacro();
+     }
+     worldDoc->undoStack()->endMacro();
 
      return true;
 }
@@ -682,11 +696,11 @@ void LotsModel::setDocument(Document *doc)
         mCellDoc->disconnect(this);
     }
 
-    mWorldDoc = doc ? doc->asWorldDocument() : 0;
-    mCellDoc = doc ? doc->asCellDocument() : 0;
+    mWorldDoc = doc ? doc->asWorldDocument() : nullptr;
+    mCellDoc = doc ? doc->asCellDocument() : nullptr;
 
-    WorldCell *cell = 0;
-    WorldDocument *worldDoc = 0;
+    WorldCell *cell = nullptr;
+    WorldDocument *worldDoc = nullptr;
 
     if (mWorldDoc) {
         worldDoc = mWorldDoc;
@@ -716,6 +730,8 @@ void LotsModel::setDocument(Document *doc)
                 SLOT(cellLotAdded(WorldCell*,int)));
         connect(worldDoc, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
                 SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
+        connect(worldDoc, &WorldDocument::cellLotReordered,
+                this, &LotsModel::cellLotReordered);
         connect(worldDoc, SIGNAL(lotLevelChanged(WorldCellLot*)),
                 SLOT(lotLevelChanged(WorldCellLot*)));
     }
@@ -757,6 +773,21 @@ void LotsModel::cellLotAboutToBeRemoved(WorldCell *cell, int index)
     }
 }
 
+void LotsModel::cellLotReordered(WorldCellLot *lot)
+{
+    if (lot->cell() != mCell)
+        return;
+    if (Item *item = toItem(lot)) {
+        Item *parentItem = item->parent;
+        QModelIndex parent = this->index(parentItem->level);
+        int row = parentItem->children.indexOf(item);
+        beginRemoveRows(parent, row, row);
+        delete parentItem->children.takeAt(row);
+        endRemoveRows();
+    }
+    cellLotAdded(mCell, mCell->indexOf(lot));
+}
+
 void LotsModel::cellContentsAboutToChange(WorldCell *cell)
 {
     qDebug() << "LotsModel::cellContentsAboutToChange" << cell->pos() << "(mine is" << (mCell ? mCell->pos() : QPoint()) << ")";
@@ -769,7 +800,7 @@ void LotsModel::cellContentsAboutToChange(WorldCell *cell)
     mLevels.clear();
 
     delete mRootItem;
-    mRootItem = 0;
+    mRootItem = nullptr;
 
     endResetModel();
 

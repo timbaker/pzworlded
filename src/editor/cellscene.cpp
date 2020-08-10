@@ -1263,6 +1263,7 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
     connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
     connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)), SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotReordered, this, &CellScene::cellLotReordered);
     connect(mDocument, SIGNAL(selectedLotsChanged()), SLOT(selectedLotsChanged()));
 
     connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
@@ -1378,7 +1379,7 @@ ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
         if (item->object() == obj)
             return item;
     }
-    return 0;
+    return nullptr;
 }
 
 void CellScene::setSelectedSubMapItems(const QSet<SubMapItem *> &selected)
@@ -1740,36 +1741,10 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
             subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
-#if 1
             mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            if (!subMapInfo->isLoading())
+            if (!subMapInfo->isLoading()) {
                 mapLoaded(subMapInfo);
-#else
-            if (subMapInfo->isLoading())
-                mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            else {
-                MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
-                SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
-                mMapBuildingsInvalid = true;
-
-                // Don't just call mSubMapItems.insert(), due to asynchronous loading.
-                QMap<int,SubMapItem*> zzz;
-                foreach (SubMapItem *item, mSubMapItems)
-                    zzz[cell()->lots().indexOf(item->lot())] = item;
-                zzz[index] = item;
-                mSubMapItems = zzz.values();
-
-                // Update with most recent information
-                lot->setMapName(subMapInfo->path());
-                lot->setWidth(subMapInfo->width());
-                lot->setHeight(subMapInfo->height());
-
-                // Schedule update *before* addItem() schedules its update.
-                doLater(AllGroups | Bounds | Synch | ZOrder);
-
-                addItem(item);
             }
-#endif
         }
     }
 }
@@ -1933,6 +1908,10 @@ void CellScene::cellObjectReordered(WorldCellObject *obj)
 {
     if (obj->cell() != cell())
         return;
+    if (ObjectItem *item = itemForObject(obj)) {
+        mObjectItems.removeAll(item);
+        mObjectItems.insert(cell()->indexOf(obj), item);
+    }
     doLater(ZOrder);
 }
 
@@ -2057,6 +2036,14 @@ void CellScene::selectedLotsChanged()
     mSelectedSubMapItems = items;
 
     // TODO: Select a layer in the level that this object is on
+}
+
+void CellScene::cellLotReordered(WorldCellLot *lot)
+{
+    if (lot->cell() != cell())
+        return;
+    sortSubMaps();
+    doLater(AllGroups | Bounds | Synch | ZOrder);
 }
 
 void CellScene::setGridVisible(bool visible)
@@ -2360,6 +2347,22 @@ void CellScene::synchAdjacentMapObjectItemVisibility()
     }
 }
 
+void CellScene::sortSubMaps()
+{
+    QMap<int,SubMapItem*> zzz;
+    for (SubMapItem *item : mSubMapItems) {
+        int index = cell()->indexOf(item->lot());
+        zzz[index] = item;
+    }
+    mSubMapItems = zzz.values();
+
+    QVector<MapComposite*> orderedMaps;
+    for (SubMapItem *item : mSubMapItems) {
+        orderedMaps += item->subMap();
+    }
+    mMapComposite->sortSubMaps(orderedMaps);
+}
+
 void CellScene::tilesetChanged(Tileset *tileset)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
@@ -2605,10 +2608,18 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
             // Don't just call mSubMapItems.insert(), due to asynchronous loading.
             QMap<int,SubMapItem*> zzz;
-            foreach (SubMapItem *item, mSubMapItems)
-                zzz[cell()->lots().indexOf(item->lot())] = item;
-            zzz[cell()->lots().indexOf(sm.lot)] = item;
+            for (SubMapItem *item : mSubMapItems) {
+                int index = cell()->indexOf(item->lot());
+                zzz[index] = item;
+            }
+            zzz[cell()->indexOf(sm.lot)] = item;
             mSubMapItems = zzz.values();
+
+            QVector<MapComposite*> orderedMaps;
+            for (SubMapItem *item : mSubMapItems) {
+                orderedMaps += item->subMap();
+            }
+            mMapComposite->sortSubMaps(orderedMaps);
 
             // Update with most-recent information
             sm.lot->setMapName(sm.mapInfo->path());
@@ -2646,8 +2657,8 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     QObject(scene), // DELETE WITH SCENE
     mScene(scene),
     mCell(cell),
-    mMapComposite(0),
-    mMapInfo(0),
+    mMapComposite(nullptr),
+    mMapInfo(nullptr),
     mObjectItemParent(new QGraphicsItemGroup)
 {
     mScene->addItem(mObjectItemParent);
@@ -2665,6 +2676,8 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
             SLOT(cellLotMoved(WorldCellLot*)));
     connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)),
             SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotReordered,
+            this, &AdjacentMap::cellLotReordered);
 
     connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
     connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
@@ -2788,6 +2801,13 @@ void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
 
         scene()->mapCompositeNeedsSynch();
     }
+}
+
+void AdjacentMap::cellLotReordered(WorldCellLot *lot)
+{
+    if (lot->cell() != cell())
+        return;
+
 }
 
 void AdjacentMap::cellObjectAdded(WorldCell *cell, int index)
@@ -2931,8 +2951,16 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
             if (mMapComposite) {
                 MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, sm.lot->pos(),
                                                              sm.lot->level());
-
                 mLotToMC[sm.lot] = subMap;
+
+                QVector<MapComposite*> orderedMaps;
+                for (WorldCellLot *lot : cell()->lots()) {
+                    if (mLotToMC.contains(lot)) {
+                        orderedMaps += mLotToMC[lot];
+                    }
+                }
+                mMapComposite->sortSubMaps(orderedMaps);
+
                 scene()->mapCompositeNeedsSynch();
                 scene()->update(lotSceneBounds(sm.lot));
             }

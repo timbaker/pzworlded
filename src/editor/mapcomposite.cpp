@@ -1079,6 +1079,23 @@ void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
         layerGroup->setNeedsSynch(true);
 }
 
+void MapComposite::sortSubMaps(const QVector<MapComposite *> &order)
+{
+    std::sort(mSubMaps.begin(), mSubMaps.end(), [order,this](MapComposite *a, MapComposite *b) {
+        int indexA = order.indexOf(a);
+        int indexB = order.indexOf(b);
+        if (indexA == -1)
+            indexA = mSubMaps.indexOf(a);
+        if (indexB == -1)
+            indexB = mSubMaps.indexOf(b);
+        return indexA < indexB;
+    });
+
+    for (CompositeLayerGroup *layerGroup : mLayerGroups) {
+        layerGroup->setNeedsSynch(true);
+    }
+}
+
 void MapComposite::layerAdded(int index)
 {
     layerRenamed(index);

@@ -375,6 +375,7 @@ private slots:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
     void lotLevelChanged(WorldCellLot *lot);
+    void cellLotReordered(WorldCellLot *lot);
 
     void cellObjectAdded(WorldCell *cell, int index);
     void cellObjectAboutToBeRemoved(WorldCell *cell, int index);
@@ -422,7 +423,7 @@ class CellScene : public BaseGraphicsScene
 {
     Q_OBJECT
 public:
-    explicit CellScene(QObject *parent = 0);
+    explicit CellScene(QObject *parent = nullptr);
     ~CellScene();
 
     void setTool(AbstractTool *tool);
@@ -501,6 +502,7 @@ protected:
     void updateCurrentLevelHighlight();
     bool shouldObjectItemBeVisible(ObjectItem *item);
     void synchAdjacentMapObjectItemVisibility();
+    void sortSubMaps();
 
     typedef Tiled::Tileset Tileset;
 signals:
@@ -525,6 +527,7 @@ public slots:
     void cellLotMoved(WorldCellLot *lot);
     void lotLevelChanged(WorldCellLot *lot);
     void selectedLotsChanged();
+    void cellLotReordered(WorldCellLot *lot);
 
     void cellObjectAdded(WorldCell *cell, int index);
     void cellObjectAboutToBeRemoved(WorldCell *cell, int index);

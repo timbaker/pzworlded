@@ -143,6 +143,7 @@ signals:
 private slots:
     void cellLotAdded(WorldCell *cell, int index);
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
+    void cellLotReordered(WorldCellLot *lot);
     void cellContentsAboutToChange(WorldCell *cell);
     void cellContentsChanged(WorldCell *cell);
     void lotLevelChanged(WorldCellLot *lot);

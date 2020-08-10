@@ -125,6 +125,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(cellLotMoved(WorldCellLot*)));
     connect(&mUndoRedo, SIGNAL(lotLevelChanged(WorldCellLot*)),
             SIGNAL(lotLevelChanged(WorldCellLot*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotReordered,
+            this, &WorldDocument::cellLotReordered);
 
     connect(&mUndoRedo, SIGNAL(cellObjectAdded(WorldCell*,int)),
             SIGNAL(cellObjectAdded(WorldCell*,int)));
@@ -387,6 +389,15 @@ void WorldDocument::setLotLevel(WorldCellLot *lot, int level)
     undoStack()->push(new SetLotLevel(this, lot, level));
 }
 
+void WorldDocument::reorderCellLot(WorldCellLot *lot, WorldCellLot *insertBefore)
+{
+    if (lot == insertBefore)
+        return;
+    const WorldCellLotList &lots = lot->cell()->lots();
+    int index = insertBefore ? lots.indexOf(insertBefore) : lots.size();
+    undoStack()->push(new ReorderCellLot(this, lot, index));
+}
+
 void WorldDocument::addCellObject(WorldCell *cell, int index, WorldCellObject *obj)
 {
     Q_ASSERT(!cell->objects().contains(obj));
@@ -433,7 +444,7 @@ void WorldDocument::setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *o
 
 void WorldDocument::setCellObjectType(WorldCellObject *obj, const QString &type)
 {
-    ObjectType *objType = 0;
+    ObjectType *objType = nullptr;
     foreach (ObjectType *ot, mWorld->objectTypes()) {
         if (ot->name() == type) {
             objType = ot;
@@ -1220,6 +1231,22 @@ int WorldDocumentUndoRedo::setLotLevel(WorldCellLot *lot, int level)
     return oldLevel;
 }
 
+int WorldDocumentUndoRedo::reorderCellLot(WorldCellLot *lot, int index)
+{
+    WorldCell *cell = lot->cell();
+    int oldIndex = cell->indexOf(lot);
+    cell->removeLot(oldIndex);
+    if (index > oldIndex) {
+        index--;
+    } else {
+        oldIndex++;
+    }
+    cell->insertLot(index, lot);
+    Q_ASSERT(cell->indexOf(lot) == index);
+    emit cellLotReordered(lot);
+    return oldIndex;
+}
+
 void WorldDocumentUndoRedo::addCellObject(WorldCell *cell, int index, WorldCellObject *obj)
 {
     cell->insertObject(index, obj);
@@ -1295,13 +1322,16 @@ ObjectType *WorldDocumentUndoRedo::setCellObjectType(WorldCellObject *obj, Objec
 int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
 {
     WorldCell *cell = obj->cell();
-    int oldIndex = cell->objects().indexOf(obj);
+    int oldIndex = cell->indexOf(obj);
 //    emit cellObjectAboutToBeReordered(oldIndex);
     cell->removeObject(oldIndex);
-    if (index > oldIndex)
+    if (index > oldIndex) {
         index--;
+    } else {
+        oldIndex++;
+    }
     cell->insertObject(index, obj);
-    Q_ASSERT(cell->objects().indexOf(obj) == index);
+    Q_ASSERT(cell->indexOf(obj) == index);
     emit cellObjectReordered(obj);
     return oldIndex;
 }

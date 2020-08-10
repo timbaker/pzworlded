@@ -209,6 +209,8 @@ public:
     void removeMap(MapComposite *subMap);
     void moveSubMap(MapComposite *subMap, const QPoint &pos);
 
+    void sortSubMaps(const QVector<MapComposite *> &order);
+
     Tiled::Map *map() const { return mMap; }
     MapInfo *mapInfo() const { return mMapInfo; }
 
