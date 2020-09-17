@@ -722,6 +722,13 @@ bool MainWindow::openFile(const QString &fileName)
 
     DefaultsFile::oldWorld(world);
 
+    for (int y = 0; y < world->height(); y++) {
+        for (int x = 0; x < world->width(); x++) {
+            WorldCell *cell = world->cellAt(x, y);
+            cell->setLastSavedXML(cell->toXML());
+        }
+    }
+
     docman()->addDocument(new WorldDocument(world, fileName));
     if (docman()->failedToAdd())
         return false;
@@ -1510,7 +1517,7 @@ void MainWindow::copy()
 {
     if (!mCurrentDocument)
         return;
-    World *world = 0;
+    World *world = nullptr;
     if (WorldDocument *worldDoc = mCurrentDocument->asWorldDocument()) {
         CopyPasteDialog dialog(worldDoc, this);
         if (dialog.exec() == QDialog::Accepted)
@@ -1945,32 +1952,32 @@ bool MainWindow::saveFile(const QString &fileName)
 void MainWindow::updateActions()
 {
     Document *doc = mCurrentDocument;
-    bool hasDoc = doc != 0;
-    CellDocument *cellDoc = hasDoc ? doc->asCellDocument() : 0;
-    WorldDocument *worldDoc = hasDoc ? doc->asWorldDocument() : 0;
+    bool hasDoc = doc != nullptr;
+    CellDocument *cellDoc = hasDoc ? doc->asCellDocument() : nullptr;
+    WorldDocument *worldDoc = hasDoc ? doc->asWorldDocument() : nullptr;
 
     ui->actionSave->setEnabled(hasDoc);
     ui->actionSaveAs->setEnabled(hasDoc);
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
 
-    ui->menuGenerate_Lots->setEnabled(worldDoc != 0);
-    ui->actionGenerateLotsAll->setEnabled(worldDoc != 0);
+    ui->menuGenerate_Lots->setEnabled(worldDoc != nullptr);
+    ui->actionGenerateLotsAll->setEnabled(worldDoc != nullptr);
     ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
                                                worldDoc->selectedCellCount());
 
-    ui->menuBMP_To_TMX->setEnabled(worldDoc != 0);
-    ui->actionBMPToTMXAll->setEnabled(worldDoc != 0);
+    ui->menuBMP_To_TMX->setEnabled(worldDoc != nullptr);
+    ui->actionBMPToTMXAll->setEnabled(worldDoc != nullptr);
     ui->actionBMPToTMXSelected->setEnabled(worldDoc &&
                                            worldDoc->selectedCellCount());
 
-    ui->menuTMX_To_BMP->setEnabled(worldDoc != 0);
-    ui->actionTMXToBMPAll->setEnabled(worldDoc != 0);
+    ui->menuTMX_To_BMP->setEnabled(worldDoc != nullptr);
+    ui->actionTMXToBMPAll->setEnabled(worldDoc != nullptr);
     ui->actionTMXToBMPSelected->setEnabled(worldDoc &&
                                            worldDoc->selectedCellCount());
 
-    ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
-    ui->actionWriteObjects->setEnabled(worldDoc != 0);
+    ui->actionLUAObjectDump->setEnabled(worldDoc != nullptr);
+    ui->actionWriteObjects->setEnabled(worldDoc != nullptr);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
@@ -1999,19 +2006,19 @@ void MainWindow::updateActions()
             || (worldDoc && worldDoc->selectedObjectCount());
     ui->actionRemoveObject->setEnabled(removeObject);
 
-    ui->actionExtractLots->setEnabled(cellDoc != 0);
-    ui->actionExtractObjects->setEnabled(cellDoc != 0);
+    ui->actionExtractLots->setEnabled(cellDoc != nullptr);
+    ui->actionExtractObjects->setEnabled(cellDoc != nullptr);
     ui->actionClearCell->setEnabled(false);
     ui->actionClearMapOnly->setEnabled(false);
 
-    ui->actionSnapToGrid->setEnabled(cellDoc != 0);
-    ui->actionShowCoordinates->setEnabled(worldDoc != 0);
+    ui->actionSnapToGrid->setEnabled(cellDoc != nullptr);
+    ui->actionShowCoordinates->setEnabled(worldDoc != nullptr);
 
     Preferences *prefs = Preferences::instance();
     ui->actionShowGrid->setChecked(worldDoc ? prefs->showWorldGrid() : cellDoc ? prefs->showCellGrid() : false);
     ui->actionShowGrid->setEnabled(hasDoc);
 
-    ui->actionHighlightCurrentLevel->setEnabled(cellDoc != 0);
+    ui->actionHighlightCurrentLevel->setEnabled(cellDoc != nullptr);
 
     ui->actionLevelAbove->setEnabled(false);
     ui->actionLevelBelow->setEnabled(false);
@@ -2019,7 +2026,7 @@ void MainWindow::updateActions()
     updateZoom();
 
     if (worldDoc) {
-        WorldCell *cell = worldDoc->selectedCellCount() ? worldDoc->selectedCells().first() : 0;
+        WorldCell *cell = worldDoc->selectedCellCount() ? worldDoc->selectedCells().first() : nullptr;
         if (cell) {
             ui->actionEditCell->setEnabled(true);
             ui->actionClearCell->setEnabled(true);

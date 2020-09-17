@@ -18,7 +18,11 @@
 #ifndef DOCUMENTMANAGER_H
 #define DOCUMENTMANAGER_H
 
+#include "filesystemwatcher.h"
+
 #include <QObject>
+#include <QSet>
+#include <QTimer>
 
 class Document;
 class CellDocument;
@@ -36,7 +40,7 @@ class DocumentManager : public QObject
     Q_OBJECT
 
 public:
-    explicit DocumentManager(QObject *parent = 0);
+    explicit DocumentManager(QObject *parent = nullptr);
 
     static DocumentManager *instance();
     static void deleteInstance();
@@ -71,6 +75,10 @@ signals:
     void documentAdded(Document *doc);
     void documentAboutToClose(int index, Document *doc);
 
+private slots:
+    void fileChanged(const QString &path);
+    void fileChangedTimeout();
+
 private:
     ~DocumentManager();
 
@@ -79,6 +87,10 @@ private:
     QUndoGroup *mUndoGroup;
     Document *mCurrent;
     bool mFailedToAdd;
+
+    Tiled::Internal::FileSystemWatcher *mFileSystemWatcher;
+    QSet<QString> mChangedFiles;
+    QTimer mChangedFilesTimer;
 };
 
 #endif // DOCUMENTMANAGER_H

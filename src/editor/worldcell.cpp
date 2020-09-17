@@ -18,6 +18,10 @@
 #include "worldcell.h"
 
 #include "world.h"
+#include "worldwriter.h"
+
+#include <QBuffer>
+#include <QDir>
 
 WorldCellLot::WorldCellLot(WorldCell *cell, const QString &name, int x, int y,
                            int z, int width, int height)
@@ -96,6 +100,21 @@ bool WorldCell::isEmpty() const
             || !templates().isEmpty())
         return false;
     return true;
+}
+
+void WorldCell::setLastSavedXML(const QString& xml)
+{
+    mXML = xml;
+}
+
+QString WorldCell::toXML() const
+{
+    WorldWriter writerA;
+    QByteArray bytesA;
+    QBuffer bufferA(&bytesA);
+    bufferA.open(QIODevice::WriteOnly);
+    writerA.writeCell(this, &bufferA, QDir::rootPath());
+    return QString::fromUtf8(bytesA.constData(),  bytesA.size());
 }
 
 /////

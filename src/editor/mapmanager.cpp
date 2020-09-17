@@ -696,7 +696,7 @@ void MapManager::mapLoadedByThread(MapManager::Map *map, MapInfo *mapInfo)
     }
     TilesetManager::instance()->addReferences(map->tilesets());
 
-    bool replace = mapInfo->mMap != 0;
+    bool replace = mapInfo->mMap != nullptr;
     if (replace) {
         Q_ASSERT(!mapInfo->isBeingEdited());
         emit mapAboutToChange(mapInfo);

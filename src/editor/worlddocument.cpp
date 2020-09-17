@@ -24,6 +24,7 @@
 #include "mainwindow.h"
 #include "undoredo.h"
 #include "world.h"
+#include "worldreader.h"
 #include "worldscene.h"
 #include "worldview.h"
 #include "worldwriter.h"
@@ -39,6 +40,9 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     , mWorld(world)
     , mFileName(fileName)
     , mUndoRedo(this)
+    , mDeferralDepth(0)
+    , mDeferralQueued(false)
+    , mFileChangedDuringDeferral(false)
 {
     mUndoStack = new QUndoStack(this);
 
@@ -245,6 +249,13 @@ bool WorldDocument::save(const QString &filePath, QString &error)
 
     undoStack()->setClean();
     setFileName(filePath);
+
+    for (int y = 0; y < mWorld->height(); y++) {
+        for (int x = 0; x < mWorld->width(); x++) {
+            WorldCell *cell = mWorld->cellAt(x, y);
+            cell->setLastSavedXML(cell->toXML());
+        }
+    }
 
     return true;
 }
@@ -915,6 +926,151 @@ void WorldDocument::emitCellMapFileAboutToChange(WorldCell *cell)
 void WorldDocument::emitCellMapFileChanged(WorldCell *cell)
 {
     emit cellMapFileChanged(cell);
+}
+
+void WorldDocument::fileChangedOnDisk()
+{
+    if (mDeferralDepth > 0) {
+        // We're inside an outer call to this method.
+        mFileChangedDuringDeferral = true;
+        return;
+    }
+
+    FileChangedDeferral defer(this);
+
+    WorldReader reader;
+    World* worldNew = reader.readWorld(fileName());
+    if (worldNew == nullptr) {
+        QMessageBox::critical(MainWindow::instance(), tr("Project file changed on disk"),
+                              tr("Project file changed on disk but couldn't be loaded.\n%1\n(while reading %2)")
+                              .arg(reader.errorString())
+                              .arg(fileName()));
+        return;
+    }
+
+    if (worldNew->size() != world()->size()) {
+        delete worldNew;
+        QMessageBox::critical(MainWindow::instance(), tr("Project file changed on disk"),
+                              tr("Project file changed on disk but couldn't be loaded.\nThe world changed size.\n(while reading %1)")
+                              .arg(fileName()));
+        return;
+    }
+
+    if (compareWorld(world(), worldNew)) {
+        delete worldNew;
+        QMessageBox::critical(MainWindow::instance(), tr("Project file changed on disk"),
+                              tr("Project file changed on disk but couldn't be loaded.\nObject groups, object types, or properties changed.\n(while reading %1)")
+                              .arg(fileName()));
+        return;
+    }
+
+    for (int y = 0; y < worldNew->height(); y++) {
+        for (int x = 0; x < worldNew->width(); x++) {
+            WorldCell* cellNew = worldNew->cellAt(x, y);
+            WorldCell* cellEditing = world()->cellAt(x, y);
+            QString xmlNew = cellNew->toXML();
+            QString xmlEditing = cellEditing->toXML();
+            if (xmlNew == xmlEditing) {
+                continue;
+            }
+            qDebug() << "WorldDocument::fileChangedOnDisk: cell" << x << "," << y << "is different";
+            bool bEdited = cellEditing->lastSavedXML() != xmlEditing;
+            cellEditing->setLastSavedXML(xmlNew);
+            if (bEdited) {
+                // conflict: cell I edited changed on disk
+                int ret = QMessageBox::warning(
+                        MainWindow::instance(), tr("Project file changed on disk"),
+                        tr("A cell you edited changed on disk.\nThe cell is %1,%2.\n\nPress Ignore to keep your changes.\nPress Discard to use the disk version.")
+                            .arg(x).arg(y),
+                        QMessageBox::Ignore | QMessageBox::Discard);
+                if (ret == QMessageBox::Ignore) {
+                    continue;
+                }
+            } else {
+                // no conflict: I didn't edit the cell that changed on disk
+            }
+            WorldCellContents *contents = new WorldCellContents(cellNew, true); // takeOwnership=true
+            contents->swapWorld(world());
+            undoStack()->push(new ReplaceCell(this, cellEditing, contents));
+        }
+    }
+
+    delete worldNew;
+}
+
+bool WorldDocument::compareWorld(World *worldA, World *worldB)
+{
+    if (worldA->propertyEnums().size() != worldB->propertyEnums().size()) {
+        return true;
+    }
+    if (worldA->propertyDefinitions().size() != worldB->propertyDefinitions().size()) {
+        return true;
+    }
+    if (worldA->propertyTemplates().size() != worldB->propertyTemplates().size()) {
+        return true;
+    }
+    if (worldA->objectTypes().size() != worldB->objectTypes().size()) {
+        return true;
+    }
+    if (worldA->objectGroups().size() != worldB->objectGroups().size()) {
+        return true;
+    }
+    for (PropertyEnum *peA : worldA->propertyEnums()) {
+        PropertyEnum *peB = worldB->propertyEnums().find(peA->name());
+        if (peB == nullptr)
+            return true;
+        if (*peB != *peA)
+            return true;
+    }
+    for (PropertyDef *pdA : worldA->propertyDefinitions()) {
+        PropertyDef *pdB = worldB->propertyDefinitions().findPropertyDef(pdA->mName);
+        if (pdB == nullptr)
+            return true;
+        if (PropertyDef(worldA, pdB) != *pdA)
+            return true;
+    }
+    for (PropertyTemplate *ptA : worldA->propertyTemplates()) {
+        PropertyTemplate *ptB = worldB->propertyTemplates().find(ptA->mName);
+        if (ptB == nullptr)
+            return true;
+        if (PropertyTemplate(worldA, ptB) != *ptA)
+           return true;
+    }
+    for (ObjectType *otA : worldA->objectTypes()) {
+        ObjectType *otB = worldB->objectTypes().find(otA->name());
+        if (otB == nullptr)
+            return true;
+        if (ObjectType(worldA, otB) != *otA)
+            return true;
+    }
+    for (WorldObjectGroup *ogA : worldA->objectGroups()) {
+        if (ogA->isNull())
+            continue;
+        WorldObjectGroup *ogB = worldB->objectGroups().find(ogA->name());
+        if (ogB == nullptr)
+            return true;
+        if (WorldObjectGroup(worldA, ogB) != *ogA)
+            return true;
+    }
+    return false;
+}
+
+void WorldDocument::deferrFileChangedOnDisk(bool defer)
+{
+    if (defer) {
+        ++mDeferralDepth;
+        qDebug() << "WorldDocument::deferrFileChangedOnDisk depth++ =" << mDeferralDepth;
+    } else {
+        Q_ASSERT(mDeferralDepth > 0);
+        qDebug() << "WorldDocument::deferrFileChangedOnDisk depth-- =" << mDeferralDepth - 1;
+        if (--mDeferralDepth == 0) {
+            if (!mDeferralQueued && mFileChangedDuringDeferral) {
+                QMetaObject::invokeMethod(this, "fileChangedOnDisk", Qt::QueuedConnection);
+                mDeferralQueued = true;
+            }
+            mFileChangedDuringDeferral = false;
+        }
+    }
 }
 
 void WorldDocument::removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd)

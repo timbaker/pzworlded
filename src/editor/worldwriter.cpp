@@ -64,6 +64,23 @@ public:
         writer.writeEndDocument();
     }
 
+    // This is for comparing one cell to another
+    void writeCell(const WorldCell *cell, QIODevice *device, const QString &absDirPath)
+    {
+        mMapDir = QDir(absDirPath);
+        mWorld = cell->world();
+
+        QXmlStreamWriter writer(device);
+        writer.setAutoFormatting(true);
+        writer.setAutoFormattingIndent(1);
+
+//        writer.writeStartDocument();
+
+        writeCell(writer, cell);
+
+//        writer.writeEndDocument();
+    }
+
     void writeWorld(QXmlStreamWriter &w, World *world)
     {
         w.writeStartElement(QLatin1String("world"));
@@ -207,7 +224,7 @@ public:
         w.writeEndElement();
     }
 
-    void writeCell(QXmlStreamWriter &w, WorldCell *cell)
+    void writeCell(QXmlStreamWriter &w, const WorldCell *cell)
     {
         if (cell->isEmpty())
             return;
@@ -538,6 +555,12 @@ bool WorldWriter::writeWorld(World *world, const QString &filePath)
 void WorldWriter::writeWorld(World *world, QIODevice *device, const QString &absDirPath)
 {
     d->writeWorld(world, device, absDirPath);
+}
+
+// This is for comparing one cell to another
+void WorldWriter::writeCell(const WorldCell *cell, QIODevice *device, const QString &absDirPath)
+{
+    d->writeCell(cell, device, absDirPath);
 }
 
 QString WorldWriter::errorString() const

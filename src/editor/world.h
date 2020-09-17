@@ -221,7 +221,7 @@ public:
     const QVector<WorldCell*> &cells() const { return mCells; }
     WorldCell *cellAt(int x, int y)
     {
-        return contains(x, y) ? mCells[y * mWidth + x] : 0;
+        return contains(x, y) ? mCells[y * mWidth + x] : nullptr;
     }
     WorldCell *cellAt(const QPoint &pos)
     { return cellAt(pos.x(), pos.y()); }

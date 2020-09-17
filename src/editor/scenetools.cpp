@@ -2449,20 +2449,18 @@ void PasteCellsTool::pasteCells(const QPointF &pos)
     int count = mDnDItems.size();
     undoStack->beginMacro(tr("Paste %1 Cell%2").arg(count).arg(QLatin1String((count > 1) ? "s" : "")));
     undoStack->push(new ProgressBegin(tr("Pasting Cells"))); // in case of multiple loadMap() calls
-#if 1
+
     // This can be called multiple times.
     Clipboard::instance()->pasteEverythingButCells(mScene->worldDocument());
-#endif
+
     QList<WorldCell*> newSelection;
     foreach (PasteCellItem *item, mDnDItems) {
         QPoint newPos = item->cellPos() + dropCellPos - startCellPos;
         WorldCell *replace = mScene->world()->cellAt(newPos);
         WorldCellContents *contents = new WorldCellContents(item->contents(), replace);
-#if 1
         // PropertyDefs, Templates, ObjectTypes, ObjectGroups -> from clipboard-world to document-world
         contents->swapWorld(mScene->world());
         contents->mergeOnto(replace);
-#endif
         undoStack->push(new ReplaceCell(mScene->worldDocument(), replace, contents));
         newSelection += mScene->world()->cellAt(newPos);
     }

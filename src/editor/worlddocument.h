@@ -396,6 +396,9 @@ public:
 
     WorldDocumentUndoRedo &undoRedo() { return mUndoRedo; }
 
+public slots:
+    void fileChangedOnDisk();
+
 private:
     void removePropertyDefinition(PropertyHolder *ph, PropertyDef *pd);
     void removeTemplate(PropertyHolder *ph, PropertyTemplate *pt);
@@ -407,6 +410,27 @@ private:
 
     void removeRoadFromSelection(Road *road);
     void removeBMPFromSelection(WorldBMP *bmp);
+
+    bool compareWorld(World *worldA, World *worldB);
+
+    class FileChangedDeferral
+    {
+    public:
+        FileChangedDeferral(WorldDocument *worldDoc)
+            : mWorldDoc(worldDoc)
+        {
+            mWorldDoc->deferrFileChangedOnDisk(true);
+        }
+
+        ~FileChangedDeferral()
+        {
+            mWorldDoc->deferrFileChangedOnDisk(false);
+        }
+
+        WorldDocument* mWorldDoc;
+    };
+
+    void deferrFileChangedOnDisk(bool defer);
 
 signals:
     void propertyDefinitionAdded(PropertyDef *pd, int index);
@@ -506,6 +530,10 @@ private:
 
     friend class WorldDocumentUndoRedo;
     WorldDocumentUndoRedo mUndoRedo;
+
+    int mDeferralDepth;
+    bool mDeferralQueued;
+    bool mFileChangedDuringDeferral;
 };
 
 #endif // WORLDDOCUMENT_H

@@ -23,7 +23,7 @@
 
 #include <QUndoStack>
 
-Clipboard *Clipboard::mInstance = 0;
+Clipboard *Clipboard::mInstance = nullptr;
 
 Clipboard *Clipboard::instance()
 {
@@ -35,7 +35,7 @@ Clipboard *Clipboard::instance()
 void Clipboard::deleteInstance()
 {
     delete mInstance;
-    mInstance = 0;
+    mInstance = nullptr;
 }
 
 bool Clipboard::isEmpty() const
@@ -152,7 +152,7 @@ void Clipboard::pasteEverythingButCells(WorldDocument *worldDoc)
 
 Clipboard::Clipboard(QObject *parent)
     : QObject(parent)
-    , mWorld(0)
+    , mWorld(nullptr)
 {
 }
 

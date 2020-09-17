@@ -303,12 +303,17 @@ public:
 
     bool isEmpty() const;
 
+    const QString& lastSavedXML() const { return mXML; }
+    void setLastSavedXML(const QString& xml);
+    QString toXML() const;
+
 private:
     int mX, mY;
     World *mWorld;
     QString mMapFilePath;
     WorldCellLotList mLots;
     WorldCellObjectList mObjects;
+    QString mXML;
 
     friend class WorldCellContents;
 };

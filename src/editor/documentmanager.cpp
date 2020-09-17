@@ -27,7 +27,16 @@
 #include <QFileInfo>
 #include <QUndoGroup>
 
-DocumentManager *DocumentManager::mInstance = NULL;
+using namespace Tiled;
+using namespace Tiled::Internal;
+
+#ifdef QT_NO_DEBUG
+inline QNoDebug noise() { return QNoDebug(); }
+#else
+inline QDebug noise() { return QDebug(QtDebugMsg); }
+#endif
+
+DocumentManager *DocumentManager::mInstance = nullptr;
 
 DocumentManager *DocumentManager::instance()
 {
@@ -44,9 +53,17 @@ void DocumentManager::deleteInstance()
 DocumentManager::DocumentManager(QObject *parent)
     : QObject(parent)
     , mUndoGroup(new QUndoGroup(this))
-    , mCurrent(0)
+    , mCurrent(nullptr)
     , mFailedToAdd(false)
+    , mFileSystemWatcher(new FileSystemWatcher(this))
 {
+    connect(mFileSystemWatcher, &FileSystemWatcher::fileChanged,
+            this, &DocumentManager::fileChanged);
+
+    mChangedFilesTimer.setInterval(500);
+    mChangedFilesTimer.setSingleShot(true);
+    connect(&mChangedFilesTimer, &QTimer::timeout,
+            this, &DocumentManager::fileChangedTimeout);
 }
 
 DocumentManager::~DocumentManager()
@@ -84,6 +101,14 @@ void DocumentManager::addDocument(Document *doc)
         return;
     }
     setCurrentDocument(doc);
+
+    if (WorldDocument* worldDoc = doc->asWorldDocument()) {
+        if (worldDoc->fileName().isEmpty()) {
+            return;
+        }
+        QFileInfo fileInfo(worldDoc->fileName());
+        mFileSystemWatcher->addPath(fileInfo.canonicalFilePath());
+    }
 }
 
 void DocumentManager::closeDocument(int index)
@@ -109,7 +134,14 @@ void DocumentManager::closeDocument(int index)
         if (mDocuments.size())
             setCurrentDocument(mDocuments.first());
         else
-            setCurrentDocument((Document*)0);
+            setCurrentDocument(static_cast<Document*>(nullptr));
+    }
+    if (WorldDocument* worldDoc = doc->asWorldDocument()) {
+        if (worldDoc->fileName().isEmpty() == false) {
+            QFileInfo fileInfo(worldDoc->fileName());
+            noise() << "DocumentManager: removed" << worldDoc->fileName() << "from FileSystemWatcher";
+            mFileSystemWatcher->removePath(fileInfo.canonicalFilePath());
+        }
     }
 //    mUndoGroup->removeStack(doc->undoStack());
     delete doc;
@@ -155,13 +187,13 @@ CellDocument *DocumentManager::findDocument(WorldCell *cell)
                 return cellDoc;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 void DocumentManager::setCurrentDocument(int index)
 {
     Q_ASSERT(index >= -1 && index < mDocuments.size());
-    setCurrentDocument((index >= 0) ? mDocuments.at(index) : 0);
+    setCurrentDocument((index >= 0) ? mDocuments.at(index) : nullptr);
 }
 
 void DocumentManager::setCurrentDocument(Document *doc)
@@ -199,4 +231,30 @@ void DocumentManager::setFailedToAdd()
 bool DocumentManager::failedToAdd()
 {
     return mFailedToAdd;
+}
+
+void DocumentManager::fileChanged(const QString &path)
+{
+    mChangedFiles.insert(path);
+    mChangedFilesTimer.start();
+}
+
+void DocumentManager::fileChangedTimeout()
+{
+    for (const QString &path : mChangedFiles) {
+        noise() << "DocumentManager::fileChanged" << path;
+        mFileSystemWatcher->removePath(path);
+        int docIndex = findDocument(path);
+        if (docIndex == -1) {
+            continue;
+        }
+        QFileInfo info(path);
+        if (info.exists()) {
+            mFileSystemWatcher->addPath(path);
+            WorldDocument* worldDoc = documentAt(docIndex)->asWorldDocument();
+            worldDoc->fileChangedOnDisk();
+        }
+    }
+
+    mChangedFiles.clear();
 }

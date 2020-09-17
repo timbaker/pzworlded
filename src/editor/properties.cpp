@@ -86,7 +86,7 @@ PropertyDef::PropertyDef(World *world, PropertyDef *other)
     : mName(other->mName)
     , mDefaultValue(other->mDefaultValue)
     , mDescription(other->mDescription)
-    , mEnum(0)
+    , mEnum(nullptr)
 {
     if (other->mEnum) {
         mEnum = world->propertyEnums().find(other->mEnum->name());
@@ -112,7 +112,7 @@ PropertyDef *PropertyDefList::findPropertyDef(const QString &name) const
             return *it;
         it++;
     }
-    return 0;
+    return nullptr;
 }
 
 PropertyDefList PropertyDefList::sorted() const

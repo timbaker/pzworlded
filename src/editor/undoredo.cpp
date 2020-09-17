@@ -40,9 +40,8 @@ void SetCellMainMap::swap()
 
 /////
 
-
 ReplaceCell::ReplaceCell(WorldDocument *doc, WorldCell *cell, WorldCellContents *contents)
-    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Replace Cell"))
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Replace Cell %1,%2").arg(cell->x()).arg(cell->y()))
     , mDocument(doc)
     , mCell(cell)
     , mContents(contents)

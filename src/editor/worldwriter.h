@@ -21,6 +21,7 @@
 #include <QString>
 
 class World;
+class WorldCell;
 class WorldWriterPrivate;
 
 class QIODevice;
@@ -33,6 +34,9 @@ public:
 
     bool writeWorld(World *world, const QString &filePath);
     void writeWorld(World *world, QIODevice *device, const QString &absDirPath);
+
+    // This is for comparing one cell to another
+    void writeCell(const WorldCell *cell, QIODevice *device, const QString &absDirPath);
 
     QString errorString() const;
 

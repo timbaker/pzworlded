@@ -33,7 +33,7 @@ class WorldReaderPrivate
 
 public:
     WorldReaderPrivate()
-        : mWorld(0)
+        : mWorld(nullptr)
     {
 
     }
@@ -67,7 +67,7 @@ public:
     {
         mError.clear();
         mPath = path;
-        World *world = 0;
+        World *world = nullptr;
 
         xml.setDevice(device);
 
@@ -127,7 +127,7 @@ private:
         // Clean up in case of error
         if (xml.hasError()) {
             delete mWorld;
-            mWorld = 0;
+            mWorld = nullptr;
         }
 
         return mWorld;
@@ -168,7 +168,7 @@ private:
                 readUnknownElement();
         }
 
-        PropertyEnum *pe = 0;
+        PropertyEnum *pe = nullptr;
         if (!enumName.isEmpty()) {
             pe = mWorld->propertyEnums().find(enumName);
             if (!pe) {
@@ -680,7 +680,7 @@ World *WorldReader::readWorld(const QString &fileName)
 {
     QFile file(fileName);
     if (!d->openFile(&file))
-        return 0;
+        return nullptr;
 
     return readWorld(&file, QFileInfo(fileName).absolutePath());
 }
