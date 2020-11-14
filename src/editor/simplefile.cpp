@@ -241,7 +241,7 @@ bool SimpleFileBlock::keyValue(const QString &name, SimpleFileKeyValue &kv)
     return false;
 }
 
-QString SimpleFileBlock::value(const QString &key)
+QString SimpleFileBlock::value(const QString &key) const
 {
     foreach (SimpleFileKeyValue kv, values) {
         if (kv.name == key)

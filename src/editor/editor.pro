@@ -56,6 +56,7 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
+    tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
     world.cpp \
@@ -150,6 +151,7 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
+    tilesetstxtfile.h \
     worldview.h \
     worldscene.h \
     world.h \
