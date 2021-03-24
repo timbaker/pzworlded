@@ -30,6 +30,8 @@
 
 namespace Tiled {
 
+class Tile;
+
 /**
  * Modified isometric map renderer for Project Zomboid.
  * Tile layers are arranged into groups, one group per level/story/floor of a map.
@@ -37,7 +39,7 @@ namespace Tiled {
 class TILEDSHARED_EXPORT ZLevelRenderer : public MapRenderer
 {
 public:
-    ZLevelRenderer(const Map *map) : MapRenderer(map) { set2x(true); }
+    ZLevelRenderer(const Map *map);
 
     QSize mapSize() const;
 
@@ -46,7 +48,8 @@ public:
     QRectF boundingRect(const MapObject *object) const;
     QPainterPath shape(const MapObject *object) const;
 
-    void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level = 0) const;
+    void drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor,
+                  int level = 0, const QRect &tileBounds = QRect()) const;
 
     void drawTileLayer(QPainter *painter, const TileLayer *layer,
                        const QRectF &exposed = QRectF()) const;
@@ -84,6 +87,27 @@ public:
                             int level = 0) const;
 
 private:
+    int rotateWidth() const;
+    int rotateHeight() const;
+    int rotateWidth(int width, int height) const;
+    int rotateHeight(int width, int height) const;
+    QPoint rotatePoint(const QPoint& pos) const;
+    QPoint unrotatePoint(const QPoint& pos) const;
+    QPointF rotatePointF(const QPointF& pos) const;
+    QPointF unrotatePointF(const QPointF& pos) const;
+
+    QPointF pixelToTileCoordsNR(qreal x, qreal y, int level = 0) const;
+    QPointF pixelToTileCoordsNR(const QPointF& pos, int level = 0) const
+    {
+        return pixelToTileCoordsNR(pos.x(), pos.y(), level);
+    }
+
+    QPointF tileToPixelCoordsNR(qreal x, qreal y, int level = 0) const;
+    QPointF tileToPixelCoordsNR(const QPointF& pos, int level = 0) const
+    {
+        return tileToPixelCoordsNR(pos.x(), pos.y(), level);
+    }
+
     QPolygonF tileRectToPolygon(const QRect &rect, int level = 0) const;
     QPolygonF tileRectToPolygon(const QRectF &rect, int level = 0) const;
 };

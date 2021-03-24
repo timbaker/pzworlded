@@ -29,10 +29,15 @@
 #include "mapmanager.h"
 #include "objectgroup.h"
 #include "orthogonalrenderer.h"
+#ifdef WORLDED
 #include "progress.h"
+#endif
 #include "staggeredrenderer.h"
 #include "tilelayer.h"
 #include "tilesetmanager.h"
+#ifndef WORLDED
+#include "zprogress.h"
+#endif
 #include "zlevelrenderer.h"
 
 #include <QDataStream>

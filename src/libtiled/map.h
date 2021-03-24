@@ -43,6 +43,7 @@
 
 namespace Tiled {
 
+class MapLevel;
 class Tile;
 class Tileset;
 class ObjectGroup;
@@ -295,6 +296,10 @@ public:
         int width, int height,
         int tileWidth, int tileHeight);
 
+    Map(const Map &other) = delete;
+
+    Map& operator=(const Map& other) = delete;
+
     /**
      * Destructor.
      */
@@ -368,8 +373,7 @@ public:
     /**
      * Returns the number of layers of this map.
      */
-    int layerCount() const
-    { return mLayers.size(); }
+    int layerCount() const;
 
     /**
      * Convenience function that returns the number of layers of this map that
@@ -389,14 +393,13 @@ public:
     /**
      * Returns the layer at the specified index.
      */
-    Layer *layerAt(int index) const
-    { return mLayers.at(index); }
+    Layer *layerAt(int z, int index) const;
 
     /**
      * Returns the list of layers of this map. This is useful when you want to
      * use foreach.
      */
-    const QList<Layer*> &layers() const { return mLayers; }
+    QList<Layer*> layers() const;
 
     QList<Layer*> layers(Layer::Type type) const;
     QList<ObjectGroup*> objectGroups() const;
@@ -407,26 +410,15 @@ public:
      */
     void addLayer(Layer *layer);
 
-    /**
-     * Returns the index of the layer given by \a layerName, or -1 if no
-     * layer with that name is found.
-     *
-     * The second optional parameter specifies the layer types which are
-     * searched.
-     */
-    int indexOfLayer(const QString &layerName,
-                     uint layerTypes = Layer::AnyLayerType) const;
-
-    /**
-     * Adds a layer to this map, inserting it at the given index.
-     */
     void insertLayer(int index, Layer *layer);
 
     /**
      * Removes the layer at the given index from this map and returns it.
      * The caller becomes responsible for the lifetime of this layer.
      */
-    Layer *takeLayerAt(int index);
+    Layer *takeLayerAt(int z, int index);
+
+    void removeLayer(Layer *layer);
 
     /**
      * Adds a tileset to this map. The map does not take ownership over its
@@ -494,6 +486,10 @@ public:
 #endif
 
 #ifdef ZOMBOID
+    int levelCount() const;
+
+    MapLevel *levelAt(int z) const;
+
     MapBmp &rbmp(int index) { return index ? mBmpVeg : mBmpMain; }
     MapBmp bmp(int index) const { return index ? mBmpVeg : mBmpMain; }
 
@@ -531,9 +527,9 @@ private:
     int mTileWidth;
     int mTileHeight;
     QMargins mDrawMargins;
-    QList<Layer*> mLayers;
     QList<Tileset*> mTilesets;
 #ifdef ZOMBOID
+    QVector<MapLevel*> mLevels;
     QPoint mCellsPerLevel;
     QList<ZTileLayerGroup*> mTileLayerGroups;
     QMap<Tileset*,int> mUsedTilesets;

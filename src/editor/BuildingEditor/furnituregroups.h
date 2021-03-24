@@ -51,6 +51,8 @@ public:
 
     FurnitureTile(FurnitureTiles *ftiles, FurnitureOrientation orient);
 
+    FurnitureTile(FurnitureTiles *ftiles, FurnitureTile *& other);
+
     FurnitureTiles *owner() const
     { return mOwner; }
 
@@ -133,7 +135,7 @@ public:
     };
 
     FurnitureTiles(bool corners);
-    ~FurnitureTiles();
+    virtual ~FurnitureTiles();
 
     void setGroup(FurnitureGroup *group)
     { mGroup = group; }
@@ -141,10 +143,15 @@ public:
     FurnitureGroup *group() const
     { return mGroup; }
 
+    int indexInGroup();
+
     bool isEmpty() const;
 
     bool hasCorners() const
     { return mCorners; }
+
+    void setCorners(bool hasCorners)
+    { mCorners = hasCorners; }
 
     void toggleCorners()
     { mCorners = !mCorners; }

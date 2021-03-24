@@ -95,7 +95,7 @@ public:
 
     // Check for the universal null entry
     virtual bool isNone() const { return false; }
-    virtual BuildingTileEntry *asNone() { return 0; }
+    virtual BuildingTileEntry *asNone() { return nullptr; }
 
     bool equals(BuildingTileEntry *other) const;
 
@@ -399,7 +399,7 @@ public:
         West,
         North,
         NorthWest,
-        SouthEast,
+        SouthEast, // Pillar
         WestWindow,
         NorthWindow,
         WestDoor,
@@ -731,6 +731,7 @@ public:
 
     Tiled::Tile *tileFor(const QString &tileName);
     Tiled::Tile *tileFor(BuildingTile *tile, int offset = 0);
+    Tiled::Tile *tileFor(const QString& tilesetName, int index);
 
     BuildingTile *fromTiledTile(Tiled::Tile *tile);
 
@@ -749,7 +750,7 @@ public:
     QString txtPath();
 
     bool readTxt();
-    void writeTxt(QWidget *parent = 0);
+    void writeTxt(QWidget *parent = nullptr);
 
     BuildingTileCategory *catEWalls() const { return mCatEWalls; }
     BuildingTileCategory *catIWalls() const { return mCatIWalls; }
@@ -760,6 +761,7 @@ public:
     BuildingTileCategory *catDoorFrames() const { return mCatDoorFrames; }
     BuildingTileCategory *catWindows() const { return mCatWindows; }
     BuildingTileCategory *catCurtains() const { return mCatCurtains; }
+    BuildingTileCategory *catShutters() const { return mCatShutters; }
     BuildingTileCategory *catStairs() const { return mCatStairs; }
     BuildingTileCategory *catRoofCaps() const { return mCatRoofCaps; }
     BuildingTileCategory *catRoofSlopes() const { return mCatRoofSlopes; }
@@ -778,6 +780,7 @@ public:
     BuildingTileEntry *defaultDoorFrameTile() const;
     BuildingTileEntry *defaultWindowTile() const;
     BuildingTileEntry *defaultCurtainsTile() const;
+    BuildingTileEntry *defaultShuttersTile() const;
     BuildingTileEntry *defaultStairsTile() const;
 
     BuildingTileEntry *defaultRoofCapTiles() const;

@@ -354,9 +354,7 @@ bool TMXToBMP::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
 bool TMXToBMP::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
                                   int levelOffset, const QPoint &offset)
 {
-    int level;
-    if (!MapComposite::levelForLayer(objectGroup, &level))
-        return true;
+    int level = objectGroup->level();
     level += levelOffset;
 
     foreach (const MapObject *mapObject, objectGroup->objects()) {

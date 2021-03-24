@@ -151,21 +151,6 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
             SIGNAL(cellObjectReordered(WorldCellObject*)));
 
-    connect(&mUndoRedo, SIGNAL(roadAdded(int)),
-            SIGNAL(roadAdded(int)));
-    connect(&mUndoRedo, SIGNAL(roadAboutToBeRemoved(int)),
-            SIGNAL(roadAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(roadRemoved(Road*)),
-            SIGNAL(roadRemoved(Road*)));
-    connect(&mUndoRedo, SIGNAL(roadCoordsChanged(int)),
-            SIGNAL(roadCoordsChanged(int)));
-    connect(&mUndoRedo, SIGNAL(roadWidthChanged(int)),
-            SIGNAL(roadWidthChanged(int)));
-    connect(&mUndoRedo, SIGNAL(roadTileNameChanged(int)),
-            SIGNAL(roadTileNameChanged(int)));
-    connect(&mUndoRedo, SIGNAL(roadLinesChanged(int)),
-            SIGNAL(roadLinesChanged(int)));
-
     connect(&mUndoRedo, SIGNAL(selectedCellsChanged()),
             SIGNAL(selectedCellsChanged()));
 
@@ -297,19 +282,6 @@ void WorldDocument::setSelectedLots(const QList<WorldCellLot *> &selectedLots)
     emit selectedLotsChanged();
 }
 
-void WorldDocument::setSelectedRoads(const QList<Road *> &selectedRoads)
-{
-    QList<Road*> selection;
-    foreach (Road *road, selectedRoads) {
-        if (!selection.contains(road))
-            selection.append(road);
-        else
-            qWarning("duplicate roads passed to setSelectedRoads");
-    }
-    mSelectedRoads = selection;
-    emit selectedRoadsChanged();
-}
-
 void WorldDocument::setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs)
 {
     QList<WorldBMP*> selection;
@@ -321,14 +293,6 @@ void WorldDocument::setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs)
     }
     mSelectedBMPs = selection;
     emit selectedBMPsChanged();
-}
-
-void WorldDocument::removeRoadFromSelection(Road *road)
-{
-    if (mSelectedRoads.contains(road)) {
-        mSelectedRoads.removeAll(road);
-        emit selectedRoadsChanged();
-    }
 }
 
 void WorldDocument::removeBMPFromSelection(WorldBMP *bmp)
@@ -464,40 +428,6 @@ void WorldDocument::reorderCellObject(WorldCellObject *obj, WorldCellObject *ins
     const WorldCellObjectList &objects = obj->cell()->objects();
     int index = insertBefore ? objects.indexOf(insertBefore) : objects.size();
     undoStack()->push(new ReorderCellObject(this, obj, index));
-}
-
-void WorldDocument::insertRoad(int index, Road *road)
-{
-    Q_ASSERT(!world()->roads().contains(road));
-    Q_ASSERT(index >= 0 && index <= world()->roads().size());
-    undoStack()->push(new AddRoad(this, index, road));
-}
-
-void WorldDocument::removeRoad(int index)
-{
-    Q_ASSERT(index >= 0 && index < world()->roads().size());
-    undoStack()->push(new RemoveRoad(this, index));
-}
-
-void WorldDocument::changeRoadCoords(Road *road,
-                                     const QPoint &start, const QPoint &end)
-{
-    undoStack()->push(new ChangeRoadCoords(this, road, start, end));
-}
-
-void WorldDocument::changeRoadWidth(Road *road, int newWidth)
-{
-    undoStack()->push(new ChangeRoadWidth(this, road, newWidth));
-}
-
-void WorldDocument::changeRoadTileName(Road *road, const QString &tileName)
-{
-    undoStack()->push(new ChangeRoadTileName(this, road, tileName));
-}
-
-void WorldDocument::changeRoadLines(Road *road, TrafficLines *lines)
-{
-    undoStack()->push(new ChangeRoadLines(this, road, lines));
 }
 
 void WorldDocument::moveCell(WorldCell *cell, const QPoint &newPos)
@@ -1334,61 +1264,6 @@ int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
     Q_ASSERT(cell->indexOf(obj) == index);
     emit cellObjectReordered(obj);
     return oldIndex;
-}
-
-void WorldDocumentUndoRedo::insertRoad(int index, Road *road)
-{
-    mWorld->insertRoad(index, road);
-    emit roadAdded(index);
-}
-
-Road *WorldDocumentUndoRedo::removeRoad(int index)
-{
-    Road *road = mWorld->roads().at(index);
-    Q_ASSERT(road);
-
-    // Must make sure to remove the road from the selection so WorldScene
-    // can update its mSelectedRoadItems
-    mWorldDoc->removeRoadFromSelection(road);
-
-    emit roadAboutToBeRemoved(index);
-    road = mWorld->removeRoad(index);
-    emit roadRemoved(road);
-    return road;
-}
-
-void WorldDocumentUndoRedo::changeRoadCoords(Road *road, const
-                                             QPoint &start, const QPoint &end,
-                                             QPoint &oldStart, QPoint &oldEnd)
-{
-    oldStart = road->start();
-    oldEnd = road->end();
-    road->setCoords(start, end);
-    emit roadCoordsChanged(mWorld->roads().indexOf(road));
-}
-
-int WorldDocumentUndoRedo::changeRoadWidth(Road *road, int newWidth)
-{
-    int oldWidth = road->width();
-    road->setWidth(newWidth);
-    emit roadWidthChanged(mWorld->roads().indexOf(road));
-    return oldWidth;
-}
-
-QString WorldDocumentUndoRedo::changeRoadTileName(Road *road, const QString &tileName)
-{
-    QString old = road->tileName();
-    road->setTileName(tileName);
-    emit roadTileNameChanged(mWorld->roads().indexOf(road));
-    return old;
-}
-
-TrafficLines *WorldDocumentUndoRedo::changeRoadLines(Road *road, TrafficLines *lines)
-{
-    TrafficLines *old = road->trafficLines();
-    road->setTrafficLines(lines);
-    emit roadLinesChanged(mWorld->roads().indexOf(road));
-    return old;
 }
 
 QList<WorldCell *> WorldDocumentUndoRedo::setSelectedCells(const QList<WorldCell *> &selection)

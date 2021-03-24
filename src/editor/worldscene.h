@@ -272,46 +272,6 @@ private:
     QList<WorldCellLot*> mLots;
 };
 
-/**
-  * This item represents a road.
-  */
-class WorldRoadItem : public QGraphicsItem
-{
-public:
-    WorldRoadItem(WorldScene *scene, Road *road);
-
-    QRectF boundingRect() const;
-
-    QPainterPath shape() const;
-
-    void paint(QPainter *painter,
-               const QStyleOptionGraphicsItem *option,
-               QWidget *widget = 0);
-
-    Road *road() const
-    { return mRoad; }
-
-    void synchWithRoad();
-
-    void setSelected(bool selected);
-    void setEditable(bool editable);
-
-    void setDragging(bool dragging);
-    void setDragOffset(const QPoint &offset);
-    QPoint dragOffset() const { return mDragOffset; }
-
-    QPolygonF polygon() const;
-
-private:
-    WorldScene *mScene;
-    QRectF mBoundingRect;
-    Road *mRoad;
-    bool mSelected;
-    bool mEditable;
-    bool mDragging;
-    QPoint mDragOffset;
-};
-
 class WorldBMPItem : public QGraphicsItem
 {
 public:
@@ -440,10 +400,6 @@ public:
     QPointF roadToSceneCoords(const QPoint &pt) const;
     QPolygonF roadRectToScenePolygon(const QRect &roadRect) const;
 
-    WorldRoadItem *itemForRoad(Road *road);
-
-    QList<Road*> roadsInRect(const QRectF &bounds);
-
     QList<WorldBMP*> bmpsInRect(const QRectF &cellRect);
 
     void pasteCellsFromClipboard();
@@ -469,12 +425,6 @@ public slots:
     void setShowCoordinates(bool show);
     void setShowBMPs(bool show);
     void setShowOtherWorlds(bool show);
-
-    void selectedRoadsChanged();
-    void roadAdded(int index);
-    void roadAboutToBeRemoved(int index);
-    void roadCoordsChanged(int index);
-    void roadWidthChanged(int index);
 
     void selectedBMPsChanged();
     void bmpAdded(int index);
@@ -513,8 +463,6 @@ private:
     PasteCellsTool *mPasteCellsTool;
     BaseWorldSceneTool *mActiveTool;
     DragMapImageItem *mDragMapImageItem;
-    QList<WorldRoadItem*> mRoadItems;
-    QSet<WorldRoadItem*> mSelectedRoadItems;
     QList<WorldBMPItem*> mBMPItems;
     QSet<WorldBMPItem*> mSelectedBMPItems;
     WorldBMPItem *mDragBMPItem;

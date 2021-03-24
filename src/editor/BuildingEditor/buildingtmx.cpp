@@ -18,10 +18,14 @@
 #include "buildingtmx.h"
 
 #include "building.h"
-//#include "buildingeditorwindow.h"
+#ifndef WORLDED
+#include "buildingeditorwindow.h"
+#endif
 #include "buildingfloor.h"
 #include "buildingmap.h"
-//#include "buildingpreferences.h"
+#ifndef WORLDED
+#include "buildingpreferences.h"
+#endif
 #include "buildingtemplates.h"
 #include "simplefile.h"
 
@@ -32,6 +36,7 @@
 #include "tilesetmanager.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "mapwriter.h"
 #include "objectgroup.h"
@@ -42,13 +47,22 @@
 #include <QCoreApplication>
 #include <QDebug>
 
+#if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
+// Hmmmm.  libtiled.dll defines the MapRands class as so:
+// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
+// Suddenly I'm getting a 'multiply-defined symbol' error.
+// I found the solution here:
+// http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
+template class __declspec(dllimport) QMap<QString, QString>;
+#endif
+
 using namespace BuildingEditor;
 using namespace Tiled;
 using namespace Tiled::Internal;
 
 static const char *TXT_FILE = "TMXConfig.txt";
 
-BuildingTMX *BuildingTMX::mInstance = 0;
+BuildingTMX *BuildingTMX::mInstance = nullptr;
 
 BuildingTMX *BuildingTMX::instance()
 {
@@ -60,7 +74,7 @@ BuildingTMX *BuildingTMX::instance()
 void BuildingTMX::deleteInstance()
 {
     delete mInstance;
-    mInstance = 0;
+    mInstance = nullptr;
 }
 
 BuildingTMX::BuildingTMX()
@@ -114,26 +128,29 @@ bool BuildingTMX::exportTMX(Building *building, const QString &fileName)
         // to level N, otherwise it is added to every level.  Object layers are
         // added above *all* the tile layers in the map.
         int previousExistingLayer = -1;
-        foreach (LayerInfo layerInfo, mLayers) {
+        for (const LayerInfo &layerInfo : mLayers) {
             QString layerName = layerInfo.mName;
             int level;
             if (MapComposite::levelForLayer(layerName, &level)) {
                 if (level != floor->level())
                     continue;
+                layerName = MapComposite::layerNameWithoutPrefix(layerName);
             } else {
-                layerName = tr("%1_%2").arg(floor->level()).arg(layerName);
+//                layerName = tr("%1_%2").arg(floor->level()).arg(layerName);
             }
+            MapLevel *mapLevel = map->levelAt(level);
             int n;
-            if ((n = map->indexOfLayer(layerName)) >= 0) {
+            if ((n = mapLevel->indexOfLayer(layerName)) >= 0) {
                 previousExistingLayer = n;
                 continue;
             }
             if (layerInfo.mType == LayerInfo::Tile) {
                 TileLayer *tl = new TileLayer(layerName, 0, 0,
                                               map->width(), map->height());
+                tl->setLevel(level);
                 if (previousExistingLayer < 0)
                     previousExistingLayer = 0;
-                map->insertLayer(previousExistingLayer + 1, tl);
+                mapLevel->insertLayer(previousExistingLayer + 1, tl);
                 previousExistingLayer++;
             } else {
                 ObjectGroup *og = new ObjectGroup(layerName,
@@ -194,7 +211,9 @@ QString BuildingTMX::txtPath()
 // VERSION1
 // Move tilesets block to Tilesets.txt
 #define VERSION1 1
-#define VERSION_LATEST VERSION1
+// Renamed some layers
+#define VERSION2 2
+#define VERSION_LATEST VERSION2
 
 bool BuildingTMX::readTxt()
 {
@@ -228,9 +247,9 @@ bool BuildingTMX::readTxt()
     mRevision = simple.value("revision").toInt();
     mSourceRevision = simple.value("source_revision").toInt();
 
-    foreach (SimpleFileBlock block, simple.blocks) {
+    for (const SimpleFileBlock &block : simple.blocks) {
         if (block.name == QLatin1String("layers")) {
-            foreach (SimpleFileKeyValue kv, block.values) {
+            for (const SimpleFileKeyValue &kv : block.values) {
                 if (kv.name == QLatin1String("tile")) {
                     mLayers += LayerInfo(kv.value, LayerInfo::Tile);
                 } else if (kv.name == QLatin1String("object")) {
@@ -251,9 +270,9 @@ bool BuildingTMX::readTxt()
     }
 
     // Check that TMXConfig.txt contains all the required tile layers.
-    foreach (QString layerName, BuildingMap::requiredLayerNames()) {
+    for (const QString &layerName : BuildingMap::requiredLayerNames()) {
         bool match = false;
-        foreach (LayerInfo layerInfo, mLayers) {
+        for (LayerInfo layerInfo : mLayers) {
             if (layerInfo.mType == LayerInfo::Tile && layerInfo.mName == layerName) {
                 match = true;
                 break;
@@ -333,9 +352,9 @@ bool BuildingTMX::upgradeTxt()
         int index = userFile.findBlock(QLatin1String("tilesets"));
         if (index >= 0) {
             SimpleFileBlock tilesetsBlock = userFile.blocks[index];
-            foreach (SimpleFileKeyValue kv, tilesetsBlock.values) {
+            for (const SimpleFileKeyValue &kv : tilesetsBlock.values) {
                 QString tilesetName = QFileInfo(kv.value).completeBaseName();
-                if (TileMetaInfoMgr::instance()->tileset(tilesetName) == 0) {
+                if (TileMetaInfoMgr::instance()->tileset(tilesetName) == nullptr) {
                     Tileset *ts = new Tileset(tilesetName, 64, 128);
                     // Since the tileset image height/width wasn't saved, create
                     // a tileset with only a single tile.
@@ -347,6 +366,28 @@ bool BuildingTMX::upgradeTxt()
             }
             userFile.blocks.removeAt(index);
             TileMetaInfoMgr::instance()->writeTxt();
+        }
+    }
+
+    // Version 2: rename some layers
+    if (userVersion == VERSION1) {
+        QMap<QString, QString> renameLookup;
+        renameLookup[QLatin1Literal("Curtains2")] = QLatin1Literal("Curtains3");
+        renameLookup[QLatin1Literal("Doors")] = QLatin1Literal("Door");
+        renameLookup[QLatin1Literal("Frames")] = QLatin1Literal("Frame");
+        renameLookup[QLatin1Literal("Walls")] = QLatin1Literal("Wall");
+        renameLookup[QLatin1Literal("Walls2")] = QLatin1Literal("Wall2");
+        renameLookup[QLatin1Literal("Windows")] = QLatin1Literal("Window");
+        int index = userFile.findBlock(QLatin1String("layers"));
+        if (index >= 0) {
+            SimpleFileBlock &layersBlock = userFile.blocks[index];
+            for (SimpleFileKeyValue &kv : layersBlock.values) {
+                if (kv.name == QLatin1Literal("tile")) {
+                    if (renameLookup.contains(kv.value)) {
+                        kv.value = renameLookup[kv.value];
+                    }
+                }
+            }
         }
     }
 

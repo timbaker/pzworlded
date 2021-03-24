@@ -30,6 +30,7 @@
 #define MAPRENDERER_H
 
 #include "tiled_global.h"
+#include "maprotation.h"
 
 #include <QPainter>
 
@@ -40,6 +41,7 @@ class Map;
 class MapObject;
 class TileLayer;
 #ifdef ZOMBOID
+class Tile;
 class ZTileLayerGroup;
 #endif
 class ImageLayer;
@@ -54,10 +56,11 @@ class TILEDSHARED_EXPORT MapRenderer
 public:
 #ifdef ZOMBOID
     MapRenderer(const Map *map)
-        : mAbortDrawing(0)
+        : mAbortDrawing(nullptr)
         , mMap(map)
         , mMaxLevel(0)
         , m2x(false)
+        , mRotation(MapRotation::NotRotated)
     {}
 #else
     MapRenderer(const Map *map) : mMap(map) {}
@@ -101,7 +104,8 @@ public:
      */
 #ifdef ZOMBOID
     virtual void drawGrid(QPainter *painter, const QRectF &rect,
-                          QColor gridColor = Qt::black, int level = 0) const = 0;
+                          QColor gridColor = Qt::black, int level = 0,
+                          const QRect &tileBounds = QRect()) const = 0;
 #else
     virtual void drawGrid(QPainter *painter, const QRectF &rect,
                           QColor gridColor = Qt::black) const = 0;
@@ -178,21 +182,16 @@ public:
 #ifdef ZOMBOID
     QPolygonF tileToPixelCoords(const QRect &rect, int level = 0) const
     {
-        QPolygonF polygon;
-        polygon << QPointF(tileToPixelCoords(rect.topLeft(), level));
-        polygon << QPointF(tileToPixelCoords(rect.topRight() + QPoint(1, 0), level));
-        polygon << QPointF(tileToPixelCoords(rect.bottomRight() + QPoint(1, 1), level));
-        polygon << QPointF(tileToPixelCoords(rect.bottomLeft() + QPoint(0, 1), level));
-        return polygon;
+        return tileToPixelCoords(QRectF(rect), level);
     }
 
     QPolygonF tileToPixelCoords(const QRectF &rect, int level = 0) const
     {
         QPolygonF polygon;
-        polygon << QPointF(tileToPixelCoords(rect.topLeft(), level));
-        polygon << QPointF(tileToPixelCoords(rect.topRight(), level));
-        polygon << QPointF(tileToPixelCoords(rect.bottomRight(), level));
-        polygon << QPointF(tileToPixelCoords(rect.bottomLeft(), level));
+        polygon << tileToPixelCoords(rect.topLeft(), level);
+        polygon << tileToPixelCoords(rect.topRight(), level);
+        polygon << tileToPixelCoords(rect.bottomRight(), level);
+        polygon << tileToPixelCoords(rect.bottomLeft(), level);
         return polygon;
     }
 
@@ -218,6 +217,9 @@ public:
 
     void setMaxLevel(int level) { mMaxLevel = level; }
     int maxLevel() const { return mMaxLevel; }
+
+    void setRotation(MapRotation rotation);
+    MapRotation rotation() const;
 
     bool *mAbortDrawing;
 
@@ -260,6 +262,7 @@ private:
 #ifdef ZOMBOID
     int mMaxLevel;
     bool m2x;
+    MapRotation mRotation;
 #endif
 };
 

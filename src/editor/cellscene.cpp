@@ -35,9 +35,11 @@
 
 #include "isometricrenderer.h"
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 #include "tilelayer.h"
+#include "tileset.h"
 #include "zlevelrenderer.h"
 
 #include "BuildingEditor/buildingtmx.h"
@@ -963,84 +965,6 @@ void SubMapItem::checkValidPos()
 
 /////
 
-CellRoadItem::CellRoadItem(CellScene *scene, Road *road)
-    : QGraphicsItem()
-    , mScene(scene)
-    , mRoad(road)
-    , mSelected(false)
-    , mEditable(false)
-    , mDragging(false)
-{
-    synchWithRoad();
-}
-
-QRectF CellRoadItem::boundingRect() const
-{
-    return mBoundingRect;
-}
-
-QPainterPath CellRoadItem::shape() const
-{
-    QPainterPath path;
-    path.addPolygon(polygon());
-    return path;
-}
-
-void CellRoadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
-{
-    Q_UNUSED(option)
-    Q_UNUSED(widget)
-
-    QColor c = Qt::blue;
-    if (mSelected)
-        c = Qt::green;
-    if (mEditable)
-        c = Qt::yellow;
-    painter->setPen(c);
-    painter->drawPath(shape());
-}
-
-void CellRoadItem::synchWithRoad()
-{
-    QPoint offset = mDragging ? mDragOffset : QPoint();
-    QPolygonF polygon = mScene->roadRectToScenePolygon(mRoad->bounds().translated(offset));
-    if (polygon != mPolygon) {
-        mPolygon = polygon;
-    }
-
-    QRectF bounds = polygon.boundingRect();
-    if (bounds != mBoundingRect) {
-        prepareGeometryChange();
-        mBoundingRect = bounds;
-    }
-}
-
-void CellRoadItem::setSelected(bool selected)
-{
-    mSelected = selected;
-    update();
-}
-
-void CellRoadItem::setEditable(bool editable)
-{
-    mEditable = editable;
-    update();
-}
-
-void CellRoadItem::setDragging(bool dragging)
-{
-    mDragging = dragging;
-    synchWithRoad();
-}
-
-void CellRoadItem::setDragOffset(const QPoint &offset)
-{
-    mDragOffset = offset;
-    synchWithRoad();
-}
-
-/////
-
 DnDItem::DnDItem(const QString &path, MapRenderer *renderer, int level, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mMapImage(MapImageManager::instance()->getMapImage(path))
@@ -1144,9 +1068,6 @@ public:
 #define DARKENING_FACTOR 0.6
 
 const int CellScene::ZVALUE_GRID = 10000;
-const int CellScene::ZVALUE_ROADITEM_CREATING = 20002;
-const int CellScene::ZVALUE_ROADITEM_SELECTED = 20001;
-const int CellScene::ZVALUE_ROADITEM_UNSELECTED = 20000;
 
 CellScene::CellScene(QObject *parent)
     : BaseGraphicsScene(CellSceneType, parent)
@@ -1167,6 +1088,8 @@ CellScene::CellScene(QObject *parent)
     , mLightSwitchOverlays(this)
     , mWaterFlowOverlay(new WaterFlowOverlay(this))
 {
+    mLevelData.resize(MAX_WORLD_LEVELS);
+
     setBackgroundBrush(Qt::darkGray);
 
     mDarkRectangle->setPen(Qt::NoPen);
@@ -1232,12 +1155,6 @@ void CellScene::setTool(AbstractTool *tool)
             item->setEditable(true);
     }
 
-    if (mActiveTool != CellEditRoadTool::instance())
-        foreach (CellRoadItem *item, mRoadItems)
-            item->setEditable(false);
-    if (mActiveTool != CellSelectMoveRoadTool::instance())
-        worldDocument()->setSelectedRoads(QList<Road*>());
-
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
@@ -1247,56 +1164,56 @@ void CellScene::viewTransformChanged(BaseGraphicsView *view)
 {
     Q_UNUSED(view)
     foreach (ObjectItem *item, mObjectItems)
-        item->synchWithObject(); // actually just need to update the label
-}
+            item->synchWithObject(); // actually just need to update the label
+        }
 
 void CellScene::setDocument(CellDocument *doc)
 {
     mDocument = doc;
 
-    connect(worldDocument(), SIGNAL(cellAdded(WorldCell*)),
-            SLOT(cellAdded(WorldCell*)));
-    connect(worldDocument(), SIGNAL(cellAboutToBeRemoved(WorldCell*)),
-            SLOT(cellAboutToBeRemoved(WorldCell*)));
+    connect(worldDocument(), &WorldDocument::cellAdded,
+            this, &CellScene::cellAdded);
+    connect(worldDocument(), &WorldDocument::cellAboutToBeRemoved,
+            this, &CellScene::cellAboutToBeRemoved);
 
-    connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
-    connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)), SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotAdded, this, &CellScene::cellLotAdded);
+    connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved, this, &CellScene::cellLotAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved, this, &CellScene::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::lotLevelChanged, this, &CellScene::lotLevelChanged);
     connect(worldDocument(), &WorldDocument::cellLotReordered, this, &CellScene::cellLotReordered);
-    connect(mDocument, SIGNAL(selectedLotsChanged()), SLOT(selectedLotsChanged()));
+    connect(mDocument, &CellDocument::selectedLotsChanged, this, &CellScene::selectedLotsChanged);
 
-    connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectMoved(WorldCellObject*)), SLOT(cellObjectMoved(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectResized(WorldCellObject*)), SLOT(cellObjectResized(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-            SLOT(cellObjectGroupChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
-            SLOT(cellObjectReordered(WorldCellObject*)));
-    connect(mDocument, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+    connect(worldDocument(), &WorldDocument::cellObjectAdded, this, &CellScene::cellObjectAdded);
+    connect(worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved, this, &CellScene::cellObjectAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellObjectMoved, this, &CellScene::cellObjectMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectResized, this, &CellScene::cellObjectResized);
+    connect(worldDocument(), &WorldDocument::objectLevelChanged, this, &CellScene::objectLevelChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectNameChanged, this, &CellScene::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectTypeChanged, this, &CellScene::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectGroupChanged,
+            this, &CellScene::cellObjectGroupChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectReordered,
+            this, &CellScene::cellObjectReordered);
+    connect(mDocument, &CellDocument::selectedObjectsChanged, this, &CellScene::selectedObjectsChanged);
 
-    connect(worldDocument(), SIGNAL(objectGroupReordered(int)),
-            SLOT(objectGroupReordered(int)));
-    connect(worldDocument(), SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
-            SLOT(objectGroupColorChanged(WorldObjectGroup*)));
+    connect(worldDocument(), &WorldDocument::objectGroupReordered,
+            this, &CellScene::objectGroupReordered);
+    connect(worldDocument(), &WorldDocument::objectGroupColorChanged,
+            this, &CellScene::objectGroupColorChanged);
 
-    connect(mDocument, SIGNAL(cellMapFileChanged()), SLOT(cellMapFileChanged()));
-    connect(mDocument, SIGNAL(cellContentsChanged()), SLOT(cellContentsChanged()));
-    connect(mDocument, SIGNAL(layerVisibilityChanged(Tiled::Layer*)),
-            SLOT(layerVisibilityChanged(Tiled::Layer*)));
-    connect(mDocument, SIGNAL(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)),
-            SLOT(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)));
-    connect(mDocument, SIGNAL(lotLevelVisibilityChanged(int)),
-            SLOT(lotLevelVisibilityChanged(int)));
-    connect(mDocument, SIGNAL(objectLevelVisibilityChanged(int)),
-            SLOT(objectLevelVisibilityChanged(int)));
-    connect(mDocument, SIGNAL(objectGroupVisibilityChanged(WorldObjectGroup*,int)),
-            SLOT(objectGroupVisibilityChanged(WorldObjectGroup*,int)));
-    connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
+    connect(mDocument, QOverload<>::of(&CellDocument::cellMapFileChanged), this, QOverload<>::of(&CellScene::cellMapFileChanged));
+    connect(mDocument, QOverload<>::of(&CellDocument::cellContentsChanged), this, QOverload<>::of(&CellScene::cellContentsChanged));
+    connect(mDocument, &CellDocument::layerVisibilityChanged,
+            this, &CellScene::layerVisibilityChanged);
+    connect(mDocument, &CellDocument::layerGroupVisibilityChanged,
+            this, &CellScene::layerGroupVisibilityChanged);
+    connect(mDocument, &CellDocument::lotLevelVisibilityChanged,
+            this, &CellScene::lotLevelVisibilityChanged);
+    connect(mDocument, &CellDocument::objectLevelVisibilityChanged,
+            this, &CellScene::objectLevelVisibilityChanged);
+    connect(mDocument, &CellDocument::objectGroupVisibilityChanged,
+            this, &CellScene::objectGroupVisibilityChanged);
+    connect(mDocument, &CellDocument::currentLayerIndexChanged, this, &CellScene::currentLayerChanged);
 
     // These are to update ObjectLabelItem
     connect(worldDocument(), &WorldDocument::propertyAdded, this, &CellScene::propertiesChanged);
@@ -1305,33 +1222,18 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
 
-    connect(worldDocument(), SIGNAL(roadAdded(int)),
-           SLOT(roadAdded(int)));
-    connect(worldDocument(), SIGNAL(roadRemoved(Road*)),
-           SLOT(roadRemoved(Road*)));
-    connect(worldDocument(), SIGNAL(roadCoordsChanged(int)),
-           SLOT(roadCoordsChanged(int)));
-    connect(worldDocument(), SIGNAL(roadWidthChanged(int)),
-           SLOT(roadWidthChanged(int)));
-    connect(worldDocument(), SIGNAL(roadTileNameChanged(int)),
-            SLOT(roadsChanged()));
-    connect(worldDocument(), SIGNAL(roadLinesChanged(int)),
-            SLOT(roadsChanged()));
-    connect(worldDocument(), SIGNAL(selectedRoadsChanged()),
-            SLOT(selectedRoadsChanged()));
-
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instance(), &MapManager::mapLoaded,
+            this, &CellScene::mapLoaded);
+    connect(MapManager::instance(), &MapManager::mapFailedToLoad,
+            this, &CellScene::mapFailedToLoad);
 
     loadMap();
 
-    connect(Tiled::Internal::TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
-            SLOT(tilesetChanged(Tileset*)));
+    connect(Tiled::Internal::TilesetManager::instance(), &Internal::TilesetManager::tilesetChanged,
+            this, &CellScene::tilesetChanged);
 
-    connect(Preferences::instance(), SIGNAL(highlightRoomUnderPointerChanged(bool)),
-            SLOT(highlightRoomUnderPointerChanged(bool)));
+    connect(Preferences::instance(), &Preferences::highlightRoomUnderPointerChanged,
+            this, &CellScene::highlightRoomUnderPointerChanged);
 }
 
 WorldDocument *CellScene::worldDocument() const
@@ -1376,9 +1278,9 @@ QList<SubMapItem *> CellScene::subMapItemsUsingMapInfo(MapInfo *mapInfo)
 ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
 {
     foreach (ObjectItem *item, mObjectItems) {
-        if (item->object() == obj)
-            return item;
-    }
+            if (item->object() == obj)
+                return item;
+        }
     return nullptr;
 }
 
@@ -1404,15 +1306,17 @@ void CellScene::setSelectedObjectItems(const QSet<ObjectItem *> &selected)
 void CellScene::setGraphicsSceneZOrder()
 {
     int z = 0;
-    foreach (MapComposite::ZOrderItem zo, mMapComposite->zOrder()) {
+    for (const MapComposite::ZOrderItem &zo : mMapComposite->zOrder()) {
         if (zo.group) {
             int level = zo.group->level();
-            if (mTileLayerGroupItems.contains(level))
-                mTileLayerGroupItems[level]->setZValue(z);
+            if (CompositeLayerGroupItem *item = mLevelData[level].mTileLayerGroupItem) {
+                item->setZValue(z);
+            }
         } else {
-            if (zo.layerIndex < mLayerItems.size()) {
-                if (QGraphicsItem *item = mLayerItems[zo.layerIndex])
+            if (zo.layerIndex < mLevelData[zo.layer->level()].mLayerItems.size()) {
+                if (QGraphicsItem *item = mLevelData[zo.layer->level()].mLayerItems[zo.layerIndex]) {
                     item->setZValue(z);
+                }
             }
         }
         ++z;
@@ -1471,14 +1375,16 @@ void CellScene::setObjectVisible(WorldCellObject *obj, bool visible)
 
 void CellScene::setLevelOpacity(int level, qreal opacity)
 {
-    if (mTileLayerGroupItems.contains(level))
-        mTileLayerGroupItems[level]->setOpacity(opacity);
+    if (CompositeLayerGroupItem *item = mLevelData[level].mTileLayerGroupItem) {
+        item->setOpacity(opacity);
+    }
 }
 
 qreal CellScene::levelOpacity(int level)
 {
-    if (mTileLayerGroupItems.contains(level))
-        return mTileLayerGroupItems[level]->opacity();
+    if (CompositeLayerGroupItem *item = mLevelData[level].mTileLayerGroupItem) {
+        return item->opacity();
+    }
     return 1.0;
 }
 
@@ -1564,14 +1470,17 @@ void CellScene::loadMap()
         delete mMapComposite;
         delete mRenderer;
 
-        mLayerItems.clear();
-        mTileLayerGroupItems.clear();
+        for (int z = 0; z < MAX_WORLD_LEVELS; z++) {
+            LevelData &levelInfo = mLevelData[z];
+            levelInfo.mLayerItems.clear();
+            levelInfo.mTileLayerGroupItem = nullptr;
+        }
+
         mPendingGroupItems.clear();
         mObjectItems.clear();
         mSelectedObjectItems.clear();
         mSubMapItems.clear();
         mSelectedSubMapItems.clear();
-        mRoadItems.clear();
 
         // mMap, mMapInfo are shared, don't destroy
         mMap = nullptr;
@@ -1603,23 +1512,22 @@ void CellScene::loadMap()
 #if 1
     // Add any missing default tile layers so the user can hide/show them in the Layers Dock.
     // FIXME: mMap is shared, is this safe?
-    for (int level = 0; level < MAX_WORLD_LEVELS; level++)
-    {
+    for (int level = 0; level < MAX_WORLD_LEVELS; level++) {
+        MapLevel *mapLevel = mMap->levelAt(level);
         QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
-        for (QString layerName : defaultLayerNames) {
-            QString withoutPrefix = MapComposite::layerNameWithoutPrefix(layerName);
-            QString withPrefix = QStringLiteral("%1_%2").arg(level).arg(withoutPrefix);
+        for (const QString &layerName : defaultLayerNames) {
             bool exists = false;
-            for (TileLayer* layer : mMap->tileLayers()) {
-                if (layer->name() == withPrefix) {
+            for (TileLayer* layer : mapLevel->tileLayers()) {
+                if (layer->name() == layerName) {
                     exists = true;
                     break;
                 }
             }
             if (exists)
                 continue;
-            TileLayer* layer = new TileLayer(withPrefix, 0, 0, 300, 300);
-            mMap->insertLayer(mMap->layerCount(), layer);
+            TileLayer* layer = new TileLayer(layerName, 0, 0, 300, 300);
+            layer->setLevel(level);
+            mMap->insertLayer(mapLevel->layerCount(), layer);
         }
     }
 #endif
@@ -1655,15 +1563,6 @@ void CellScene::loadMap()
         mMapComposite->ensureMaxLevels(obj->level());
     }
 
-    // FIXME: This creates a new CellRoadItem for every road in the world,
-    // even if many are not visible in this cell.
-    foreach (Road *road, world()->roads()) {
-        CellRoadItem *item = new CellRoadItem(this, road);
-        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
-        addItem(item);
-        mRoadItems += item;
-    }
-
     // Explicitly set sceneRect, otherwise it will just be as large as is needed to display
     // all the items in the scene (without getting smaller, ever).
     setSceneRect(0, 0, 1, 1);
@@ -1688,9 +1587,6 @@ void CellScene::loadMap()
     addItem(mWaterFlowOverlay);
 
     updateCurrentLevelHighlight();
-
-    mMapComposite->generateRoadLayers(QPoint(cell()->x()*300, cell()->y()*300),
-                                      world()->roads());
 
     mMapBuildingsInvalid = true;
 }
@@ -1941,10 +1837,12 @@ void CellScene::layerVisibilityChanged(Layer *layer)
 {
     if (TileLayer *tl = layer->asTileLayer()) {
         int level = tl->level(); //tl->group() ? tl->group()->level() : -1;
-        if (/*(level != -1) && */mTileLayerGroupItems.contains(level)) {
-            if (!mPendingGroupItems.contains(mTileLayerGroupItems[level]))
-                mPendingGroupItems += mTileLayerGroupItems[level];
-            doLater(Bounds | Synch | Paint); //mTileLayerGroupItems[level]->synchWithTileLayers();
+        if (CompositeLayerGroupItem *item = mLevelData[level].mTileLayerGroupItem) {
+            if (!mPendingGroupItems.contains(item)) {
+                mPendingGroupItems += item;
+            }
+            doLater(Bounds | Synch | Paint);
+            //mTileLayerGroupItems[level]->synchWithTileLayers();
         }
     }
 }
@@ -1957,8 +1855,9 @@ void CellScene::layerGroupAdded(int level)
 
 void CellScene::layerGroupVisibilityChanged(ZTileLayerGroup *layerGroup)
 {
-    if (mTileLayerGroupItems.contains(layerGroup->level()))
-        mTileLayerGroupItems[layerGroup->level()]->setVisible(layerGroup->isVisible());
+    if (CompositeLayerGroupItem *item = mLevelData[layerGroup->level()].mTileLayerGroupItem) {
+        item->setVisible(layerGroup->isVisible());
+    }
 }
 
 void CellScene::lotLevelVisibilityChanged(int level)
@@ -2011,9 +1910,10 @@ void CellScene::objectGroupColorChanged(WorldObjectGroup *og)
     }
 }
 
-void CellScene::currentLevelChanged(int index)
+void CellScene::currentLayerChanged(int levelIndex, int layerIndex)
 {
-    Q_UNUSED(index)
+    Q_UNUSED(levelIndex)
+    Q_UNUSED(layerIndex)
     updateCurrentLevelHighlight();
     mGridItem->updateBoundingRect();
 }
@@ -2115,10 +2015,10 @@ void CellScene::handlePendingUpdates()
     // Adding a submap may create new TileLayerGroups to ensure
     // all the submap layers can be viewed.
     foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups()) {
-        if (!mTileLayerGroupItems.contains(layerGroup->level())) {
+        if (mLevelData[layerGroup->level()].mTileLayerGroupItem == nullptr) {
             CompositeLayerGroupItem *item = new CompositeLayerGroupItem(layerGroup, mRenderer);
             addItem(item);
-            mTileLayerGroupItems[layerGroup->level()] = item;
+            mLevelData[layerGroup->level()].mTileLayerGroupItem = item;
 
             mRenderer->setMaxLevel(mMapComposite->maxLevel());
 
@@ -2126,13 +2026,20 @@ void CellScene::handlePendingUpdates()
         }
     }
 
-    int oldSize = mLayerItems.count();
-    mLayerItems.resize(mMap->layerCount());
-    for (int layerIndex = oldSize; layerIndex < mMap->layerCount(); ++layerIndex)
-        mLayerItems[layerIndex] = new DummyGraphicsItem();
-
-    if (mPendingFlags & AllGroups)
-        mPendingGroupItems = mTileLayerGroupItems.values();
+    for (int z = 0; z < MAX_WORLD_LEVELS; z++) {
+        MapLevel *mapLevel = mMap->levelAt(z);
+        LevelData &levelData = mLevelData[z];
+        int oldSize = levelData.mLayerItems.count();
+        levelData.mLayerItems.resize(mapLevel->layerCount());
+        for (int layerIndex = oldSize; layerIndex < mapLevel->layerCount(); ++layerIndex) {
+            levelData.mLayerItems[layerIndex] = new DummyGraphicsItem();
+        }
+        if (mPendingFlags & AllGroups) {
+            if (levelData.mTileLayerGroupItem) {
+                mPendingGroupItems += levelData.mTileLayerGroupItem;
+            }
+        }
+    }
 
     if (mPendingFlags & Synch) {
         foreach (CompositeLayerGroupItem *item, mPendingGroupItems)
@@ -2182,83 +2089,6 @@ void CellScene::handlePendingUpdates()
     mPendingActive = false;
 }
 
-void CellScene::roadAdded(int index)
-{
-    Road *road = world()->roads().at(index);
-    Q_ASSERT(itemForRoad(road) == 0);
-    CellRoadItem *item = new CellRoadItem(this, road);
-    item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
-    addItem(item);
-    mRoadItems += item;
-
-    roadsChanged();
-}
-
-void CellScene::roadRemoved(Road *road)
-{
-    CellRoadItem *item = itemForRoad(road);
-    Q_ASSERT(item);
-    mRoadItems.removeAll(item);
-//    mSelectedRoadItems.remove(item); // paranoia
-    removeItem(item);
-    delete item;
-
-    roadsChanged();
-}
-
-void CellScene::roadCoordsChanged(int index)
-{
-    Road *road = world()->roads().at(index);
-    CellRoadItem *item = itemForRoad(road);
-    Q_ASSERT(item);
-    item->synchWithRoad();
-
-    roadsChanged();
-}
-
-void CellScene::roadWidthChanged(int index)
-{
-    Road *road = world()->roads().at(index);
-    CellRoadItem *item = itemForRoad(road);
-    Q_ASSERT(item);
-    item->synchWithRoad();
-
-    roadsChanged();
-}
-
-void CellScene::selectedRoadsChanged()
-{
-    const QList<Road*> &selection = worldDocument()->selectedRoads();
-
-    QSet<CellRoadItem*> items;
-    foreach (Road *road, selection)
-        items.insert(itemForRoad(road));
-
-    foreach (CellRoadItem *item, mSelectedRoadItems - items) {
-        item->setSelected(false);
-        item->setEditable(false);
-        item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
-    }
-
-    bool editable = CellEditRoadTool::instance()->isCurrent();
-    foreach (CellRoadItem *item, items - mSelectedRoadItems) {
-        item->setSelected(true);
-        item->setEditable(editable);
-        item->setZValue(ZVALUE_ROADITEM_SELECTED);
-    }
-
-    mSelectedRoadItems = items;
-}
-
-void CellScene::roadsChanged()
-{
-    mMapComposite->generateRoadLayers(QPoint(cell()->x() * 300, cell()->y() * 300),
-                                      world()->roads());
-    if (mMapComposite->tileLayersForLevel(0))
-        if (mTileLayerGroupItems.contains(0))
-            mTileLayerGroupItems[0]->update();
-}
-
 // Called when our MapComposite adds a sub-map asynchronously.
 void CellScene::mapCompositeNeedsSynch()
 {
@@ -2274,17 +2104,22 @@ void CellScene::updateCurrentLevelHighlight()
     if (!mHighlightCurrentLevel) {
         mDarkRectangle->setVisible(false);
 
-        for (int i = 0; i < mLayerItems.size(); ++i) {
-            const Layer *layer = mMap->layerAt(i);
-            mLayerItems.at(i)->setVisible(layer->isVisible());
+        for (int z = 0; z < MAX_WORLD_LEVELS; z++) {
+            MapLevel *mapLevel = mMap->levelAt(z);
+            LevelData &levelData = mLevelData[z];
+            for (int i = 0; i < levelData.mLayerItems.size(); ++i) {
+                const Layer *layer = mapLevel->layerAt(i);
+                levelData.mLayerItems.at(i)->setVisible(layer->isVisible());
+            }
+            if (CompositeLayerGroupItem *item = levelData.mTileLayerGroupItem) {
+                item->setVisible(item->layerGroup()->isVisible());
+            }
         }
 
-        foreach (CompositeLayerGroupItem *item, mTileLayerGroupItems)
-            item->setVisible(item->layerGroup()->isVisible());
-
-        foreach (SubMapItem *item, mSubMapItems)
+        for (SubMapItem *item : mSubMapItems) {
             item->setVisible(item->subMap()->isVisible() &&
                              mDocument->isLotLevelVisible(item->subMap()->levelOffset()));
+        }
 
         foreach (ObjectItem *item, mObjectItems)
             item->setVisible(shouldObjectItemBeVisible(item));
@@ -2294,21 +2129,24 @@ void CellScene::updateCurrentLevelHighlight()
         return;
     }
 
-    Q_ASSERT(mTileLayerGroupItems.contains(currentLevel));
-    QGraphicsItem *currentItem = mTileLayerGroupItems[currentLevel];
+    Q_ASSERT(mLevelData[currentLevel].mTileLayerGroupItem != nullptr);
+    QGraphicsItem *currentItem = mLevelData[currentLevel].mTileLayerGroupItem;
 
     // Hide items above the current item
-    int index = 0;
-    foreach (QGraphicsItem *item, mLayerItems) {
-        Layer *layer = mMap->layerAt(index);
-        bool visible = layer->isVisible() && (layer->level() <= currentLevel);
-        item->setVisible(visible);
-        ++index;
-    }
-    foreach (CompositeLayerGroupItem *item, mTileLayerGroupItems) {
-        CompositeLayerGroup *layerGroup = item->layerGroup();
-        bool visible = layerGroup->isVisible() && (layerGroup->level() <= currentLevel);
-        item->setVisible(visible);
+    for (int z = 0; z < MAX_WORLD_LEVELS; z++) {
+        LevelData &levelData = mLevelData[z];
+        MapLevel *mapLevel = mMap->levelAt(z);
+        for (int index = 0; index < mapLevel->layerCount(); index++) {
+            QGraphicsItem *item = levelData.mLayerItems[index];
+            Layer *layer = mapLevel->layerAt(index);
+            bool visible = layer->isVisible() && (layer->level() <= currentLevel);
+            item->setVisible(visible);
+        }
+        if (CompositeLayerGroupItem *item = levelData.mTileLayerGroupItem) {
+            CompositeLayerGroup *layerGroup = item->layerGroup();
+            bool visible = layerGroup->isVisible() && (layerGroup->level() <= currentLevel);
+            item->setVisible(visible);
+        }
     }
 
     // Hide object-like things not on the current level
@@ -2537,49 +2375,6 @@ void CellScene::dropEvent(QGraphicsSceneDragDropEvent *event)
         return;
     }
     event->ignore();
-}
-
-QPoint CellScene::pixelToRoadCoords(qreal x, qreal y) const
-{
-    QPoint tileCoords = mRenderer->pixelToTileCoordsInt(QPointF(x, y));
-    return tileCoords + QPoint(cell()->x() * 300, cell()->y() * 300);
-}
-
-QPointF CellScene::roadToSceneCoords(const QPoint &pt) const
-{
-    QPoint tileCoords = pt - QPoint(cell()->x() * 300, cell()->y() * 300);
-    return mRenderer->tileToPixelCoords(tileCoords);
-}
-
-QPolygonF CellScene::roadRectToScenePolygon(const QRect &roadRect) const
-{
-    QPolygonF polygon;
-    QRect adjusted = roadRect.adjusted(0, 0, 1, 1);
-    polygon += roadToSceneCoords(adjusted.topLeft());
-    polygon += roadToSceneCoords(adjusted.topRight());
-    polygon += roadToSceneCoords(adjusted.bottomRight());
-    polygon += roadToSceneCoords(adjusted.bottomLeft());
-    polygon += polygon[0];
-    return polygon;
-}
-
-CellRoadItem *CellScene::itemForRoad(Road *road)
-{
-    foreach (CellRoadItem *item, mRoadItems) {
-        if (item->road() == road)
-            return item;
-    }
-    return 0;
-}
-
-QList<Road *> CellScene::roadsInRect(const QRectF &bounds)
-{
-    QList<Road*> result;
-    foreach (QGraphicsItem *item, items(bounds)) {
-        if (CellRoadItem *roadItem = dynamic_cast<CellRoadItem*>(item))
-            result += roadItem->road();
-    }
-    return result;
 }
 
 void CellScene::initAdjacentMaps()

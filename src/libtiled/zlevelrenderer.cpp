@@ -41,22 +41,33 @@ using namespace Tiled;
 #define DISPLAY_TILE_WIDTH (map()->tileWidth() * (is2x() ? 2 : 1))
 #define DISPLAY_TILE_HEIGHT (map()->tileHeight() * (is2x() ? 2 : 1))
 
+ZLevelRenderer::ZLevelRenderer(const Map *map)
+    : MapRenderer(map)
+{
+    set2x(true);
+}
+
 QSize ZLevelRenderer::mapSize() const
 {
     // Map width and height contribute equally in both directions
-    const int side = map()->height() + map()->width();
+    const int side = rotateHeight() + rotateWidth();
     return QSize(side * DISPLAY_TILE_WIDTH / 2
                  + maxLevel() * map()->cellsPerLevel().x() * DISPLAY_TILE_WIDTH,
                  side * DISPLAY_TILE_HEIGHT / 2
                  + maxLevel() * map()->cellsPerLevel().y() * DISPLAY_TILE_HEIGHT);
 }
 
-QRect ZLevelRenderer::boundingRect(const QRect &rect, int level) const
+QRect ZLevelRenderer::boundingRect(const QRect &rectR, int level) const
 {
     const int tileWidth = DISPLAY_TILE_WIDTH;
     const int tileHeight = DISPLAY_TILE_HEIGHT;
 
-    const int originX = map()->height() * tileWidth / 2;
+    int w = rectR.width(), h = rectR.height();
+    QRect rect = rectR;
+    rect.setWidth(rotateWidth(w, h));
+    rect.setHeight(rotateHeight(w, h));
+
+    const int originX = rotateHeight() * tileWidth / 2;
     const QPoint pos((rect.x() - (rect.y() + rect.height()))
                      * tileWidth / 2 + originX,
                      (rect.x() + rect.y()) * tileHeight / 2
@@ -110,7 +121,7 @@ AddRemoveMapObject::removeObject
                         MapObjectItem::shape()
                             <this function>
     */
-    if (layer == 0)
+    if (layer == nullptr)
         return QPainterPath();
 #else
     Q_ASSERT(layer);
@@ -145,21 +156,30 @@ AddRemoveMapObject::removeObject
     return path;
 }
 
-void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor gridColor, int level) const
+void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect,
+                              QColor gridColor, int level,
+                              const QRect &tileBounds) const
 {
-    const int tileWidth = map()->tileWidth();
-    const int tileHeight = map()->tileHeight();
+    QRect b = tileBounds;
+    if (b.isEmpty())
+        b = QRect(0, 0, map()->width(), map()->height());
+    int w = b.width(), h = b.height();
+    b.setWidth(rotateWidth(w, h));
+    b.setHeight(rotateHeight(w, h));
+
+    const int tileWidth = DISPLAY_TILE_WIDTH;
+    const int tileHeight = DISPLAY_TILE_HEIGHT;
 
     QRect r = rect.toAlignedRect();
     r.adjust(-tileWidth / 2, -tileHeight / 2,
              tileWidth / 2, tileHeight / 2);
 
-    const int startX = qMax(qreal(0), pixelToTileCoords(r.topLeft(), level).x());
-    const int startY = qMax(qreal(0), pixelToTileCoords(r.topRight(), level).y());
-    const int endX = qMin(qreal(map()->width()),
-                          pixelToTileCoords(r.bottomRight(), level).x());
-    const int endY = qMin(qreal(map()->height()),
-                          pixelToTileCoords(r.bottomLeft(), level).y());
+    const int startX = int(qMax(qreal(b.left()), pixelToTileCoordsNR(r.topLeft(), level).x()));
+    const int startY = int(qMax(qreal(b.top()), pixelToTileCoordsNR(r.topRight(), level).y()));
+    const int endX = int(qMin(qreal(b.right() + 1),
+                          pixelToTileCoordsNR(r.bottomRight(), level).x()));
+    const int endY = int(qMin(qreal(b.bottom() + 1),
+                          pixelToTileCoordsNR(r.bottomLeft(), level).y()));
 
     gridColor.setAlpha(128);
 
@@ -172,18 +192,31 @@ void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor grid
     painter->setPen(pen);
 
     for (int y = startY; y <= endY; ++y) {
-        const QPointF start = tileToPixelCoords(startX, (qreal)y, level);
-        const QPointF end = tileToPixelCoords(endX, (qreal)y, level);
+        const QPointF start = tileToPixelCoordsNR(startX, qreal(y), level);
+        const QPointF end = tileToPixelCoordsNR(endX, qreal(y), level);
         painter->drawLine(start, end);
     }
     for (int x = startX; x <= endX; ++x) {
-        const QPointF start = tileToPixelCoords(x, (qreal)startY, level);
-        const QPointF end = tileToPixelCoords(x, (qreal)endY, level);
+        const QPointF start = tileToPixelCoordsNR(x, qreal(startY), level);
+        const QPointF end = tileToPixelCoordsNR(x, qreal(endY), level);
+        painter->drawLine(start, end);
+    }
+
+    brush = QBrush(QColor(0, 255, 255));
+    pen.setBrush(brush);
+    painter->setPen(pen);
+    if (rotation() != MapRotation::NotRotated) {
+        b = tileBounds;
+        if (b.isEmpty()) {
+            b = QRect(0, 0, map()->width(), map()->height());
+        }
+        const QPointF start = tileToPixelCoords(b.x(), b.y(), level);
+        const QPointF end = tileToPixelCoords(b.right() + 1, b.y(), level);
         painter->drawLine(start, end);
     }
 }
 
-static Tile *g_missing_tile = 0;
+static Tile *g_missing_tile = nullptr;
 
 void ZLevelRenderer::drawTileLayer(QPainter *painter,
                                       const TileLayer *layer,
@@ -211,9 +244,9 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                 drawMargins.top());
 
     // Determine the tile and pixel coordinates to start at
-    QPointF tilePos = pixelToTileCoords(rect.x(), rect.y(), level);
-    QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
-                           (int) std::floor(tilePos.y()));
+    QPointF tilePos = pixelToTileCoordsNR(rect.x(), rect.y(), level);
+    QPoint rowItr = QPoint(int(std::floor(tilePos.x())),
+                           int(std::floor(tilePos.y())));
     QPointF startPos = tileToPixelCoords(rowItr, level);
 
     startPos.rx() -= tileWidth / 2;
@@ -246,8 +279,7 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
 
     QTransform baseTransform = painter->transform();
 
-    for (int y = startPos.y(); y - tileHeight < rect.bottom();
-         y += tileHeight / 2)
+    for (int y = startPos.y(); y - tileHeight < rect.bottom(); y += tileHeight / 2)
     {
         QPoint columnItr = rowItr;
 
@@ -269,7 +301,7 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                     qreal m22 = 1;      // Vertical scaling factor
                     qreal dx = offset.x() + x;
                     qreal dy = offset.y() + y - cell.tile->height();
-
+#if 0
                     if (cell.flippedAntiDiagonally) {
                         // Use shearing to swap the X/Y axis
                         m11 = 0;
@@ -292,14 +324,14 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
                         dy += cell.flippedAntiDiagonally ? img.width()
                                                          : img.height();
                     }
-
+#endif
                     if (tileWidth == cell.tile->width() * 2) {
-                        m11 *= 2.0f;
-                        m22 *= 2.0f;
+                        m11 *= qreal(2.0);
+                        m22 *= qreal(2.0);
                         dx += cell.tile->offset().x();
                         dy -= cell.tile->height() - cell.tile->offset().y();
                     } else if (tileWidth == cell.tile->width() / 2) {
-                        float scale = 0.5f;
+                        qreal scale = qreal(0.5);
                         m11 *= scale;
                         m22 *= scale;
                         dy += cell.tile->height() / 2;
@@ -333,7 +365,6 @@ void ZLevelRenderer::drawTileLayer(QPainter *painter,
 }
 
 #ifdef ZOMBOID
-#include <QThreadStorage>
 void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *layerGroup,
                             const QRectF &exposed) const
 {
@@ -359,10 +390,10 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                 drawMargins.top());
 
     // Determine the tile and pixel coordinates to start at
-    QPointF tilePos = pixelToTileCoords(rect.x(), rect.y(), level);
-    QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
-                           (int) std::floor(tilePos.y()));
-    QPointF startPos = tileToPixelCoords(rowItr, level);
+    QPointF tilePos = pixelToTileCoordsNR(rect.x(), rect.y(), level);
+    QPoint rowItr = QPoint(int(std::floor(tilePos.x())),
+                           int(std::floor(tilePos.y())));
+    QPointF startPos = tileToPixelCoordsNR(rowItr, level);
     startPos.rx() -= tileWidth / 2;
     startPos.ry() += tileHeight;
 
@@ -390,39 +421,48 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
 
     QTransform baseTransform = painter->transform();
 
-#if 0
-    QThreadStorage<QVector<const Cell*> > cellStorage;
-    QThreadStorage<QVector<qreal> > opacityStorage;
-    QVector<const Cell*> &cells = cellStorage.localData();
-    QVector<qreal> &opacities = opacityStorage.localData();
-#else
-    /*static*/ QVector<const Cell*> cells(40); // or QVarLengthArray
-    /*static*/ QVector<qreal> opacities(40); // or QVarLengthArray
-#endif
+    QVector<ZTileRenderInfo> tileInfos(40);
 
     layerGroup->prepareDrawing(this, rect);
 
     qreal opacity = painter->opacity();
 
-    for (int y = startPos.y(); y - tileHeight < rect.bottom();
-         y += tileHeight / 2)
-    {
+    for (int y = int(startPos.y()); y - tileHeight < rect.bottom(); y += tileHeight / 2) {
         QPoint columnItr = rowItr;
-
-        for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
-            cells.resize(0);
-            if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
-                for (int i = 0; i < cells.size(); i++) {
+        for (int x = int(startPos.x()); x < rect.right(); x += tileWidth) {
+            tileInfos.resize(0);
+            QPoint cellPos = unrotatePoint(columnItr);
+            // FIXME
+            {
+                switch (rotation()) {
+                case MapRotation::NotRotated:
+                    break;
+                case MapRotation::Clockwise90:
+                    cellPos.ry()--;
+                    break;
+                case MapRotation::Clockwise180:
+                    cellPos.rx()--;
+                    cellPos.ry()--;
+                    break;
+                case MapRotation::Clockwise270:
+                    cellPos.rx()--;
+                    break;
+                }
+            }
+            if (layerGroup->orderedTilesAt(this, cellPos, tileInfos)) {
+                for (int i = 0; i < tileInfos.size(); i++) {
                     // Multi-threading
                     if (mAbortDrawing && *mAbortDrawing) {
                         painter->setTransform(baseTransform);
                         return;
                     }
-                    const Cell *cell = cells[i];
-                    if (!cell->isEmpty()) {
-                        Tile *tile = cell->tile;
+                    const ZTileRenderInfo& tileInfo = tileInfos[i];
+                    if (tileInfo.mTile != nullptr) {
+                        Tile *tile = tileInfo.mTile;
+                        if (tile->tileset()->name() == QLatin1String("none"))
+                            continue; // rotated
                         if (tile->image().isNull()) {
-                            if (g_missing_tile == 0) {
+                            if (g_missing_tile == nullptr) {
                                 Tileset *ts = new Tileset(QLatin1String("MISSING"), 64, 128);
                                 if (ts->loadFromImage(QImage(QLatin1String(":/images/missing-tile.png")), QLatin1String(":/images/missing-tile.png"))) {
                                     g_missing_tile = ts->tileAt(0);
@@ -441,6 +481,9 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                         qreal dx = offset.x() + x;
                         qreal dy = offset.y() + y - tile->height();
 
+                        dx += tileInfo.mOffset.x() * (is2x() ? 2 : 1);
+                        dy += tileInfo.mOffset.y() * (is2x() ? 2 : 1);
+#if 0
                         if (cell->flippedAntiDiagonally) {
                             // Use shearing to swap the X/Y axis
                             m11 = 0;
@@ -463,14 +506,14 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                             dy += cell->flippedAntiDiagonally ? img.width()
                                                              : img.height();
                         }
-
+#endif
                         if (tileWidth == tile->width() * 2) {
-                            m11 *= 2.0f;
-                            m22 *= 2.0f;
+                            m11 *= qreal(2.0);
+                            m22 *= qreal(2.0);
                             dx += tile->offset().x();
                             dy -= tile->height() - tile->offset().y();
                         } else if (tileWidth == tile->width() / 2) {
-                            float scale = 0.5f;
+                            qreal scale = qreal(0.5);
                             m11 *= scale;
                             m22 *= scale;
 //                            dx += (tileWidth - img.width() * scale) / 2;
@@ -482,7 +525,7 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                         const QTransform transform(m11, m12, m21, m22, dx, dy);
                         painter->setTransform(transform * baseTransform);
 
-                        painter->setOpacity(opacities[i] * opacity);
+                        painter->setOpacity(tileInfo.mOpacity * opacity);
 
                         painter->drawImage(0, 0, img);
                     }
@@ -518,7 +561,7 @@ void ZLevelRenderer::drawTileSelection(QPainter *painter,
 {
     painter->setBrush(color);
     painter->setPen(Qt::NoPen);
-    foreach (const QRect &r, region.rects()) {
+    for (const QRect &r : region.rects()) {
         QPolygonF polygon = tileRectToPolygon(r, level);
         if (QRectF(polygon.boundingRect()).intersects(exposed))
             painter->drawConvexPolygon(polygon);
@@ -551,6 +594,11 @@ void ZLevelRenderer::drawMapObject(QPainter *painter,
         painter->drawRect(QRectF(paintOrigin, img.size()));
     } else {
         QColor brushColor = color;
+#if 1
+        if (color.alpha() != 255)
+            brushColor.setAlpha(color.alpha());
+        else
+#endif
         brushColor.setAlpha(50);
         QBrush brush(brushColor);
 
@@ -640,6 +688,100 @@ void ZLevelRenderer::drawFancyRectangle(QPainter *painter,
     painter->restore();
 }
 
+int ZLevelRenderer::rotateWidth() const
+{
+    return rotateHeight(map()->width(), map()->height());
+}
+
+int ZLevelRenderer::rotateHeight() const
+{
+    return rotateHeight(map()->width(), map()->height());
+}
+
+int ZLevelRenderer::rotateWidth(int width, int height) const
+{
+    switch (rotation())
+    {
+    case MapRotation::Clockwise90:
+    case MapRotation::Clockwise270:
+        return height;
+    default:
+        return width;
+    }
+}
+
+int ZLevelRenderer::rotateHeight(int width, int height) const
+{
+    switch (rotation())
+    {
+    case MapRotation::Clockwise90:
+    case MapRotation::Clockwise270:
+        return width;
+    default:
+        return height;
+    }
+}
+
+QPoint ZLevelRenderer::rotatePoint(const QPoint &pos) const
+{
+    switch (rotation())
+    {
+    case MapRotation::NotRotated:
+        return pos;
+    case MapRotation::Clockwise90:
+        return QPoint(map()->height() - pos.y() - 1, pos.x());
+    case MapRotation::Clockwise180:
+        return QPoint(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
+    case MapRotation::Clockwise270:
+        return QPoint(pos.y(), map()->width() - pos.x() - 1);
+    }
+}
+
+QPoint ZLevelRenderer::unrotatePoint(const QPoint &pos) const
+{
+    switch (rotation())
+    {
+    case MapRotation::NotRotated:
+        return pos;
+    case MapRotation::Clockwise90:
+        return QPoint(pos.y(), map()->height() - pos.x() - 1);
+    case MapRotation::Clockwise180:
+        return QPoint(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
+    case MapRotation::Clockwise270:
+        return QPoint(map()->width() - pos.y() - 1, pos.x());
+    }
+}
+
+QPointF ZLevelRenderer::rotatePointF(const QPointF &pos) const
+{
+    switch (rotation())
+    {
+    case MapRotation::NotRotated:
+        return pos;
+    case MapRotation::Clockwise90:
+        return QPointF(map()->height() - pos.y() - 1, pos.x());
+    case MapRotation::Clockwise180:
+        return QPointF(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
+    case MapRotation::Clockwise270:
+        return QPointF(pos.y(), map()->width() - pos.x() - 1);
+    }
+}
+
+QPointF ZLevelRenderer::unrotatePointF(const QPointF &pos) const
+{
+    switch (rotation())
+    {
+    case MapRotation::NotRotated:
+        return pos;
+    case MapRotation::Clockwise90:
+        return QPointF(pos.y(), map()->height() - pos.x() - 1);
+    case MapRotation::Clockwise180:
+        return QPointF(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
+    case MapRotation::Clockwise270:
+        return QPointF(map()->width() - pos.y() - 1, pos.x());
+    }
+}
+
 void ZLevelRenderer::drawImageLayer(QPainter *painter,
                                        const ImageLayer *imageLayer,
                                        const QRectF &exposed) const
@@ -659,8 +801,41 @@ QPointF ZLevelRenderer::pixelToTileCoords(qreal x, qreal y, int level) const
     const int tileWidth = DISPLAY_TILE_WIDTH;
     const int tileHeight = DISPLAY_TILE_HEIGHT;
     const qreal ratio = (qreal) tileWidth / tileHeight;
+    x -= rotateHeight() * tileWidth / 2;
+#ifdef ZOMBOID
+    y -= map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
+#endif
+    const qreal mx = y + (x / ratio);
+    const qreal my = y - (x / ratio);
 
-    x -= map()->height() * tileWidth / 2;
+    return unrotatePointF({mx / tileHeight, my / tileHeight});
+}
+
+QPointF ZLevelRenderer::tileToPixelCoords(qreal x, qreal y, int level) const
+{
+    const int tileWidth = DISPLAY_TILE_WIDTH;
+    const int tileHeight = DISPLAY_TILE_HEIGHT;
+#ifdef ZOMBOID
+    QPointF p = rotatePointF({x, y});
+    const int originX = rotateHeight() * tileWidth / 2; // top-left corner
+    const int originY = map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
+    return QPointF((p.x() - p.y()) * tileWidth / 2 + originX,
+                   (p.x() + p.y()) * tileHeight / 2 + originY);
+#else
+    const int originX = map()->height() * tileWidth / 2;
+    return QPointF((x - y) * tileWidth / 2 + originX,
+                   (x + y) * tileHeight / 2);
+#endif
+}
+
+// NR=NotRotated
+QPointF ZLevelRenderer::pixelToTileCoordsNR(qreal x, qreal y, int level) const
+{
+    const int tileWidth = DISPLAY_TILE_WIDTH;
+    const int tileHeight = DISPLAY_TILE_HEIGHT;
+    const qreal ratio = (qreal) tileWidth / tileHeight;
+
+    x -= rotateHeight() * tileWidth / 2;
 #ifdef ZOMBOID
     y -= map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
 #endif
@@ -671,12 +846,13 @@ QPointF ZLevelRenderer::pixelToTileCoords(qreal x, qreal y, int level) const
                    my / tileHeight);
 }
 
-QPointF ZLevelRenderer::tileToPixelCoords(qreal x, qreal y, int level) const
+// NR=NotRotated
+QPointF ZLevelRenderer::tileToPixelCoordsNR(qreal x, qreal y, int level) const
 {
     const int tileWidth = DISPLAY_TILE_WIDTH;
     const int tileHeight = DISPLAY_TILE_HEIGHT;
 #ifdef ZOMBOID
-    const int originX = map()->height() * tileWidth / 2; // top-left corner
+    const int originX = rotateHeight() * tileWidth / 2; // top-left corner
     const int originY = map()->cellsPerLevel().y() * (maxLevel() - level) * tileHeight;
     return QPointF((x - y) * tileWidth / 2 + originX,
                    (x + y) * tileHeight / 2 + originY);
@@ -689,21 +865,7 @@ QPointF ZLevelRenderer::tileToPixelCoords(qreal x, qreal y, int level) const
 
 QPolygonF ZLevelRenderer::tileRectToPolygon(const QRect &rect, int level) const
 {
-    const int tileWidth = DISPLAY_TILE_WIDTH;
-    const int tileHeight = DISPLAY_TILE_HEIGHT;
-
-    const QPointF topRight = tileToPixelCoords(rect.topRight(), level);
-    const QPointF bottomRight = tileToPixelCoords(rect.bottomRight(), level);
-    const QPointF bottomLeft = tileToPixelCoords(rect.bottomLeft(), level);
-
-    QPolygonF polygon;
-    polygon << QPointF(tileToPixelCoords(rect.topLeft(), level));
-    polygon << QPointF(topRight.x() + tileWidth / 2,
-                       topRight.y() + tileHeight / 2);
-    polygon << QPointF(bottomRight.x(), bottomRight.y() + tileHeight);
-    polygon << QPointF(bottomLeft.x() - tileWidth / 2,
-                       bottomLeft.y() + tileHeight / 2);
-    return polygon;
+    return tileRectToPolygon(QRectF(rect), level);
 }
 
 QPolygonF ZLevelRenderer::tileRectToPolygon(const QRectF &rect, int level) const

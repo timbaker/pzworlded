@@ -491,7 +491,7 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
         // There may be a thread already reading or about to read this image.
         QImage *image = new QImage(ts->imageSource2x().isEmpty() ? ts->imageSource() : ts->imageSource2x());
         Tileset *cached = mTilesetImageCache->findMatch(ts, ts->imageSource(), ts->imageSource2x());
-        Q_ASSERT(cached != 0 && !cached->isLoaded());
+        Q_ASSERT(cached != nullptr && !cached->isLoaded());
         if (cached) {
             imageLoaded(image, cached); // deletes image
         }

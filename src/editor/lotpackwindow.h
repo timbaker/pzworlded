@@ -47,13 +47,16 @@ class LotPackLayerGroup : public Tiled::ZTileLayerGroup
 public:
     LotPackLayerGroup(IsoWorld *world, Tiled::Map *map, int level);
 
-    QRect bounds() const;
-    QMargins drawMargins() const;
+    QRect bounds() const override;
+    QMargins drawMargins() const override;
 
-    bool orderedCellsAt(const QPoint &point, QVector<const Tiled::Cell*>& cells,
-                        QVector<qreal> &opacities) const;
+    bool orderedCellsAt(const Tiled::MapRenderer *renderer, const QPoint &point, QVector<const Tiled::Cell*>& cells,
+                        QVector<qreal> &opacities) const override;
 
-    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
+    bool orderedTilesAt(const Tiled::MapRenderer *renderer, const QPoint &point,
+                        QVector<Tiled::ZTileRenderInfo>& tileInfos) const override;
+
+    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect) override;
 
     IsoWorld *mWorld;
     QVector<Tiled::SparseTileGrid*> mGrids;

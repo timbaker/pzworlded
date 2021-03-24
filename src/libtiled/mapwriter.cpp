@@ -406,8 +406,8 @@ void MapWriterPrivate::writeLayerAttributes(QXmlStreamWriter &w,
 {
     w.writeAttribute(QLatin1String("name"), layer->name());
     w.writeAttribute(QLatin1String("width"), QString::number(layer->width()));
-    w.writeAttribute(QLatin1String("height"),
-                     QString::number(layer->height()));
+    w.writeAttribute(QLatin1String("height"), QString::number(layer->height()));
+    w.writeAttribute(QLatin1Literal("level"), QString::number(layer->level()));
     const int x = layer->x();
     const int y = layer->y();
     const qreal opacity = layer->opacity();

@@ -22,6 +22,7 @@
 #include "preferences.h"
 #include "progress.h"
 #include "tilemetainfomgr.h"
+#include "tilerotation.h"
 #include "zoomable.h"
 
 #include "BuildingEditor/buildingtiles.h"
@@ -59,7 +60,8 @@ QMargins LotPackLayerGroup::drawMargins() const
     return QMargins(0, 128, 64, 0);
 }
 
-bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
+bool LotPackLayerGroup::orderedCellsAt(const Tiled::MapRenderer *renderer,
+                                       const QPoint &point,
                                        QVector<const Cell *> &cells,
                                        QVector<qreal> &opacities) const
 {
@@ -79,6 +81,113 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
         }
     }
     return !cells.isEmpty();
+}
+
+static void sortForRendering(const MapRenderer *renderer, QVector<ZTileRenderInfo> &tileInfo)
+{
+    int size = tileInfo.size();
+    QVector<ZTileRenderInfo> sorted(size);
+    sorted.resize(0);
+
+    // Floors Lowest -> Highest
+    for (int i = 0; i < size; i++) {
+        const ZTileRenderInfo& tri = tileInfo[i];
+        switch (tri.mOrder) {
+        case ZTileRenderOrder::Floor:
+            sorted += tri;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // West Wall Lowest -> Highest
+    for (int i = 0; i < size; i++) {
+        const ZTileRenderInfo& tri = tileInfo[i];
+        switch (tri.mOrder) {
+        case ZTileRenderOrder::WestWall:
+            sorted += tri;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // North Wall Lowest -> Highest
+    for (int i = 0; i < size; i++) {
+        const ZTileRenderInfo& tri = tileInfo[i];
+        switch (tri.mOrder) {
+        case ZTileRenderOrder::NorthWall:
+            sorted += tri;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Non-walls
+    for (int i = 0; i < size; i++) {
+        const ZTileRenderInfo& tri = tileInfo[i];
+        switch (tri.mOrder) {
+        case ZTileRenderOrder::West:
+            sorted += tri;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // East Wall Highest -> lowest
+    for (int i = size - 1; i >= 0; i--) {
+        const ZTileRenderInfo& tri = tileInfo[i];
+        switch (tri.mOrder) {
+        case ZTileRenderOrder::EastWall:
+            sorted += tri;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // South Wall Highest -> lowest
+    for (int i = size - 1; i >= 0; i--) {
+        const ZTileRenderInfo& tri = tileInfo[i];
+        switch (tri.mOrder) {
+        case ZTileRenderOrder::SouthWall:
+            sorted += tri;
+            break;
+        default:
+            break;
+        }
+    }
+
+    tileInfo = sorted;
+}
+
+bool LotPackLayerGroup::orderedTilesAt(const MapRenderer *renderer, const QPoint &point, QVector<ZTileRenderInfo> &tileInfos) const
+{
+    QVector<const Cell *> cells(40);
+    QVector<qreal> opacities(40);
+    cells.resize(0);
+    opacities.resize(0);
+    orderedCellsAt(renderer, point, cells, opacities);
+
+    tileInfos.clear();
+
+    for (int i = 0; i < cells.size(); i++) {
+        const Cell* cell = cells[i];
+        if (cell->isEmpty())
+            continue;
+        int j = tileInfos.size();
+        TileRotation::instance()->rotateTile(*cells[i], renderer->rotation(), tileInfos);
+        for (; j < tileInfos.size(); j++) {
+            tileInfos[j].mOpacity = opacities[i];
+        }
+    }
+
+    sortForRendering(renderer, tileInfos);
+
+    return !tileInfos.isEmpty();
 }
 
 void LotPackLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect)

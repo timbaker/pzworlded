@@ -88,6 +88,7 @@ private:
     void readTilesetTile(Tileset *tileset);
     void readTilesetImage(Tileset *tileset);
 
+    void readLayerAttributes(Layer *layer, const QXmlStreamAttributes &atts);
     TileLayer *readLayer();
     void readLayerData(TileLayer *tileLayer);
     void decodeBinaryLayerData(TileLayer *tileLayer,
@@ -116,6 +117,10 @@ private:
     void readProperty(Properties *properties);
 
 #ifdef ZOMBOID
+    bool levelForLayerName(const QString layerName, QString &newName, int &level);
+
+    QString layerNameWithoutPrefix(const QString &name);
+
     void readBmpSettings();
     QRgb rgbFromString(const QString &s, bool &ok);
     void readBmpAliases();
@@ -135,6 +140,8 @@ private:
     QString mError;
     QString mPath;
     Map *mMap;
+    int mVersionMajor;
+    int mVersionMinor;
     GidMapper mGidMapper;
     bool mReadingExternalTileset;
 
@@ -226,6 +233,29 @@ Map *MapReaderPrivate::readMap()
     Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("map"));
 
     const QXmlStreamAttributes atts = xml.attributes();
+
+    QString versionStr = atts.value(QLatin1String("version")).toString();
+    QStringList versionStrings = versionStr.split(QLatin1Char('.'));
+    if (versionStrings.size() == 2) {
+        bool ok;
+        mVersionMajor = versionStrings[0].toInt(&ok);
+        if (!ok) {
+            xml.raiseError(tr("Unsupported map version: \"%1\"").arg(versionStr));
+            return nullptr;
+        }
+        mVersionMinor = versionStrings[1].toInt(&ok);
+        if (!ok) {
+            xml.raiseError(tr("Unsupported map version: \"%1\"").arg(versionStr));
+            return nullptr;
+        }
+    } else {
+        xml.raiseError(tr("Unsupported map version: \"%1\"").arg(versionStr));
+        return nullptr;
+    }
+    if ((mVersionMajor > 1) || (mVersionMinor > 1)) {
+        xml.raiseError(tr("Unsupported map version: \"%1\"").arg(versionStr));
+    }
+
     const int mapWidth =
             atts.value(QLatin1String("width")).toString().toInt();
     const int mapHeight =
@@ -407,7 +437,7 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
     xml.skipCurrentElement();
 }
 
-static void readLayerAttributes(Layer *layer,
+void MapReaderPrivate::readLayerAttributes(Layer *layer,
                                 const QXmlStreamAttributes &atts)
 {
     const QStringRef opacityRef = atts.value(QLatin1String("opacity"));
@@ -421,6 +451,14 @@ static void readLayerAttributes(Layer *layer,
     const int visible = visibleRef.toString().toInt(&ok);
     if (ok)
         layer->setVisible(visible);
+
+    if ((mVersionMajor >= 1) && (mVersionMinor >= 1)) {
+        const QStringRef levelRef = atts.value(QLatin1Literal("level"));
+        int level = levelRef.toInt(&ok);
+        if (ok) {
+            layer->setLevel(level);
+        }
+    }
 }
 
 TileLayer *MapReaderPrivate::readLayer()
@@ -436,6 +474,15 @@ TileLayer *MapReaderPrivate::readLayer()
 
     TileLayer *tileLayer = new TileLayer(name, x, y, width, height);
     readLayerAttributes(tileLayer, atts);
+
+    if (mVersionMajor == 1 && mVersionMinor == 0) {
+        QString newName = name;
+        int level = 0;
+        if (levelForLayerName(name, newName, level)) {
+            tileLayer->setName(newName);
+            tileLayer->setLevel(level);
+        }
+    }
 
     while (xml.readNextStartElement()) {
         if (xml.name() == QLatin1String("properties"))
@@ -713,6 +760,15 @@ ObjectGroup *MapReaderPrivate::readObjectGroup()
     ObjectGroup *objectGroup = new ObjectGroup(name, x, y, width, height);
     readLayerAttributes(objectGroup, atts);
 
+    if (mVersionMajor == 1 && mVersionMinor == 0) {
+        QString newName = name;
+        int level = 0;
+        if (levelForLayerName(name, newName, level)) {
+            objectGroup->setName(newName);
+            objectGroup->setLevel(level);
+        }
+    }
+
     const QString color = atts.value(QLatin1String("color")).toString();
     if (!color.isEmpty())
         objectGroup->setColor(color);
@@ -742,6 +798,15 @@ ImageLayer *MapReaderPrivate::readImageLayer()
 
     ImageLayer *imageLayer = new ImageLayer(name, x, y, width, height);
     readLayerAttributes(imageLayer, atts);
+
+    if (mVersionMajor == 1 && mVersionMinor == 0) {
+        QString newName = name;
+        int level = 0;
+        if (levelForLayerName(name, newName, level)) {
+            imageLayer->setName(newName);
+            imageLayer->setLevel(level);
+        }
+    }
 
     while (xml.readNextStartElement()) {
         if (xml.name() == QLatin1String("image"))
@@ -931,6 +996,31 @@ void MapReaderPrivate::readProperty(Properties *properties)
 }
 
 #ifdef ZOMBOID
+bool MapReaderPrivate::levelForLayerName(const QString layerName, QString &newName, int &level)
+{
+    QString trimmed = layerName.trimmed();
+    // See if the layer name matches "0_foo" or "1_bar" etc.
+    int p = trimmed.indexOf(QLatin1Char('_'));
+    if (p <= 0) {
+        return false;
+    }
+    QString levelStr = trimmed.left(p);
+    bool conversionOK;
+    int level2 = levelStr.toInt(&conversionOK);
+    if (conversionOK && (level2 >= 0)) {
+        newName = newName.mid(p + 1);
+        level = level2;
+        return true;
+    }
+    return false;
+}
+
+QString MapReaderPrivate::layerNameWithoutPrefix(const QString &name)
+{
+    int pos = name.indexOf(QLatin1Char('_')) + 1; // Could be "-1 + 1 == 0"
+    return name.mid(pos);
+}
+
 void MapReaderPrivate::readBmpSettings()
 {
     Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("bmp-settings"));
@@ -1028,6 +1118,9 @@ void MapReaderPrivate::readBmpRules()
                 if (tileChoices[i] == QLatin1String("null"))
                     tileChoices[i].clear();
             QString targetLayer = atts.value(QLatin1String("targetLayer")).toString();
+            if (mVersionMajor == 1 && mVersionMinor == 0) {
+                targetLayer = layerNameWithoutPrefix(targetLayer);
+            }
             QRgb condition = rgbFromString(atts.value(QLatin1String("condition")).toString(), ok);
             rules += new BmpRule(label, bitmapIndex, color, tileChoices, targetLayer, condition);
             xml.skipCurrentElement();
@@ -1058,6 +1151,9 @@ void MapReaderPrivate::readBmpBlends()
         if (xml.name() == QLatin1String("blend")) {
             const QXmlStreamAttributes atts = xml.attributes();
             QString targetLayer = atts.value(QLatin1String("targetLayer")).toString();
+            if (mVersionMajor == 1 && mVersionMinor == 0) {
+                targetLayer = layerNameWithoutPrefix(targetLayer);
+            }
             QString mainTile = atts.value(QLatin1String("mainTile")).toString();
             QString blendTile = atts.value(QLatin1String("blendTile")).toString();
             QString dirString = atts.value(QLatin1String("dir")).toString();
@@ -1070,6 +1166,11 @@ void MapReaderPrivate::readBmpBlends()
                     .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
             QStringList exclude2 = atts.value(QLatin1String("exclude2"))
                     .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+            if (mVersionMajor == 1 && mVersionMinor == 0) {
+                for (int i = 0; i < exclude2.size() - 1; i += 2) {
+                    exclude2[i + 1] = layerNameWithoutPrefix(exclude2[i + 1]);
+                }
+            }
             blends += new BmpBlend(targetLayer, mainTile, blendTile, dir,
                                    ExclusionList, exclude2);
             xml.skipCurrentElement();
@@ -1179,6 +1280,10 @@ void MapReaderPrivate::readNoBlend()
 
     const QXmlStreamAttributes atts = xml.attributes();
     QString layerName = atts.value(QLatin1String("layer")).toString();
+
+    if (mVersionMajor == 1 && mVersionMinor == 0) {
+        layerName = layerNameWithoutPrefix(layerName);
+    }
 
     MapNoBlend *noBlend = mMap->noBlend(layerName);
 

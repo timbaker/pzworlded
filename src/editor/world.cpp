@@ -89,16 +89,6 @@ ObjectType *World::removeObjectType(int index)
     return mObjectTypes.takeAt(index);
 }
 
-void World::insertRoad(int index, Road *road)
-{
-    mRoads.insert(index, road);
-}
-
-Road *World::removeRoad(int index)
-{
-    return mRoads.takeAt(index);
-}
-
 void World::insertBmp(int index, WorldBMP *bmp)
 {
     mBMPs.insert(index, bmp);

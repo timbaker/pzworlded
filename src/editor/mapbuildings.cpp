@@ -23,6 +23,7 @@
 #include "BuildingEditor/roofhiding.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 
@@ -181,10 +182,11 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
         int oy = mc->originRecursive().y();
         int rootLevel = mc->levelRecursive();
         for (int level = 0; level <= mc->maxLevel(); level++) {
-            QString layerName = QString::fromLatin1("%1_RoomDefs").arg(level);
-            int index = mc->map()->indexOfLayer(layerName, Layer::ObjectGroupType);
+            QString layerName = QLatin1String("RoomDefs");
+            MapLevel *mapLevel = mc->map()->levelAt(level);
+            int index = mapLevel->indexOfLayer(layerName, Layer::ObjectGroupType);
             if (index >= 0) {
-                const QList<MapObject*> mapObjects = mc->map()->layerAt(index)->asObjectGroup()->objects();
+                const QList<MapObject*> mapObjects = mapLevel->layerAt(index)->asObjectGroup()->objects();
                 for (MapObject *mapObject : mapObjects) {
                     if (BuildingEditor::RoofHiding::isEmptyOutside(mapObject->name()))
                         continue;

@@ -85,9 +85,11 @@ QPainterPath StaggeredRenderer::shape(const MapObject *object) const
 
 #ifdef ZOMBOID
 void StaggeredRenderer::drawGrid(QPainter *painter, const QRectF &rect,
-                                 QColor gridColor, int level) const
+                                 QColor gridColor, int level,
+                                 const QRect &tileBounds) const
 {
     Q_UNUSED(level)
+    Q_UNUSED(tileBounds)
 #else
 void StaggeredRenderer::drawGrid(QPainter *painter, const QRectF &rect,
                                  QColor gridColor) const
@@ -217,7 +219,7 @@ void StaggeredRenderer::drawTileLayer(QPainter *painter,
             qreal m22 = 1;      // Vertical scaling factor
             qreal dx = offset.x() + rowPos.x();
             qreal dy = offset.y() + rowPos.y() - img.height();
-
+#if 0
             if (cell.flippedAntiDiagonally) {
                 // Use shearing to swap the X/Y axis
                 m11 = 0;
@@ -240,7 +242,7 @@ void StaggeredRenderer::drawTileLayer(QPainter *painter,
                 dy += cell.flippedAntiDiagonally ? img.width()
                                                  : img.height();
             }
-
+#endif
             const QTransform transform(m11, m12, m21, m22, dx, dy);
             painter->setTransform(transform * baseTransform);
 

@@ -80,9 +80,10 @@ public:
 
     int findValue(const QString &key) const;
 
-    bool keyValue(const char *name, SimpleFileKeyValue &kv)
+    bool keyValue(const char *name, SimpleFileKeyValue &kv) const
     { return keyValue(QLatin1String(name), kv); }
-    bool keyValue(const QString &name, SimpleFileKeyValue &kv);
+
+    bool keyValue(const QString &name, SimpleFileKeyValue &kv) const;
 
     QString value(const char *key) const
     { return value(QLatin1String(key)); }

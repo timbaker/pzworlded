@@ -17,10 +17,14 @@
 
 #include "furnituregroups.h"
 
-#include "preferences.h"
+#ifndef WORLDED
+#include "buildingpreferences.h"
+#endif
 #include "buildingtiles.h"
 #include "buildingfloor.h"
 #include "simplefile.h"
+
+#include "preferences.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -98,7 +102,7 @@ FurnitureTiles *FurnitureGroups::furnitureTilesFromSFB(SimpleFileBlock &furnitur
             FurnitureTiles::LayerFurniture : FurnitureTiles::layerFromString(layerString);
     if (layer == FurnitureTiles::InvalidLayer) {
         error = tr("Invalid furniture layer '%1'.").arg(layerString);
-        return 0;
+        return nullptr;
     }
 
     FurnitureTiles *tiles = new FurnitureTiles(corners);
@@ -112,7 +116,7 @@ FurnitureTiles *FurnitureGroups::furnitureTilesFromSFB(SimpleFileBlock &furnitur
             if (grimeString.length() && !booleanFromString(grimeString, grime)) {
                 error = mError;
                 delete tiles;
-                return 0;
+                return nullptr;
             }
             FurnitureTile *tile = new FurnitureTile(tiles, orient);
             tile->setAllowGrime(grime);
@@ -127,14 +131,14 @@ FurnitureTiles *FurnitureGroups::furnitureTilesFromSFB(SimpleFileBlock &furnitur
                     error = tr("Invalid tile coordinates (%1,%2).")
                             .arg(x).arg(y);
                     delete tiles;
-                    return 0;
+                    return nullptr;
                 }
                 QString tilesetName;
                 int tileIndex;
                 if (!BuildingTilesMgr::parseTileName(kv.value, tilesetName, tileIndex)) {
                     error = tr("Can't parse tile name '%1'.").arg(kv.value);
                     delete tiles;
-                    return 0;
+                    return nullptr;
                 }
                 tile->setTile(x, y, BuildingTilesMgr::instance()->get(kv.value));
             }
@@ -143,7 +147,7 @@ FurnitureTiles *FurnitureGroups::furnitureTilesFromSFB(SimpleFileBlock &furnitur
             error = tr("Unknown block name '%1'.")
                     .arg(entryBlock.name);
             delete tiles;
-            return 0;
+            return nullptr;
         }
     }
 
@@ -571,14 +575,24 @@ FurnitureTile::FurnitureTile(FurnitureTiles *ftiles, FurnitureOrientation orient
     mOwner(ftiles),
     mOrient(orient),
     mSize(1, 1),
-    mTiles(1, 0),
+    mTiles(1, nullptr),
     mGrime(true)
 {
 }
 
+FurnitureTile::FurnitureTile(FurnitureTiles *ftiles, FurnitureTile *&other)
+    : mOwner(ftiles)
+    , mOrient(other->mOrient)
+    , mSize(other->mSize)
+    , mTiles(other->mTiles)
+    , mGrime(other->mGrime)
+{
+
+}
+
 void FurnitureTile::clear()
 {
-    mTiles.fill(0, 1);
+    mTiles.fill(nullptr, 1);
     mSize = QSize(1, 1);
 }
 
@@ -598,14 +612,14 @@ bool FurnitureTile::equals(FurnitureTile *other) const
 void FurnitureTile::setTile(int x, int y, BuildingTile *btile)
 {
     // Get larger if needed
-    if ((btile != 0) && (x >= mSize.width() || y >= mSize.height())) {
+    if ((btile != nullptr) && (x >= mSize.width() || y >= mSize.height())) {
         resize(qMax(mSize.width(), x + 1), qMax(mSize.height(), y + 1));
     }
 
     mTiles[x + y * mSize.width()] = btile;
 
     // Get smaller if needed
-    if ((btile == 0) && (x == mSize.width() - 1 || y == mSize.height() - 1)) {
+    if ((btile == nullptr) && (x == mSize.width() - 1 || y == mSize.height() - 1)) {
         int width = mSize.width(), height = mSize.height();
         while (width > 1 && columnEmpty(width - 1))
             width--;
@@ -618,15 +632,15 @@ void FurnitureTile::setTile(int x, int y, BuildingTile *btile)
 
 BuildingTile *FurnitureTile::tile(int x, int y) const
 {
-    if (x < 0 || x >= mSize.width()) return 0;
-    if (y < 0 || y >= mSize.height()) return 0;
+    if (x < 0 || x >= mSize.width()) return nullptr;
+    if (y < 0 || y >= mSize.height()) return nullptr;
     return mTiles[x + y * mSize.width()];
 }
 
 bool FurnitureTile::isEmpty() const
 {
     foreach (BuildingTile *btile, mTiles)
-        if (btile != 0)
+        if (btile != nullptr)
             return false;
     return true;
 }
@@ -657,14 +671,14 @@ FloorTileGrid *FurnitureTile::toFloorTileGrid(QRegion &rgn)
 {
     rgn = QRegion();
     if (size().isNull() || isEmpty())
-        return 0;
+        return nullptr;
 
     FloorTileGrid *tiles = new FloorTileGrid(width(), height());
     for (int x = 0; x < width(); x++) {
         for (int y = 0; y < height(); y++) {
             if (BuildingTile *btile = tile(x, y)) {
                 if (!btile->isNone()) {
-                    tiles->replace(x, y, btile->name());
+                    tiles->replace(x, y, BuildingCell(btile->name(), Tiled::MapRotation::NotRotated));
                     rgn += QRect(x, y, 1, 1);
                 }
             }
@@ -672,7 +686,7 @@ FloorTileGrid *FurnitureTile::toFloorTileGrid(QRegion &rgn)
     }
     if (rgn.isEmpty()) {
         delete tiles;
-        return 0;
+        return nullptr;
     }
     return tiles;
 }
@@ -706,8 +720,8 @@ bool FurnitureTile::rowEmpty(int y)
 /////
 
 FurnitureTiles::FurnitureTiles(bool corners) :
-    mGroup(0),
-    mTiles(8, 0),
+    mGroup(nullptr),
+    mTiles(8, nullptr),
     mCorners(corners),
     mLayer(LayerFurniture)
 {
@@ -724,6 +738,11 @@ FurnitureTiles::FurnitureTiles(bool corners) :
 FurnitureTiles::~FurnitureTiles()
 {
     qDeleteAll(mTiles);
+}
+
+int FurnitureTiles::indexInGroup()
+{
+    return group()->mTiles.indexOf(this);
 }
 
 bool FurnitureTiles::isEmpty() const
@@ -750,7 +769,7 @@ FurnitureTile *FurnitureTiles::tile(int orient) const
     Q_ASSERT(orient >= 0 && orient < FurnitureTile::OrientCount);
     if (orient >= 0 && orient < FurnitureTile::OrientCount)
         return mTiles[orient];
-    return 0;
+    return nullptr;
 }
 
 bool FurnitureTiles::equals(const FurnitureTiles *other)

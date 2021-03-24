@@ -132,9 +132,14 @@ QPainterPath IsometricRenderer::shape(const MapObject *object) const
 
 #ifdef ZOMBOID
 void IsometricRenderer::drawGrid(QPainter *painter, const QRectF &rect,
-                                 QColor gridColor, int level) const
+                                 QColor gridColor, int level,
+                                 const QRect &tileBounds) const
 {
     Q_UNUSED(level)
+
+    QRect b = tileBounds;
+    if (b.isEmpty())
+        b = QRect(QPoint(0, 0), map()->size());
 #else
 void IsometricRenderer::drawGrid(QPainter *painter, const QRectF &rect,
                                  QColor gridColor) const
@@ -147,12 +152,19 @@ void IsometricRenderer::drawGrid(QPainter *painter, const QRectF &rect,
     r.adjust(-tileWidth / 2, -tileHeight / 2,
              tileWidth / 2, tileHeight / 2);
 
+#ifdef ZOMBOID
+    const int startX = qMax(qreal(b.left()), pixelToTileCoords(r.topLeft()).x());
+    const int startY = qMax(qreal(b.top()), pixelToTileCoords(r.topRight()).y());
+    const int endX = qMin(qreal(b.right() + 1), pixelToTileCoords(r.bottomRight()).x());
+    const int endY = qMin(qreal(b.bottom() + 1), pixelToTileCoords(r.bottomLeft()).y());
+#else
     const int startX = qMax(qreal(0), pixelToTileCoords(r.topLeft()).x());
     const int startY = qMax(qreal(0), pixelToTileCoords(r.topRight()).y());
     const int endX = qMin(qreal(map()->width()),
                           pixelToTileCoords(r.bottomRight()).x());
     const int endY = qMin(qreal(map()->height()),
                           pixelToTileCoords(r.bottomLeft()).y());
+#endif
 
     gridColor.setAlpha(128);
 
@@ -269,7 +281,7 @@ void IsometricRenderer::drawTileLayer(QPainter *painter,
                     qreal m22 = 1;      // Vertical scaling factor
                     qreal dx = offset.x() + x;
                     qreal dy = offset.y() + y - img.height();
-
+#if 0
                     if (cell.flippedAntiDiagonally) {
                         // Use shearing to swap the X/Y axis
                         m11 = 0;
@@ -292,7 +304,7 @@ void IsometricRenderer::drawTileLayer(QPainter *painter,
                         dy += cell.flippedAntiDiagonally ? img.width()
                                                          : img.height();
                     }
-
+#endif
                     const QTransform transform(m11, m12, m21, m22, dx, dy);
                     painter->setTransform(transform * baseTransform);
 
@@ -398,7 +410,7 @@ void IsometricRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *l
 
         for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
             cells.resize(0);
-            if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
+            if (layerGroup->orderedCellsAt(this, columnItr, cells, opacities)) {
                 for (int i = 0; i < cells.size(); i++) {
                     // Multi-threading
                     if (mAbortDrawing && *mAbortDrawing) {
@@ -416,7 +428,7 @@ void IsometricRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *l
                         qreal m22 = 1;      // Vertical scaling factor
                         qreal dx = offset.x() + x;
                         qreal dy = offset.y() + y - img.height();
-
+#if 0
                         if (cell->flippedAntiDiagonally) {
                             // Use shearing to swap the X/Y axis
                             m11 = 0;
@@ -439,7 +451,7 @@ void IsometricRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *l
                             dy += cell->flippedAntiDiagonally ? img.width()
                                                              : img.height();
                         }
-
+#endif
                         const QTransform transform(m11, m12, m21, m22, dx, dy);
                         painter->setTransform(transform * baseTransform);
 
@@ -522,6 +534,11 @@ void IsometricRenderer::drawMapObject(QPainter *painter,
         painter->drawRect(QRectF(paintOrigin, img.size()));
     } else {
         QColor brushColor = color;
+#ifdef ZOMBOID
+        if (color.alpha() != 255)
+            brushColor.setAlpha(color.alpha());
+        else
+#endif
         brushColor.setAlpha(50);
         QBrush brush(brushColor);
 

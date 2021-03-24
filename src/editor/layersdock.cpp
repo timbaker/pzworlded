@@ -22,9 +22,11 @@
 #include "documentmanager.h"
 #include "layersmodel.h"
 #include "mapcomposite.h"
+#include "worldcell.h"
 #include "worlddocument.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "tilelayer.h"
 
 #include <QBoxLayout>
@@ -53,8 +55,8 @@ LayersDock::LayersDock(QWidget *parent)
     opacityLayout->addWidget(mOpacitySlider);
     mOpacityLabel->setBuddy(mOpacitySlider);
 
-    connect(mOpacitySlider, SIGNAL(valueChanged(int)),
-            SLOT(opacitySliderValueChanged(int)));
+    connect(mOpacitySlider, &QAbstractSlider::valueChanged,
+            this, &LayersDock::opacitySliderValueChanged);
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
@@ -67,11 +69,11 @@ LayersDock::LayersDock(QWidget *parent)
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mView, &QWidget::setVisible);
 
-    connect(DocumentManager::instance(), SIGNAL(documentAboutToClose(int,Document*)),
-            SLOT(documentAboutToClose(int,Document*)));
+    connect(DocumentManager::instance(), &DocumentManager::documentAboutToClose,
+            this, &LayersDock::documentAboutToClose);
 }
 
 void LayersDock::setCellDocument(CellDocument *doc)
@@ -86,14 +88,14 @@ void LayersDock::setCellDocument(CellDocument *doc)
     mView->setCellDocument(mCellDocument);
 
     if (mCellDocument) {
-        connect(mCellDocument, SIGNAL(currentLevelChanged(int)),
-                SLOT(updateOpacitySlider()));
+        connect(mCellDocument, &CellDocument::currentLayerIndexChanged,
+                this, &LayersDock::updateOpacitySlider);
 
         // These connections won't break until the document is closed
-        connect(mCellDocument->worldDocument(), SIGNAL(cellMapFileAboutToChange(WorldCell*)),
-                SLOT(cellMapFileAboutToChange(WorldCell*)), Qt::UniqueConnection);
-        connect(mCellDocument->worldDocument(), SIGNAL(cellContentsAboutToChange(WorldCell*)),
-                SLOT(cellMapFileAboutToChange(WorldCell*)), Qt::UniqueConnection);
+        connect(mCellDocument->worldDocument(), &WorldDocument::cellMapFileAboutToChange,
+                this, &LayersDock::cellMapFileAboutToChange, Qt::UniqueConnection);
+        connect(mCellDocument->worldDocument(), &WorldDocument::cellContentsAboutToChange,
+                this, &LayersDock::cellMapFileAboutToChange, Qt::UniqueConnection);
         restoreExpandedLevels(mCellDocument);
     }
 
@@ -261,9 +263,11 @@ void LayersView::selectionChanged(const QItemSelection &selected, const QItemSel
     if (count == 1) {
         QModelIndex index = selectedRows.first();
         if (TileLayer *tl = model()->toTileLayer(index)) {
-            int layerIndex = mCellDocument->scene()->map()->layers().indexOf(tl);
-            if (layerIndex != mCellDocument->currentLayerIndex())
-                mCellDocument->setCurrentLayerIndex(layerIndex);
+            int levelIndex = tl->level();
+            MapLevel *mapLevel = mCellDocument->scene()->map()->levelAt(levelIndex);
+            int layerIndex = mapLevel->layers().indexOf(tl);
+            if (levelIndex != mCellDocument->currentLevel() || layerIndex != mCellDocument->currentLayerIndex())
+                mCellDocument->setCurrentLayerIndex(levelIndex, layerIndex);
         }
         if (CompositeLayerGroup *g = model()->toTileLayerGroup(index)) {
             int level = g->level();
@@ -271,7 +275,7 @@ void LayersView::selectionChanged(const QItemSelection &selected, const QItemSel
                 mCellDocument->setCurrentLevel(level);
         }
     } else if (!count) {
-        mCellDocument->setCurrentLayerIndex(-1);
+        mCellDocument->setCurrentLayerIndex(mCellDocument->currentLevel(), -1);
     }
     mSynching = false;
 }

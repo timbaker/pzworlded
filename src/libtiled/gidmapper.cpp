@@ -26,10 +26,16 @@
 
 using namespace Tiled;
 
+#if 1
+static const uint RotateFlag90 = 0x80000000;
+static const uint RotateFlag180 = 0x40000000;
+static const uint RotateFlag270 = 0x20000000;
+#else
 // Bits on the far end of the 32-bit global tile ID are used for tile flags
 const int FlippedHorizontallyFlag   = 0x80000000;
 const int FlippedVerticallyFlag     = 0x40000000;
 const int FlippedAntiDiagonallyFlag = 0x20000000;
+#endif
 
 GidMapper::GidMapper()
 {
@@ -38,7 +44,7 @@ GidMapper::GidMapper()
 GidMapper::GidMapper(const QList<Tileset *> &tilesets)
 {
     uint firstGid = 1;
-    foreach (Tileset *tileset, tilesets) {
+    for (Tileset *tileset : tilesets) {
         insert(firstGid, tileset);
         firstGid += tileset->tileCount();
     }
@@ -48,6 +54,18 @@ Cell GidMapper::gidToCell(uint gid, bool &ok) const
 {
     Cell result;
 
+#if 1
+    // Read out the flags
+    if (gid & RotateFlag90)
+        result.rotation = MapRotation::Clockwise90;
+    else if (gid & RotateFlag180)
+        result.rotation = MapRotation::Clockwise180;
+    else if (gid & RotateFlag270)
+        result.rotation = MapRotation::Clockwise270;
+
+    // Clear the flags
+    gid &= ~(RotateFlag90 | RotateFlag180 | RotateFlag270);
+#else
     // Read out the flags
     result.flippedHorizontally = (gid & FlippedHorizontallyFlag);
     result.flippedVertically = (gid & FlippedVerticallyFlag);
@@ -57,7 +75,7 @@ Cell GidMapper::gidToCell(uint gid, bool &ok) const
     gid &= ~(FlippedHorizontallyFlag |
              FlippedVerticallyFlag |
              FlippedAntiDiagonallyFlag);
-
+#endif
     if (gid == 0) {
         ok = true;
     } else if (isEmpty()) {
@@ -80,7 +98,7 @@ Cell GidMapper::gidToCell(uint gid, bool &ok) const
 
             result.tile = tileset->tileAt(tileId);
         } else {
-            result.tile = 0;
+            result.tile = nullptr;
         }
 
         ok = true;
@@ -106,13 +124,26 @@ uint GidMapper::cellToGid(const Cell &cell) const
         return 0;
 
     uint gid = i.key() + cell.tile->id();
+#if 1
+    switch (cell.rotation) {
+    case MapRotation::Clockwise90:
+        gid |= RotateFlag90;
+        break;
+    case MapRotation::Clockwise180:
+        gid |= RotateFlag180;
+        break;
+    case MapRotation::Clockwise270:
+        gid |= RotateFlag270;
+        break;
+    }
+#else
     if (cell.flippedHorizontally)
         gid |= FlippedHorizontallyFlag;
     if (cell.flippedVertically)
         gid |= FlippedVerticallyFlag;
     if (cell.flippedAntiDiagonally)
         gid |= FlippedAntiDiagonallyFlag;
-
+#endif
     return gid;
 }
 

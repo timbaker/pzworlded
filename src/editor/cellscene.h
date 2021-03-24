@@ -41,7 +41,6 @@ class MapInfo;
 class ObjectItem;
 class PropertyHolder;
 class ResizeHandle;
-class Road;
 class SceneOverlay;
 class SubMap;
 class World;
@@ -192,48 +191,6 @@ private:
     bool mIsEditable;
     bool mIsMouseOver;
     bool mIsValidPos;
-};
-
-/**
-  * This item represents a road.
-  */
-class CellRoadItem : public QGraphicsItem
-{
-public:
-    CellRoadItem(CellScene *scene, Road *road);
-
-    QRectF boundingRect() const;
-
-    QPainterPath shape() const;
-
-    void paint(QPainter *painter,
-               const QStyleOptionGraphicsItem *option,
-               QWidget *widget = 0);
-
-    Road *road() const
-    { return mRoad; }
-
-    void synchWithRoad();
-
-    void setSelected(bool selected);
-    void setEditable(bool editable);
-
-    void setDragging(bool dragging);
-    void setDragOffset(const QPoint &offset);
-    QPoint dragOffset() const { return mDragOffset; }
-
-    QPolygonF polygon() const
-    { return mPolygon; }
-
-private:
-    CellScene *mScene;
-    QRectF mBoundingRect;
-    Road *mRoad;
-    bool mSelected;
-    bool mEditable;
-    bool mDragging;
-    QPoint mDragOffset;
-    QPolygonF mPolygon;
 };
 
 /**
@@ -480,22 +437,7 @@ public:
 
     Tiled::MapRenderer *renderer() const { return mRenderer; }
 
-    QPoint pixelToRoadCoords(qreal x, qreal y) const;
-
-    inline QPoint pixelToRoadCoords(const QPointF &point) const
-    { return pixelToRoadCoords(point.x(), point.y()); }
-
-    QPointF roadToSceneCoords(const QPoint &pt) const;
-    QPolygonF roadRectToScenePolygon(const QRect &roadRect) const;
-
-    CellRoadItem *itemForRoad(Road *road);
-
-    QList<Road*> roadsInRect(const QRectF &bounds);
-
     static const int ZVALUE_GRID;
-    static const int ZVALUE_ROADITEM_CREATING;
-    static const int ZVALUE_ROADITEM_SELECTED;
-    static const int ZVALUE_ROADITEM_UNSELECTED;
 
 protected:
     void loadMap();
@@ -504,12 +446,11 @@ protected:
     void synchAdjacentMapObjectItemVisibility();
     void sortSubMaps();
 
-    typedef Tiled::Tileset Tileset;
 signals:
     void mapContentsChanged();
 
 public slots:
-    void tilesetChanged(Tileset *tileset);
+    void tilesetChanged(Tiled::Tileset *tileset);
 
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapChanged(MapInfo *mapInfo);
@@ -549,7 +490,7 @@ public slots:
     void objectGroupColorChanged(WorldObjectGroup *og);
     void objectGroupReordered(int index);
 
-    void currentLevelChanged(int index);
+    void currentLayerChanged(int levelIndex, int layerIndex);
     void setGridVisible(bool visible);
     void gridColorChanged(const QColor &gridColor);
     void showObjectsChanged(bool show);
@@ -559,13 +500,6 @@ public slots:
     void handlePendingUpdates();
 
     void propertiesChanged(PropertyHolder* ph);
-
-    void roadAdded(int index);
-    void roadRemoved(Road *road);
-    void roadCoordsChanged(int index);
-    void roadWidthChanged(int index);
-    void selectedRoadsChanged();
-    void roadsChanged();
 
     void mapCompositeNeedsSynch();
 
@@ -598,11 +532,17 @@ private:
     QList<AdjacentMap*> mAdjacentMaps;
     void initAdjacentMaps();
 
+    class LevelData
+    {
+    public:
+        QVector<QGraphicsItem*> mLayerItems;
+        CompositeLayerGroupItem* mTileLayerGroupItem;
+    };
+
     Tiled::Map *mMap;
     MapInfo *mMapInfo;
     MapComposite *mMapComposite;
-    QVector<QGraphicsItem*> mLayerItems;
-    QMap<int,CompositeLayerGroupItem*> mTileLayerGroupItems;
+    QVector<LevelData> mLevelData;
     CellDocument *mDocument;
     Tiled::MapRenderer *mRenderer;
     DnDItem *mDnDItem;
@@ -610,8 +550,6 @@ private:
     QSet<SubMapItem*> mSelectedSubMapItems;
     QList<ObjectItem*> mObjectItems;
     QSet<ObjectItem*> mSelectedObjectItems;
-    QList<CellRoadItem*> mRoadItems;
-    QSet<CellRoadItem*> mSelectedRoadItems;
     QGraphicsRectItem *mDarkRectangle;
     CellGridItem *mGridItem;
     bool mHighlightCurrentLevel;

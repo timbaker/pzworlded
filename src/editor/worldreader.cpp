@@ -319,7 +319,7 @@ private:
     void readRoad()
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("road"));
-
+#if 0
         const QXmlStreamAttributes atts = xml.attributes();
 
         const int x1 =  atts.value(QLatin1String("x1")).toString().toInt();
@@ -336,7 +336,7 @@ private:
         road->setTileName(tileName);
         road->setTrafficLines(lines);
         mWorld->insertRoad(mWorld->roads().size(), road);
-
+#endif
         while (xml.readNextStartElement()) {
             readUnknownElement();
         }

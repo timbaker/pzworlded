@@ -37,13 +37,54 @@ namespace Tiled {
 class Cell;
 class Map;
 class MapRenderer;
+class Tile;
 class TileLayer;
+
+enum class ZTileRenderOrder
+{
+    Floor,
+    WestWall,
+    NorthWall,
+    West,
+    North,
+    East,
+    South,
+    EastWall,
+    SouthWall
+};
+
+class TILEDSHARED_EXPORT ZTileRenderInfo
+{
+public:
+    ZTileRenderInfo()
+        : mTile(nullptr)
+        , mOpacity(qreal(1.0))
+        , mOrder(ZTileRenderOrder::West)
+    {
+
+    }
+
+    ZTileRenderInfo(Tiled::Tile* tile)
+        : mTile(tile)
+        , mOpacity(qreal(1.0))
+        , mOrder(ZTileRenderOrder::West)
+    {
+
+    }
+
+    Tiled::Tile* mTile;
+    qreal mOpacity;
+    QPoint mOffset; // Rendering offset, to move north walls onto the south edge, for example.
+    ZTileRenderOrder mOrder;
+};
 
 class TILEDSHARED_EXPORT ZTileLayerGroup
 {
 public:
 
     ZTileLayerGroup(Map *map, int level);
+    ZTileLayerGroup(const ZTileLayerGroup& other) = delete;
+    ZTileLayerGroup &operator=(const ZTileLayerGroup& other) = delete;
     virtual ~ZTileLayerGroup() {}
 
     virtual void addTileLayer(TileLayer *layer, int index);
@@ -57,8 +98,10 @@ public:
 
     virtual QRectF boundingRect(const MapRenderer *renderer) const;
 
-    virtual bool orderedCellsAt(const QPoint &point, QVector<const Cell*>& cells,
+    virtual bool orderedCellsAt(const Tiled::MapRenderer *renderer, const QPoint &point, QVector<const Cell*>& cells,
                                 QVector<qreal> &opacities) const = 0;
+    virtual bool orderedTilesAt(const Tiled::MapRenderer *renderer, const QPoint &point,
+                                QVector<ZTileRenderInfo>& tileInfo) const = 0;
     virtual void prepareDrawing(const MapRenderer *renderer, const QRect &rect) = 0;
 
     void setLevel(int level) { mLevel = level; }
@@ -67,14 +110,13 @@ public:
     const QVector<TileLayer*> &layers() const { return mLayers; }
     int layerCount() const { return mLayers.count(); }
 
-    bool isVisible() const { return mVisible; }
-    void setVisible(bool visible) { mVisible = visible; }
+    bool isVisible() const;
+    void setVisible(bool visible);
 
     Map *mMap;
     QVector<TileLayer*> mLayers;
     QVector<int> mIndices;
     int mLevel;
-    bool mVisible;
 };
 
 } // namespace Tiled

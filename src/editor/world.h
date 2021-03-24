@@ -19,7 +19,6 @@
 #define WORLD_H
 
 #include "worldproperties.h"
-#include "road.h"
 
 #include <QRect>
 #include <QSize>
@@ -259,10 +258,6 @@ public:
     ObjectType *objectType(const QString &name)
     { return mObjectTypes.find(name); }
 
-    void insertRoad(int index, Road *road);
-    Road *removeRoad(int index);
-    RoadList roadsInRect(const QRect &bounds);
-
     void insertBmp(int index, WorldBMP *bmp);
     WorldBMP *removeBmp(int index);
 
@@ -276,8 +271,6 @@ public:
     { return mPropertyDefs; }
     const PropertyTemplateList &propertyTemplates() const
     { return mPropertyTemplates; }
-    const RoadList &roads() const
-    { return mRoads; }
     const QList<WorldBMP*> bmps() const
     { return mBMPs; }
     const QStringList &otherWorlds() const
@@ -321,7 +314,6 @@ private:
     PropertyEnumList mPropertyEnums;
     PropertyDefList mPropertyDefs;
     PropertyTemplateList mPropertyTemplates;
-    RoadList mRoads;
     QList<WorldBMP*> mBMPs;
     BMPToTMXSettings mBMPToTMXSettings;
     TMXToBMPSettings mTMXToBMPSettings;

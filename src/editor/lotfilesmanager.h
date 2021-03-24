@@ -18,7 +18,9 @@
 #ifndef LOTFILESMANAGER_H
 #define LOTFILESMANAGER_H
 
-#include "gidmapper.h"
+//#include "gidmapper.h"
+#include "maprotation.h"
+#include "tilelayer.h"
 
 #include <QObject>
 
@@ -27,7 +29,6 @@ class MapComposite;
 class MapInfo;
 class PropertyHolder;
 class PropertyList;
-class Road;
 class World;
 class WorldDocument;
 class WorldCell;
@@ -81,12 +82,14 @@ public:
 class Entry
 {
 public:
-    Entry(int gid) :
-        gid(gid)
+    Entry(uint gid, Tiled::MapRotation rotation) :
+        gid(gid),
+        rotation(rotation)
     {
     }
 
-    int gid;
+    uint gid;
+    Tiled::MapRotation rotation;
 };
 
 class Square
@@ -353,6 +356,7 @@ private:
     WorldDocument *mWorldDoc;
     QList<LotFile::Zone*> ZoneList;
     QMap<const Tiled::Tileset*,uint> mTilesetToFirstGid;
+    QMap<QString,uint> mTilesetToFirstGidByName;
     Tiled::Tileset *mJumboTreeTileset;
     QMap<int,LotFile::Tile*> TileMap;
     QVector<QVector<QVector<LotFile::Square> > > mGridData;

@@ -19,9 +19,14 @@
 
 #include "mapcomposite.h"
 #include "preferences.h"
+#ifdef WORLDED
 #include "progress.h"
+#endif
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
+#ifndef WORLDED
+#include "zprogress.h"
+#endif
 
 #include "map.h"
 #include "mapreader.h"
@@ -469,7 +474,13 @@ MapInfo *MapManager::getEmptyMap()
     Map *map = new Map(mapInfo->orientation(),
                        mapInfo->width(), mapInfo->height(),
                        mapInfo->tileWidth(), mapInfo->tileHeight());
-
+#ifndef WORLDED
+    for (int level = 0; level < 1; level++) {
+        TileLayer *tl = new TileLayer(tr("Tile Layer"), 0, 0, 300, 300);
+        tl->setLevel(level);
+        map->addLayer(tl);
+    }
+#endif
     mapInfo->mMap = map;
     mapInfo->setFilePath(mapFilePath);
     mMapInfo[mapFilePath] = mapInfo;
@@ -493,7 +504,13 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int he
         mapInfo = new MapInfo(Map::LevelIsometric, width, height, 64, 32);
     Map *map = new Map(mapInfo->orientation(), mapInfo->width(), mapInfo->height(),
                        mapInfo->tileWidth(), mapInfo->tileHeight());
-
+#ifndef WORLDED
+    for (int level = 0; level < 1; level++) {
+        TileLayer *tl = new TileLayer(QLatin1Literal("Tile Layer"), 0, 0, 300, 300);
+        tl->setLevel(level);
+        map->addLayer(tl);
+    }
+#endif
     mapInfo->mMap = map;
     mapInfo->setFilePath(mapFilePath);
     mapInfo->mPlaceholder = true;
@@ -584,22 +601,21 @@ Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)
         newMap->setOrientation(orient);
         QPoint offset(3, 3);
         if (orient0 == Map::Isometric && orient1 == Map::LevelIsometric) {
-            foreach (Layer *layer, newMap->layers()) {
-                int level;
-                if (MapComposite::levelForLayer(layer, &level) && level > 0)
+            for (Layer *layer : newMap->layers()) {
+                int level = layer->level();
+                if (level > 0)
                     layer->offset(offset * level, layer->bounds(), false, false);
             }
         }
         if (orient0 == Map::LevelIsometric && orient1 == Map::Isometric) {
-            int level, maxLevel = 0;
-            foreach (Layer *layer, map->layers())
-                if (MapComposite::levelForLayer(layer, &level))
-                    maxLevel = qMax(maxLevel, level);
+            int maxLevel = 0;
+            for (Layer *layer : map->layers()) {
+                maxLevel = qMax(maxLevel, layer->level());
+            }
             newMap->setWidth(map->width() + maxLevel * 3);
             newMap->setHeight(map->height() + maxLevel * 3);
-            foreach (Layer *layer, newMap->layers()) {
-                MapComposite::levelForLayer(layer, &level);
-                layer->resize(newMap->size(), offset * (maxLevel - level));
+            for (Layer *layer : newMap->layers()) {
+                layer->resize(newMap->size(), offset * (maxLevel - layer->level()));
             }
         }
         TilesetManager *tilesetManager = TilesetManager::instance();

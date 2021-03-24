@@ -27,6 +27,7 @@
 
 #include "layer.h"
 #include "map.h"
+#include "maplevel.h"
 #include "tilelayer.h"
 #include "ztilelayergroup.h"
 
@@ -185,13 +186,20 @@ bool CellDocument::isObjectGroupVisible(WorldObjectGroup *og, int level)
     return mObjectGroupVisible[og][level];
 }
 
-void CellDocument::setCurrentLayerIndex(int index)
+void CellDocument::setCurrentLayerIndex(int levelIndex, int layerIndex)
 {
-    Q_ASSERT(index >= -1 && index < scene()->map()->layerCount());
-    mCurrentLayerIndex = index;
+    MapLevel *mapLevel = scene()->map()->levelAt(levelIndex);
+    if (mapLevel == nullptr) {
+        return;
+    }
 
-    mCurrentLevel = (index == -1) ? 0 : currentLayer()->level();
-    emit currentLevelChanged(mCurrentLevel);
+    Q_ASSERT(layerIndex >= -1 && layerIndex < mapLevel->layerCount());
+    if (layerIndex < 0 || layerIndex >= mapLevel->layerCount()) {
+        return;
+    }
+
+    mCurrentLevel = levelIndex;
+    mCurrentLayerIndex = layerIndex;
 
     /* This function always sends the following signal, even if the index
      * didn't actually change. This is because the selected index in the layer
@@ -203,22 +211,19 @@ void CellDocument::setCurrentLayerIndex(int index)
      * of other items. The selected item doesn't change in that case, but our
      * layer index does.
      */
-    emit currentLayerIndexChanged(mCurrentLayerIndex);
+    emit currentLayerIndexChanged(mCurrentLevel, mCurrentLayerIndex);
 }
 
 Tiled::Layer *CellDocument::currentLayer() const
 {
-    if (mCurrentLayerIndex == -1)
-        return 0;
-
-    return scene()->map()->layerAt(mCurrentLayerIndex);
+    return scene()->map()->layerAt(mCurrentLevel, mCurrentLayerIndex);
 }
 
 TileLayer *CellDocument::currentTileLayer() const
 {
     if (Layer *layer = currentLayer())
         return layer->asTileLayer();
-    return 0;
+    return nullptr;
 }
 
 void CellDocument::setCurrentLevel(int level)
@@ -226,8 +231,7 @@ void CellDocument::setCurrentLevel(int level)
     Q_ASSERT(level >= 0 && level < scene()->mapComposite()->layerGroupCount());
     mCurrentLevel = level;
     mCurrentLayerIndex = -1;
-    emit currentLevelChanged(mCurrentLevel);
-    emit currentLayerIndexChanged(mCurrentLayerIndex);
+    emit currentLayerIndexChanged(mCurrentLevel, mCurrentLayerIndex);
 }
 
 CompositeLayerGroup *CellDocument::currentLayerGroup() const

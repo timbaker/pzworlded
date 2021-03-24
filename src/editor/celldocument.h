@@ -80,7 +80,7 @@ public:
     void setObjectGroupVisible(WorldObjectGroup *og, int level, bool visible);
     bool isObjectGroupVisible(WorldObjectGroup *og, int level);
 
-    void setCurrentLayerIndex(int index);
+    void setCurrentLayerIndex(int levelIndex, int layerIndex);
     int currentLayerIndex() const { return mCurrentLayerIndex; }
     Tiled::Layer *currentLayer() const;
     Tiled::TileLayer *currentTileLayer() const;
@@ -105,8 +105,7 @@ signals:
     void cellContentsChanged();
     void cellMapFileAboutToChange();
     void cellMapFileChanged();
-    void currentLayerIndexChanged(int);
-    void currentLevelChanged(int);
+    void currentLayerIndexChanged(int levelIndex, int layerIndex);
     void currentObjectGroupChanged(WorldObjectGroup *og);
 
 private slots:

@@ -132,8 +132,10 @@ void MapsDock::selectionChanged()
     QFileInfo info(path);
     if (info.isDir())
         return;
+#ifdef WORLDED
     if (info.suffix() == QLatin1String("pzw"))
         return;
+#endif
     MapImage *mapImage = MapImageManager::instance()->getMapImage(path);
     if (mapImage) {
         if (mapImage->isLoaded()) {
@@ -271,6 +273,7 @@ void MapsView::onActivated(const QModelIndex &index)
     if (fileInfo.isDir()) {
         Preferences *prefs = Preferences::instance();
         prefs->setMapsDirectory(fileInfo.canonicalFilePath());
+        return;
     }
     if (fileInfo.suffix() == QLatin1String("pzw"))
         MainWindow::instance()->openFile(fileInfo.canonicalFilePath());

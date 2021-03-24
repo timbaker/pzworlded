@@ -33,7 +33,6 @@ class LotPackWindow;
 class MapsDock;
 class ObjectsDock;
 class PropertiesDock;
-class RoadsDock;
 class SearchDock;
 class UndoDock;
 class World;
@@ -124,7 +123,6 @@ public slots:
     void paste();
     void showClipboard();
 
-    void removeRoad();
     void removeBMP();
 
     void removeLot();
@@ -190,9 +188,6 @@ private:
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
     SearchDock* mSearchDock;
-#ifdef ROAD_UI
-    RoadsDock *mRoadsDock;
-#endif
     Document *mCurrentDocument;
     QComboBox *mZoomComboBox;
     QMenu *mCurrentLevelMenu;

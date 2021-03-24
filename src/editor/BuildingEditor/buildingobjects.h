@@ -40,7 +40,7 @@ class Window;
 class BuildingObject
 {
 public:
-    enum Direction
+    enum class Direction
     {
         N,
         S,
@@ -64,7 +64,7 @@ public:
     { return QRect(mX, mY, 1, 1); }
 
     void setPos(int x, int y)
-    { mX = x, mY = y; }
+    { mX = x; mY = y; }
 
     void setPos(const QPoint &pos)
     { setPos(pos.x(), pos.y()); }
@@ -81,11 +81,17 @@ public:
     Direction dir() const
     { return mDir; }
 
-    bool isW() const
-    { return mDir == W; }
-
     bool isN() const
-    { return mDir == N; }
+    { return mDir == Direction::N; }
+
+    bool isE() const
+    { return mDir == Direction::E; }
+
+    bool isS() const
+    { return mDir == Direction::S; }
+
+    bool isW() const
+    { return mDir == Direction::W; }
 
     QString dirString() const;
     static Direction dirFromString(const QString &s);
@@ -145,7 +151,7 @@ class Door : public BuildingObject
 public:
     Door(BuildingFloor *floor, int x, int y, Direction dir) :
         BuildingObject(floor, x, y, dir),
-        mFrameTile(0)
+        mFrameTile(nullptr)
     {
 
     }
@@ -158,7 +164,7 @@ public:
     Door *asDoor() { return this; }
 
     int getOffset()
-    { return (mDir == N) ? 1 : 0; }
+    { return (mDir == Direction::N) ? 1 : 0; }
 
     void setTile(BuildingTileEntry *tile, int alternate = 0)
     { alternate ? mFrameTile = tile : mTile = tile; }
@@ -193,7 +199,7 @@ public:
     void flip(bool horizontal);
 
     bool isValidPos(const QPoint &offset = QPoint(),
-                    BuildingEditor::BuildingFloor *floor = 0) const;
+                    BuildingEditor::BuildingFloor *floor = nullptr) const;
 
     bool affectsFloorAbove() const { return true; }
 
@@ -249,7 +255,7 @@ public:
     void flip(bool horizontal);
 
     bool isValidPos(const QPoint &offset = QPoint(),
-                    BuildingEditor::BuildingFloor *floor = 0) const;
+                    BuildingEditor::BuildingFloor *floor = nullptr) const;
 
     BuildingObject *clone() const;
     bool sameAs(BuildingObject *other);
@@ -317,8 +323,8 @@ public:
 
     Window *asWindow() { return this; }
 
-    int getOffset() const
-    { return (mDir == N) ? 1 : 0; }
+//    int getOffset() const
+//    { return (mDir == Direction::N) ? 1 : 0; }
 
     BuildingTileEntry *curtainsTile()
     { return mCurtainsTile; }

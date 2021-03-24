@@ -22,6 +22,7 @@
 
 #include "preferences.h"
 #include "tilemetainfomgr.h"
+#include "tilerotation.h"
 #include "tilesetmanager.h"
 
 #include "tile.h"
@@ -650,6 +651,16 @@ Tile *BuildingTilesMgr::tileFor(BuildingTile *tile, int offset)
     return tileset->tileAt(tile->mIndex + offset);
 }
 
+Tile *BuildingTilesMgr::tileFor(const QString& tilesetName, int index)
+{
+    Tileset *tileset = TileMetaInfoMgr::instance()->tileset(tilesetName);
+    if (!tileset)
+        return mMissingTile;
+    if (index >= tileset->tileCount())
+        return tileset->isMissing() ? tileset->tileAt(0) : mMissingTile;
+    return tileset->tileAt(index);
+}
+
 BuildingTile *BuildingTilesMgr::fromTiledTile(Tile *tile)
 {
     if (tile == mNoneTiledTile)
@@ -700,6 +711,11 @@ BuildingTileEntry *BuildingTilesMgr::defaultWindowTile() const
 BuildingTileEntry *BuildingTilesMgr::defaultCurtainsTile() const
 {
     return mCatCurtains->defaultEntry();
+}
+
+BuildingTileEntry *BuildingTilesMgr::defaultShuttersTile() const
+{
+    return mCatShutters->defaultEntry();
 }
 
 BuildingTileEntry *BuildingTilesMgr::defaultStairsTile() const

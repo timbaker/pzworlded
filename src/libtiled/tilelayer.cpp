@@ -98,10 +98,10 @@ void TileLayer::setCell(int x, int y, const Cell &cell)
     if (cell.tile) {
         int width = cell.tile->width();
         int height = cell.tile->height();
-
+#if 0
         if (cell.flippedAntiDiagonally)
             std::swap(width, height);
-
+#endif
         const QPoint offset = cell.tile->tileset()->tileOffset();
 
         mMaxTileSize = maxSize(QSize(width, height), mMaxTileSize);
@@ -205,6 +205,8 @@ void TileLayer::erase()
 }
 #endif
 
+#if 0
+
 void TileLayer::flip(FlipDirection direction)
 {
 #if SPARSE_TILELAYER
@@ -303,6 +305,7 @@ void TileLayer::rotate(RotateDirection direction)
     mGrid = newGrid;
 }
 
+#endif
 
 QSet<Tileset*> TileLayer::usedTilesets() const
 {

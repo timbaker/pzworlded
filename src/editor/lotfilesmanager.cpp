@@ -49,6 +49,14 @@
 
 using namespace Tiled;
 
+#define VERSION0 0
+#define VERSION1 1
+#define VERSION_LATEST VERSION1
+
+static const uint RotateFlag90 = 0x80000000;
+static const uint RotateFlag180 = 0x40000000;
+static const uint RotateFlag270 = 0x20000000;
+
 static void SaveString(QDataStream& out, const QString& str)
 {
     for (int i = 0; i < str.length(); i++) {
@@ -259,9 +267,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         mapComposite->addMap(info, lot->pos(), lot->level());
     }
 
-    mapComposite->generateRoadLayers(QPoint(cell->x() * 300, cell->y() * 300),
-                                     cell->world()->roads());
-
     progress.update(tr("Generating .lot files (%1,%2)")
                       .arg(cell->x()).arg(cell->y()));
 #else
@@ -347,7 +352,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                     }
                     if (lx >= mapWidth) continue;
                     if (ly >= mapHeight) continue;
-                    LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));
+                    uint gid = cellToGid(cell);
+                    LotFile::Entry *e = new LotFile::Entry(gid, cell->rotation);
                     mGridData[lx][ly][lg->level()].Entries.append(e);
                     TileMap[e->gid]->used = true;
                 }
@@ -440,6 +446,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     TileMap[0] = new LotFile::Tile;
 
     mTilesetToFirstGid.clear();
+    mTilesetToFirstGidByName.clear();
     uint firstGid = 1;
     for (Tileset *tileset : tilesets) {
         if (!handleTileset(tileset, firstGid))
@@ -551,7 +558,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     QDataStream out(&file);
     out.setByteOrder(QDataStream::LittleEndian);
 
-    Version = 0;
+    Version = VERSION_LATEST;
     out << qint32(Version);
 
     int tilecount = 0;
@@ -679,10 +686,22 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
                     out << qint32(entries.count() + 1);
                     out << qint32(getRoomID(gx, gy, z));
                 }
-                foreach (LotFile::Entry *entry, entries) {
+                for (LotFile::Entry *entry : entries) {
                     Q_ASSERT(TileMap[entry->gid]);
                     Q_ASSERT(TileMap[entry->gid]->id != -1);
-                    out << qint32(TileMap[entry->gid]->id);
+                    int gidPlusRotation = TileMap[entry->gid]->id;
+                    switch (entry->rotation) {
+                    case MapRotation::Clockwise90:
+                        gidPlusRotation |= RotateFlag90;
+                        break;
+                    case MapRotation::Clockwise180:
+                        gidPlusRotation |= RotateFlag180;
+                        break;
+                    case MapRotation::Clockwise270:
+                        gidPlusRotation |= RotateFlag270;
+                        break;
+                    }
+                    out << qint32(gidPlusRotation);
                 }
             }
         }
@@ -943,19 +962,14 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
         return false;
     }
 
-    QString name = nameOfTileset(tileset);
+    const QString name = nameOfTileset(tileset);
 
     // TODO: Verify that two tilesets sharing the same name are identical
     // between maps.
-    QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
-    QMap<const Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
-    while (i != i_end) {
-        QString name2 = nameOfTileset(i.key());
-        if (name == name2) {
-            mTilesetToFirstGid.insert(tileset, i.value());
-            return true;
-        }
-        ++i;
+    QMap<QString,uint>::const_iterator i = mTilesetToFirstGidByName.find(name);
+    if (i != mTilesetToFirstGidByName.end()) {
+        mTilesetToFirstGid.insert(tileset, i.value());
+        return true;
     }
 
     for (int i = 0; i < tileset->tileCount(); ++i) {
@@ -967,6 +981,7 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
     }
 
     mTilesetToFirstGid.insert(tileset, firstGid);
+    mTilesetToFirstGidByName.insert(name, firstGid);
     firstGid += tileset->tileCount();
 
     return true;
@@ -996,11 +1011,8 @@ uint LotFilesManager::cellToGid(const Cell *cell)
 {
     Tileset *tileset = cell->tile->tileset();
 
-    QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
-    QMap<const Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
-    while (i != i_end && i.key() != tileset)
-        ++i;
-    if (i == i_end) // tileset not found
+    QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.find(tileset);
+    if (i == mTilesetToFirstGid.end()) // tileset not found
         return 0;
 
     return i.value() + cell->tile->id();
@@ -1026,9 +1038,7 @@ bool LotFilesManager::processObjectGroups(WorldCell *cell, MapComposite *mapComp
 bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
                                          int levelOffset, const QPoint &offset)
 {
-    int level;
-    if (!MapComposite::levelForLayer(objectGroup, &level))
-        return true;
+    int level = objectGroup->level();
     level += levelOffset;
 
     foreach (const MapObject *mapObject, objectGroup->objects()) {

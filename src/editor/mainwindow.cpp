@@ -51,7 +51,6 @@
 #include "propertydefinitionsdialog.h"
 #include "propertyenumdialog.h"
 #include "resizeworlddialog.h"
-#include "roadsdock.h"
 #include "scenetools.h"
 #include "searchdock.h"
 #include "simplefile.h"
@@ -73,6 +72,7 @@
 #include "zoomable.h"
 
 #include "layer.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "maprenderer.h"
 #include "objectgroup.h"
@@ -109,9 +109,6 @@ MainWindow::MainWindow(QWidget *parent)
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
     , mSearchDock(new SearchDock(this))
-#ifdef ROAD_UI
-    , mRoadsDock(new RoadsDock(this))
-#endif
     , mCurrentDocument(0)
     , mCurrentLevelMenu(new QMenu(this))
     , mObjectGroupMenu(new QMenu(this))
@@ -205,16 +202,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
     ui->menuView->addAction(mSearchDock->toggleViewAction());
-#ifdef ROAD_UI
-    ui->menuView->addAction(mRoadsDock->toggleViewAction());
-#endif
 
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mSearchDock);
-#ifdef ROAD_UI
-    addDockWidget(Qt::LeftDockWidgetArea, mRoadsDock);
-#endif
     addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
     addDockWidget(Qt::RightDockWidgetArea, mLayersDock);
     addDockWidget(Qt::RightDockWidgetArea, mMapsDock);
@@ -265,11 +256,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionEnums, SIGNAL(triggered()), SLOT(propertyEnumsDialog()));
     connect(ui->actionProperties, SIGNAL(triggered()), SLOT(properyDefinitionsDialog()));
     connect(ui->actionTemplates, SIGNAL(triggered()), SLOT(templatesDialog()));
-#ifdef ROAD_UI
-    connect(ui->actionRemoveRoad, SIGNAL(triggered()), SLOT(removeRoad()));
-#else
     ui->actionRemoveRoad->setVisible(false);
-#endif
     connect(ui->actionRemoveBMP, SIGNAL(triggered()), SLOT(removeBMP()));
 
     connect(ui->actionRemoveLot, SIGNAL(triggered()), SLOT(removeLot()));
@@ -308,11 +295,6 @@ MainWindow::MainWindow(QWidget *parent)
     ToolManager *toolManager = ToolManager::instance();
     toolManager->registerTool(WorldCellTool::instance());
     toolManager->registerTool(PasteCellsTool::instance());
-#ifdef ROAD_UI
-    toolManager->registerTool(WorldSelectMoveRoadTool::instance());
-    toolManager->registerTool(WorldCreateRoadTool::instance());
-    toolManager->registerTool(WorldEditRoadTool::instance());
-#endif
     toolManager->registerTool(WorldBMPTool::instance());
     toolManager->addSeparator();
     toolManager->registerTool(SubMapTool::instance());
@@ -320,11 +302,6 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CreateObjectTool::instance());
     new SpawnPointTool;
     toolManager->registerTool(SpawnPointTool::instancePtr());
-#ifdef ROAD_UI
-    toolManager->registerTool(CellSelectMoveRoadTool::instance());
-    toolManager->registerTool(CellCreateRoadTool::instance());
-    toolManager->registerTool(CellEditRoadTool::instance());
-#endif
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -561,10 +538,6 @@ void MainWindow::currentDocumentChanged(Document *doc)
                     SLOT(updateActions()));
             connect(cellDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
                     SLOT(generateLotSettingsChanged()));
-#ifdef ROAD_UI
-            connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
-                    SLOT(updateActions()));
-#endif
         }
 
         if (WorldDocument *worldDoc = doc->asWorldDocument()) {
@@ -575,10 +548,6 @@ void MainWindow::currentDocumentChanged(Document *doc)
                     SLOT(setStatusBarCoords(int,int)));
             connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
                     SLOT(generateLotSettingsChanged()));
-#ifdef ROAD_UI
-            connect(worldDoc, SIGNAL(selectedRoadsChanged()),
-                    SLOT(updateActions()));
-#endif
             connect(worldDoc, SIGNAL(selectedBMPsChanged()),
                     SLOT(updateActions()));
         }
@@ -586,9 +555,6 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLotsDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
         mSearchDock->setDocument(doc);
-#ifdef ROAD_UI
-        mRoadsDock->setDocument(doc);
-#endif
 
         mZoomable = mCurrentDocument->view()->zoomable();
         mZoomable->connectToComboBox(mZoomComboBox);
@@ -602,9 +568,6 @@ void MainWindow::currentDocumentChanged(Document *doc)
         mLotsDock->clearDocument();
         mObjectsDock->clearDocument();
         mSearchDock->clearDocument();
-#ifdef ROAD_UI
-        mRoadsDock->clearDocument();
-#endif
     }
 
     ToolManager::instance()->setScene(doc ? doc->view()->scene() : 0);
@@ -773,8 +736,12 @@ void MainWindow::openLastFiles()
                         continue;
                     }
                     int layerIndex = mSettings.value(QLatin1String("currentLayer")).toInt();
-                    if (layerIndex >= 0 && layerIndex < cellDoc->scene()->map()->layerCount())
-                        cellDoc->setCurrentLayerIndex(layerIndex);
+                    Map *map = cellDoc->scene()->map();
+                    QList<Layer*> layers = map->layers();
+                    if (layerIndex >= 0 && layerIndex < layers.size()) {
+                        Layer *layer = layers[layerIndex];
+                        cellDoc->setCurrentLayerIndex(layer->level(), map->levelAt(layer->level())->layers().indexOf(layer));
+                    }
                 } else {
                     mSettings.endGroup();
                     continue;
@@ -1118,9 +1085,12 @@ void MainWindow::FromToAux(bool selectedOnly)
             QMap<QString,TileLayer*> layerMapping;
             foreach (FromToFile::FromTo fromto, file.fromtos) {
                 foreach (QString layerName, fromto.layers) {
-                    int index = mapInfo->map()->indexOfLayer(layerName, Layer::TileLayerType);
+                    int level;
+                    MapComposite::levelForLayer(layerName, &level);
+                    MapLevel *mapLevel = mapInfo->map()->levelAt(level);
+                    int index = mapLevel->indexOfLayer(layerName, Layer::TileLayerType);
                     if (index == -1) continue;
-                    TileLayer *tl = map->layerAt(index)->asTileLayer();
+                    TileLayer *tl = map->layerAt(level, index)->asTileLayer();
                     layerMapping[layerName] = tl;
                 }
             }
@@ -1567,29 +1537,6 @@ void MainWindow::showClipboard()
     }
 }
 
-void MainWindow::removeRoad()
-{
-    Q_ASSERT(mCurrentDocument);
-    WorldDocument *worldDoc = 0;
-    if ((worldDoc = mCurrentDocument->asWorldDocument())) {
-    }
-    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
-        worldDoc = cellDoc->worldDocument();
-    }
-    int count = worldDoc->selectedRoadCount();
-    Q_ASSERT(count);
-
-    QUndoStack *undoStack = worldDoc->undoStack();
-    undoStack->beginMacro(tr("Remove %1 Road%2").arg(count)
-                          .arg((count > 1) ? QLatin1String("s") : QLatin1String("")));
-    foreach (Road *road, worldDoc->selectedRoads()) {
-        int index = worldDoc->world()->roads().indexOf(road);
-        Q_ASSERT(index >= 0);
-        worldDoc->removeRoad(index);
-    }
-    undoStack->endMacro();
-}
-
 void MainWindow::removeBMP()
 {
     Q_ASSERT(mCurrentDocument);
@@ -1887,9 +1834,9 @@ void MainWindow::writeSettings()
         if (CellDocument *cellDoc = doc->asCellDocument()) {
             mSettings.setValue(QLatin1String("cellX"), QString::number(cellDoc->cell()->x()));
             mSettings.setValue(QLatin1String("cellY"), QString::number(cellDoc->cell()->y()));
-            const int currentLayerIndex = cellDoc->currentLayerIndex();
+            QList<Layer*> layers = cellDoc->scene()->map()->layers();
+            const int currentLayerIndex = layers.indexOf(cellDoc->currentLayer());
             mSettings.setValue(QLatin1String("currentLayer"), QString::number(currentLayerIndex));
-        } else {
         }
         mSettings.endGroup();
         ++i;
@@ -1974,12 +1921,6 @@ void MainWindow::updateActions()
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());
-
-#ifdef ROAD_UI
-    bool removeRoad = (worldDoc && worldDoc->selectedRoadCount()) ||
-            (cellDoc && cellDoc->worldDocument()->selectedRoadCount());
-    ui->actionRemoveRoad->setEnabled(removeRoad);
-#endif
 
     ui->actionRemoveBMP->setEnabled(worldDoc && worldDoc->selectedBMPCount());
 

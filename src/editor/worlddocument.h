@@ -36,7 +36,6 @@ class PropertyDef;
 class PropertyEnum;
 class PropertyHolder;
 class PropertyTemplate;
-class Road;
 class TMXToBMPSettings;
 class TrafficLines;
 class World;
@@ -111,14 +110,6 @@ public:
     WorldObjectGroup *setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *group);
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
     int reorderCellObject(WorldCellObject *obj, int index);
-
-    void insertRoad(int index, Road *road);
-    Road *removeRoad(int index);
-    void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end,
-                          QPoint &oldStart, QPoint &oldEnd);
-    int changeRoadWidth(Road *road, int newWidth);
-    QString changeRoadTileName(Road *road, const QString &tileName);
-    TrafficLines *changeRoadLines(Road *road, TrafficLines *lines);
 
     QList<WorldCell *> setSelectedCells(const QList<WorldCell*> &selection);
 
@@ -200,14 +191,6 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
-    void roadAdded(int index);
-    void roadAboutToBeRemoved(int index);
-    void roadRemoved(Road *road);
-    void roadCoordsChanged(int index);
-    void roadWidthChanged(int index);
-    void roadTileNameChanged(int index);
-    void roadLinesChanged(int index);
-
     void selectedCellsChanged();
 
     void bmpCoordsChanged(int index);
@@ -253,10 +236,6 @@ public:
     const QList<WorldCellLot*> &selectedLots() const { return mSelectedLots; }
     int selectedLotCount() const { return mSelectedLots.size(); }
 
-    void setSelectedRoads(const QList<Road *> &selectedRoads);
-    const QList<Road*> &selectedRoads() const { return mSelectedRoads; }
-    int selectedRoadCount() const { return mSelectedRoads.size(); }
-
     void setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs);
     const QList<WorldBMP*> &selectedBMPs() const { return mSelectedBMPs; }
     int selectedBMPCount() const { return mSelectedBMPs.size(); }
@@ -282,13 +261,6 @@ public:
     void setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og);
     void setCellObjectType(WorldCellObject *obj, const QString &type);
     void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
-
-    void insertRoad(int index, Road *road);
-    void removeRoad(int index);
-    void changeRoadCoords(Road *road, const QPoint &start, const QPoint &end);
-    void changeRoadWidth(Road *road, int newWidth);
-    void changeRoadTileName(Road *road, const QString &tileName);
-    void changeRoadLines(Road *road, TrafficLines *lines);
 
     /**
       * Transfers the contents of \a cell to a different cell at
@@ -405,7 +377,6 @@ private:
                                   const QString &oldName, const QString &newName);
     void syncPropertyEnumChoices(PropertyHolder *ph, PropertyDef *pd, const QStringList &choices);
 
-    void removeRoadFromSelection(Road *road);
     void removeBMPFromSelection(WorldBMP *bmp);
 
 signals:
@@ -427,7 +398,6 @@ signals:
     void selectedCellsChanged();
     void selectedObjectsChanged();
     void selectedLotsChanged();
-    void selectedRoadsChanged();
     void selectedBMPsChanged();
 
     void propertyAdded(PropertyHolder *ph, int index);
@@ -465,14 +435,6 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
-    void roadAdded(int index);
-    void roadAboutToBeRemoved(int index);
-    void roadRemoved(Road *road);
-    void roadCoordsChanged(int index);
-    void roadWidthChanged(int index);
-    void roadTileNameChanged(int index);
-    void roadLinesChanged(int index);
-
     void templateAdded(int index);
     void templateAboutToBeRemoved(int index);
     void templateChanged(PropertyTemplate *pt);
@@ -500,7 +462,6 @@ private:
     QList<WorldCell*> mSelectedCells;
     QList<WorldCellObject*> mSelectedObjects;
     QList<WorldCellLot*> mSelectedLots;
-    QList<Road*> mSelectedRoads;
     QList<WorldBMP*> mSelectedBMPs;
     QString mFileName;
 

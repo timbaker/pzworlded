@@ -151,9 +151,11 @@ QPainterPath OrthogonalRenderer::shape(const MapObject *object) const
 
 #ifdef ZOMBOID
 void OrthogonalRenderer::drawGrid(QPainter *painter, const QRectF &rect,
-                                  QColor gridColor, int level) const
+                                  QColor gridColor, int level,
+                                  const QRect &tileBounds) const
 {
     Q_UNUSED(level)
+    Q_UNUSED(tileBounds)
 #else
 void OrthogonalRenderer::drawGrid(QPainter *painter, const QRectF &rect,
                                   QColor gridColor) const
@@ -261,7 +263,7 @@ void OrthogonalRenderer::drawTileLayer(QPainter *painter,
             qreal m22 = 1;      // Vertical scaling factor
             qreal dx = offset.x() + x * tileWidth;
             qreal dy = offset.y() + (y + 1) * tileHeight - img.height();
-
+#if 0
             if (cell.flippedAntiDiagonally) {
                 // Use shearing to swap the X/Y axis
                 m11 = 0;
@@ -282,7 +284,7 @@ void OrthogonalRenderer::drawTileLayer(QPainter *painter,
                 m22 = -m22;
                 dy += cell.flippedAntiDiagonally ? img.width() : img.height();
             }
-
+#endif
             const QTransform transform(m11, m12, m21, m22, dx, dy);
             painter->setTransform(transform * baseTransform);
 

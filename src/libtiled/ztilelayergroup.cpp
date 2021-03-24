@@ -26,6 +26,7 @@
 #include "ztilelayergroup.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "maprenderer.h"
 #include "tilelayer.h"
 
@@ -34,7 +35,6 @@ using namespace Tiled;
 ZTileLayerGroup::ZTileLayerGroup(Map *map, int level)
     : mMap(map)
     , mLevel(level)
-    , mVisible(true)
 {
 }
 
@@ -44,7 +44,7 @@ void ZTileLayerGroup::addTileLayer(TileLayer *layer, int index)
     if (mLayers.contains(layer))
         return;
     int arrayIndex = 0;
-    foreach(int index1, mIndices) {
+    for (int index1 : mIndices) {
         if (index1 >= index)
             break;
         arrayIndex++;
@@ -58,7 +58,6 @@ void ZTileLayerGroup::addTileLayer(TileLayer *layer, int index)
         arrayIndex++;
     }
     layer->setGroup(this);
-//    layer->setLevel(mLevel);
 }
 
 void ZTileLayerGroup::removeTileLayer(TileLayer *layer)
@@ -72,7 +71,7 @@ void ZTileLayerGroup::removeTileLayer(TileLayer *layer)
             mIndices[arrayIndex] -= 1;
             arrayIndex++;
         }
-        layer->setGroup(0);
+        layer->setGroup(nullptr);
 //        layer->setLevel(0);
     }
 }
@@ -80,7 +79,7 @@ void ZTileLayerGroup::removeTileLayer(TileLayer *layer)
 QRect ZTileLayerGroup::bounds() const
 {
     QRect r;
-    foreach (TileLayer *tl, mLayers)
+    for (TileLayer *tl : mLayers)
         r |= tl->bounds();
     return r;
 }
@@ -99,7 +98,7 @@ static void maxMargins(const QMargins &a,
 QMargins ZTileLayerGroup::drawMargins() const
 {
     QMargins m;
-    foreach (TileLayer *tl, mLayers) {
+    for (TileLayer *tl : mLayers) {
         maxMargins(m, tl->drawMargins(), m);
     }
     return m;
@@ -120,4 +119,14 @@ QRectF ZTileLayerGroup::boundingRect(const MapRenderer *renderer) const
                 drawMargins.bottom());
 
     return boundingRect;
+}
+
+bool ZTileLayerGroup::isVisible() const
+{
+    return mMap->levelAt(mLevel)->isVisible();
+}
+
+void ZTileLayerGroup::setVisible(bool visible)
+{
+    mMap->levelAt(mLevel)->setVisible(visible);
 }

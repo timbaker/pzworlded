@@ -33,6 +33,7 @@
 #include "tiled_global.h"
 
 #include "layer.h"
+#include "maprotation.h"
 #ifdef ZOMBOID
 #include "ztilelayergroup.h"
 #endif
@@ -53,41 +54,36 @@ class Cell
 {
 public:
     Cell() :
-        tile(0),
-        flippedHorizontally(false),
-        flippedVertically(false),
-        flippedAntiDiagonally(false)
+        tile(nullptr),
+        rotation(MapRotation::NotRotated)
     {}
 
     explicit Cell(Tile *tile) :
         tile(tile),
-        flippedHorizontally(false),
-        flippedVertically(false),
-        flippedAntiDiagonally(false)
+        rotation(MapRotation::NotRotated)
     {}
 
-    bool isEmpty() const { return tile == 0; }
+    explicit Cell(Tile *tile, MapRotation rotation) :
+        tile(tile),
+        rotation(rotation)
+    {}
+
+    bool isEmpty() const { return tile == nullptr; }
 
     bool operator == (const Cell &other) const
     {
         return tile == other.tile
-                && flippedHorizontally == other.flippedHorizontally
-                && flippedVertically == other.flippedVertically
-                && flippedAntiDiagonally == other.flippedAntiDiagonally;
+                && rotation == other.rotation;
     }
 
     bool operator != (const Cell &other) const
     {
         return tile != other.tile
-                || flippedHorizontally != other.flippedHorizontally
-                || flippedVertically != other.flippedVertically
-                || flippedAntiDiagonally != other.flippedAntiDiagonally;
+                || rotation != other.rotation;
     }
 
     Tile *tile;
-    bool flippedHorizontally;
-    bool flippedVertically;
-    bool flippedAntiDiagonally;
+    MapRotation rotation;
 };
 
 #ifdef ZOMBOID
@@ -300,7 +296,7 @@ public:
      */
     void setCells(int x, int y, TileLayer *tileLayer,
                   const QRegion &mask = QRegion());
-
+#if 0
     /**
      * Flip this tile layer in the given \a direction. Direction must be
      * horizontal or vertical. This doesn't change the dimensions of the
@@ -314,7 +310,7 @@ public:
      * dimensions of the tile layer are swapped.
      */
     void rotate(RotateDirection direction);
-
+#endif
     /**
      * Computes and returns the set of tilesets used by this tile layer.
      */

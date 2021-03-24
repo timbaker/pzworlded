@@ -32,9 +32,6 @@
 #include <QVector>
 
 class MapInfo;
-#if 1 // ROAD_CRUD
-class Road;
-#endif // ROAD_CRUD
 
 namespace Tiled {
 class Layer;
@@ -50,22 +47,27 @@ class CompositeLayerGroup : public Tiled::ZTileLayerGroup
 public:
     CompositeLayerGroup(MapComposite *owner, int level);
 
-    void addTileLayer(Tiled::TileLayer *layer, int index);
-    void removeTileLayer(Tiled::TileLayer *layer);
+    void addTileLayer(Tiled::TileLayer *layer, int index) override;
+    void removeTileLayer(Tiled::TileLayer *layer) override;
 
-    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
-    bool orderedCellsAt(const QPoint &pos, QVector<const Tiled::Cell*>& cells,
-                        QVector<qreal> &opacities) const;
+    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect) override;
+    bool orderedCellsAt(const Tiled::MapRenderer *renderer, const QPoint &pos,
+                        QVector<const Tiled::Cell*>& cells,
+                        QVector<qreal> &opacities) const override;
+    bool orderedTilesAt(const Tiled::MapRenderer *renderer, const QPoint &point,
+                        QVector<Tiled::ZTileRenderInfo>& tileInfos) const override;
 
-    QRect bounds() const;
-    QMargins drawMargins() const;
+    QRect bounds() const override;
+    QMargins drawMargins() const override;
 
-    QRectF boundingRect(const Tiled::MapRenderer *renderer) const;
+    QRectF boundingRect(const Tiled::MapRenderer *renderer) const override;
 
     void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
 
+#ifdef WORLDED
     void prepareDrawingNoBmpBlender(const Tiled::MapRenderer *renderer, const QRect &rect);
+#endif
 
     bool setLayerVisibility(const QString &layerName, bool visible);
     bool setLayerVisibility(Tiled::TileLayer *tl, bool visible);
@@ -126,7 +128,11 @@ public:
 
     void setHighlightLayer(const QString &layerName)
     { mHighlightLayer = layerName; }
+
 #endif
+
+private:
+    void sortForRendering(const Tiled::MapRenderer *renderer, QVector<Tiled::ZTileRenderInfo> &tileInfo) const;
 
 private:
     MapComposite *mOwner;
@@ -184,10 +190,6 @@ private:
     QString mHighlightLayer;
     QVector<bool> mForceNonEmpty;
 #endif // BUILDINGED
-#if 1 // ROAD_CRUD
-    Tiled::TileLayer *mRoadLayer0; // 0_Floor
-    Tiled::TileLayer *mRoadLayer1; // 0_FloorOverlay
-#endif // ROAD_CRUD
 };
 
 class MapComposite : public QObject
@@ -209,14 +211,16 @@ public:
     void removeMap(MapComposite *subMap);
     void moveSubMap(MapComposite *subMap, const QPoint &pos);
 
+#ifdef WORLDED
     void sortSubMaps(const QVector<MapComposite *> &order);
+#endif
 
     Tiled::Map *map() const { return mMap; }
     MapInfo *mapInfo() const { return mMapInfo; }
 
-    void layerAdded(int index);
-    void layerAboutToBeRemoved(int index);
-    void layerRenamed(int index);
+    void layerAdded(int z, int index);
+    void layerAboutToBeRemoved(int z, int index);
+    void layerRenamed(int z, int index);
 
     int layerGroupCount() const { return mLayerGroups.size(); }
     const QMap<int,CompositeLayerGroup*>& layerGroups() const { return mLayerGroups; }
@@ -302,6 +306,11 @@ public:
     bool showBMPTiles() const
     { return mShowBMPTiles; }
 
+    void setShowLotFloorsOnly(bool show)
+    { mShowLotFloorsOnly = show; }
+    bool showLotFloorsOnly() const
+    { return mShowLotFloorsOnly; }
+
     void setShowMapTiles(bool show)
     { mShowMapTiles = show; }
     bool showMapTiles() const
@@ -332,19 +341,12 @@ public:
     { return mSuppressRgn; }
     int suppressLevel() const
     { return mSuppressLevel; }
-
-#if 1 // ROAD_CRUD
-    void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
-    Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
-    Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }
-#endif // ROAD_CRUD
-
 signals:
     void layerGroupAdded(int level);
-    void layerAddedToGroup(int index);
-    void layerAboutToBeRemovedFromGroup(int index);
-    void layerRemovedFromGroup(int index, CompositeLayerGroup *oldGroup);
-    void layerLevelChanged(int index, int oldLevel);
+    void layerAddedToGroup(int z, int index);
+    void layerAboutToBeRemovedFromGroup(int z, int index);
+    void layerRemovedFromGroup(int z, int index, CompositeLayerGroup *oldGroup);
+    void layerLevelChanged(int z, int index, int oldLevel);
 
     void needsSynch();
 
@@ -354,8 +356,8 @@ private slots:
     void mapFailedToLoad(MapInfo *mapInfo);
 
 private:
-    void addLayerToGroup(int index);
-    void removeLayerFromGroup(int index);
+    void addLayerToGroup(int z, int index);
+    void removeLayerFromGroup(int z, int index);
 
     void recreate();
 
@@ -383,6 +385,7 @@ private:
     bool mSavedVisible;
     bool mHiddenDuringDrag;
     bool mShowBMPTiles;
+    bool mShowLotFloorsOnly = false;
     bool mShowMapTiles;
     bool mSavedShowBMPTiles;
     bool mSavedShowMapTiles;
@@ -404,11 +407,6 @@ private:
 
     QRegion mSuppressRgn;
     int mSuppressLevel;
-
-#if 1 // ROAD_CRUD
-    Tiled::TileLayer *mRoadLayer1;
-    Tiled::TileLayer *mRoadLayer0;
-#endif // ROAD_CRUD
 
 public:
     MapComposite *root();

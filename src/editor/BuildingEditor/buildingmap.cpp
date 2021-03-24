@@ -20,6 +20,7 @@
 #include "building.h"
 #include "buildingfloor.h"
 #include "buildingobjects.h"
+#include "buildingroomdef.h"
 #include "buildingtemplates.h"
 #include "buildingtiles.h"
 #include "buildingtmx.h"
@@ -28,10 +29,12 @@
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "tilemetainfomgr.h"
+#include "tilerotation.h"
 #include "tilesetmanager.h"
 
 #include "isometricrenderer.h"
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "maprenderer.h"
 #include "objectgroup.h"
@@ -48,13 +51,13 @@ using namespace Tiled::Internal;
 
 BuildingMap::BuildingMap(Building *building) :
     mBuilding(building),
-    mMapComposite(0),
-    mMap(0),
-    mBlendMapComposite(0),
-    mBlendMap(0),
-    mMapRenderer(0),
-    mCursorObjectFloor(0),
-    mShadowBuilding(0),
+    mMapComposite(nullptr),
+    mMap(nullptr),
+    mBlendMapComposite(nullptr),
+    mBlendMap(nullptr),
+    mMapRenderer(nullptr),
+    mCursorObjectFloor(nullptr),
+    mShadowBuilding(nullptr),
     pending(false),
     pendingRecreateAll(false),
     pendingBuildingResized(false)
@@ -84,34 +87,38 @@ BuildingMap::~BuildingMap()
         delete mShadowBuilding;
 }
 
-QString BuildingMap::buildingTileAt(int x, int y, int level, const QString &layerName)
+BuildingCell BuildingMap::buildingTileAt(int x, int y, int level, const QString &layerName)
 {
     CompositeLayerGroup *layerGroup = mBlendMapComposite->layerGroupForLevel(level);
 
-    QString tileName;
+    BuildingCell buildingCell;
 
-    foreach (TileLayer *tl, layerGroup->layers()) {
+    for (TileLayer *tl : layerGroup->layers()) {
         if (layerName == MapComposite::layerNameWithoutPrefix(tl)) {
             if (tl->contains(x, y)) {
-                Tile *tile = tl->cellAt(x, y).tile;
-                if (tile)
-                    tileName = BuildingTilesMgr::nameForTile(tile);
+                const Cell &cell = tl->cellAt(x, y);
+                if (!cell.isEmpty()) {
+                    buildingCell.mTileName = BuildingTilesMgr::nameForTile(cell.tile);
+                    buildingCell.mRotation = cell.rotation;
+                }
             }
             break;
         }
     }
 
-    return tileName;
+    return buildingCell;
 }
 
-QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevels)
+BuildingCell BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevels)
 {
     // x and y are scene coordinates
     // Perform per-pixel hit detection
     Tile *tile = nullptr;
+    MapRotation rotation = MapRotation::NotRotated;
 
     for (int level = 0; level < mBuilding->floorCount(); level++) {
-        if (!visibleLevels[level]) continue;
+        if (!visibleLevels[level])
+            continue;
         CompositeLayerGroup *lgBlend = mBlendMapComposite->layerGroupForLevel(level);
         CompositeLayerGroup *lg = mMapComposite->layerGroupForLevel(level);
         QPoint tilePos = mMapRenderer->pixelToTileCoordsInt(QPoint(x, y), level);
@@ -126,10 +133,14 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                     QString layerName = MapComposite::layerNameWithoutPrefix(tl->name());
                     if (!mBuilding->floor(level)->layerVisibility(layerName))
                         continue;
-                    if (!tl->contains(tx, ty)) continue;
+                    if (!tl->contains(tx, ty))
+                        continue;
                     Tile *test = tl->cellAt(tx, ty).tile; // user tile
-                    if (!test)
+                    rotation = tl->cellAt(tx, ty).rotation;
+                    if (!test) {
                         test = tlBlend->cellAt(tx, ty).tile; // building tile
+                        rotation = tlBlend->cellAt(tx, ty).rotation;
+                    }
                     if (test) {
                         Tile *realTile = test;
                         if (test->image().isNull()) {
@@ -162,9 +173,10 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
         }
     }
 
-    if (tile)
-        return BuildingTilesMgr::nameForTile(tile);
-    return QString();
+    if (tile) {
+        return BuildingCell(BuildingTilesMgr::nameForTile(tile), rotation);
+    }
+    return BuildingCell();
 }
 
 // The order must match the BuildingFloor::Square::SquareSection constants.
@@ -172,31 +184,50 @@ static const char *gLayerNames[] = {
     "Floor",
     "FloorGrime",
     "FloorGrime2",
-    "Walls",
+    "FloorGrime3",
+    "FloorGrime4",
+    "Wall",
     "WallTrim",
-    "Walls2",
+    "Wall2",
     "WallTrim2",
+    "Wall3",
+    "WallTrim3",
+    "Wall4",
+    "WallTrim4",
     "RoofCap",
     "RoofCap2",
     "WallOverlay",
     "WallOverlay2",
+    "WallOverlay3",
+    "WallOverlay4",
     "WallGrime",
     "WallGrime2",
+    "WallGrime3",
+    "WallGrime4",
     "WallFurniture",
     "WallFurniture2",
-    "Frames",
-    "Doors",
-    "Windows",
+    "WallFurniture3",
+    "WallFurniture4",
+    "Frame",
+    "Frame2",
+    "Frame3",
+    "Frame4",
+    "Door",
+    "Door2",
+    "Door3",
+    "Door4",
+    "Window",
+    "Window2",
+    "Window3",
+    "Window4",
     "Curtains",
+    "Curtains2",
+    "Curtains3",
+    "Curtains4",
     "Furniture",
     "Furniture2",
     "Furniture3",
     "Furniture4",
-    "Curtains2",
-    "WallFurniture3",
-    "WallFurniture4",
-    "WallOverlay3",
-    "WallOverlay4",
     "Roof",
     "Roof2",
     "RoofTop",
@@ -312,10 +343,14 @@ Map *BuildingMap::mergedMap() const
 {
     Map *map = mBlendMap->clone();
     TilesetManager::instance()->addReferences(map->tilesets());
-    for (int i = 0; i < map->layerCount(); i++) {
-        if (TileLayer *tl = map->layerAt(i)->asTileLayer())
-            tl->merge(tl->position(), mMap->layerAt(i)->asTileLayer());
-
+    for (int z = 0; z < map->levelCount(); z++) {
+        MapLevel *level = map->levelAt(z);
+        for (int j = 0; j < level->layerCount(); j++) {
+            if (TileLayer *tl = level->layerAt(j)->asTileLayer()) {
+                TileLayer *tl2 =  mMap->levelAt(level->z())->layerAt(j)->asTileLayer();
+                tl->merge(tl->position(), tl2);
+            }
+        }
     }
     return map;
 }
@@ -338,8 +373,6 @@ void BuildingMap::loadNeededTilesets(Building *building)
         }
     }
 }
-
-#include "buildingroomdef.h"
 
 // Copied from BuildingFloor::roomRegion()
 static QList<QRect> cleanupRegion(QRegion region)
@@ -384,7 +417,7 @@ void BuildingMap::addRoomDefObjects(Map *map)
 void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
 {
     Building *building = floor->building();
-    ObjectGroup *objectGroup = new ObjectGroup(tr("%1_RoomDefs").arg(floor->level()),
+    ObjectGroup *objectGroup = new ObjectGroup(tr("RoomDefs"),
                                                0, 0, map->width(), map->height());
     map->addLayer(objectGroup);
 
@@ -485,8 +518,9 @@ void BuildingMap::BuildingToMap()
 
     // Add tilesets from Tilesets.txt
     mMap->addTileset(TilesetManager::instance()->missingTileset());
-    foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets())
+    for (Tileset *ts : TileMetaInfoMgr::instance()->tilesets()) {
         mMap->addTileset(ts);
+    }
     TilesetManager::instance()->addReferences(mMap->tilesets());
 
     switch (mMap->orientation()) {
@@ -500,18 +534,18 @@ void BuildingMap::BuildingToMap()
         return;
     }
 
-    Q_ASSERT(sizeof(gLayerNames)/sizeof(gLayerNames[0]) == BuildingFloor::Square::MaxSection + 1);
+    Q_ASSERT(sizeof(gLayerNames)/sizeof(gLayerNames[0]) == BuildingSquare::MaxSection + 1);
 
     QMap<QString,int> layerToSection;
     for (int i = 0; gLayerNames[i]; i++)
         layerToSection.insert(QLatin1String(gLayerNames[i]), i);
 
     mLayerToSection.clear();
-    foreach (BuildingFloor *floor, mBuilding->floors()) {
-        foreach (QString name, layerNames(floor->level())) {
-            QString layerName = tr("%1_%2").arg(floor->level()).arg(name);
-            TileLayer *tl = new TileLayer(layerName,
-                                          0, 0, mapSize.width(), mapSize.height());
+    for (BuildingFloor *floor : mBuilding->floors()) {
+        for (QString name : layerNames(floor->level())) {
+            QString layerName = name;
+            TileLayer *tl = new TileLayer(layerName, 0, 0, mapSize.width(), mapSize.height());
+            tl->setLevel(floor->level());
             mMap->addLayer(tl);
             mLayerToSection[layerName] = layerToSection.contains(name)
                     ? layerToSection[name] : -1;
@@ -522,9 +556,9 @@ void BuildingMap::BuildingToMap()
     mMapComposite = new MapComposite(mapInfo);
 
     // Synch layer opacity with the floor.
-    foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups()) {
+    for (CompositeLayerGroup *layerGroup : mMapComposite->layerGroups()) {
         BuildingFloor *floor = mBuilding->floor(layerGroup->level());
-        foreach (TileLayer *tl, layerGroup->layers()) {
+        for (TileLayer *tl : layerGroup->layers()) {
             QString layerName = MapComposite::layerNameWithoutPrefix(tl);
             layerGroup->setLayerOpacity(tl, floor->layerOpacity(layerName));
         }
@@ -538,15 +572,15 @@ void BuildingMap::BuildingToMap()
     mMapComposite->setBlendOverMap(mBlendMapComposite);
 
     // Set the automatically-generated tiles.
-    foreach (CompositeLayerGroup *layerGroup, mBlendMapComposite->layerGroups()) {
+    for (CompositeLayerGroup *layerGroup : mBlendMapComposite->layerGroups()) {
         BuildingFloor *floor = mBuilding->floor(layerGroup->level());
         floor->LayoutToSquares();
         BuildingSquaresToTileLayers(floor, floor->bounds(1, 1), layerGroup);
     }
 
     // Set the user-drawn tiles.
-    foreach (BuildingFloor *floor, mBuilding->floors()) {
-        foreach (QString layerName, floor->grimeLayers())
+    for (BuildingFloor *floor : mBuilding->floors()) {
+        for (QString layerName : floor->grimeLayers())
             userTilesToLayer(floor, layerName, floor->bounds(1, 1));
     }
 
@@ -569,7 +603,7 @@ void BuildingMap::BuildingSquaresToTileLayers(BuildingFloor *floor,
         suppress = mSuppressTiles[floor];
 
     int layerIndex = 0;
-    foreach (TileLayer *tl, layerGroup->layers()) {
+    for (TileLayer *tl : layerGroup->layers()) {
         int section = mLayerToSection[tl->name()];
         if (section == -1) // Skip user-added layers.
             continue;
@@ -579,25 +613,30 @@ void BuildingMap::BuildingSquaresToTileLayers(BuildingFloor *floor,
             tl->erase(area/*.adjusted(0,0,1,1)*/);
         for (int x = area.x(); x <= area.right(); x++) {
             for (int y = area.y(); y <= area.bottom(); y++) {
-                if (section != BuildingFloor::Square::SectionFloor
-                        && suppress.contains(QPoint(x, y)))
+                if (section != BuildingSquare::SectionFloor
+                        && suppress.contains(QPoint(x, y))) {
                     continue;
-                const BuildingFloor::Square &square = shadowFloor->squares[x][y];
+                }
+                const BuildingSquare &square = shadowFloor->squares[x][y];
+                MapRotation rotation = square.mRotation[section];
                 if (BuildingTile *btile = square.mTiles[section]) {
                     if (!btile->isNone()) {
-                        if (Tiled::Tile *tile = BuildingTilesMgr::instance()->tileFor(btile))
-                            tl->setCell(x + offset, y + offset, Cell(tile));
+                        if (Tiled::Tile *tile = BuildingTilesMgr::instance()->tileFor(btile)) {
+                            tl->setCell(x + offset, y + offset, Cell(tile, rotation));
+                        }
                     }
                     continue;
                 }
                 if (BuildingTileEntry *entry = square.mEntries[section]) {
                     int tileOffset = square.mEntryEnum[section];
-                    if (entry->isNone() || entry->tile(tileOffset)->isNone())
+                    if (entry->isNone() || entry->tile(tileOffset)->isNone()) {
                         continue;
-                    if (Tiled::Tile *tile = BuildingTilesMgr::instance()->tileFor(entry->tile(tileOffset)))
-                        tl->setCell(x + offset, y + offset, Cell(tile));
+                    }
+                    BuildingTile *buildingTile = entry->tile(tileOffset);
+                    if (Tiled::Tile *tile = BuildingTilesMgr::instance()->tileFor(buildingTile)) {
+                        tl->setCell(x + offset, y + offset, Cell(tile, rotation));
+                    }
                 }
-
             }
         }
         layerGroup->regionAltered(tl); // possibly set mNeedsSynch
@@ -625,7 +664,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
     }
 
     QMap<QString,Tileset*> tilesetByName;
-    foreach (Tileset *ts, mMap->tilesets())
+    for (Tileset *ts : mMap->tilesets())
         tilesetByName[ts->name()] = ts;
 
     QRegion suppress;
@@ -640,19 +679,21 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
                 layer->setCell(x, y, Cell());
                 continue;
             }
-            QString tileName = shadowFloor->grimeAt(layerName, x, y);
+            BuildingCell buildingCell = shadowFloor->grimeAt(layerName, x, y);
             Tile *tile = nullptr;
-            if (!tileName.isEmpty()) {
+            MapRotation rotation = MapRotation::NotRotated;
+            if (!buildingCell.isEmpty()) {
                 tile = TilesetManager::instance()->missingTile();
                 QString tilesetName;
                 int index;
-                if (BuildingTilesMgr::parseTileName(tileName, tilesetName, index)) {
+                if (BuildingTilesMgr::parseTileName(buildingCell.tileName(), tilesetName, index)) {
                     if (tilesetByName.contains(tilesetName)) {
                         tile = tilesetByName[tilesetName]->tileAt(index);
+                        rotation = buildingCell.rotation();
                     }
                 }
             }
-            layer->setCell(x, y, Cell(tile));
+            layer->setCell(x, y, Cell(tile, rotation));
         }
     }
 
@@ -700,7 +741,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor, const QString &layerNa
     pendingUserTilesToLayer[floor][layerName] |= bounds;
 
     // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
-    if (layerName == QLatin1Literal("Walls") || layerName == QLatin1Literal("Walls2"))
+    if (layerName == QLatin1Literal("Wall") || layerName == QLatin1Literal("Wall2"))
         pendingLayoutToSquares.insert(floor);
 
     schedulePending();
@@ -1309,8 +1350,13 @@ bool ShadowBuilding::setCursorObject(BuildingFloor *floor, BuildingObject *objec
     if (mCursorObjectModifier) {
         // FIXME: any modifier using the recreated shadow object must get updated
         // or they will still point to the old shadow object.
-        if (mOriginalToShadowObject.contains(object))
+        if (mOriginalToShadowObject.contains(object)) {
+//            if (object->sameAs(mOriginalToShadowObject[object])) {
+//                qDebug() << "sameAs";
+//                return false;
+//            }
             recreateObject(floor, object);
+        }
     } else {
         bool cursorObject = floor->indexOf(object) == -1;
         if (cursorObject) {

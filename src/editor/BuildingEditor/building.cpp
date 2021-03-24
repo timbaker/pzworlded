@@ -181,15 +181,16 @@ QStringList Building::tilesetNames() const
         foreach (QString layerName, floor->grimeLayers()) {
             for (int y = 0; y < floor->height(); y++) {
                 for (int x = 0; x < floor->width(); x++) {
-                    QString tileName = floor->grime()[layerName]->at(x, y);
-                    if (tileName.isEmpty())
+                    const BuildingCell &buildingCell = floor->grime()[layerName]->at(x, y);
+                    if (buildingCell.isEmpty())
                         continue;
                     QString tilesetName;
                     int index;
-                    if (BuildingTilesMgr::instance()->parseTileName(tileName,
+                    if (BuildingTilesMgr::instance()->parseTileName(buildingCell.tileName(),
                                                                     tilesetName,
-                                                                    index))
+                                                                    index)) {
                         ret += tilesetName;
+                    }
                 }
             }
         }

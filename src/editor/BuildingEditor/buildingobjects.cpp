@@ -32,23 +32,23 @@ BuildingObject::BuildingObject(BuildingFloor *floor, int x, int y, Direction dir
     mX(x),
     mY(y),
     mDir(dir),
-    mTile(0)
+    mTile(nullptr)
 {
 }
 
 QString BuildingObject::dirString() const
 {
     static const char *s[] = { "N", "S", "E", "W" };
-    return QLatin1String(s[mDir]);
+    return QLatin1String(s[int(mDir)]);
 }
 
 BuildingObject::Direction BuildingObject::dirFromString(const QString &s)
 {
-    if (s == QLatin1String("N")) return N;
-    if (s == QLatin1String("S")) return S;
-    if (s == QLatin1String("W")) return W;
-    if (s == QLatin1String("E")) return E;
-    return Invalid;
+    if (s == QLatin1String("N")) return Direction::N;
+    if (s == QLatin1String("S")) return Direction::S;
+    if (s == QLatin1String("W")) return Direction::W;
+    if (s == QLatin1String("E")) return Direction::E;
+    return Direction::Invalid;
 }
 
 QSet<BuildingTile*> BuildingObject::buildingTiles() const
@@ -78,7 +78,7 @@ bool BuildingObject::isValidPos(const QPoint &offset, BuildingFloor *floor) cons
 
 void BuildingObject::rotate(bool right)
 {
-    mDir = (mDir == N) ? W : N;
+    mDir = (mDir == Direction::N) ? Direction::W : Direction::N;
 
     int oldWidth = mFloor->height();
     int oldHeight = mFloor->width();
@@ -86,13 +86,13 @@ void BuildingObject::rotate(bool right)
         int x = mX;
         mX = oldHeight - mY - 1;
         mY = x;
-        if (mDir == W)
+        if (mDir == Direction::W)
             mX++;
     } else {
         int x = mX;
         mX = mY;
         mY = oldWidth - x - 1;
-        if (mDir == N)
+        if (mDir == Direction::N)
             mY++;
     }
 }
@@ -101,11 +101,11 @@ void BuildingObject::flip(bool horizontal)
 {
     if (horizontal) {
         mX = mFloor->width() - mX - 1;
-        if (mDir == W)
+        if (mDir == Direction::W)
             mX++;
     } else {
         mY = mFloor->height() - mY - 1;
-        if (mDir == N)
+        if (mDir == Direction::N)
             mY++;
     }
 }
@@ -150,9 +150,13 @@ bool Door::sameAs(BuildingObject *other)
 QPolygonF Door::calcShape() const
 {
     if (isN())
-        return QRectF(mX, mY - 5/30.0, 30/30.0, 10/30.0);
+        return QRectF(mX, mY, 30/30.0, 10/30.0);
+    if (isE())
+        return QRectF(mX + 1 - 10/30.0, mY, 10/30.0, 30/30.0);
+    if (isS())
+        return QRectF(mX, mY + 1 - 10/30.0, 30/30.0, 10/30.0);
     if (isW())
-        return QRectF(mX - 5/30.0, mY, 10/30.0, 30/30.0);
+        return QRectF(mX, mY, 10/30.0, 30/30.0);
     return QPolygonF();
 }
 
@@ -160,9 +164,9 @@ QPolygonF Door::calcShape() const
 
 QRect Stairs::bounds() const
 {
-    if (mDir == N)
+    if (isN())
         return QRect(mX, mY, 1, 5);
-    if (mDir == W)
+    if (isW())
         return QRect(mX, mY, 5, 1);
     return QRect();
 }
@@ -171,10 +175,10 @@ void Stairs::rotate(bool right)
 {
     BuildingObject::rotate(right);
     if (right) {
-        if (mDir == W) // used to be N
+        if (mDir == Direction::W) // used to be N
             mX -= 5;
     } else {
-        if (mDir == N) // used to be W
+        if (mDir == Direction::N) // used to be W
             mY -= 5;
     }
 }
@@ -182,9 +186,9 @@ void Stairs::rotate(bool right)
 void Stairs::flip(bool horizontal)
 {
     BuildingObject::flip(horizontal);
-    if (mDir == W && horizontal)
+    if (mDir == Direction::W && horizontal)
         mX -= 5;
-    else if (mDir == N && !horizontal)
+    else if (mDir == Direction::N && !horizontal)
         mY -= 5;
 }
 
@@ -227,7 +231,7 @@ QPolygonF Stairs::calcShape() const
 
 int Stairs::getOffset(int x, int y)
 {
-    if (mDir == N) {
+    if (mDir == Direction::N) {
         if (x == mX) {
             int index = y - mY;
             if (index == 1)
@@ -238,7 +242,7 @@ int Stairs::getOffset(int x, int y)
                 return BTC_Stairs::North1;
         }
     }
-    if (mDir == W) {
+    if (mDir == Direction::W) {
         if (y == mY) {
             int index = x - mX;
             if (index == 1)
@@ -255,8 +259,8 @@ int Stairs::getOffset(int x, int y)
 /////
 
 FurnitureObject::FurnitureObject(BuildingFloor *floor, int x, int y) :
-    BuildingObject(floor, x, y, Invalid),
-    mFurnitureTile(0)
+    BuildingObject(floor, x, y, Direction::Invalid),
+    mFurnitureTile(nullptr)
 {
 
 }
@@ -368,9 +372,10 @@ QSet<BuildingTile *> FurnitureObject::buildingTiles() const
     QSet<BuildingTile *> ret;
     if (!mFurnitureTile || mFurnitureTile->isEmpty())
         return ret;
-    foreach (BuildingTile *btile, mFurnitureTile->tiles()) {
-        if (btile && !btile->isNone())
+    for (BuildingTile *btile : mFurnitureTile->tiles()) {
+        if (btile && !btile->isNone()) {
             ret += btile;
+        }
     }
     return ret;
 }
@@ -492,7 +497,7 @@ bool FurnitureObject::inWallLayer() const
 RoofObject::RoofObject(BuildingFloor *floor, int x, int y, int width, int height,
                        RoofType type, RoofDepth depth,
                        bool cappedW, bool cappedN, bool cappedE, bool cappedS) :
-    BuildingObject(floor, x, y, BuildingObject::Invalid),
+    BuildingObject(floor, x, y, BuildingObject::Direction::Invalid),
     mWidth(width),
     mHeight(height),
     mType(type),
@@ -502,9 +507,9 @@ RoofObject::RoofObject(BuildingFloor *floor, int x, int y, int width, int height
     mCappedE(cappedE),
     mCappedS(cappedS),
     mHalfDepth(depth == Point5 || depth == OnePoint5 || depth == TwoPoint5),
-    mCapTiles(0),
-    mSlopeTiles(0),
-    mTopTiles(0)
+    mCapTiles(nullptr),
+    mSlopeTiles(nullptr),
+    mTopTiles(nullptr)
 {
     resize(mWidth, mHeight, mHalfDepth);
 }
@@ -718,7 +723,7 @@ BuildingTileEntry *RoofObject::tile(int alternate) const
     if (alternate == TileCap) return mCapTiles;
     if (alternate == TileSlope) return mSlopeTiles;
     if (alternate == TileTop) return mTopTiles;
-    return 0;
+    return nullptr;
 }
 
 BuildingObject *RoofObject::clone() const
@@ -1134,7 +1139,8 @@ bool RoofObject::isDepthMax()
     case SlopeE:
     case SlopeS:
         switch (mDepth) {
-        case Three: return true; ///
+        case Three:
+            return true; ///
         default:
             break;
         }
@@ -1142,14 +1148,14 @@ bool RoofObject::isDepthMax()
     case PeakWE:
     case PeakNS:
         switch (mDepth) {
-        case Three: return true; ///
+        case Three:
+            return true; ///
         default:
             break;
         }
         break;
     case FlatTop:
         return mDepth == Three;
-        break;
     case CornerInnerSW:
     case CornerInnerNW:
     case CornerInnerNE:
@@ -1157,7 +1163,8 @@ bool RoofObject::isDepthMax()
         switch (mDepth) {
         case One:
         case Two:
-        case Three: return true; ///
+        case Three:
+            return true; ///
         default:
             break;
         }
@@ -1177,7 +1184,8 @@ bool RoofObject::isDepthMin()
     case SlopeE:
     case SlopeS:
         switch (mDepth) {
-        case One: return true; ///
+        case One:
+            return true; ///
         default:
             break;
         }
@@ -1185,14 +1193,14 @@ bool RoofObject::isDepthMin()
     case PeakWE:
     case PeakNS:
         switch (mDepth) {
-        case Point5: return true; ///
+        case Point5:
+            return true; ///
         default:
             break;
         }
         break;
     case FlatTop:
         return mDepth == Zero;
-        break;
     case CornerInnerSW:
     case CornerInnerNW:
     case CornerInnerNE:
@@ -1200,7 +1208,8 @@ bool RoofObject::isDepthMin()
         switch (mDepth) {
         case Point5:
         case OnePoint5:
-        case TwoPoint5: return true; ///
+        case TwoPoint5:
+            return true; ///
         default:
             break;
         }
@@ -1825,6 +1834,7 @@ QVector<RoofObject::RoofTile> RoofObject::westCapTiles(QRect &b)
         ret << CapShallowFallE1;
         if (mHeight > 2) ret << CapShallowFallE2 << CapShallowRiseE2;
         ret << CapShallowRiseE1;
+        break;
     case FlatTop:
     case CornerInnerSW:
     case CornerInnerNW: {
@@ -2397,15 +2407,15 @@ WallObject::WallObject(BuildingFloor *floor, int x, int y,
                        Direction dir, int length) :
     BuildingObject(floor, x, y, dir),
     mLength(length),
-    mExteriorTrimTile(0),
-    mInteriorTile(0),
-    mInteriorTrimTile(0)
+    mExteriorTrimTile(nullptr),
+    mInteriorTile(nullptr),
+    mInteriorTrimTile(nullptr)
 {
 }
 
 QRect WallObject::bounds() const
 {
-    return QRect(mX, mY, isW() ? mLength : 1, isW() ? 1 : mLength);
+    return QRect(mX, mY, (isN() || isS()) ? mLength : 1, (isN() || isS()) ? 1 : mLength);
 }
 
 void WallObject::rotate(bool right)
@@ -2415,23 +2425,23 @@ void WallObject::rotate(bool right)
 
     if (right) {
         int x = mX;
-        mX = oldFloorHeight - mY - (isN() ? mLength: 0);
+        mX = oldFloorHeight - mY - (isW() ? mLength: 0);
         mY = x;
     } else {
         int x = mX;
         mX = mY;
-        mY = oldFloorWidth - x - (isW() ? mLength: 0);
+        mY = oldFloorWidth - x - (isN() ? mLength: 0);
     }
 
-    mDir = isN() ? W : N;
+    mDir = isN() ? Direction::W : Direction::N;
 }
 
 void WallObject::flip(bool horizontal)
 {
     if (horizontal) {
-        mX = mFloor->width() - mX - (isW() ? mLength: 0);
+        mX = mFloor->width() - mX - (isN() ? mLength: 0);
     } else {
-        mY = mFloor->height() - mY - (isN() ? mLength: 0);
+        mY = mFloor->height() - mY - (isW() ? mLength: 0);
     }
 }
 
@@ -2444,7 +2454,7 @@ bool WallObject::isValidPos(const QPoint &offset, BuildingFloor *floor) const
     // Vertical walls can't go past the bottom edge of the building.
     QRect floorBounds = floor->bounds();
     QRect objectBounds = bounds().translated(offset);
-    if (isN())
+    if (isW() || isE())
         floorBounds.adjust(0,0,1,0);
     else
         floorBounds.adjust(0,0,0,1);
@@ -2473,9 +2483,13 @@ bool WallObject::sameAs(BuildingObject *other)
 QPolygonF WallObject::calcShape() const
 {
     if (isN())
-       return QRectF(mX - 6/30.0, mY, 12/30.0, mLength * 30/30.0);
+        return QRectF(mX, mY /*- 6/30.0*/, mLength * 30/30.0, 12/30.0);
+    if (isS())
+        return QRectF(mX, mY + 1 - 12/30.0, mLength * 30/30.0, 12/30.0);
     if (isW())
-        return QRectF(mX, mY - 6/30.0, mLength * 30/30.0, 12/30.0);
+       return QRectF(mX /*- 6/30.0*/, mY, 12/30.0, mLength * 30/30.0);
+    if (isE())
+       return QRectF(mX + 1 - 12/30.0, mY, 12/30.0, mLength * 30/30.0);
     return QPolygonF();
 }
 
@@ -2503,9 +2517,13 @@ bool Window::sameAs(BuildingObject *other)
 QPolygonF Window::calcShape() const
 {
     if (isN())
-        return QRectF(mX + 7/30.0, mY - 3/30.0, 16/30.0, 6/30.0);
+        return QRectF(mX + 7/30.0, mY, 16/30.0, 6/30.0);
+    if (isS())
+        return QRectF(mX + 7/30.0, mY + 1 - 6/30.0, 16/30.0, 6/30.0);
     if (isW())
-        return QRectF(mX - 3/30.0, mY + 7/30.0, 6/30.0, 16/30.0);
+        return QRectF(mX, mY + 7/30.0, 6/30.0, 16/30.0);
+    if (isE())
+        return QRectF(mX  + 1 - 6/30.0, mY + 7/30.0, 6/30.0, 16/30.0);
     return QPolygonF();
 }
 

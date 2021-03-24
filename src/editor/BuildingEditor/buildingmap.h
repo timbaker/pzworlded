@@ -18,9 +18,10 @@
 #ifndef BUILDINGMAP_H
 #define BUILDINGMAP_H
 
-#include <QObject>
+#include "buildingcell.h"
 
 #include <QMap>
+#include <QObject>
 #include <QRegion>
 #include <QSet>
 #include <QStringList>
@@ -130,8 +131,8 @@ public:
     Tiled::MapRenderer *mapRenderer() const
     { return mMapRenderer; }
 
-    QString buildingTileAt(int x, int y, int level, const QString &layerName);
-    QString buildingTileAt(int x, int y, const QList<bool> visibleLevels);
+    BuildingCell buildingTileAt(int x, int y, int level, const QString &layerName);
+    BuildingCell buildingTileAt(int x, int y, const QList<bool> visibleLevels);
 
     static QStringList layerNames(int level);
     static QStringList requiredLayerNames();

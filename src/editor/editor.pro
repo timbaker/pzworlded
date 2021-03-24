@@ -54,8 +54,11 @@ RCC_DIR = .rcc
 OBJECTS_DIR = .obj
 
 SOURCES += main.cpp\
+    BuildingEditor/buildingcell.cpp \
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
+    tilerotation.cpp \
+    tilerotationfile.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -100,8 +103,6 @@ SOURCES += main.cpp\
     copypastedialog.cpp \
     clipboard.cpp \
     lotfilesmanager.cpp \
-    road.cpp \
-    roadsdock.cpp \
     simplefile.cpp \
     bmptotmx.cpp \
     bmptotmxdialog.cpp \
@@ -150,7 +151,10 @@ SOURCES += main.cpp\
     waterflow.cpp
 
 HEADERS  += mainwindow.h \
+    BuildingEditor/buildingcell.h \
     generatelotsfailuredialog.h \
+    tilerotation.h \
+    tilerotationfile.h \
     tilesetstxtfile.h \
     worldview.h \
     worldscene.h \
@@ -193,8 +197,6 @@ HEADERS  += mainwindow.h \
     copypastedialog.h \
     clipboard.h \
     lotfilesmanager.h \
-    road.h \
-    roadsdock.h \
     simplefile.h \
     bmptotmx.h \
     bmptotmxdialog.h \
