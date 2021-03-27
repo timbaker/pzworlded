@@ -17,6 +17,7 @@
 
 #include "cellview.h"
 
+#include "celldocument.h"
 #include "cellscene.h"
 #include "preferences.h"
 #include "zoomable.h"
@@ -38,7 +39,7 @@ CellScene *CellView::scene() const
 
 void CellView::mouseMoveEvent(QMouseEvent *event)
 {
-    QPoint tilePos = scene()->renderer()->pixelToTileCoordsInt(mapToScene(event->pos()));
+    QPoint tilePos = scene()->renderer()->pixelToTileCoordsInt(mapToScene(event->pos()), scene()->document()->currentLevel());
     emit statusBarCoordinatesChanged(tilePos.x(), tilePos.y());
 
     BaseGraphicsView::mouseMoveEvent(event);

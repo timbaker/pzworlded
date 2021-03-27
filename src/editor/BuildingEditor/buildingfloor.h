@@ -188,6 +188,8 @@ public:
             edge(edge),
             entryWall(nullptr),
             entryTrim(nullptr),
+            door(nullptr),
+            window(nullptr),
             furniture(nullptr),
             furnitureBldgTile(nullptr),
             type(WallType::Invalid)
