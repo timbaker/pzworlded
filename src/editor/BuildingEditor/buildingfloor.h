@@ -260,7 +260,7 @@ public:
     void ReplaceFrame(BuildingTileEntry *tile, SquareSection section, int offset, Tiled::MapRotation rotation);
     void ReplaceWindow(BuildingTileEntry *tile, SquareSection section, int offset, Tiled::MapRotation rotation);
     void ReplaceCurtains(Window *window, SquareSection section, int offset, Tiled::MapRotation rotation);
-    void ReplaceShutters(Window *window, bool first, Tiled::MapRotation rotation);
+    void ReplaceShutters(Window *window, int offset, Tiled::MapRotation rotation);
     void ReplaceFurniture(BuildingTileEntry *tile, int offset = 0);
     void ReplaceFurniture(BuildingTile *btile, SquareSection sectionMin, SquareSection sectionMax, Tiled::MapRotation rotation);
     void ReplaceRoof(BuildingTileEntry *tile, int offset = 0);

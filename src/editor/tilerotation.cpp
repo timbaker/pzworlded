@@ -173,6 +173,11 @@ public:
         }
         Tile *tile = cell.tile;
 
+        if ((viewRotation == MapRotation::NotRotated) && (cell.rotation == MapRotation::NotRotated)) {
+            tileInfos += ZTileRenderInfo(tile);
+            return;
+        }
+
         // FIXME: temporary lazy init
         if (mTilesetRotatedList.isEmpty()) {
             tempLazyInit();

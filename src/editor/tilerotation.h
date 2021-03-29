@@ -103,6 +103,11 @@ public:
         addTile(tileName, QPoint(0, 1), TileRotatedVisualEdge::South);
     }
 
+    void addTileFloor(const QString& tileName)
+    {
+        addTile(tileName, QPoint(), TileRotatedVisualEdge::Floor);
+    }
+
     void clear()
     {
         mTileNames.clear();
