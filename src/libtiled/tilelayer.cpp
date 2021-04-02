@@ -141,7 +141,7 @@ TileLayer *TileLayer::copy(const QRegion &region) const
                                       0, 0,
                                       bounds.width(), bounds.height());
 
-    foreach (const QRect &rect, area.rects())
+    for (const QRect &rect : area)
         for (int x = rect.left(); x <= rect.right(); ++x)
             for (int y = rect.top(); y <= rect.bottom(); ++y)
                 copied->setCell(x - areaBounds.x() + offsetX,
@@ -177,7 +177,7 @@ void TileLayer::setCells(int x, int y, TileLayer *layer,
     if (!mask.isEmpty())
         area &= mask;
 
-    foreach (const QRect &rect, area.rects())
+    for (const QRect &rect : area)
         for (int _x = rect.left(); _x <= rect.right(); ++_x)
             for (int _y = rect.top(); _y <= rect.bottom(); ++_y)
                 setCell(_x, _y, layer->cellAt(_x - x, _y - y));
@@ -186,7 +186,7 @@ void TileLayer::setCells(int x, int y, TileLayer *layer,
 void TileLayer::erase(const QRegion &area)
 {
     const Cell emptyCell;
-    foreach (const QRect &rect, area.rects())
+    for (const QRect &rect : area)
         for (int x = rect.left(); x <= rect.right(); ++x)
             for (int y = rect.top(); y <= rect.bottom(); ++y)
                 setCell(x, y, emptyCell);
@@ -310,7 +310,8 @@ void TileLayer::rotate(RotateDirection direction)
 QSet<Tileset*> TileLayer::usedTilesets() const
 {
 #ifdef ZOMBOID
-    return mUsedTilesets.keys().toSet();
+    QList<Tileset*> keys = mUsedTilesets.keys();
+    return QSet<Tileset*>(keys.constBegin(), keys.constEnd());
 #else
     QSet<Tileset*> tilesets;
 

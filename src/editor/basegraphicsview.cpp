@@ -184,13 +184,15 @@ void BaseGraphicsView::hideEvent(QHideEvent *event)
 
 void BaseGraphicsView::wheelEvent(QWheelEvent *event)
 {
-    if (event->modifiers() & Qt::ControlModifier
-        && event->orientation() == Qt::Vertical)
+    QPoint numDegrees = event->angleDelta() / 8;
+    if ((event->modifiers() & Qt::ControlModifier) && (numDegrees.y() != 0))
     {
+        QPoint numSteps = numDegrees / 15;
+
         // No automatic anchoring since we'll do it manually
         setTransformationAnchor(QGraphicsView::NoAnchor);
 
-        mZoomable->handleWheelDelta(event->delta());
+        mZoomable->handleWheelDelta(numSteps.y() * 120);
 
         // Place the last known mouse scene pos below the mouse again
         QWidget *view = viewport();
@@ -209,7 +211,7 @@ void BaseGraphicsView::wheelEvent(QWheelEvent *event)
 
 void BaseGraphicsView::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::MidButton) {
+    if (event->button() == Qt::MiddleButton) {
         setHandScrolling(true);
         return;
     }
@@ -281,7 +283,7 @@ void BaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
 
 void BaseGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::MidButton) {
+    if (event->button() == Qt::MiddleButton) {
         setHandScrolling(false);
         return;
     }

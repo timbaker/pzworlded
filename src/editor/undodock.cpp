@@ -34,7 +34,7 @@ UndoDock::UndoDock(QUndoGroup *undoGroup, QWidget *parent) :
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setMargin(5);
+    layout->setContentsMargins(5, 5, 5, 5);
     layout->addWidget(mUndoView);
 
     setWidget(widget);

@@ -697,7 +697,7 @@ QList<BuildingTileEntry *> BuildingReaderPrivate::readUsedTiles()
         if (xml.isEndElement())
             break;
         if (xml.isCharacters() && !xml.isWhitespace()) {
-            QStringList used = xml.text().toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList used = xml.text().toString().split(QLatin1Char(' '), Qt::SkipEmptyParts);
             foreach (QString s, used) {
                 if (BuildingTileEntry *entry = getEntry(s))
                     if (!entry->isNone())
@@ -721,7 +721,7 @@ QList<FurnitureTiles *> BuildingReaderPrivate::readUsedFurniture()
         if (xml.isEndElement())
             break;
         if (xml.isCharacters() && !xml.isWhitespace()) {
-            QStringList used = xml.text().toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList used = xml.text().toString().split(QLatin1Char(' '), Qt::SkipEmptyParts);
             foreach (QString s, used) {
                 if (FurnitureTiles *ftiles = getFurniture(s))
                     result += ftiles;
@@ -757,7 +757,7 @@ Room *BuildingReaderPrivate::readRoom()
     Room *room = new Room();
     room->Name = name;
     room->internalName = internalName;
-    QStringList rgb = color.split(QLatin1Char(' '), QString::SkipEmptyParts);
+    QStringList rgb = color.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     room->Color = qRgb(rgb[0].toInt(), rgb[1].toInt(), rgb[2].toInt());
     for (int i = 0; i < Room::TileCount; i++)
         room->setTile(i, getEntry(tiles[i]));
@@ -796,12 +796,12 @@ BuildingFloor *BuildingReaderPrivate::readFloor()
             }
             if (mVersion == VERSION2) {
                 QMap<QString, QString> renameLookup;
-                renameLookup[QLatin1Literal("Curtains2")] = QLatin1Literal("Curtains3");
-                renameLookup[QLatin1Literal("Doors")] = QLatin1Literal("Door");
-                renameLookup[QLatin1Literal("Frames")] = QLatin1Literal("Frame");
-                renameLookup[QLatin1Literal("Walls")] = QLatin1Literal("Wall");
-                renameLookup[QLatin1Literal("Walls2")] = QLatin1Literal("Wall2");
-                renameLookup[QLatin1Literal("Windows")] = QLatin1Literal("Window");
+                renameLookup[QLatin1String("Curtains2")] = QLatin1String("Curtains3");
+                renameLookup[QLatin1String("Doors")] = QLatin1String("Door");
+                renameLookup[QLatin1String("Frames")] = QLatin1String("Frame");
+                renameLookup[QLatin1String("Walls")] = QLatin1String("Wall");
+                renameLookup[QLatin1String("Walls2")] = QLatin1String("Wall2");
+                renameLookup[QLatin1String("Windows")] = QLatin1String("Window");
                 if (renameLookup.contains(layerName)) {
                     layerName = renameLookup[layerName];
                 }
@@ -1006,7 +1006,7 @@ bool BuildingReaderPrivate::readPoint(const QString &name, QPoint &result)
         result = QPoint();
         return true;
     }
-    QStringList split = s.split(QLatin1Char(','), QString::SkipEmptyParts);
+    QStringList split = s.split(QLatin1Char(','), Qt::SkipEmptyParts);
     if (split.size() != 2) {
         xml.raiseError(tr("expected point, got '%1'").arg(s));
         return false;

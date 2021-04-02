@@ -36,6 +36,8 @@
 
 #include <cmath>
 
+#include <QPainterPath>
+
 using namespace Tiled;
 
 #define DISPLAY_TILE_WIDTH (map()->tileWidth() * (is2x() ? 2 : 1))
@@ -561,7 +563,7 @@ void ZLevelRenderer::drawTileSelection(QPainter *painter,
 {
     painter->setBrush(color);
     painter->setPen(Qt::NoPen);
-    for (const QRect &r : region.rects()) {
+    for (const QRect &r : region) {
         QPolygonF polygon = tileRectToPolygon(r, level);
         if (QRectF(polygon.boundingRect()).intersects(exposed))
             painter->drawConvexPolygon(polygon);
@@ -734,6 +736,8 @@ QPoint ZLevelRenderer::rotatePoint(const QPoint &pos) const
         return QPoint(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
     case MapRotation::Clockwise270:
         return QPoint(pos.y(), map()->width() - pos.x() - 1);
+    default:
+        return pos;
     }
 }
 
@@ -749,6 +753,8 @@ QPoint ZLevelRenderer::unrotatePoint(const QPoint &pos) const
         return QPoint(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
     case MapRotation::Clockwise270:
         return QPoint(map()->width() - pos.y() - 1, pos.x());
+    default:
+        return pos;
     }
 }
 
@@ -764,6 +770,8 @@ QPointF ZLevelRenderer::rotatePointF(const QPointF &pos) const
         return QPointF(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
     case MapRotation::Clockwise270:
         return QPointF(pos.y(), map()->width() - pos.x() - 1);
+    default:
+        return pos;
     }
 }
 
@@ -779,6 +787,8 @@ QPointF ZLevelRenderer::unrotatePointF(const QPointF &pos) const
         return QPointF(map()->width() - pos.x() - 1, map()->height() - pos.y() - 1);
     case MapRotation::Clockwise270:
         return QPointF(map()->width() - pos.y() - 1, pos.x());
+    default:
+        return pos;
     }
 }
 

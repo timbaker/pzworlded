@@ -86,6 +86,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QRandomGenerator>
 #include <QScrollBar>
 #include <QUndoGroup>
 #include <QUndoStack>
@@ -125,11 +126,11 @@ MainWindow::MainWindow(QWidget *parent)
     mZoomComboBox = ui->zoomComboBox;
 
     QString coordString = QLatin1String("Cell x,y=300,300");
-    int width = ui->coordinatesLabel->fontMetrics().width(coordString);
+    int width = ui->coordinatesLabel->fontMetrics().horizontalAdvance(coordString);
     ui->coordinatesLabel->setMinimumWidth(width + 8);
 
     coordString = QLatin1String("World x,y=9999,9999");
-    width = ui->coordinatesLabel->fontMetrics().width(coordString);
+    width = ui->coordinatesLabel->fontMetrics().horizontalAdvance(coordString);
     ui->worldCoordinatesLabel->setMinimumWidth(width + 8);
 
     ui->actionSave->setShortcuts(QKeySequence::Save);
@@ -1159,7 +1160,7 @@ void MainWindow::FromToAux(bool selectedOnly)
                         if (!cell.tile) continue;
                         if (tileMapping.contains(qMakePair(tl,cell.tile))) {
                             QList<Tile*> &choices = tileMapping[qMakePair(tl,cell.tile)];
-                            tl->setCell(x, y, Cell(choices[qrand() % choices.size()]));
+                            tl->setCell(x, y, Cell(choices[QRandomGenerator::global()->generate() % choices.size()]));
                         }
                     }
                 }
@@ -1683,7 +1684,7 @@ void MainWindow::extractObjects()
             if (o->name() != QLatin1String("lot") && !o->name().isEmpty()) {
                 // Create a new ObjectGroup if needed
                 WorldObjectGroup *group = world->nullObjectGroup();
-                QString name = MapComposite::layerNameWithoutPrefix(og->name());
+                QString name = og->name(); // MapComposite::layerNameWithoutPrefix(og->name());
                 if (!name.isEmpty()) {
                     group = world->objectGroups().find(name);
                     if (!group) {

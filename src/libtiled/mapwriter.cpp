@@ -407,7 +407,7 @@ void MapWriterPrivate::writeLayerAttributes(QXmlStreamWriter &w,
     w.writeAttribute(QLatin1String("name"), layer->name());
     w.writeAttribute(QLatin1String("width"), QString::number(layer->width()));
     w.writeAttribute(QLatin1String("height"), QString::number(layer->height()));
-    w.writeAttribute(QLatin1Literal("level"), QString::number(layer->level()));
+    w.writeAttribute(QLatin1String("level"), QString::number(layer->level()));
     const int x = layer->x();
     const int y = layer->y();
     const qreal opacity = layer->opacity();
@@ -619,8 +619,8 @@ void MapWriterPrivate::writeBmpSettings(QXmlStreamWriter &w,
     w.writeAttribute(QLatin1String("file"), fileName);
     w.writeEndElement(); // <blends-file>
 
-    w.writeStartElement(QLatin1Literal("edges-everywhere"));
-    w.writeAttribute(QLatin1Literal("value"), QLatin1Literal(settings->isBlendEdgesEverywhere() ? "true" : "false"));
+    w.writeStartElement(QLatin1String("edges-everywhere"));
+    w.writeAttribute(QLatin1String("value"), QLatin1String(settings->isBlendEdgesEverywhere() ? "true" : "false"));
     w.writeEndElement(); // <edges-everywhere>
 
     w.writeStartElement(QLatin1String("aliases"));
@@ -683,7 +683,7 @@ void MapWriterPrivate::writeBmpImage(QXmlStreamWriter &w,
             return qBlue(a) < qBlue(b);
         }
     };
-    qSort(colors.begin(), colors.end(), ColorCompare());
+    std::sort(colors.begin(), colors.end(), ColorCompare());
 
     w.writeStartElement(QLatin1String("bmp-image"));
     w.writeAttribute(QLatin1String("index"), QString::number(index));

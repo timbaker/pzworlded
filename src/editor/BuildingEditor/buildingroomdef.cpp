@@ -44,7 +44,7 @@ BuildingRoomDefecator::BuildingRoomDefecator(BuildingFloor *floor, Room *room) :
 
 void BuildingRoomDefecator::defecate()
 {
-    foreach (QRect r, mRoomRegion.rects()) {
+    for (const QRect &r : mRoomRegion) {
         for (int y = r.top(); y <= r.bottom(); y++) {
             for (int x = r.left(); x <= r.right(); x++) {
                 if (!isValidPos(x, y))

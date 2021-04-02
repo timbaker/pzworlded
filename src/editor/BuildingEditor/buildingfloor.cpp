@@ -38,7 +38,7 @@
 // I found the solution here:
 // http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
 template class __declspec(dllimport) QMap<QString, QString>;
-template class __declspec(dllimport) QVector<QVector<int> >;
+template class __declspec(dllimport) QVector<QVector<quint32> >;
 #endif
 
 using namespace BuildingEditor;
@@ -112,8 +112,8 @@ bool FloorTileGrid::replace(const BuildingCell &tile)
 bool FloorTileGrid::replace(const QRegion &rgn, const BuildingCell &tile)
 {
     bool changed = false;
-    for (QRect r2 : rgn.rects()) {
-        r2 &= bounds();
+    for (const QRect &r1 : rgn) {
+        QRect r2 = r1 & bounds();
         for (int x = r2.left(); x <= r2.right(); x++) {
             for (int y = r2.top(); y <= r2.bottom(); y++) {
                 if (at(x, y) != tile) {
@@ -131,8 +131,8 @@ bool FloorTileGrid::replace(const QRegion &rgn, const QPoint &p,
 {
     Q_ASSERT(other->bounds().translated(p).contains(rgn.boundingRect()));
     bool changed = false;
-    for (QRect r2 : rgn.rects()) {
-        r2 &= bounds();
+    for (const QRect &r1 : rgn) {
+        QRect r2 = r1 & bounds();
         for (int x = r2.left(); x <= r2.right(); x++) {
             for (int y = r2.top(); y <= r2.bottom(); y++) {
                 BuildingCell tile = other->at(x - p.x(), y - p.y());
@@ -205,8 +205,8 @@ FloorTileGrid *FloorTileGrid::clone(const QRect &r)
 FloorTileGrid *FloorTileGrid::clone(const QRect &r, const QRegion &rgn)
 {
     FloorTileGrid *klone = new FloorTileGrid(r.width(), r.height());
-    for (QRect r2 : rgn.rects()) {
-        r2 &= bounds() & r;
+    for (const QRect &r1 : rgn) {
+        QRect r2 = r1 & bounds() & r;
         for (int x = r2.left(); x <= r2.right(); x++) {
             for (int y = r2.top(); y <= r2.bottom(); y++) {
                 klone->replace(x - r.x(), y - r.y(), at(x, y));
@@ -604,11 +604,11 @@ static bool canPlaceWallE(BuildingFloor *floor, int x, int y)
     if (x >= floor->width()) {
         return false;
     }
-    BuildingCell userTile1 = floor->grimeAt(QLatin1Literal("Wall"), x + 1, y);
+    BuildingCell userTile1 = floor->grimeAt(QLatin1String("Wall"), x + 1, y);
     if (!userTile1.isEmpty() && tileHasWallPropertyW(userTile1.tileName())) {
         return false;
     }
-    BuildingCell userTile2 = floor->grimeAt(QLatin1Literal("Wall2"), x + 1, y);
+    BuildingCell userTile2 = floor->grimeAt(QLatin1String("Wall2"), x + 1, y);
     if (!userTile2.isEmpty() && tileHasWallPropertyW(userTile2.tileName())) {
         return false;
     }
@@ -625,11 +625,11 @@ static bool canPlaceWallS(BuildingFloor *floor, int x, int y)
     if (y >= floor->height()) {
         return false;
     }
-    BuildingCell userTile1 = floor->grimeAt(QLatin1Literal("Wall"), x, y + 1);
+    BuildingCell userTile1 = floor->grimeAt(QLatin1String("Wall"), x, y + 1);
     if (!userTile1.isEmpty() && tileHasWallPropertyN(userTile1.tileName())) {
         return false;
     }
-    BuildingCell userTile2 = floor->grimeAt(QLatin1Literal("Wall2"), x, y + 1);
+    BuildingCell userTile2 = floor->grimeAt(QLatin1String("Wall2"), x, y + 1);
     if (!userTile2.isEmpty() && tileHasWallPropertyN(userTile2.tileName())) {
         return false;
     }
@@ -1291,11 +1291,11 @@ void BuildingFloor::LayoutToSquares()
             if (square.HasShuttersW()) {
                 if (square.mExterior) {
                     if (y > 0)
-                        squares[x][y - 1].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestBelow, Tiled::MapRotation::NotRotated);
-                    squares[x][y].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestAbove, Tiled::MapRotation::NotRotated);
+                        squares[x][y - 1].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestAbove, Tiled::MapRotation::NotRotated);
                     squares[x][y].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestBelow, Tiled::MapRotation::NotRotated);
+                    squares[x][y].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestAbove, Tiled::MapRotation::NotRotated);
                     if (y < height() + 1)
-                        squares[x][y + 1].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestAbove, Tiled::MapRotation::NotRotated);
+                        squares[x][y + 1].ReplaceShutters(square.mWallW.window, BTC_Shutters::WestBelow, Tiled::MapRotation::NotRotated);
                 }
             }
             if (square.HasShuttersE()) {
@@ -1422,10 +1422,10 @@ void BuildingFloor::LayoutToSquares()
         }
     }
 
-    FloorTileGrid *userTilesWall = mGrimeGrid.contains(QLatin1Literal("Wall")) ? mGrimeGrid[QLatin1Literal("Wall")] : nullptr;
-    FloorTileGrid *userTilesWall2 = mGrimeGrid.contains(QLatin1Literal("Wall2")) ? mGrimeGrid[QLatin1Literal("Wall2")] : nullptr;
-    FloorTileGrid *userTilesWall3 = mGrimeGrid.contains(QLatin1Literal("Wall3")) ? mGrimeGrid[QLatin1Literal("Wall3")] : nullptr;
-    FloorTileGrid *userTilesWall4 = mGrimeGrid.contains(QLatin1Literal("Wall4")) ? mGrimeGrid[QLatin1Literal("Wall4")] : nullptr;
+    FloorTileGrid *userTilesWall = mGrimeGrid.contains(QLatin1String("Wall")) ? mGrimeGrid[QLatin1String("Wall")] : nullptr;
+    FloorTileGrid *userTilesWall2 = mGrimeGrid.contains(QLatin1String("Wall2")) ? mGrimeGrid[QLatin1String("Wall2")] : nullptr;
+    FloorTileGrid *userTilesWall3 = mGrimeGrid.contains(QLatin1String("Wall3")) ? mGrimeGrid[QLatin1String("Wall3")] : nullptr;
+    FloorTileGrid *userTilesWall4 = mGrimeGrid.contains(QLatin1String("Wall4")) ? mGrimeGrid[QLatin1String("Wall4")] : nullptr;
 
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
@@ -1621,7 +1621,7 @@ QVector<QRect> BuildingFloor::roomRegion(Room *room)
 
     // Clean up the region by merging vertically-adjacent rectangles of the
     // same width.
-    QVector<QRect> rects = region.rects();
+    QVector<QRect> rects(region.cbegin(), region.cend());
     for (int i = 0; i < rects.size(); i++) {
         QRect r = rects[i];
         if (!r.isValid()) continue;
@@ -2322,7 +2322,7 @@ void TileDefWatcher::check()
     if (!tileDefFileChecked) {
         QFileInfo fileInfo(TileMetaInfoMgr::instance()->tilesDirectory() + QString::fromLatin1("/newtiledefinitions.tiles"));
 #if 1
-        QFileInfo info2(QLatin1Literal("D:/zomboid-svn/Anims2/workdir/media/newtiledefinitions.tiles"));
+        QFileInfo info2(QLatin1String("D:/zomboid-svn/Anims2/workdir/media/newtiledefinitions.tiles"));
         if (info2.exists())
             fileInfo = info2;
 #endif
@@ -2407,11 +2407,11 @@ static bool tileHasGrimeProperties(BuildingTile *btile, GrimeProperties *props)
                         props->West = props->North = true;
                     else if (tdt->mProperties.contains(QString::fromLatin1("WallSE")))
                         props->SouthEast = true;
-                    if (tdt->mProperties.contains(QLatin1Literal("GrimeType"))) {
-                        props->FullWindow = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("FullWindow");
-                        props->Trim = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("Trim");
-                        props->DoubleLeft = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("DoubleLeft");
-                        props->DoubleRight = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("DoubleRight");
+                    if (tdt->mProperties.contains(QLatin1String("GrimeType"))) {
+                        props->FullWindow = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("FullWindow");
+                        props->Trim = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("Trim");
+                        props->DoubleLeft = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("DoubleLeft");
+                        props->DoubleRight = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("DoubleRight");
                     }
                 }
                 return true;

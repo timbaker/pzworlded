@@ -192,7 +192,7 @@ bool TileMetaInfoMgr::readTxt()
 
         TilesetMetaInfo *info = new TilesetMetaInfo;
         for (const TilesetsTxtFile::Tile& fileTile : fileTileset->mTiles) {
-            QString coordString = QString(QLatin1Literal("%1,%2")).arg(fileTile.mX).arg(fileTile.mY);
+            QString coordString = QStringLiteral("%1,%2").arg(fileTile.mX).arg(fileTile.mY);
             info->mInfo[coordString].mMetaGameEnum = fileTile.mMetaEnum;
         }
         mTilesetInfo[fileTileset->mName] = info;
@@ -739,7 +739,7 @@ bool TileMetaInfoMgr::isEnumNorth(const QString &enumName) const
 
 bool TileMetaInfoMgr::parse2Ints(const QString &s, int *pa, int *pb)
 {
-    QStringList coords = s.split(QLatin1Char(','), QString::SkipEmptyParts);
+    QStringList coords = s.split(QLatin1Char(','), Qt::SkipEmptyParts);
     if (coords.size() != 2)
         return false;
     bool ok;

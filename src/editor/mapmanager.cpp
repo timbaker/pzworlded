@@ -760,7 +760,7 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     QSet<Tileset*> usedTilesets = map->usedTilesets();
     usedTilesets.remove(TilesetManager::instance()->missingTileset());
 
-    TileMetaInfoMgr::instance()->loadTilesets(usedTilesets.toList());
+    TileMetaInfoMgr::instance()->loadTilesets(QList<Tileset*>(usedTilesets.constBegin(), usedTilesets.constEnd()));
 
     // The map references TileMetaInfoMgr's tilesets, but we add a reference
     // to them ourself below.

@@ -155,7 +155,7 @@ public:
     {
 //      initFromBuildingTiles();
         TileRotationFile file;
-        if (file.read(QLatin1Literal("D:\\pz\\TileRotation.txt"))) {
+        if (file.read(QLatin1String("D:\\pz\\TileRotation.txt"))) {
             mTilesetRotatedList = file.takeTilesets();
             mVisuals = file.takeVisuals();
             mTilesetByName.clear();
@@ -357,6 +357,7 @@ void TileRotation::reload()
 
 MapRotation TileRotation::unrotateTile(const QString &tileName, MapRotation viewRotation)
 {
+    Q_UNUSED(tileName)
     switch (viewRotation) {
     case MapRotation::NotRotated:
         return MapRotation::NotRotated;

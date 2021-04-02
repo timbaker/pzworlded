@@ -52,7 +52,7 @@ public:
 
     QStringList values() const
     {
-        return value.split(QRegExp(QLatin1String("[\\s]+")), QString::SkipEmptyParts);
+        return value.split(QRegExp(QLatin1String("[\\s]+")), Qt::SkipEmptyParts);
     }
 
     QString name;

@@ -38,6 +38,8 @@
 #include "ztilelayergroup.h"
 #endif
 
+#include <QPainterPath>
+
 #include <cmath>
 
 using namespace Tiled;
@@ -497,7 +499,7 @@ void IsometricRenderer::drawTileSelection(QPainter *painter,
 #endif
     painter->setBrush(color);
     painter->setPen(Qt::NoPen);
-    foreach (const QRect &r, region.rects()) {
+    for (const QRect &r : region) {
         QPolygonF polygon = tileRectToPolygon(r);
         if (QRectF(polygon.boundingRect()).intersects(exposed))
             painter->drawConvexPolygon(polygon);

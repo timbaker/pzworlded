@@ -259,7 +259,7 @@ QVariant PropertiesModel::data(const QModelIndex &index, int role) const
             return index.column() ? QVariant() : item->peChoice;
         case Qt::CheckStateRole: {
             if (index.column()) break;
-            QStringList values = item->parent->p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            QStringList values = item->parent->p->mValue.split(QLatin1String(","), Qt::SkipEmptyParts);
             return values.contains(item->peChoice) ? Qt::Checked : Qt::Unchecked;
         }
         default:
@@ -298,7 +298,7 @@ bool PropertiesModel::setData(const QModelIndex &index, const QVariant &value,
             if (item->parent->parent->parent != mRootItem) break;
             if (index.column()) break;
             Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
-            QStringList values = item->parent->p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            QStringList values = item->parent->p->mValue.split(QLatin1String(","), Qt::SkipEmptyParts);
             QStringList choices = pe->values();
             for (int i = 0; i < choices.size(); i++) {
                 if (!pe->isMulti()) {
@@ -977,7 +977,7 @@ PropertiesDock::PropertiesDock(QWidget *parent)
     frame->setFrameShape(QFrame::NoFrame);
 
     QVBoxLayout *vlayout = new QVBoxLayout();
-    vlayout->setMargin(2);
+    vlayout->setContentsMargins(2, 2, 2, 2);
     vlayout->setSpacing(3);
 
     vlayout->addWidget(mLabel);

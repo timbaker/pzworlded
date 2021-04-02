@@ -871,7 +871,7 @@ void WorldDocument::removePropertyEnumChoice(PropertyHolder *ph, PropertyEnum *p
 {
     foreach (Property *p, ph->properties()) {
         if (p->mDefinition->mEnum == pe) {
-            QStringList values = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            QStringList values = p->mValue.split(QLatin1String(","), Qt::SkipEmptyParts);
             values.removeAll(name);
             QString value = values.join(QLatin1String(","));
             if (value != p->mValue)
@@ -897,7 +897,7 @@ void WorldDocument::syncPropertyEnumChoices(PropertyHolder *ph, PropertyDef *pd,
 {
     foreach (Property *p, ph->properties()) {
         if (p->mDefinition == pd) {
-            QStringList values = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+            QStringList values = p->mValue.split(QLatin1String(","), Qt::SkipEmptyParts);
             for (int i = 0; i < values.size(); i++) {
                 if (!choices.contains(values[i]))
                     values.removeAt(i--);

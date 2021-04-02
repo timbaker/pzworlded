@@ -238,7 +238,7 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
     QDir dir1x(tiles1xDir);
     QDir dir2x(tiles2xDir);
 
-    QString fileName = tilesetName + QLatin1Literal(".png");
+    QString fileName = tilesetName + QLatin1String(".png");
     path1x = dir1x.filePath(fileName);
     path2x = dir2x.filePath(fileName);
 

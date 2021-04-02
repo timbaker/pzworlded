@@ -201,5 +201,5 @@ QStringList Building::tilesetNames() const
             ret += btile->mTilesetName;
     }
 
-    return ret.toList();
+    return QStringList(ret.constBegin(), ret.constEnd());
 }

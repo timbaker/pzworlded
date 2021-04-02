@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QMap>
 #include <QSharedPointer>
 
 class SimpleFileBlock;

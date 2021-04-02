@@ -69,7 +69,7 @@ public:
         : QGraphicsItem(parent)
         , mScene(scene)
     {
-        setAcceptedMouseButtons(0);
+        setAcceptedMouseButtons(Qt::MouseButtons());
         setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
         updateBoundingRect();
     }
@@ -114,7 +114,7 @@ CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
     , mCell(scene->cell())
     , mMapImage(0)
 {
-    setAcceptedMouseButtons(0);
+    setAcceptedMouseButtons(Qt::MouseButtons());
 
     updateCellImage();
 

@@ -47,6 +47,7 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QMessageBox>
+#include <QPainterPath>
 
 #ifdef QT_NO_DEBUG
 inline QNoDebug noise() { return QNoDebug(); }
@@ -1077,7 +1078,7 @@ MapImageData MapImageRenderWorker::generateMapImage(MapComposite *mapComposite)
     QPainter painter(&image);
 
     painter.setRenderHints(QPainter::SmoothPixmapTransform |
-                           QPainter::HighQualityAntialiasing);
+                           QPainter::Antialiasing);
     painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
 
     foreach (MapComposite::ZOrderItem zo, mapComposite->zOrder()) {

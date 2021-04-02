@@ -37,6 +37,8 @@
 #include "tilelayer.h"
 #include "tileset.h"
 
+#include <QRandomGenerator>
+
 using namespace Tiled;
 
 Map::Map(Orientation orientation,
@@ -237,7 +239,7 @@ void Map::replaceTileset(Tileset *oldTileset, Tileset *newTileset)
 
     for (MapLevel *mapLevel : mLevels) {
         for (Layer *layer : mapLevel->layers()) {
-        layer->replaceReferencesToTileset(oldTileset, newTileset);
+            layer->replaceReferencesToTileset(oldTileset, newTileset);
         }
     }
 
@@ -260,7 +262,8 @@ bool Map::isTilesetUsed(Tileset *tileset) const
 #ifdef ZOMBOID
 QSet<Tileset *> Map::usedTilesets() const
 {
-    return mUsedTilesets.keys().toSet();
+    QList<Tileset*> keys = mUsedTilesets.keys();
+    return QSet<Tileset*>(keys.constBegin(), keys.constEnd());
 }
 
 void Map::addTilesetUser(Tileset *tileset)
@@ -352,7 +355,7 @@ Map *Map::clone() const
     o->mDrawMargins = mDrawMargins;
     for (const MapLevel *mapLevel : mLevels) {
         for (const Layer *layer : mapLevel->layers()) {
-        o->addLayer(layer->clone());
+            o->addLayer(layer->clone());
         }
     }
     o->mTilesets = mTilesets;
@@ -428,12 +431,12 @@ MapRands::MapRands(int width, int height, uint seed) :
 
 void MapRands::setSize(int width, int height)
 {
-    qsrand(mSeed);
+    QRandomGenerator prng(mSeed);
     resize(width);
     for (int x = 0; x < width; x++) {
         (*this)[x].resize(height);
         for (int y = 0; y < height; y++)
-            (*this)[x][y] = qrand();
+            (*this)[x][y] = prng.generate();
     }
 }
 
@@ -568,7 +571,7 @@ QList<QRgb> MapBmp::colors() const
                 colorSet += rgb;
         }
     }
-    return colorSet.toList();
+    return QList<QRgb>(colorSet.constBegin(), colorSet.constEnd());
 }
 
 /////
@@ -594,7 +597,7 @@ void MapNoBlend::replace(const MapNoBlend *other, const QRegion &rgn)
     Q_ASSERT(other->width() == bounds.width() && other->height() == bounds.height());
     QRegion clipped = rgn & QRect(0, 0, width(), height());
 
-    foreach (QRect r, clipped.rects()) {
+    for (const QRect &r : clipped) {
         for (int y = r.top(); y <= r.bottom(); y++) {
             for (int x = r.x(); x <= r.right(); x++) {
                 set(x, y, other->get(x - bounds.x(),  y - bounds.y()));
@@ -608,7 +611,7 @@ MapNoBlend MapNoBlend::copy(const QRegion &rgn)
     QRect bounds = rgn.boundingRect();
     MapNoBlend copy(layerName(), bounds.width(), bounds.height());
     QRegion clipped = rgn & QRect(0, 0, width(), height());
-    foreach (QRect r, clipped.rects()) {
+    for (const QRect &r : clipped) {
         for (int y = r.top(); y <= r.bottom(); y++) {
             for (int x = r.x(); x <= r.right(); x++) {
                 copy.set(x - bounds.x(), y - bounds.y(), get(x, y));

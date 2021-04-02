@@ -257,7 +257,7 @@ public:
                         PropertyList properties;
                         resolveProperties(obj, properties);
                         if (Property *p = properties.find(pd)) {
-                            QStringList professions = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+                            QStringList professions = p->mValue.split(QLatin1String(","), Qt::SkipEmptyParts);
                             if (professions.contains(QLatin1String("all"))) {
                                 if (pd->mEnum)
                                     professions = pd->mEnum->values();

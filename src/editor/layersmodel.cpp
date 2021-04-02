@@ -95,7 +95,7 @@ QVariant LayersModel::data(const QModelIndex &index, int role) const
     if (TileLayer *tl = toTileLayer(index)) {
         switch (role) {
         case Qt::DisplayRole:
-            return MapComposite::layerNameWithoutPrefix(tl);
+            return tl->name(); // MapComposite::layerNameWithoutPrefix(tl);
         case Qt::EditRole:
             return tl->name();
         case Qt::DecorationRole:

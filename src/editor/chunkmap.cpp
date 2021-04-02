@@ -9,11 +9,11 @@
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the MapRands class as so:
-// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
+// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<quint32> >
 // Suddenly I'm getting a 'multiply-defined symbol' error.
 // I found the solution here:
 // http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
-template class __declspec(dllimport) QVector<QVector<int> >;
+template class __declspec(dllimport) QVector<QVector<quint32> >;
 #endif
 
 /////

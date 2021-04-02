@@ -44,7 +44,7 @@ MapsDock::MapsDock(QWidget *parent)
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setMargin(2);
+    layout->setContentsMargins(2, 2, 2, 2);
 
     mPreviewLabel->setFrameShape(QFrame::StyledPanel);
     mPreviewLabel->setFrameShadow(QFrame::Plain);
@@ -54,9 +54,9 @@ MapsDock::MapsDock(QWidget *parent)
     QHBoxLayout *dirLayout = new QHBoxLayout;
     QLabel *label = new QLabel(tr("Folder:"));
 
-    // QDirModel is obsolete, but I could not get QFileSystemModel to work here
     QLineEdit *edit = mDirectoryEdit = new QLineEdit();
-    QDirModel *model = new QDirModel(this);
+    QFileSystemModel *model = new QFileSystemModel(this);
+    model->setRootPath(QDir::rootPath());
     model->setFilter(QDir::AllDirs | QDir::Dirs | QDir::Drives | QDir::NoDotAndDotDot);
     QCompleter *completer = new QCompleter(model, this);
     edit->setCompleter(completer);
@@ -200,7 +200,7 @@ MapsView::MapsView(QWidget *parent)
     if (!mapsDir.exists())
         mapsDir.setPath(QDir::currentPath());
 
-    QFileSystemModel *model = mFSModel = new QFileSystemModel;
+    QFileSystemModel *model = mFSModel = new QFileSystemModel(this);
     model->setRootPath(mapsDir.absolutePath());
 
     model->setFilter(QDir::AllDirs | QDir::NoDot | QDir::Files);

@@ -60,7 +60,7 @@ LayersDock::LayersDock(QWidget *parent)
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setMargin(2);
+    layout->setContentsMargins(2, 2, 2, 2);
     layout->addLayout(opacityLayout);
     layout->addWidget(mView);
 

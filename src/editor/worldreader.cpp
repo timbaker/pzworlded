@@ -142,7 +142,7 @@ private:
         const QString choicesString = atts.value(QLatin1String("choices")).toString();
         const QString multiString = atts.value(QLatin1String("multi")).toString();
 
-        QStringList choices = choicesString.split(QLatin1String(","), QString::SkipEmptyParts);
+        QStringList choices = choicesString.split(QLatin1String(","), Qt::SkipEmptyParts);
         bool multi = multiString == QLatin1String("true");
 
         PropertyEnum *pe = new PropertyEnum(name, choices, multi);
@@ -625,7 +625,7 @@ private:
             result = QPoint();
             return true;
         }
-        QStringList split = s.split(QLatin1Char(','), QString::SkipEmptyParts);
+        QStringList split = s.split(QLatin1Char(','), Qt::SkipEmptyParts);
         if (split.size() != 2) {
             xml.raiseError(tr("expected point, got '%1'").arg(s));
             return false;

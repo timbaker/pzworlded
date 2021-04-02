@@ -35,6 +35,8 @@
 #include "tileset.h"
 #include "imagelayer.h"
 
+#include <QPainterPath>
+
 #include <cmath>
 
 using namespace Tiled;
@@ -314,7 +316,7 @@ void OrthogonalRenderer::drawTileSelection(QPainter *painter,
                                            const QRectF &exposed) const
 {
 #endif
-    foreach (const QRect &r, region.rects()) {
+    for (const QRect &r : region) {
         const QRectF toFill = QRectF(boundingRect(r)).intersected(exposed);
         if (!toFill.isEmpty())
             painter->fillRect(toFill, color);

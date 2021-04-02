@@ -56,7 +56,7 @@ class ZTileLayerGroup;
   * This class represents a grid of random numbers for each cell in a Map.
   * The random numbers are used by the BmpBlender class.
   */
-class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
+class TILEDSHARED_EXPORT MapRands : public QVector<QVector<quint32> >
 {
 public:
     MapRands(int width, int height, uint seed);
@@ -85,7 +85,7 @@ public:
     QRgb pixel(int x, int y) const { return mImage.pixel(x, y); }
     void setPixel(int x, int y, QRgb rgb) { mImage.setPixel(x, y, rgb); }
 
-    int rand(int x, int y) { return mRands[x][y]; }
+    quint32 rand(int x, int y) { return mRands[x][y]; }
 
     void resize(const QSize &size, const QPoint &offset);
     void merge(const QPoint &pos, const MapBmp *other);

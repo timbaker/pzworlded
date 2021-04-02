@@ -779,7 +779,7 @@ BaseCellItem::BaseCellItem(WorldScene *scene, QGraphicsItem *parent)
     , mMapImage(0)
     , mWantsImages(true)
 {
-    setAcceptedMouseButtons(0);
+    setAcceptedMouseButtons(Qt::MouseButtons());
 #ifndef QT_NO_DEBUG
     mUpdatingImage = false;
 #endif
@@ -1367,7 +1367,7 @@ void WorldCoordItem::paint(QPainter *painter,
         for (int x = startX; x <= endX; ++x) {
             QString text = QString(QLatin1String("%1,%2")).arg(worldOrigin.x() + x).arg(worldOrigin.y() + y);
 
-            int textWidth = fm.width(text);
+            int textWidth = fm.horizontalAdvance(text);
             QPointF center = mScene->cellToPixelCoords(x + 0.5, y + 0.5);
             QRectF r(center.x() - textWidth/2.0, center.y() - lineHeight/2.0, textWidth, lineHeight);
             r.adjust(-5 * scale, -5 * scale, 4 * scale, 4 * scale);

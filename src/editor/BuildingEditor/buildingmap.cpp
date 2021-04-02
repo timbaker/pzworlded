@@ -94,7 +94,7 @@ BuildingCell BuildingMap::buildingTileAt(int x, int y, int level, const QString 
     BuildingCell buildingCell;
 
     for (TileLayer *tl : layerGroup->layers()) {
-        if (layerName == MapComposite::layerNameWithoutPrefix(tl)) {
+        if (layerName == tl->name() /* MapComposite::layerNameWithoutPrefix(tl) */) {
             if (tl->contains(x, y)) {
                 const Cell &cell = tl->cellAt(x, y);
                 if (!cell.isEmpty()) {
@@ -130,7 +130,7 @@ BuildingCell BuildingMap::buildingTileAt(int x, int y, const QList<bool> visible
                     // User-drawn tiles second.
                     TileLayer *tlBlend = lgBlend->layers().at(i);
                     TileLayer *tl = lg->layers().at(i);
-                    QString layerName = MapComposite::layerNameWithoutPrefix(tl->name());
+                    QString layerName = tl->name(); // MapComposite::layerNameWithoutPrefix(tl->name());
                     if (!mBuilding->floor(level)->layerVisibility(layerName))
                         continue;
                     if (!tl->contains(tx, ty))
@@ -329,8 +329,8 @@ void BuildingMap::suppressTiles(BuildingFloor *floor, const QRegion &rgn)
         mSuppressTiles[floor] = rgn;
     }
     if (!update.isEmpty()) {
-        foreach (QRect r, update.rects()) {
-            r &= floor->bounds(1, 1);
+        for (const QRect &r1 : update) {
+            QRect r = r1 & floor->bounds(1, 1);
             pendingSquaresToTileLayers[floor] |= r;
             foreach (QString layerName, floor->grimeLayers())
                 pendingUserTilesToLayer[floor][layerName] |= r;
@@ -379,7 +379,7 @@ static QList<QRect> cleanupRegion(QRegion region)
 {
     // Clean up the region by merging vertically-adjacent rectangles of the
     // same width.
-    QVector<QRect> rects = region.rects();
+    QVector<QRect> rects(region.cbegin(), region.cend());
     for (int i = 0; i < rects.size(); i++) {
         QRect r = rects[i];
         if (!r.isValid()) continue;
@@ -471,7 +471,7 @@ void BuildingMap::buildingRotated()
 
     // When rotating or flipping, all the user tiles are cleared.
     // However, no signal is emitted until the buildingRotated signal.
-    pendingEraseUserTiles = mBuilding->floors().toSet();
+    pendingEraseUserTiles = QSet<BuildingFloor*>(mBuilding->floors().constBegin(), mBuilding->floors().constEnd());
 
     schedulePending();
 }
@@ -559,7 +559,7 @@ void BuildingMap::BuildingToMap()
     for (CompositeLayerGroup *layerGroup : mMapComposite->layerGroups()) {
         BuildingFloor *floor = mBuilding->floor(layerGroup->level());
         for (TileLayer *tl : layerGroup->layers()) {
-            QString layerName = MapComposite::layerNameWithoutPrefix(tl);
+            QString layerName = tl->name(); // MapComposite::layerNameWithoutPrefix(tl);
             layerGroup->setLayerOpacity(tl, floor->layerOpacity(layerName));
         }
     }
@@ -651,7 +651,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
     CompositeLayerGroup *layerGroup = mMapComposite->layerGroupForLevel(floor->level());
     TileLayer *layer = nullptr;
     foreach (TileLayer *tl, layerGroup->layers()) {
-        if (layerName == MapComposite::layerNameWithoutPrefix(tl)) {
+        if (layerName == tl->name() /*MapComposite::layerNameWithoutPrefix(tl)*/) {
             layer = tl;
             break;
         }
@@ -727,7 +727,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor)
     pendingEraseUserTiles.insert(floor);
 
     // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
-//    if (tiles.contains(QLatin1Literal("Walls")) || tiles.contains(QLatin1Literal("Walls2")))
+//    if (tiles.contains(QLatin1String("Walls")) || tiles.contains(QLatin1String("Walls2")))
         pendingLayoutToSquares.insert(floor);
 
     schedulePending();
@@ -741,7 +741,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor, const QString &layerNa
     pendingUserTilesToLayer[floor][layerName] |= bounds;
 
     // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
-    if (layerName == QLatin1Literal("Wall") || layerName == QLatin1Literal("Wall2"))
+    if (layerName == QLatin1String("Wall") || layerName == QLatin1String("Wall2"))
         pendingLayoutToSquares.insert(floor);
 
     schedulePending();
@@ -901,7 +901,7 @@ void BuildingMap::handlePending()
     }
 
     if (pendingRecreateAll || pendingBuildingResized) {
-        pendingLayoutToSquares = mBuilding->floors().toSet();
+        pendingLayoutToSquares = QSet<BuildingFloor*>(mBuilding->floors().constBegin(), mBuilding->floors().constEnd());
         pendingUserTilesToLayer.clear();
         foreach (BuildingFloor *floor, mBuilding->floors()) {
             foreach (QString layerName, floor->grimeLayers()) {
@@ -976,8 +976,9 @@ void BuildingMap::handlePending()
         foreach (BuildingFloor *floor, pendingUserTilesToLayer.keys()) {
             foreach (QString layerName, pendingUserTilesToLayer[floor].keys()) {
                 QRegion rgn = pendingUserTilesToLayer[floor][layerName];
-                foreach (QRect r, rgn.rects())
+                for (const QRect &r : rgn) {
                     userTilesToLayer(floor, layerName, r);
+                }
                 updatedLevels[floor->level()] |= rgn;
             }
         }

@@ -453,7 +453,7 @@ void MapReaderPrivate::readLayerAttributes(Layer *layer,
         layer->setVisible(visible);
 
     if ((mVersionMajor >= 1) && (mVersionMinor >= 1)) {
-        const QStringRef levelRef = atts.value(QLatin1Literal("level"));
+        const QStringRef levelRef = atts.value(QLatin1String("level"));
         int level = levelRef.toInt(&ok);
         if (ok) {
             layer->setLevel(level);
@@ -597,18 +597,18 @@ void MapReaderPrivate::decodeBinaryLayerData(TileLayer *tileLayer,
 }
 
 #if defined(ZOMBOID) /*&& defined(_DEBUG)*/
-void QString_split(const QChar &sep, QString::SplitBehavior behavior, Qt::CaseSensitivity cs, const QString &in, QVector<int>& out)
+void QString_split(const QChar &sep, Qt::SplitBehavior behavior, Qt::CaseSensitivity cs, const QString &in, QVector<int>& out)
 {
     int start = 0;
     int end;
     while ((end = in.indexOf(sep, start, cs)) != -1) {
-        if (start != end || behavior == QString::KeepEmptyParts) {
+        if (start != end || behavior == Qt::SplitBehaviorFlags::KeepEmptyParts) {
             out.append(start);
             out.append(end - start);
         }
         start = end + 1;
     }
-    if (start != in.size() || behavior == QString::KeepEmptyParts) {
+    if (start != in.size() || behavior == Qt::SplitBehaviorFlags::KeepEmptyParts) {
         out.append(start);
         out.append(in.size() - start);
     }
@@ -928,7 +928,7 @@ QPolygonF MapReaderPrivate::readPolygon()
     const QXmlStreamAttributes atts = xml.attributes();
     const QString points = atts.value(QLatin1String("points")).toString();
     const QStringList pointsList = points.split(QLatin1Char(' '),
-                                                QString::SkipEmptyParts);
+                                                Qt::SplitBehaviorFlags::SkipEmptyParts);
 
     QPolygonF polygon;
     bool ok = true;
@@ -1046,9 +1046,9 @@ void MapReaderPrivate::readBmpSettings()
                 mMap->rbmpSettings()->setBlendsFile(fileName);
             }
             xml.skipCurrentElement();
-        } else if (xml.name() == QLatin1Literal("edges-everywhere")) {
+        } else if (xml.name() == QLatin1String("edges-everywhere")) {
             const QXmlStreamAttributes atts = xml.attributes();
-            bool everywhere = atts.value(QLatin1Literal("value")).toString() == QLatin1Literal("true");
+            bool everywhere = atts.value(QLatin1String("value")).toString() == QLatin1String("true");
             mMap->rbmpSettings()->setBlendEdgesEverywhere(everywhere);
             xml.skipCurrentElement();
         } else if (xml.name() == QLatin1String("aliases")) {
@@ -1089,7 +1089,7 @@ void MapReaderPrivate::readBmpAliases()
             const QXmlStreamAttributes atts = xml.attributes();
             QString name = atts.value(QLatin1String("name")).toString();
             QStringList tiles = atts.value(QLatin1String("tiles")).toString()
-                    .split(QLatin1Char(' '), QString::SkipEmptyParts);
+                    .split(QLatin1Char(' '), Qt::SplitBehaviorFlags::SkipEmptyParts);
             aliases += new BmpAlias(name, tiles);
             xml.skipCurrentElement();
         } else {
@@ -1163,9 +1163,9 @@ void MapReaderPrivate::readBmpBlends()
             }
             BmpBlend::Direction dir = dirMap[dirString];
             QStringList ExclusionList = atts.value(QLatin1String("ExclusionList"))
-                    .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+                    .toString().split(QLatin1Char(' '), Qt::SplitBehaviorFlags::SkipEmptyParts);
             QStringList exclude2 = atts.value(QLatin1String("exclude2"))
-                    .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+                    .toString().split(QLatin1Char(' '), Qt::SplitBehaviorFlags::SkipEmptyParts);
             if (mVersionMajor == 1 && mVersionMinor == 0) {
                 for (int i = 0; i < exclude2.size() - 1; i += 2) {
                     exclude2[i + 1] = layerNameWithoutPrefix(exclude2[i + 1]);
@@ -1202,7 +1202,7 @@ bogusColor:
                 xml.raiseError(tr("invalid bmp-image color '%1'").arg(rgbString));
                 return;
             }
-            QStringList split = rgbString.split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList split = rgbString.split(QLatin1Char(' '), Qt::SplitBehaviorFlags::SkipEmptyParts);
             if (split.size() != 3)
                 goto bogusColor;
             int r = split[0].toInt();

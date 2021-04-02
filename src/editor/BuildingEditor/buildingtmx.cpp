@@ -372,17 +372,17 @@ bool BuildingTMX::upgradeTxt()
     // Version 2: rename some layers
     if (userVersion == VERSION1) {
         QMap<QString, QString> renameLookup;
-        renameLookup[QLatin1Literal("Curtains2")] = QLatin1Literal("Curtains3");
-        renameLookup[QLatin1Literal("Doors")] = QLatin1Literal("Door");
-        renameLookup[QLatin1Literal("Frames")] = QLatin1Literal("Frame");
-        renameLookup[QLatin1Literal("Walls")] = QLatin1Literal("Wall");
-        renameLookup[QLatin1Literal("Walls2")] = QLatin1Literal("Wall2");
-        renameLookup[QLatin1Literal("Windows")] = QLatin1Literal("Window");
+        renameLookup[QLatin1String("Curtains2")] = QLatin1String("Curtains3");
+        renameLookup[QLatin1String("Doors")] = QLatin1String("Door");
+        renameLookup[QLatin1String("Frames")] = QLatin1String("Frame");
+        renameLookup[QLatin1String("Walls")] = QLatin1String("Wall");
+        renameLookup[QLatin1String("Walls2")] = QLatin1String("Wall2");
+        renameLookup[QLatin1String("Windows")] = QLatin1String("Window");
         int index = userFile.findBlock(QLatin1String("layers"));
         if (index >= 0) {
             SimpleFileBlock &layersBlock = userFile.blocks[index];
             for (SimpleFileKeyValue &kv : layersBlock.values) {
-                if (kv.name == QLatin1Literal("tile")) {
+                if (kv.name == QLatin1String("tile")) {
                     if (renameLookup.contains(kv.value)) {
                         kv.value = renameLookup[kv.value];
                     }
