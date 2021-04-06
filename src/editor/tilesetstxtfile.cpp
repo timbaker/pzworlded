@@ -69,7 +69,7 @@ bool TilesetsTxtFile::read(const QString &path)
     QSet<int> enumValueSet;
     QSet<QString> tilesetNameSet;
 
-    for (const SimpleFileBlock& block : simple.blocks) {
+    for (const SimpleFileBlock& block : qAsConst(simple.blocks)) {
         if (block.name == QLatin1String("meta-enums")) {
             for (const SimpleFileKeyValue& kv : block.values) {
                 if (enumNameSet.contains(kv.name)) {
@@ -229,7 +229,7 @@ void TilesetsTxtFile::Tileset::setTile(const TilesetsTxtFile::Tile &source)
 int TilesetsTxtFile::Tileset::findTile(int column, int row)
 {
     int i = 0;
-    for (const Tile& tile : mTiles) {
+    for (const Tile& tile : qAsConst(mTiles)) {
         if ((tile.mX == column) && (tile.mY == row)) {
             return i;
         }

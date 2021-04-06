@@ -200,7 +200,7 @@ public:
         }
     }
 
-    void overlapping(const QRect& rect, QList<RoomRect*>& rects)
+    void overlapping(const QRect& rect, QList<RoomRect*>& rects) const
     {
         int xMin = rect.x() / 10;
         int yMin = rect.y() / 10;

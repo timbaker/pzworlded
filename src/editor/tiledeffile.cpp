@@ -67,7 +67,7 @@ bool TileDefFile::read(const QString &fileName)
         return false;
     }
 
-    QDir dir = QFileInfo(fileName).absoluteDir();
+//    QDir dir = QFileInfo(fileName).absoluteDir();
 
     QDataStream in(&file);
     in.setByteOrder(QDataStream::LittleEndian);
@@ -182,11 +182,12 @@ bool TileDefFile::write(const QString &fileName)
         out << qint32(ts->mRows);
         out << qint32(ts->mID);
         out << qint32(ts->mTiles.size());
-        foreach (TileDefTile *tile, ts->mTiles) {
+        for (TileDefTile *tile : qAsConst(ts->mTiles)) {
             QMap<QString,QString> &properties = tile->mProperties;
             tile->mPropertyUI.ToProperties(properties);
             out << qint32(properties.size());
-            foreach (QString key, properties.keys()) {
+            const QStringList propertyNames = properties.keys();
+            for (const QString &key : propertyNames) {
                 SaveString(out, key);
                 SaveString(out, properties[key]);
             }

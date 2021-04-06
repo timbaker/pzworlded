@@ -419,6 +419,7 @@ void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
     Building *building = floor->building();
     ObjectGroup *objectGroup = new ObjectGroup(tr("RoomDefs"),
                                                0, 0, map->width(), map->height());
+    objectGroup->setLevel(floor->level());
     map->addLayer(objectGroup);
 
     int delta = (building->floorCount() - 1 - floor->level()) * 3;
@@ -426,14 +427,14 @@ void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
         delta = 0;
     QPoint offset(delta, delta);
     int roomID = 1;
-    foreach (Room *room, building->rooms()) {
+    for (Room *room : building->rooms()) {
 #if 1
         BuildingRoomDefecator rd(floor, room);
         rd.defecate();
-        foreach (QRegion roomRgn, rd.mRegions) {
-            foreach (QRect rect, cleanupRegion(roomRgn)) {
-                QString name = room->internalName + QLatin1Char('#')
-                        + QString::number(roomID);
+        for (const QRegion &roomRgn : qAsConst(rd.mRegions)) {
+            const QList<QRect> roomRects = cleanupRegion(roomRgn);
+            for (const QRect &rect : roomRects) {
+                QString name = room->internalName + QLatin1Char('#') + QString::number(roomID);
                 MapObject *mapObject = new MapObject(name, QLatin1String("room"),
                                                      rect.topLeft() + offset,
                                                      rect.size());
@@ -542,7 +543,8 @@ void BuildingMap::BuildingToMap()
 
     mLayerToSection.clear();
     for (BuildingFloor *floor : mBuilding->floors()) {
-        for (QString name : layerNames(floor->level())) {
+        const QStringList layerNames1 = layerNames(floor->level());
+        for (const QString &name : layerNames1) {
             QString layerName = name;
             TileLayer *tl = new TileLayer(layerName, 0, 0, mapSize.width(), mapSize.height());
             tl->setLevel(floor->level());
@@ -580,7 +582,7 @@ void BuildingMap::BuildingToMap()
 
     // Set the user-drawn tiles.
     for (BuildingFloor *floor : mBuilding->floors()) {
-        for (QString layerName : floor->grimeLayers())
+        for (const QString &layerName : floor->grimeLayers())
             userTilesToLayer(floor, layerName, floor->bounds(1, 1));
     }
 
@@ -930,7 +932,7 @@ void BuildingMap::handlePending()
         MapManager::instance()->mapParametersChanged(mBlendMapComposite->mapInfo());
         mBlendMapComposite->bmpBlender()->recreate();
 
-        foreach (CompositeLayerGroup *lg, mMapComposite->layerGroups())
+        for (CompositeLayerGroup *lg : mMapComposite->layerGroups())
             lg->setNeedsSynch(true);
 
         delete mShadowBuilding;
@@ -938,7 +940,7 @@ void BuildingMap::handlePending()
     }
 
     if (!pendingLayoutToSquares.isEmpty()) {
-        foreach (BuildingFloor *floor, pendingLayoutToSquares) {
+        for (BuildingFloor *floor : pendingLayoutToSquares) {
             floor->LayoutToSquares(); // not sure this belongs in this class
             pendingSquaresToTileLayers[floor] = floor->bounds(1, 1);
 
@@ -947,7 +949,7 @@ void BuildingMap::handlePending()
     }
 
     if (!pendingSquaresToTileLayers.isEmpty()) {
-        foreach (BuildingFloor *floor, pendingSquaresToTileLayers.keys()) {
+        for (BuildingFloor *floor : pendingSquaresToTileLayers.keys()) {
             CompositeLayerGroup *layerGroup = mBlendMapComposite->layerGroupForLevel(floor->level());
             QRect area = pendingSquaresToTileLayers[floor].boundingRect(); // TODO: only affected region
             BuildingSquaresToTileLayers(floor, area, layerGroup);
@@ -962,19 +964,19 @@ void BuildingMap::handlePending()
     }
 
     if (!pendingEraseUserTiles.isEmpty()) {
-        foreach (BuildingFloor *floor, pendingEraseUserTiles) {
+        for (BuildingFloor *floor : pendingEraseUserTiles) {
             CompositeLayerGroup *layerGroup = mMapComposite->layerGroupForLevel(floor->level());
-            foreach (TileLayer *tl, layerGroup->layers())
+            for (TileLayer *tl : layerGroup->layers())
                 tl->erase();
-            foreach (QString layerName, floor->grimeLayers())
+            for (const QString &layerName : floor->grimeLayers())
                 pendingUserTilesToLayer[floor][layerName] = floor->bounds(1, 1);
             updatedLevels[floor->level()] |= floor->bounds();
         }
     }
 
     if (!pendingUserTilesToLayer.isEmpty()) {
-        foreach (BuildingFloor *floor, pendingUserTilesToLayer.keys()) {
-            foreach (QString layerName, pendingUserTilesToLayer[floor].keys()) {
+        for (BuildingFloor *floor : pendingUserTilesToLayer.keys()) {
+            for (QString layerName : pendingUserTilesToLayer[floor].keys()) {
                 QRegion rgn = pendingUserTilesToLayer[floor][layerName];
                 for (const QRect &r : rgn) {
                     userTilesToLayer(floor, layerName, r);
@@ -989,7 +991,7 @@ void BuildingMap::handlePending()
     else if (pendingBuildingResized)
         emit mapResized();
 
-    foreach (int level, updatedLevels.keys())
+    for (int level : updatedLevels.keys())
         emit layersUpdated(level, updatedLevels[level]);
 
     pending = false;

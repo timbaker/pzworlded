@@ -62,7 +62,7 @@ void MapBuildings::calculate(MapComposite *mc)
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
     QList<MapBuildingsNS::RoomRect*> overlapping;
-    for (MapBuildingsNS::RoomRectsForLevel* rr4L : mRoomRectsByLevel) {
+    for (const MapBuildingsNS::RoomRectsForLevel* rr4L : qAsConst(mRoomRectsByLevel)) {
         const QList<MapBuildingsNS::RoomRect*>& rrList = rr4L->mRects;
         for (MapBuildingsNS::RoomRect *rr : rrList) {
             if (rr->room == nullptr) {
@@ -75,7 +75,7 @@ void MapBuildings::calculate(MapComposite *mc)
                 continue;
             overlapping.clear();
             rr4L->overlapping(rr->bounds().adjusted(-1, -1, 1, 1), overlapping);
-            for (MapBuildingsNS::RoomRect *comp : overlapping) {
+            for (MapBuildingsNS::RoomRect *comp : qAsConst(overlapping)) {
                 if (comp == rr)
                     continue;
                 if (comp->room == rr->room)
@@ -83,7 +83,7 @@ void MapBuildings::calculate(MapComposite *mc)
                 if (rr->inSameRoom(comp)) {
                     if (comp->room != nullptr) {
                         MapBuildingsNS::Room *room = comp->room;
-                        for (MapBuildingsNS::RoomRect *rr2 : room->rects) {
+                        for (MapBuildingsNS::RoomRect *rr2 : qAsConst(room->rects)) {
                             Q_ASSERT(rr2->room == room);
                             Q_ASSERT(!rr->room->rects.contains(rr2));
                             rr2->room = rr->room;
@@ -105,7 +105,7 @@ void MapBuildings::calculate(MapComposite *mc)
     elapsed.restart();
 
     mRoomLookup.clear();
-    for (MapBuildingsNS::Room* r : mRooms) {
+    for (MapBuildingsNS::Room* r : qAsConst(mRooms)) {
         mRoomLookup.addRoom(r);
     }
 
@@ -119,7 +119,7 @@ void MapBuildings::calculate(MapComposite *mc)
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
     QList<MapBuildingsNS::Room*> overlappingRooms;
-    for (MapBuildingsNS::Room *r : mRooms) {
+    for (MapBuildingsNS::Room *r : qAsConst(mRooms)) {
         if (r->building == nullptr) {
             r->building = new MapBuildingsNS::Building();
             mBuildings += r->building;
@@ -127,7 +127,7 @@ void MapBuildings::calculate(MapComposite *mc)
         }
         overlappingRooms.clear();
         mRoomLookup.overlapping(r->bounds().adjusted(-1, -1, 1, 1), overlappingRooms);
-        for (MapBuildingsNS::Room *comp : overlappingRooms) {
+        for (MapBuildingsNS::Room *comp : qAsConst(overlappingRooms)) {
             if (comp == r)
                 continue;
             if (r->building == comp->building)
@@ -136,7 +136,7 @@ void MapBuildings::calculate(MapComposite *mc)
             if (r->inSameBuilding(comp)) {
                 if (comp->building != nullptr) {
                     MapBuildingsNS::Building *b = comp->building;
-                    for (MapBuildingsNS::Room *r2 : b->RoomList) {
+                    for (MapBuildingsNS::Room *r2 : qAsConst(b->RoomList)) {
                         Q_ASSERT(r2->building == b);
                         Q_ASSERT(!r->building->RoomList.contains(r2));
                         r2->building = r->building;
@@ -173,7 +173,8 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
     qDeleteAll(mRoomRectsByLevel);
     mRoomRectsByLevel.clear();
 
-    for (MapComposite *mc : mapComposite->maps()) {
+    const QList<MapComposite*> mapComposites = mapComposite->maps();
+    for (MapComposite *mc : mapComposites) {
         if (isAdjacentMap(mc))
             continue;
         if (!mc->isGroupVisible() || !mc->isVisible())
@@ -212,8 +213,8 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
         }
     }
 
-    for (MapBuildingsNS::RoomRectsForLevel* rr4L : mRoomRectsByLevel) {
-        for (MapBuildingsNS::RoomRect *rr : rr4L->mRects) {
+    for (MapBuildingsNS::RoomRectsForLevel* rr4L : qAsConst(mRoomRectsByLevel)) {
+        for (MapBuildingsNS::RoomRect *rr : qAsConst(rr4L->mRects)) {
             rr4L->addRect(rr);
         }
     }
@@ -226,7 +227,8 @@ MapBuildingsNS::Room *MapBuildings::roomAt(const QPoint &pos, int level)
     x = clamp(x, 0, 30-1);
     y = clamp(y, 0, 30-1);
 
-    for (MapBuildingsNS::Room* r : mRoomLookup.mGrid[x + y * 30]) {
+    const QList<MapBuildingsNS::Room*> rooms = mRoomLookup.mGrid[x + y * 30];
+    for (MapBuildingsNS::Room* r : rooms) {
         if ((r->floor == level) && r->contains(pos)) {
             return r;
         }

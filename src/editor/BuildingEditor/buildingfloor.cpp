@@ -220,8 +220,8 @@ void FloorTileGrid::swapToVector()
 {
     Q_ASSERT(!mUseVector);
     mCellsVector.resize(size());
-    QHash<int,BuildingCell>::const_iterator it = mCells.begin();
-    while (it != mCells.end()) {
+    QHash<int,BuildingCell>::const_iterator it = mCells.constBegin();
+    while (it != mCells.constEnd()) {
         mCellsVector[it.key()] = (*it);
         ++it;
     }
@@ -666,7 +666,7 @@ void BuildingFloor::LayoutToSquares()
         floors += room->tile(Room::Floor);
     }
 
-    for (BuildingObject *object : mObjects) {
+    for (BuildingObject *object : qAsConst(mObjects)) {
         QRect bounds = object->bounds() & this->bounds(1, 1);
         for (int y = bounds.y(); y <= bounds.bottom(); y++) {
             for (int x = bounds.x(); x <= bounds.right(); x++) {
@@ -757,7 +757,7 @@ void BuildingFloor::LayoutToSquares()
     }
 
     // Handle WallObjects.
-    for (BuildingObject *object : mObjects) {
+    for (BuildingObject *object : qAsConst(mObjects)) {
         if (WallObject *wall = object->asWall()) {
             int x = wall->x(), y = wall->y();
             if (wall->isW()) {
@@ -806,7 +806,7 @@ void BuildingFloor::LayoutToSquares()
 
     // Furniture in the Walls layer replaces wall entries with tiles.
     QList<FurnitureObject*> wallReplacement;
-    for (BuildingObject *object : mObjects) {
+    for (BuildingObject *object : qAsConst(mObjects)) {
         if (FurnitureObject *fo = object->asFurniture()) {
             FurnitureTile *ftile = fo->furnitureTile()->resolved();
             if (ftile->owner()->layer() == FurnitureTiles::LayerWalls) {
@@ -953,7 +953,6 @@ void BuildingFloor::LayoutToSquares()
                         case FurnitureTile::FurnitureOrientation::FurnitureN:
                             sectionMin = BuildingSquare::SquareSection::SectionWallOverlay;
                             sectionMax = BuildingSquare::SquareSection::SectionWallOverlay2;
-                            sectionMax = sectionMin;
                             break;
                         case FurnitureTile::FurnitureOrientation::FurnitureE:
                             sectionMin = BuildingSquare::SquareSection::SectionWallOverlay3;
@@ -1321,7 +1320,7 @@ void BuildingFloor::LayoutToSquares()
         }
     }
 
-    for (FurnitureObject *fo : wallReplacement) {
+    for (FurnitureObject *fo : qAsConst(wallReplacement)) {
         FurnitureTile *ftile = fo->furnitureTile()->resolved();
         int x = fo->x(), y = fo->y();
         int dx = 0, dy = 0;
@@ -1398,12 +1397,12 @@ void BuildingFloor::LayoutToSquares()
 
     if (BuildingFloor *floorBelow = this->floorBelow()) {
         // Place flat roof tops above roofs on the floor below
-        for (RoofObject *ro : floorBelow->mFlatRoofsWithDepthThree) {
+        for (RoofObject *ro : qAsConst(floorBelow->mFlatRoofsWithDepthThree)) {
             ReplaceRoofTop(ro, ro->flatTop(), squares);
         }
 
         // Nuke floors that have stairs on the floor below.
-        for (Stairs *stairs : floorBelow->mStairs) {
+        for (Stairs *stairs : qAsConst(floorBelow->mStairs)) {
             int x = stairs->x(), y = stairs->y();
             if (stairs->isW()) {
                 if (x + 1 < 0 || x + 3 >= width() || y < 0 || y >= height())
@@ -1513,7 +1512,7 @@ void BuildingFloor::LayoutToSquares()
 
 Door *BuildingFloor::GetDoorAt(int x, int y)
 {
-    for (BuildingObject *o : mObjects) {
+    for (BuildingObject *o : qAsConst(mObjects)) {
         if (!o->bounds().contains(x, y))
             continue;
         if (Door *door = o->asDoor())
@@ -1524,7 +1523,7 @@ Door *BuildingFloor::GetDoorAt(int x, int y)
 
 Window *BuildingFloor::GetWindowAt(int x, int y)
 {
-    for (BuildingObject *o : mObjects) {
+    for (BuildingObject *o : qAsConst(mObjects)) {
         if (!o->bounds().contains(x, y))
             continue;
         if (Window *window = o->asWindow())
@@ -1535,7 +1534,7 @@ Window *BuildingFloor::GetWindowAt(int x, int y)
 
 Stairs *BuildingFloor::GetStairsAt(int x, int y)
 {
-    for (BuildingObject *o : mObjects) {
+    for (BuildingObject *o : qAsConst(mObjects)) {
         if (!o->bounds().contains(x, y))
             continue;
         if (Stairs *stairs = o->asStairs())
@@ -1546,7 +1545,7 @@ Stairs *BuildingFloor::GetStairsAt(int x, int y)
 
 FurnitureObject *BuildingFloor::GetFurnitureAt(int x, int y)
 {
-    for (BuildingObject *o : mObjects) {
+    for (BuildingObject *o : qAsConst(mObjects)) {
         if (!o->bounds().contains(x, y))
             continue;
         if (FurnitureObject *fo = o->asFurniture())
@@ -1562,7 +1561,7 @@ WallObject *BuildingFloor::GetWallObjectAt(int x, int y, BuildingObject::Directi
         return nullptr;
     }
     BuildingSquare &square = squares[x][y];
-    for (BuildingObject *o : square.mObjects) {
+    for (BuildingObject *o : qAsConst(square.mObjects)) {
         if (WallObject *wall = o->asWall()) {
             if (wall->dir() == dir) {
                 return wall;
@@ -1662,7 +1661,7 @@ QVector<QVector<Room *> > BuildingFloor::resizeGrid(const QSize &newSize) const
 QMap<QString,FloorTileGrid*> BuildingFloor::resizeGrime(const QSize &newSize) const
 {
     QMap<QString,FloorTileGrid*> grid;
-    foreach (QString key, mGrimeGrid.keys()) {
+    for (const QString &key : mGrimeGrid.keys()) {
         grid[key] = new FloorTileGrid(newSize.width(), newSize.height());
         for (int x = 0; x < qMin(mGrimeGrid[key]->width(), newSize.width()); x++)
             for (int y = 0; y < qMin(mGrimeGrid[key]->height(), newSize.height()); y++)
@@ -1726,13 +1725,13 @@ BuildingFloor *BuildingFloor::clone()
     BuildingFloor *klone = new BuildingFloor(mBuilding, mLevel);
     klone->mIndexAtPos = mIndexAtPos;
     klone->mRoomAtPos = mRoomAtPos;
-    foreach (BuildingObject *object, mObjects) {
+    for (BuildingObject *object : qAsConst(mObjects)) {
         BuildingObject *kloneObject = object->clone();
         kloneObject->setFloor(klone);
         klone->mObjects += kloneObject;
     }
     klone->mGrimeGrid = mGrimeGrid;
-    foreach (QString key, klone->mGrimeGrid.keys())
+    for (const QString &key : klone->mGrimeGrid.keys())
         klone->mGrimeGrid[key] = new FloorTileGrid(*klone->mGrimeGrid[key]);
     return klone;
 }
@@ -1762,7 +1761,7 @@ FloorTileGrid *BuildingFloor::grimeAt(const QString &layerName, const QRect &r,
 QMap<QString,FloorTileGrid*> BuildingFloor::grimeClone() const
 {
     QMap<QString,FloorTileGrid*> clone;
-    foreach (QString key, mGrimeGrid.keys()) {
+    for (const QString &key : mGrimeGrid.keys()) {
         clone[key] = new FloorTileGrid(*mGrimeGrid[key]);
     }
     return clone;

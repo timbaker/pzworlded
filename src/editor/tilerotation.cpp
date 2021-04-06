@@ -159,7 +159,7 @@ public:
             mTilesetRotatedList = file.takeTilesets();
             mVisuals = file.takeVisuals();
             mTilesetByName.clear();
-            for (TilesetRotated *tilesetR : mTilesetRotatedList) {
+            for (TilesetRotated *tilesetR : qAsConst(mTilesetRotatedList)) {
                 mTilesetByName[tilesetR->name()] = tilesetR;
             }
             initRenderInfo(mVisuals);
@@ -324,7 +324,7 @@ void TileRotation::readFile(const QString &filePath)
     mPrivate->mTilesetRotatedList = file.takeTilesets();
     mPrivate->mVisuals = file.takeVisuals();
     mPrivate->mTilesetByName.clear();
-    for (TilesetRotated *tilesetR : mPrivate->mTilesetRotatedList) {
+    for (TilesetRotated *tilesetR : qAsConst(mPrivate->mTilesetRotatedList)) {
         mPrivate->mTilesetByName[tilesetR->name()] = tilesetR;
     }
     mPrivate->initRenderInfo(mPrivate->mVisuals);

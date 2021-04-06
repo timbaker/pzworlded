@@ -506,7 +506,7 @@ MapInfo *MapManager::getPlaceholderMap(const QString &mapName, int width, int he
                        mapInfo->tileWidth(), mapInfo->tileHeight());
 #ifndef WORLDED
     for (int level = 0; level < 1; level++) {
-        TileLayer *tl = new TileLayer(QLatin1Literal("Tile Layer"), 0, 0, 300, 300);
+        TileLayer *tl = new TileLayer(QLatin1String("Tile Layer"), 0, 0, 300, 300);
         tl->setLevel(level);
         map->addLayer(tl);
     }
@@ -601,7 +601,8 @@ Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)
         newMap->setOrientation(orient);
         QPoint offset(3, 3);
         if (orient0 == Map::Isometric && orient1 == Map::LevelIsometric) {
-            for (Layer *layer : newMap->layers()) {
+            const QList<Layer*> layers = newMap->layers();
+            for (Layer *layer : layers) {
                 int level = layer->level();
                 if (level > 0)
                     layer->offset(offset * level, layer->bounds(), false, false);
@@ -609,12 +610,14 @@ Map *MapManager::convertOrientation(Map *map, Tiled::Map::Orientation orient)
         }
         if (orient0 == Map::LevelIsometric && orient1 == Map::Isometric) {
             int maxLevel = 0;
-            for (Layer *layer : map->layers()) {
+            const QList<Layer*> layers1 = map->layers();
+            for (Layer *layer : layers1) {
                 maxLevel = qMax(maxLevel, layer->level());
             }
             newMap->setWidth(map->width() + maxLevel * 3);
             newMap->setHeight(map->height() + maxLevel * 3);
-            for (Layer *layer : newMap->layers()) {
+            const QList<Layer*> layers2 = newMap->layers();
+            for (Layer *layer : layers2) {
                 layer->resize(newMap->size(), offset * (maxLevel - layer->level()));
             }
         }

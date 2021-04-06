@@ -630,7 +630,7 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
         return nullptr;
     }
 
-    BuildingTileEntry *entry = new BuildingTileEntry(category);
+    QScopedPointer<BuildingTileEntry> entry(new BuildingTileEntry(category));
     mFakeBuildingTilesMgr.mUsedCategories[category] = true;
 
     while (xml.readNextStartElement()) {
@@ -656,12 +656,11 @@ BuildingTileEntry *BuildingReaderPrivate::readTileEntry()
             readUnknownElement();
     }
 
-    if (BuildingTileEntry *match = category->findMatch(entry)) {
-        delete entry;
+    if (BuildingTileEntry *match = category->findMatch(entry.data())) {
         return match;
     }
 
-    return entry;
+    return entry.take();
 }
 
 void BuildingReaderPrivate::readUserTiles()
@@ -1066,7 +1065,7 @@ void BuildingReaderPrivate::decodeCSVFloorData(BuildingFloor *floor,
             floor->SetRoomAt(x, y, nullptr);
         } else {
             bool conversionOk;
-            uint index = text.mid(start, end - start).toUInt(&conversionOk);
+            uint index = text.midRef(start, end - start).toUInt(&conversionOk);
             if (!conversionOk) {
                 xml.raiseError(
                         tr("Unable to parse room at (%1,%2) on floor %3")
@@ -1093,7 +1092,7 @@ void BuildingReaderPrivate::decodeCSVFloorData(BuildingFloor *floor,
         floor->SetRoomAt(x, y, nullptr);
     } else {
         bool conversionOk;
-        uint index = text.mid(start, end - start).toUInt(&conversionOk);
+        uint index = text.midRef(start, end - start).toUInt(&conversionOk);
         if (!conversionOk) {
             xml.raiseError(
                     tr("Unable to parse room at (%1,%2) on floor %3")
@@ -1131,7 +1130,7 @@ void BuildingReaderPrivate::decodeCSVTileData(BuildingFloor *floor,
             ; //floor->setGrime(layerName, x, y, QString());
         } else {
             bool conversionOk;
-            uint index = text.mid(start, end - start).toUInt(&conversionOk);
+            uint index = text.midRef(start, end - start).toUInt(&conversionOk);
             if (!conversionOk) {
                 xml.raiseError(
                         tr("Unable to parse user-tile at (%1,%2) on floor %3")
@@ -1158,7 +1157,7 @@ void BuildingReaderPrivate::decodeCSVTileData(BuildingFloor *floor,
         ; //floor->setGrime(layerName, x, y, QString());
     } else {
         bool conversionOk;
-        uint index = text.mid(start, end - start).toUInt(&conversionOk);
+        uint index = text.midRef(start, end - start).toUInt(&conversionOk);
         if (!conversionOk) {
             xml.raiseError(
                     tr("Unable to parse user-tile at (%1,%2) on floor %3")

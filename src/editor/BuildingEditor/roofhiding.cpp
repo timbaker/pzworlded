@@ -23,6 +23,6 @@ bool RoofHiding::isEmptyOutside(const QString &roomName)
 {
     int pos = roomName.indexOf(QLatin1Char('#'));
     if (pos != -1)
-        return roomName.left(pos).compare(QLatin1String("emptyoutside"), Qt::CaseInsensitive) == 0;
+        return roomName.leftRef(pos).compare(QLatin1String("emptyoutside"), Qt::CaseInsensitive) == 0;
     return roomName.compare(QLatin1String("emptyoutside"), Qt::CaseInsensitive) == 0;
 }

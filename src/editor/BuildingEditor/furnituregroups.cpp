@@ -517,21 +517,21 @@ bool FurnitureGroups::mergeTxt()
 
     QMap<QString,SimpleFileBlock> sourceGroupsByName;
     QMap<QString,QStringList> sourceFurnitureByGroupName;
-    foreach (SimpleFileBlock b, sourceFile.blocks) {
+    for (const SimpleFileBlock &b : sourceFile.blocks) {
         QString label = b.value("label");
         sourceGroupsByName[label] = b;
-        foreach (SimpleFileBlock b2, b.blocks)
+        for (const SimpleFileBlock &b2 : b.blocks)
             sourceFurnitureByGroupName[label] += b2.toString();
     }
 
-    foreach (QString label, sourceGroupsByName.keys()) {
+    for (const QString &label : sourceGroupsByName.keys()) {
         if (userGroupsByName.contains(label)) {
             // A user-group with the same name as a source-group exists.
             // Copy unique source-furniture to the user-group.
             int userGroupIndex = userGroupIndexByName[label];
             int userFurnitureIndex = 0;
             int sourceFurnitureIndex = 0;
-            foreach (QString f, sourceFurnitureByGroupName[label]) {
+            for (const QString &f : sourceFurnitureByGroupName[label]) {
                 if (userFurnitureByGroupName[label].contains(f)) {
                     userFurnitureIndex = userFurnitureByGroupName[label].indexOf(f) + 1;
                 } else {
@@ -549,7 +549,7 @@ bool FurnitureGroups::mergeTxt()
             userGroupsByName[label] = sourceGroupsByName[label];
             int index = userGroupsByName.keys().indexOf(label); // insert group alphabetically
             userFile.blocks.insert(index, userGroupsByName[label]);
-            foreach (QString label, userGroupsByName.keys()) {
+            for (const QString &label : userGroupsByName.keys()) {
                 if (userGroupIndexByName[label] >= index)
                     userGroupIndexByName[label]++;
             }

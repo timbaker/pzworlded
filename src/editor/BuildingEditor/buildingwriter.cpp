@@ -265,7 +265,8 @@ public:
     void writeUserTiles(QXmlStreamWriter &w)
     {
         for (BuildingFloor *floor : mBuilding->floors()) {
-            for (const QString &layerName : floor->grimeLayers()) {
+            const QStringList grimeLayers = floor->grimeLayers();
+            for (const QString &layerName : grimeLayers) {
                 for (int x = 0; x <= floor->width(); x++) {
                     for (int y = 0; y <= floor->height(); y++) {
                         const BuildingCell &buildingCell = floor->grimeAt(layerName, x, y);
@@ -278,7 +279,8 @@ public:
         }
 
         w.writeStartElement(QLatin1String("user_tiles"));
-        for (const QString &tileName : mUserTilesMap.values()) { // sorted
+        const QStringList userTiles = mUserTilesMap.values(); // sorted
+        for (const QString &tileName : userTiles) {
             w.writeStartElement(QLatin1String("tile"));
             w.writeAttribute(QLatin1String("tile"), tileName);
             w.writeEndElement(); // </tile>
@@ -316,7 +318,8 @@ public:
         w.writeEndElement();
 
         // Write user tile indices.
-        for (const QString &layerName : floor->grimeLayers()) {
+        QStringList grimeLayers = floor->grimeLayers();
+        for (const QString &layerName : grimeLayers) {
             if (floor->grime()[layerName]->isEmpty())
                 continue;
             text.clear();

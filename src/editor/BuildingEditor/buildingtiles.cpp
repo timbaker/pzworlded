@@ -144,7 +144,7 @@ BuildingTilesMgr::~BuildingTilesMgr()
 BuildingTile *BuildingTilesMgr::add(const QString &tileName)
 {
     QString tilesetName;
-    int tileIndex;
+    int tileIndex = 0;
     parseTileName(tileName, tilesetName, tileIndex);
     BuildingTile *btile = new BuildingTile(tilesetName, tileIndex);
     Q_ASSERT(!mTileByName.contains(btile->name()));
@@ -214,7 +214,7 @@ bool BuildingTilesMgr::legalTileName(const QString &tileName)
 QString BuildingTilesMgr::adjustTileNameIndex(const QString &tileName, int offset)
 {
     QString tilesetName;
-    int index;
+    int index = 0;
     parseTileName(tileName, tilesetName, index);
 
     // Currently, the only place this gets called with offset > 0 is by the
@@ -574,21 +574,21 @@ bool BuildingTilesMgr::mergeTxt()
 
     QMap<QString,SimpleFileBlock> sourceCategoriesByName;
     QMap<QString,QStringList> sourceEntriesByCategoryName;
-    foreach (SimpleFileBlock b, sourceFile.blocks) {
+    for (const SimpleFileBlock &b : sourceFile.blocks) {
         QString name = b.value("name");
         sourceCategoriesByName[name] = b;
-        foreach (SimpleFileBlock b2, b.blocks)
+        for (const SimpleFileBlock &b2 : b.blocks)
             sourceEntriesByCategoryName[name] += b2.toString();
     }
 
-    foreach (QString categoryName, sourceCategoriesByName.keys()) {
+    for (const QString &categoryName : sourceCategoriesByName.keys()) {
         if (userCategoriesByName.contains(categoryName)) {
             // A user-category with the same name as a source-category exists.
             // Copy unique source-entries to the user-category.
             int userGroupIndex = userCategoryIndexByName[categoryName];
             int userEntryIndex = userEntriesByCategoryName[categoryName].size();
             int sourceEntryIndex = 0;
-            foreach (QString f, sourceEntriesByCategoryName[categoryName]) {
+            for (const QString &f : sourceEntriesByCategoryName[categoryName]) {
                 if (userEntriesByCategoryName[categoryName].contains(f)) {
                     userEntryIndex = userEntriesByCategoryName[categoryName].indexOf(f) + 1;
                 } else {
@@ -606,7 +606,7 @@ bool BuildingTilesMgr::mergeTxt()
             userCategoriesByName[categoryName] = sourceCategoriesByName[categoryName];
             int index = userCategoriesByName.keys().indexOf(categoryName); // insert group alphabetically
             userFile.blocks.insert(index, userCategoriesByName[categoryName]);
-            foreach (QString label, userCategoriesByName.keys()) {
+            for (const QString &label : userCategoriesByName.keys()) {
                 if (userCategoryIndexByName[label] >= index)
                     userCategoryIndexByName[label]++;
             }

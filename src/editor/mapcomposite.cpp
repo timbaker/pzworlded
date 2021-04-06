@@ -179,7 +179,7 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
     mPreparedSubMapLayers.resize(0);
     if (mAnyVisibleLayers == false)
         return;
-    for (const SubMapLayers &subMapLayer : mVisibleSubMapLayers) {
+    for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
         CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
         if (subMapLayer.mSubMap->isHiddenDuringDrag())
             continue;
@@ -555,7 +555,7 @@ void CompositeLayerGroup::synch()
                 const QString name = layerName; // MapComposite::layerNameWithoutPrefix(layerName);
                 if (!mLayersByName.contains(name))
                     continue;
-                for (Layer *layer : mLayersByName[name]) {
+                for (Layer *layer : qAsConst(mLayersByName[name])) {
                     int index = mLayers.indexOf(layer->asTileLayer());
                     Q_ASSERT(index != -1);
                     mVisibleLayers[index] = rootGroup->mVisibleLayers[rootIndex];
@@ -566,7 +566,7 @@ void CompositeLayerGroup::synch()
     }
 
     int index = 0;
-    for (TileLayer *tl : mLayers) {
+    for (TileLayer *tl : qAsConst(mLayers)) {
         if (!isLayerEmpty(index)) {
             unionTileRects(r, tl->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
             maxMargins(m, tl->drawMargins(), m);
@@ -816,7 +816,7 @@ QMargins CompositeLayerGroup::drawMargins() const
 
 bool CompositeLayerGroup::setLayerVisibility(const QString &layerName, bool visible)
 {
-    const QString name = MapComposite::layerNameWithoutPrefix(layerName);
+    const QString name = layerName; // MapComposite::layerNameWithoutPrefix(layerName);
     if (!mLayersByName.contains(name))
         return false;
     foreach (Layer *layer, mLayersByName[name])
@@ -993,7 +993,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     for (int level = 0; level < mMap->levelCount(); level++) {
         int index = 0;
         MapLevel *mapLevel = mMap->levelAt(level);
-        for (Layer *layer : mapLevel->layers(Layer::Type::TileLayerType)) {
+        const QList<Layer*> layers = mapLevel->layers(Layer::Type::TileLayerType);
+        for (Layer *layer : layers) {
             TileLayer *tl = layer->asTileLayer();
             if (!mLayerGroups.contains(level))
                 mLayerGroups[level] = new CompositeLayerGroup(this, level);
@@ -1007,7 +1008,8 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     // Load lots, but only if this is not the map being edited (that is handled
     // by the LotManager).
     if (!mapInfo->isBeingEdited()) {
-        for (ObjectGroup *objectGroup : mMap->objectGroups()) {
+        const QList<ObjectGroup*> objectGroups = mMap->objectGroups();
+        for (ObjectGroup *objectGroup : objectGroups) {
             int levelOffset = objectGroup->level();
 //            (void) levelForLayer(objectGroup, &levelOffset);
             for (MapObject *object : objectGroup->objects()) {
@@ -1067,7 +1069,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     mMinLevel = 10000;
     mMaxLevel = 0;
 
-    for (CompositeLayerGroup *layerGroup : mLayerGroups) {
+    for (CompositeLayerGroup *layerGroup : qAsConst(mLayerGroups)) {
         if (!mMapInfo->isBeingEdited())
             layerGroup->synch();
         if (layerGroup->level() < mMinLevel)
@@ -1075,9 +1077,10 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         if (layerGroup->level() > mMaxLevel)
             mMaxLevel = layerGroup->level();
     }
-    for (MapComposite *subMap : mSubMaps)
+    for (MapComposite *subMap : qAsConst(mSubMaps)) {
         if (subMap->mLevelOffset + subMap->mMaxLevel > mMaxLevel)
             mMaxLevel = subMap->mLevelOffset + subMap->mMaxLevel;
+    }
 
     if (mMinLevel == 10000)
         mMinLevel = 0;
@@ -1467,12 +1470,33 @@ MapComposite::ZOrderList MapComposite::zOrder()
 {
     ZOrderList result;
 
+#if 1
+    for (int level = 0; level < mMap->levelCount(); level++) {
+        MapLevel *mapLevel = mMap->levelAt(level);
+        if (mLayerGroups.contains(level)) {
+            if (CompositeLayerGroup *layerGroup = mLayerGroups[level]) {
+                result += ZOrderItem(layerGroup);
+            }
+        }
+        for (int layerIndex = 0; layerIndex < mapLevel->layerCount(); layerIndex++) {
+            Layer *layer = mapLevel->layerAt(layerIndex);
+            if (layer->isTileLayer()) {
+                // TileLayers are grouped into a single QGraphicsItem.
+                // The layer may not be in a group yet during renaming.
+                continue;
+            }
+            // Non-TileLayer layers go above TileLayers.
+            result += ZOrderItem(layer, layerIndex);
+        }
+    }
+#else
     QVector<int> seenLevels;
     typedef QPair<int,Layer*> LayerPair;
-    QMap<CompositeLayerGroup*,QVector<LayerPair> > layersAboveLevel;
+    QHash<CompositeLayerGroup*,QVector<LayerPair> > layersAboveLevel;
     CompositeLayerGroup *previousGroup = nullptr;
     int layerIndex = -1;
-    for (Layer *layer : mMap->layers()) {
+    const QList<Layer*> layers = mMap->layers();
+    for (Layer *layer : layers) {
         ++layerIndex;
         int level = layer->level();
         bool hasGroup = true; // levelForLayer(layer, &level);
@@ -1495,14 +1519,14 @@ MapComposite::ZOrderList MapComposite::zOrder()
             result += ZOrderItem(layer, layerIndex);
     }
 
-    for (CompositeLayerGroup *layerGroup : mSortedLayerGroups) {
+    for (CompositeLayerGroup *layerGroup : qAsConst(mSortedLayerGroups)) {
         result += ZOrderItem(layerGroup);
         QVector<LayerPair> layers = layersAboveLevel[layerGroup];
         for (LayerPair pair : layers) {
             result += ZOrderItem(pair.second, pair.first);
         }
     }
-
+#endif
     return result;
 }
 
@@ -1666,7 +1690,8 @@ void MapComposite::recreate()
     }
 
     int index = 0;
-    for (Layer *layer : mMap->layers()) {
+    const QList<Layer*> layers = mMap->layers();
+    for (Layer *layer : layers) {
         if (TileLayer *tl = layer->asTileLayer()) {
             int level = layer->level();
             if (!mLayerGroups.contains(level))
