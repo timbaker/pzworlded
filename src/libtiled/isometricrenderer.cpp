@@ -38,6 +38,8 @@
 #include "ztilelayergroup.h"
 #endif
 
+#include <QPainterPath>
+
 #include <cmath>
 
 using namespace Tiled;

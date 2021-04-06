@@ -42,6 +42,7 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QMessageBox>
+#include <QPainterPath>
 
 #ifdef QT_NO_DEBUG
 inline QNoDebug noise() { return QNoDebug(); }
