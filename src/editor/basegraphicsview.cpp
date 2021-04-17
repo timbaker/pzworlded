@@ -93,7 +93,8 @@ void BaseGraphicsView::setUseOpenGL(bool useOpenGL)
             QGLFormat format = QGLFormat::defaultFormat();
             format.setDepth(false); // No need for a depth buffer
             format.setSampleBuffers(true); // Enable anti-aliasing
-            newViewport = new QGLWidget(format);
+            newViewport = new QGLWidget(format, this);
+            newViewport->setMinimumSize(200, 200);
         }
     } else {
         if (qobject_cast<QGLWidget*>(viewport()))
@@ -365,6 +366,8 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     , mSmallerButton(new QToolButton(mButtons))
 {
     setFrameStyle(NoFrame);
+    setMinimumWidth(20);
+    setMinimumHeight(20);
 
     // For the smaller/bigger buttons
     setMouseTracking(true);
