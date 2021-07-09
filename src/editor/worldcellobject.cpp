@@ -43,7 +43,7 @@ WorldCellObject::WorldCellObject(WorldCell *cell, WorldCellObject *other)
     , mZ(other->level())
     , mWidth(other->width())
     , mHeight(other->height())
-    , mGeometryType(ObjectGeometryType::INVALID)
+    , mGeometryType(other->geometryType())
     , mCell(cell)
     , mVisible(other->isVisible())
 {

@@ -2066,6 +2066,8 @@ void EditPolygonObjectTool::setScene(BaseGraphicsScene *scene)
     if (mScene) {
         connect(mScene->worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved,
                 this, &EditPolygonObjectTool::cellObjectAboutToBeRemoved);
+        connect(mScene->worldDocument(), &WorldDocument::cellObjectMoved,
+                this, &EditPolygonObjectTool::cellObjectMoved);
         connect(mScene->worldDocument(), &WorldDocument::cellObjectPointMoved,
                 this, &EditPolygonObjectTool::cellObjectPointMoved);
         connect(mScene->worldDocument(), &WorldDocument::cellObjectPointsChanged,
@@ -2085,7 +2087,7 @@ void EditPolygonObjectTool::deactivate()
 {
     if (mSelectedObjectItem) {
         mSelectedObjectItem->setEditable(false);
-        for (ObjectPointHandle* handle : mHandles) {
+        for (ObjectPointHandle* handle : qAsConst(mHandles)) {
             mScene->removeItem(handle);
             delete handle;
         }
@@ -2155,8 +2157,16 @@ void EditPolygonObjectTool::cellObjectAboutToBeRemoved(WorldCell* cell, int obje
     }
 }
 
+void EditPolygonObjectTool::cellObjectMoved(WorldCellObject *object)
+{
+    if (object == mSelectedObject) {
+        setSelectedItem(mSelectedObjectItem);
+    }
+}
+
 void EditPolygonObjectTool::cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex)
 {
+    Q_UNUSED(pointIndex)
     WorldCellObject* object = cell->objects().at(objectIndex);
     if (object == mSelectedObject) {
 //        mSelectedObjectItem->synchWithObject();

@@ -659,6 +659,7 @@ public:
 
 private slots:
     void cellObjectAboutToBeRemoved(WorldCell* cell, int objectIndex);
+    void cellObjectMoved(WorldCellObject *object);
     void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
     void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
     void selectedObjectsChanged();

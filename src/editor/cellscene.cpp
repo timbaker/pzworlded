@@ -842,7 +842,7 @@ void ObjectItem::setEditable(bool editable)
 
     mIsEditable = editable;
 
-    mResizeHandle->setVisible(mIsEditable);
+    mResizeHandle->setVisible(mIsEditable && (mObject->geometryType() == ObjectGeometryType::INVALID));
 
     if (mIsEditable)
         setCursor(Qt::SizeAllCursor);
@@ -890,7 +890,7 @@ void ObjectItem::synchWithObject()
 
     switch (mObject->geometryType()) {
     case ObjectGeometryType::INVALID:
-        break;
+        return;
     case ObjectGeometryType::Point: {
         WorldCellObjectPoint center = mObject->points()[0];
         mPolygon += { qreal(center.x) , qreal(center.y) };
