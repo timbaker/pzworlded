@@ -260,6 +260,39 @@ void ReorderCellObject::swap()
 
 /////
 
+MoveCellObjectPoint::MoveCellObjectPoint(WorldDocument *doc, WorldCell* cell, int objectIndex, int pointIndex, const WorldCellObjectPoint& point)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Move Object Point"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mObjectIndex(objectIndex)
+    , mPointIndex(pointIndex)
+    , mPoint(point)
+{
+}
+
+void MoveCellObjectPoint::swap()
+{
+    mPoint = mDocument->undoRedo().moveCellObjectPoint(mCell, mObjectIndex, mPointIndex, mPoint);
+}
+
+/////
+
+SetCellObjectPoints::SetCellObjectPoints(WorldDocument *doc, WorldCell* cell, int objectIndex, const WorldCellObjectPoints& points)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Set Object Points"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mObjectIndex(objectIndex)
+    , mPoints(points)
+{
+}
+
+void SetCellObjectPoints::swap()
+{
+    mPoints = mDocument->undoRedo().setCellObjectPoints(mCell, mObjectIndex, mPoints);
+}
+
+/////
+
 AddRemoveRoad::AddRemoveRoad(WorldDocument *doc, int index, Road *road)
     : mDocument(doc)
     , mRoad(road)

@@ -150,6 +150,11 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             SIGNAL(objectLevelChanged(WorldCellObject*)));
     connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
             SIGNAL(cellObjectReordered(WorldCellObject*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectPointMoved,
+            this, &WorldDocument::cellObjectPointMoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectPointsChanged,
+            this, &WorldDocument::cellObjectPointsChanged);
+
 
     connect(&mUndoRedo, SIGNAL(roadAdded(int)),
             SIGNAL(roadAdded(int)));
@@ -464,6 +469,18 @@ void WorldDocument::reorderCellObject(WorldCellObject *obj, WorldCellObject *ins
     const WorldCellObjectList &objects = obj->cell()->objects();
     int index = insertBefore ? objects.indexOf(insertBefore) : objects.size();
     undoStack()->push(new ReorderCellObject(this, obj, index));
+}
+
+void WorldDocument::moveCellObjectPoint(WorldCell *cell, int objectIndex, int pointIndex, const WorldCellObjectPoint &point)
+{
+    Q_ASSERT(objectIndex >= 0 && objectIndex < cell->objects().size());
+    undoStack()->push(new MoveCellObjectPoint(this, cell, objectIndex, pointIndex, point));
+}
+
+void WorldDocument::setCellObjectPoints(WorldCell *cell, int objectIndex, const WorldCellObjectPoints &points)
+{
+    Q_ASSERT(objectIndex >= 0 && objectIndex < cell->objects().size());
+    undoStack()->push(new SetCellObjectPoints(this, cell, objectIndex, points));
 }
 
 void WorldDocument::insertRoad(int index, Road *road)
@@ -1266,6 +1283,11 @@ QPointF WorldDocumentUndoRedo::moveCellObject(WorldCellObject *obj, const QPoint
 {
     QPointF oldPos = obj->pos();
     obj->setPos(pos);
+    if (obj->points().isEmpty() == false) {
+        WorldCellObjectPoints points = obj->points();
+        points.translate(pos.x() - oldPos.x(), pos.y() - oldPos.y());
+        obj->setPoints(points);
+    }
     emit cellObjectMoved(obj);
     return oldPos;
 }
@@ -1334,6 +1356,25 @@ int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
     Q_ASSERT(cell->indexOf(obj) == index);
     emit cellObjectReordered(obj);
     return oldIndex;
+}
+
+WorldCellObjectPoint WorldDocumentUndoRedo::moveCellObjectPoint(WorldCell *cell, int objectIndex, int pointIndex, const WorldCellObjectPoint &point)
+{
+    WorldCellObject* object = cell->objects().at(objectIndex);
+    const WorldCellObjectPoints& points = object->points();
+    WorldCellObjectPoint old = points[pointIndex];
+    object->setPoint(pointIndex, point);
+    emit cellObjectPointMoved(cell, objectIndex, pointIndex);
+    return old;
+}
+
+WorldCellObjectPoints WorldDocumentUndoRedo::setCellObjectPoints(WorldCell *cell, int objectIndex, const WorldCellObjectPoints &points)
+{
+    WorldCellObject* object = cell->objects().at(objectIndex);
+    WorldCellObjectPoints old = object->points();
+    object->setPoints(points);
+    emit cellObjectPointsChanged(cell, objectIndex);
+    return old;
 }
 
 void WorldDocumentUndoRedo::insertRoad(int index, Road *road)

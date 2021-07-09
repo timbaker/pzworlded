@@ -175,6 +175,69 @@ private:
 };
 
 /**
+ * This class represents a single point in a WorldCellObject.
+ */
+class WorldCellObjectPoint
+{
+public:
+    WorldCellObjectPoint()
+        : x(0)
+        , y(0)
+    {
+
+    }
+
+    WorldCellObjectPoint(int x, int y)
+        : x(x)
+        , y(y)
+    {
+
+    }
+
+    bool operator==(const WorldCellObjectPoint& rhs) const {
+        return x == rhs.x && y == rhs.y;
+    }
+
+    bool operator!=(const WorldCellObjectPoint& rhs) const {
+        return x != rhs.x || y != rhs.y;
+    }
+
+    WorldCellObjectPoint operator+(const WorldCellObjectPoint& rhs) const {
+        return { x + rhs.x, y + rhs.y };
+    }
+
+    WorldCellObjectPoint operator-(const WorldCellObjectPoint& rhs) const {
+        return { x - rhs.x, y - rhs.y };
+    }
+
+    int x;
+    int y;
+};
+
+/**
+ * This class represents a list of points in a WorldCellObject.
+ */
+class WorldCellObjectPoints : public QVector<WorldCellObjectPoint>
+{
+public:
+    void translate(int dx, int dy)
+    {
+        for (auto &point : *this) {
+            point.x += dx;
+            point.y += dy;
+        }
+    }
+};
+
+enum class ObjectGeometryType
+{
+    INVALID,
+    Point,
+    Polygon,
+    Polyline
+};
+
+/**
   * This class represents a single object in a WorldCell.
   * Each WorldCell has its own list of these.
   */
@@ -226,6 +289,32 @@ public:
 
     bool isSpawnPoint() const;
 
+    void setGeometryType(ObjectGeometryType geometryType)
+    {
+        mGeometryType = geometryType;
+    }
+
+    ObjectGeometryType geometryType() const
+    {
+        return mGeometryType;
+    }
+
+    void setPoints(const WorldCellObjectPoints &points)
+    {
+        mPoints = points;
+    }
+
+    const WorldCellObjectPoints &points() const
+    {
+        return mPoints;
+    }
+
+    void setPoint(int index, const WorldCellObjectPoint &point)
+    {
+        mPoints[index] = point;
+    }
+
+
 private:
     QString mName;
     WorldObjectGroup *mGroup;
@@ -233,6 +322,8 @@ private:
     qreal mX, mY;
     int mZ;
     qreal mWidth, mHeight;
+    ObjectGeometryType mGeometryType;
+    WorldCellObjectPoints mPoints;
     WorldCell *mCell;
     bool mVisible;
 };

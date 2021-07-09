@@ -21,6 +21,7 @@
 #include "basegraphicsscene.h"
 
 #include "sceneoverlay.h"
+#include "worldcell.h"
 
 #include "map.h"
 
@@ -44,13 +45,15 @@ class ResizeHandle;
 class Road;
 class SceneOverlay;
 class SubMap;
+class WorldDocument;
+/*
 class World;
 class WorldCell;
 class WorldCellLot;
 class WorldCellObject;
-class WorldDocument;
+class WorldCellObjectPoint;
 class WorldObjectGroup;
-
+*/
 namespace Tiled {
 class MapRenderer;
 class Layer;
@@ -91,14 +94,15 @@ class ObjectItem : public QGraphicsItem
 public:
     ObjectItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent = 0);
 
-    QRectF boundingRect() const;
+    QRectF boundingRect() const override;
 
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override;
 
-    void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
-    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
 
-    QPainterPath shape() const;
+    QPainterPath shape() const override;
 
     void setEditable(bool editable);
     bool isEditable() const { return mIsEditable; }
@@ -132,10 +136,22 @@ public:
 
     ObjectLabelItem* labelItem() const { return mLabel; }
 
+    bool isPoint() const;
+    bool isPolygon() const;
+    bool isPolyline() const;
+
+    void movePoint(int pointIndex, const WorldCellObjectPoint& point);
+
 protected:
+    friend class ObjectPointHandle;
+    friend class EditPolygonObjectTool;
+
+    CellScene* mScene;
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
     WorldCellObject *mObject;
+    QPolygonF mPolygon;
+    bool mSyncing;
     bool mIsEditable;
     bool mIsSelected;
     int mHoverRefCount;
@@ -144,7 +160,61 @@ protected:
     ResizeHandle *mResizeHandle;
     ObjectLabelItem *mLabel;
     bool mAdjacent;
+    int mAddPointIndex;
+    QPointF mAddPointPos;
 };
+
+/////
+
+class ObjectPointHandle : public QGraphicsItem
+{
+public:
+    ObjectPointHandle(ObjectItem *objectItem, int pointIndex);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = nullptr);
+
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+        Q_UNUSED(event)
+        if (++mHoverRefCount == 1) {
+            update();
+        }
+    }
+
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+        Q_UNUSED(event)
+        if (--mHoverRefCount == 0) {
+            update();
+        }
+    }
+
+    WorldCellObjectPoint geometryPoint() const {
+        auto& coords = mObjectItem->object()->points();
+        if (mPointIndex < 0 || mPointIndex >= coords.size())
+            return { -1, -1 };
+        return coords.at(mPointIndex);
+    }
+
+    bool isSelected() const;
+
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+
+protected:
+    ObjectItem *mObjectItem;
+    int mPointIndex;
+    WorldCellObjectPoint mOldPos;
+    bool mMoveAllPoints = false;
+    int mHoverRefCount = 0;
+};
+
+/////
 
 class SpawnPointItem : public ObjectItem
 {
@@ -537,7 +607,10 @@ public slots:
     void objectXXXXChanged(WorldCellObject *obj);
     void cellObjectGroupChanged(WorldCellObject *obj);
     void cellObjectReordered(WorldCellObject *obj);
+    void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
+    void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
     void selectedObjectsChanged();
+    void selectedObjectPointsChanged();
 
     void layerVisibilityChanged(Tiled::Layer *layer);
     void layerGroupAdded(int level);

@@ -68,6 +68,10 @@ public:
     const QList<WorldCellObject*> &selectedObjects() const { return mSelectedObjects; }
     int selectedObjectCount() const { return mSelectedObjects.count(); }
 
+    void setSelectedObjectPoints(const QList<int>& selected);
+    const QList<int>& selectedObjectPoints() const
+    { return mSelectedObjectPoints; }
+
     void setLayerVisibility(Tiled::Layer *layer, bool visible);
     void setLayerGroupVisibility(Tiled::ZTileLayerGroup *layerGroup, bool visible);
 
@@ -101,6 +105,7 @@ signals:
     void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
     void selectedLotsChanged();
     void selectedObjectsChanged();
+    void selectedObjectPointsChanged();
     void cellContentsAboutToChange();
     void cellContentsChanged();
     void cellMapFileAboutToChange();
@@ -130,6 +135,7 @@ private:
     CellScene *mCellScene;
     QList<WorldCellLot*> mSelectedLots;
     QList<WorldCellObject*> mSelectedObjects;
+    QList<int> mSelectedObjectPoints;
     int mCurrentLayerIndex;
     int mCurrentLevel;
     WorldObjectGroup *mCurrentObjectGroup;

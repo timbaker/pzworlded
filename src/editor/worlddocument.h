@@ -19,6 +19,7 @@
 #define WORLDDOCUMENT_H
 
 #include "document.h"
+#include "worldcell.h"
 
 #include <QColor>
 #include <QObject>
@@ -41,12 +42,13 @@ class TMXToBMPSettings;
 class TrafficLines;
 class World;
 class WorldBMP;
+/*
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
 class WorldCellObject;
 class WorldObjectGroup;
-
+*/
 class QUndoStack;
 
 
@@ -111,6 +113,8 @@ public:
     WorldObjectGroup *setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *group);
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
     int reorderCellObject(WorldCellObject *obj, int index);
+    WorldCellObjectPoint moveCellObjectPoint(WorldCell* cell, int objectIndex, int pointIndex, const WorldCellObjectPoint& point);
+    WorldCellObjectPoints setCellObjectPoints(WorldCell* cell, int objectIndex, const WorldCellObjectPoints& points);
 
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
@@ -199,6 +203,8 @@ signals:
     void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
+    void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
+    void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
@@ -282,6 +288,8 @@ public:
     void setCellObjectGroup(WorldCellObject *obj, WorldObjectGroup *og);
     void setCellObjectType(WorldCellObject *obj, const QString &type);
     void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
+    void moveCellObjectPoint(WorldCell* cell, int objectIndex, int pointIndex, const WorldCellObjectPoint& point);
+    void setCellObjectPoints(WorldCell* cell, int objectIndex, const WorldCellObjectPoints& points);
 
     void insertRoad(int index, Road *road);
     void removeRoad(int index);
@@ -464,6 +472,8 @@ signals:
     void objectLevelAboutToChange(WorldCellObject *object);
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
+    void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
+    void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);

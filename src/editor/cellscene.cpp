@@ -551,8 +551,10 @@ static QRectF boundingRect(MapRenderer *renderer, const QRectF &bounds, int leve
 
 ObjectItem::ObjectItem(WorldCellObject *obj, CellScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
+    , mScene(scene)
     , mRenderer(scene->renderer())
     , mObject(obj)
+    , mSyncing(false)
     , mIsEditable(false)
     , mIsSelected(false)
     , mHoverRefCount(0)
@@ -560,6 +562,7 @@ ObjectItem::ObjectItem(WorldCellObject *obj, CellScene *scene, QGraphicsItem *pa
     , mResizeHandle(new ResizeHandle(this, scene))
     , mLabel(new ObjectLabelItem(this, this))
     , mAdjacent(false)
+    , mAddPointIndex(-1)
 {
     setAcceptHoverEvents(true);
     mBoundingRect = ::boundingRect(mRenderer, QRectF(mObject->pos(), mObject->size()),
@@ -577,6 +580,77 @@ QRectF ObjectItem::boundingRect() const
 
 void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
+    if (mObject->points().isEmpty() == false) {
+
+        QColor color = mHoverRefCount > 0 ? Qt::blue : Qt::darkBlue;
+        if (isSelected())
+            color = mHoverRefCount ? Qt::green : Qt::darkGreen;
+        if (isEditable())
+            color = mHoverRefCount ? Qt::red : Qt::darkRed;
+
+    //    if (mHoverRefCount)
+    //        painter->drawPath(shape());
+
+        QColor brushColor = color;
+        brushColor.setAlpha(50);
+        QBrush brush(brushColor);
+
+        QPen pen(Qt::black);
+        pen.setJoinStyle(Qt::RoundJoin);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setWidth(2);
+        pen.setCosmetic(true);
+
+        painter->setPen(pen);
+        painter->setRenderHint(QPainter::Antialiasing);
+
+        QPolygonF screenPolygon = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset));
+
+        switch (mObject->geometryType()) {
+        case ObjectGeometryType::INVALID:
+            break;
+        case ObjectGeometryType::Point:
+            pen.setColor(color);
+            painter->setPen(pen);
+            painter->setBrush(brush);
+            painter->drawEllipse(screenPolygon[0], 10, 10);
+            break;
+        case ObjectGeometryType::Polygon:
+            painter->drawPolygon(screenPolygon);
+
+            pen.setColor(color);
+            painter->setPen(pen);
+            painter->setBrush(brush);
+            screenPolygon.translate(0, -1);
+            painter->drawPolygon(screenPolygon);
+            break;
+        case ObjectGeometryType::Polyline:
+            painter->drawPolyline(screenPolygon);
+
+            pen.setColor(color);
+            painter->setPen(pen);
+            painter->setBrush(brush);
+            screenPolygon.translate(0, -1);
+            painter->drawPolyline(screenPolygon);
+            break;
+        }
+
+        if (mAddPointIndex != -1) {
+#if 1
+            qreal zoom = 1.0; // FIXME
+#else
+            auto scene = static_cast<CellScene*>(this->scene());
+            auto view = static_cast<CellView*>(scene->views().first());
+            qreal zoom = view->zoomable()->scale();
+#endif
+            zoom = qMin(zoom, 1.0);
+
+            painter->drawRect(mAddPointPos.x() - 5/zoom, mAddPointPos.y() -5/zoom, (int)(10 / zoom), (int)(10 / zoom));
+        }
+
+        return;
+    }
+
     QColor color = mObject->group()->color();
     if (mIsSelected)
         color = QColor(0x33,0x99,0xff/*,255/8*/);
@@ -631,11 +705,93 @@ void ObjectItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
     }
 }
 
+// http://www.randygaul.net/2014/07/23/distance-point-to-line-segment/
+static float distanceOfPointToLineSegment(QVector2D p1, QVector2D p2, QVector2D p)
+{
+    QVector2D n = p2 - p1;
+    QVector2D pa =  p1 - p;
+
+    float c = QVector2D::dotProduct(n, pa);
+
+    if (c > 0.0f)
+        return QVector2D::dotProduct(pa, pa);
+
+    QVector2D bp = p - p2;
+
+    if (QVector2D::dotProduct(n, bp) > 0.0f)
+        return QVector2D::dotProduct(bp, bp);
+
+    QVector2D e = pa - n * (c / QVector2D::dotProduct(n, n));
+
+    return QVector2D::dotProduct(e, e);
+}
+
+#include <QtMath>
+
+void ObjectItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
+{
+    if (!isEditable()) {
+        if (mAddPointIndex != -1) {
+            mAddPointIndex = -1;
+            update();
+        }
+        return;
+    }
+
+#if 1 // FIXME
+    qreal zoom = 1.0;
+#else
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+#endif
+    zoom = qMin(zoom, 1.0);
+
+    QPolygonF poly = mRenderer->tileToPixelCoords(mPolygon, 0);
+
+    // Don't add points near other points
+    for (int i = 0; i < poly.size(); i++) {
+        float d = QVector2D(event->scenePos()).distanceToPoint(QVector2D(poly[i]));
+        if (d < 20 / (float) zoom) {
+            if (mAddPointIndex != -1) {
+                mAddPointIndex = -1;
+                update();
+            }
+            return;
+        }
+    }
+
+    // Find the line segment the mouse pointer is over
+    int closestIndex = -1;
+    float closestDist = 10000;
+    for (int i = 0; i < poly.size() - 1; i++) {
+        QVector2D p1(poly[i]), p2(poly[i+1]);
+//        QVector2D dir = (p2 - p1).normalized();
+//        float d = QVector2D(event->scenePos()).distanceToLine(p1, dir);
+        float d = distanceOfPointToLineSegment(p1, p2, QVector2D(event->scenePos()));
+        d = qSqrt(qAbs(d));
+        if (d < 10 / (float)zoom && d < closestDist) {
+            closestIndex = i;
+            closestDist = d;
+        }
+    }
+    if (closestIndex != -1) {
+        mAddPointIndex = closestIndex;
+        mAddPointPos = event->scenePos();
+//        qDebug() << "mAddPointIndex " << mAddPointIndex << " dist " << closestDist;
+        update();
+    } else if (mAddPointIndex != -1) {
+        mAddPointIndex = -1;
+        update();
+    }
+}
+
 void ObjectItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
     Q_ASSERT(mHoverRefCount > 0);
     if (--mHoverRefCount == 0) {
+        mAddPointIndex = -1;
         update();
 
         mLabel->synch();
@@ -644,6 +800,34 @@ void ObjectItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 
 QPainterPath ObjectItem::shape() const
 {
+    if (mObject->points().isEmpty() == false) {
+        QPolygonF polygon = mRenderer->tileToPixelCoords(mPolygon, 0);
+
+        if (isPolygon())
+            polygon += polygon[0];
+
+#if 1 // FIXME
+        qreal zoom = 1.0;
+#else
+        auto scene = static_cast<CellScene*>(this->scene());
+        auto view = static_cast<CellView*>(scene->views().first());
+        qreal zoom = view->zoomable()->scale();
+#endif
+        zoom = qMin(zoom, 1.0);
+
+        QPainterPath path;
+        if (isPoint()) {
+    //        path.addEllipse(polygon[0], 10, 10);
+            path.addRect(polygon[0].x() - 10, polygon[0].y() - 10, 20, 20);
+            return path;
+        }
+        path.addPolygon(polygon);
+
+        QPainterPathStroker stroker;
+        stroker.setWidth(20 / zoom);
+        return stroker.createStroke(path);
+    }
+
     QPolygonF polygon = mRenderer->tileToPixelCoords(tileBounds(), mObject->level());
 
     QPainterPath path;
@@ -689,15 +873,52 @@ void ObjectItem::synchWithObject()
     toolTip += QLatin1String(" (") + type + QLatin1String(")");
     setToolTip(toolTip);
 
-    QRectF tileBounds(mObject->pos() + mDragOffset, mObject->size() + mResizeDelta);
-    QRectF sceneBounds = ::boundingRect(mRenderer, tileBounds, mObject->level()).adjusted(-2, -3, 2, 2);
-    if (sceneBounds != mBoundingRect) {
-        prepareGeometryChange();
-        mBoundingRect = sceneBounds;
+    if (mObject->geometryType() == ObjectGeometryType::INVALID) {
+        QRectF tileBounds(mObject->pos() + mDragOffset, mObject->size() + mResizeDelta);
+        QRectF sceneBounds = ::boundingRect(mRenderer, tileBounds, mObject->level()).adjusted(-2, -3, 2, 2);
+        if (sceneBounds != mBoundingRect) {
+            prepareGeometryChange();
+            mBoundingRect = sceneBounds;
+        }
     }
     mResizeHandle->synch();
 
     mLabel->synch();
+
+    mPolygon.clear();
+    mAddPointIndex = -1;
+
+    switch (mObject->geometryType()) {
+    case ObjectGeometryType::INVALID:
+        break;
+    case ObjectGeometryType::Point: {
+        WorldCellObjectPoint center = mObject->points()[0];
+        mPolygon += { qreal(center.x) , qreal(center.y) };
+        QPointF scenePos = mRenderer->tileToPixelCoords(mPolygon[0] + mDragOffset);
+        QRectF bounds(scenePos.x() - 10, scenePos.y() - 10, 20, 20);
+        if (bounds != mBoundingRect) {
+            prepareGeometryChange();
+            mBoundingRect = bounds;
+        }
+        return;
+    }
+    case ObjectGeometryType::Polygon:
+        for (const auto& point : mObject->points()) {
+            mPolygon += QPoint(point.x, point.y);
+        }
+        break;
+    case ObjectGeometryType::Polyline:
+        for (const auto& point : mObject->points()) {
+            mPolygon += QPoint(point.x, point.y);
+        }
+        break;
+    }
+
+    QRectF bounds = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset)).boundingRect().adjusted(-2, -3, 2, 2);
+    if (bounds != mBoundingRect) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
 }
 
 void ObjectItem::setDragOffset(const QPointF &offset)
@@ -724,7 +945,163 @@ bool ObjectItem::isMouseOverHighlighted() const
 
 bool ObjectItem::hoverToolCurrent() const
 {
-    return SelectMoveObjectTool::instance()->isCurrent();
+    return SelectMoveObjectTool::instance()->isCurrent() ||
+            EditPolygonObjectTool::instance().isCurrent();
+}
+
+bool ObjectItem::isPoint() const
+{
+    return mObject->geometryType() == ObjectGeometryType::Point;
+}
+
+bool ObjectItem::isPolygon() const
+{
+    return mObject->geometryType() == ObjectGeometryType::Polygon;
+}
+
+bool ObjectItem::isPolyline() const
+{
+    return mObject->geometryType() == ObjectGeometryType::Polyline;
+}
+
+void ObjectItem::movePoint(int pointIndex, const WorldCellObjectPoint &point)
+{
+    mObject->setPoint(pointIndex, point);
+    QRectF boundingRect = mBoundingRect;
+    synchWithObject();
+    if (boundingRect == mBoundingRect) {
+        update();
+    }
+}
+
+/////
+
+ObjectPointHandle::ObjectPointHandle(ObjectItem *objectItem, int pointIndex)
+    : QGraphicsItem(objectItem)
+    , mObjectItem(objectItem)
+    , mPointIndex(pointIndex)
+{
+    setFlags(QGraphicsItem::ItemIsMovable |
+             QGraphicsItem::ItemSendsGeometryChanges |
+             QGraphicsItem::ItemIgnoresTransformations |
+             QGraphicsItem::ItemIgnoresParentOpacity);
+    setAcceptHoverEvents(true);
+}
+
+QRectF ObjectPointHandle::boundingRect() const
+{
+    return QRectF(-5, -5, 10 + 1, 10 + 1);
+}
+
+void ObjectPointHandle::paint(QPainter *painter,
+                   const QStyleOptionGraphicsItem*,
+                   QWidget *)
+{
+    painter->setBrush(mHoverRefCount ? Qt::red : Qt::blue);
+    painter->setPen(Qt::black);
+    painter->drawRect(QRectF(-5, -5, 10, 10));
+
+    if (isSelected()) {
+        painter->setPen(Qt::white);
+        painter->drawRect(QRectF(-5, -5, 10, 10));
+    }
+}
+
+bool ObjectPointHandle::isSelected() const
+{
+    CellScene *scene = mObjectItem->mScene;
+    return scene->document()->selectedObjectPoints().contains(mPointIndex);
+}
+
+void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsItem::mousePressEvent(event);
+
+    if (event->button() == Qt::LeftButton) {
+        mOldPos = geometryPoint();
+        mMoveAllPoints = (event->modifiers() & Qt::ShiftModifier) != 0;
+
+        CellScene *scene = mObjectItem->mScene;
+        QList<int> selection = scene->document()->selectedObjectPoints();
+        if (event->modifiers() & Qt::ControlModifier) {
+            if (isSelected()) {
+                selection.removeOne(mPointIndex);
+            } else {
+                selection += mPointIndex;
+            }
+        } else {
+            if (isSelected() == false) {
+                selection.clear();
+                selection += mPointIndex;
+            }
+        }
+        scene->document()->setSelectedObjectPoints(selection);
+    }
+
+    // Stop the object context menu messing us up.
+    event->accept();
+}
+
+void ObjectPointHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsItem::mouseReleaseEvent(event);
+
+    if (event->button() == Qt::LeftButton && (mOldPos != geometryPoint())) {
+        WorldDocument *document = mObjectItem->mScene->worldDocument();
+        int objectIndex = mObjectItem->object()->index();
+        WorldCellObjectPoint newPos = geometryPoint();
+        mObjectItem->object()->setPoint(mPointIndex, mOldPos);
+        if (mMoveAllPoints) {
+            WorldCellObjectPoints coords = mObjectItem->object()->points();
+            coords.translate(int(newPos.x - mOldPos.x), int(newPos.y - mOldPos.y));
+            document->setCellObjectPoints(mObjectItem->object()->cell(), objectIndex, coords);
+//            QUndoCommand *cmd = new SetCellObjectPoints(document, mObjectItem->object()->cell(), objectIndex, coords);
+//            document->undoStack()->push(cmd);
+        } else {
+            document->moveCellObjectPoint(mObjectItem->object()->cell(), objectIndex, mPointIndex, newPos);
+//            QUndoCommand *cmd = new MoveCellObjectPoint(document, mObjectItem->object()->cell(), objectIndex, mPointIndex, newPos);
+//            document->undoStack()->push(cmd);
+        }
+    }
+
+    // Stop the context-menu messing us up.
+    event->accept();
+}
+
+QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if (!mObjectItem->mSyncing) {
+        auto* renderer = mObjectItem->mRenderer;
+
+        if (change == ItemPositionChange) {
+            bool snapToGrid = true;
+
+            // Calculate the absolute pixel position
+            const QPointF itemPos = mObjectItem->pos();
+            QPointF pixelPos = value.toPointF() + itemPos;
+
+            // Calculate the new coordinates in tiles
+            QPointF tileCoords = renderer->pixelToTileCoords(pixelPos, 0);
+
+            const QPointF objectPos = { 0, 0 };
+            tileCoords -= objectPos;
+            tileCoords.setX(qMax(tileCoords.x(), qreal(0)));
+            tileCoords.setY(qMax(tileCoords.y(), qreal(0)));
+            if (snapToGrid)
+                tileCoords = tileCoords.toPoint();
+            tileCoords += objectPos;
+
+            return renderer->tileToPixelCoords(tileCoords, 0) - itemPos;
+        }
+        else if (change == ItemPositionHasChanged) {
+            const QPointF newPos = value.toPointF();
+            QPointF tileCoords = renderer->pixelToTileCoords(newPos, 0);
+            WorldCellObjectPoint point(tileCoords.x(), tileCoords.y());
+            mObjectItem->movePoint(mPointIndex, point);
+        }
+    }
+
+    return QGraphicsItem::itemChange(change, value);
 }
 
 /////
@@ -1238,6 +1615,12 @@ void CellScene::setTool(AbstractTool *tool)
     if (mActiveTool != CellSelectMoveRoadTool::instance())
         worldDocument()->setSelectedRoads(QList<Road*>());
 
+    if (mActiveTool != EditPolygonObjectTool::instancePtr()) {
+        for (ObjectItem* item : mObjectItems){
+            item->setEditable(false);
+        }
+    }
+
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
@@ -1278,6 +1661,10 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
             SLOT(cellObjectReordered(WorldCellObject*)));
     connect(mDocument, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+
+    connect(worldDocument(), &WorldDocument::cellObjectPointMoved, this, &CellScene::cellObjectPointMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectPointsChanged, this, &CellScene::cellObjectPointsChanged);
+    connect(mDocument, &CellDocument::selectedObjectPointsChanged, this, &CellScene::selectedObjectPointsChanged);
 
     connect(worldDocument(), SIGNAL(objectGroupReordered(int)),
             SLOT(objectGroupReordered(int)));
@@ -1915,6 +2302,31 @@ void CellScene::cellObjectReordered(WorldCellObject *obj)
     doLater(ZOrder);
 }
 
+void CellScene::cellObjectPointMoved(WorldCell *cell, int objectIndex, int pointIndex)
+{
+    Q_UNUSED(pointIndex)
+
+    if (cell != this->cell())
+        return;
+
+    WorldCellObject *object = cell->objects().at(objectIndex);
+    if (auto* item = itemForObject(object)) {
+        item->synchWithObject();
+    }
+}
+
+void CellScene::cellObjectPointsChanged(WorldCell *cell, int objectIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    WorldCellObject *object = cell->objects().at(objectIndex);
+    if (auto* item = itemForObject(object)) {
+        item->synchWithObject();
+        item->update();
+    }
+}
+
 void CellScene::selectedObjectsChanged()
 {
     const QList<WorldCellObject*> &selection = document()->selectedObjects();
@@ -1935,6 +2347,13 @@ void CellScene::selectedObjectsChanged()
     }
 
     mSelectedObjectItems = items;
+}
+
+void CellScene::selectedObjectPointsChanged()
+{
+    for (auto objectItem : mSelectedObjectItems) {
+        objectItem->update();
+    }
 }
 
 void CellScene::layerVisibilityChanged(Layer *layer)

@@ -18,6 +18,8 @@
 #ifndef UNDOREDO_H
 #define UNDOREDO_H
 
+#include "worldcell.h"
+
 #include <QColor>
 #include <QCoreApplication>
 #include <QPoint>
@@ -39,13 +41,14 @@ class Road;
 class TMXToBMPSettings;
 class TrafficLines;
 class WorldBMP;
+class WorldDocument;
+/*
 class WorldCell;
 class WorldCellContents;
 class WorldCellLot;
 class WorldCellObject;
-class WorldDocument;
 class WorldObjectGroup;
-
+*/
 class QToolButton;
 
 /**
@@ -361,6 +364,45 @@ private:
     WorldDocument *mDocument;
     WorldCellObject *mObject;
     int mIndex;
+};
+
+/////
+
+class MoveCellObjectPoint : public QUndoCommand
+{
+public:
+    MoveCellObjectPoint(WorldDocument *doc, WorldCell* cell, int objectIndex, int pointIndex, const WorldCellObjectPoint &newPos);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell* mCell;
+    int mObjectIndex;
+    int mPointIndex;
+    WorldCellObjectPoint mPoint;
+};
+
+/////
+
+class SetCellObjectPoints : public QUndoCommand
+{
+public:
+    SetCellObjectPoints(WorldDocument *doc, WorldCell *cell, int objectIndex, const WorldCellObjectPoints& points);
+
+    void undo() override { swap(); }
+    void redo() override { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mObjectIndex;
+    WorldCellObjectPoints mPoints;
 };
 
 /////

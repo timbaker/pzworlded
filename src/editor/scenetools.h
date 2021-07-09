@@ -20,6 +20,8 @@
 
 #include "singleton.h"
 
+#include "worldcell.h"
+
 #include <QIcon>
 #include <QGraphicsPolygonItem>
 #include <QKeySequence>
@@ -47,9 +49,10 @@ class SubMapItem;
 class TrafficLines;
 class WorldBMP;
 class WorldBMPItem;
+/*
 class WorldCellObject;
+*/
 class WorldRoadItem;
-
 class QGraphicsScene;
 class QGraphicsSceneMouseEvent;
 class QKeyEvent;
@@ -539,6 +542,133 @@ private:
     QList<Road*> mMovingRoads;
     QGraphicsRectItem *mSelectionRectItem;
     static CellSelectMoveRoadTool *mInstance;
+};
+
+class ObjectPointHandle;
+
+class AbstractCreatePolygonObjectTool : public BaseCellSceneTool
+{
+    Q_OBJECT
+
+public:
+    explicit AbstractCreatePolygonObjectTool(ObjectGeometryType type);
+    ~AbstractCreatePolygonObjectTool();
+
+    void setScene(BaseGraphicsScene *scene);
+
+    void activate();
+    void deactivate();
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    bool affectsLots() const { return false; }
+    bool affectsObjects() const { return false; }
+
+    void languageChanged() {
+        switch (mGeometryType) {
+        case ObjectGeometryType::INVALID:
+            break;
+        case ObjectGeometryType::Point:
+            setName(tr("Create Object (Point)"));
+            break;
+        case ObjectGeometryType::Polygon:
+            setName(tr("Create Object (Polygon)"));
+            break;
+        case ObjectGeometryType::Polyline:
+            setName(tr("Create Object (LineString)"));
+            break;
+        }
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private:
+    void updatePathItem();
+    void addPoint(const QPointF& scenePos);
+
+    ObjectGeometryType mGeometryType;
+    QGraphicsPathItem* mPathItem;
+    QPolygon mPolygon;
+    QPointF mScenePos;
+};
+
+class CreatePointObjectTool : public AbstractCreatePolygonObjectTool, public Singleton<CreatePointObjectTool>
+{
+    Q_OBJECT
+
+public:
+    CreatePointObjectTool()
+        : AbstractCreatePolygonObjectTool(ObjectGeometryType::Point)
+    {
+        setIcon(QIcon(QStringLiteral(":/images/22x22/road-tool-edit.png")));
+    }
+};
+
+class CreatePolygonObjectTool : public AbstractCreatePolygonObjectTool, public Singleton<CreatePolygonObjectTool>
+{
+    Q_OBJECT
+
+public:
+    CreatePolygonObjectTool()
+        : AbstractCreatePolygonObjectTool(ObjectGeometryType::Polygon)
+    {
+        setIcon(QIcon(QStringLiteral(":/images/24x24/insert-polygon.png")));
+    }
+};
+
+class CreatePolylineObjectTool : public AbstractCreatePolygonObjectTool, public Singleton<CreatePolylineObjectTool>
+{
+    Q_OBJECT
+
+public:
+    CreatePolylineObjectTool()
+        : AbstractCreatePolygonObjectTool(ObjectGeometryType::Polyline)
+    {
+        setIcon(QIcon(QStringLiteral(":/images/24x24/insert-polyline.png")));
+    }
+};
+
+class EditPolygonObjectTool : public BaseCellSceneTool, public Singleton<EditPolygonObjectTool>
+{
+    Q_OBJECT
+
+public:
+    explicit EditPolygonObjectTool();
+    ~EditPolygonObjectTool();
+
+    void setScene(BaseGraphicsScene *scene);
+
+    void activate();
+    void deactivate();
+
+    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    bool affectsLots() const { return false; }
+    bool affectsObjects() const { return false; }
+
+    void languageChanged()
+    {
+        setName(tr("Edit Mapbox Features"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private slots:
+    void cellObjectAboutToBeRemoved(WorldCell* cell, int objectIndex);
+    void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
+    void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
+    void selectedObjectsChanged();
+
+private:
+    void setSelectedItem(ObjectItem* feature);
+
+    ObjectItem *mSelectedObjectItem;
+    WorldCellObject *mSelectedObject;
+    QList<ObjectPointHandle*> mHandles;
 };
 
 /////
