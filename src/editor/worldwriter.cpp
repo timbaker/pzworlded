@@ -270,11 +270,38 @@ public:
             w.writeAttribute(QLatin1String("group"), obj->group()->name());
         if (!obj->type()->name().isEmpty())
             w.writeAttribute(QLatin1String("type"), obj->type()->name());
-        w.writeAttribute(QLatin1String("x"), QString::number(obj->x()));
-        w.writeAttribute(QLatin1String("y"), QString::number(obj->y()));
-        w.writeAttribute(QLatin1String("level"), QString::number(obj->level()));
-        w.writeAttribute(QLatin1String("width"), QString::number(obj->width()));
-        w.writeAttribute(QLatin1String("height"), QString::number(obj->height()));
+        if (obj->geometryType() == ObjectGeometryType::INVALID) {
+            w.writeAttribute(QLatin1String("x"), QString::number(obj->x()));
+            w.writeAttribute(QLatin1String("y"), QString::number(obj->y()));
+            w.writeAttribute(QLatin1String("level"), QString::number(obj->level()));
+            w.writeAttribute(QLatin1String("width"), QString::number(obj->width()));
+            w.writeAttribute(QLatin1String("height"), QString::number(obj->height()));
+        } else {
+            w.writeAttribute(QLatin1String("level"), QString::number(obj->level()));
+            QString geometry;
+            switch (obj->geometryType()) {
+            case ObjectGeometryType::INVALID:
+                break;
+            case ObjectGeometryType::Point:
+                geometry = QLatin1String("point");
+                break;
+            case ObjectGeometryType::Polygon:
+                geometry = QLatin1String("polygon");
+                break;
+            case ObjectGeometryType::Polyline:
+                geometry = QLatin1String("polyline");
+                break;
+            }
+            w.writeAttribute(QLatin1String("geometry"), geometry);
+            QString pointStr;
+            for (const auto& point : obj->points()) {
+                pointStr += QStringLiteral("%1,%2 ").arg(point.x).arg(point.y);
+            }
+            if (pointStr.isEmpty() == false) {
+                pointStr.truncate(pointStr.length() - 1);
+            }
+            w.writeAttribute(QLatin1String("points"), pointStr);
+        }
         if (!obj->isVisible())
             w.writeAttribute(QLatin1String("visible"), QLatin1String("0"));
 

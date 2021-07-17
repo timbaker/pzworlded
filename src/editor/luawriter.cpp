@@ -216,16 +216,50 @@ public:
 
     void writeObject(WorldCellObject *obj)
     {
+        QPoint origin = mWorld->getGenerateLotsSettings().worldOrigin;
+
         w->writeStartTable();
         w->setSuppressNewlines(true);
         if (!obj->name().isEmpty())
             w->writeKeyAndValue("name", obj->name());
         w->writeKeyAndValue("type", obj->type()->name());
-        w->writeKeyAndValue("x", obj->x());
-        w->writeKeyAndValue("y", obj->y());
-        w->writeKeyAndValue("level", obj->level());
-        w->writeKeyAndValue("width", obj->width());
-        w->writeKeyAndValue("height", obj->height());
+        if (obj->geometryType() == ObjectGeometryType::INVALID) {
+            w->writeKeyAndValue("x", (obj->cell()->x() + origin.x()) * 300 + obj->x());
+            w->writeKeyAndValue("y", (obj->cell()->y() + origin.y()) * 300 + obj->y());
+            w->writeKeyAndValue("level", obj->level());
+            w->writeKeyAndValue("width", obj->width());
+            w->writeKeyAndValue("height", obj->height());
+        } else {
+            QString geometry;
+            switch (obj->geometryType()) {
+            case ObjectGeometryType::INVALID:
+                break;
+            case ObjectGeometryType::Point:
+                geometry = QLatin1String("point");
+                break;
+            case ObjectGeometryType::Polygon:
+                geometry = QLatin1String("polygon");
+                break;
+            case ObjectGeometryType::Polyline:
+                geometry = QLatin1String("polyline");
+                break;
+            }
+            w->writeKeyAndValue("level", obj->level());
+            w->writeKeyAndValue("geometry", geometry);
+            QBuffer buf;
+            buf.open(QIODevice::ReadWrite);
+            LuaTableWriter w2(&buf);
+            w2.setSuppressNewlines(true);
+            w2.writeStartTable();
+            QString pointStr;
+            for (const auto &point : obj->points()) {
+                w2.writeValue((obj->cell()->x() + origin.x()) * 300 + point.x);
+                w2.writeValue((obj->cell()->x() + origin.x()) * 300 + point.y);
+            }
+            w2.writeEndTable();
+            buf.close();
+            w->writeKeyAndUnquotedValue("points", buf.data());
+        }
 
         PropertyList properties;
         resolveProperties(obj, properties);
@@ -323,11 +357,43 @@ public:
                     w.setSuppressNewlines(true);
                     w.writeKeyAndValue("name", obj->name());
                     w.writeKeyAndValue("type", obj->type()->name());
-                    w.writeKeyAndValue("x", (obj->cell()->x() + origin.x()) * 300 + obj->x());
-                    w.writeKeyAndValue("y", (obj->cell()->y() + origin.y()) * 300 + obj->y());
-                    w.writeKeyAndValue("z", obj->level());
-                    w.writeKeyAndValue("width", obj->width());
-                    w.writeKeyAndValue("height", obj->height());
+                    if (obj->geometryType() == ObjectGeometryType::INVALID) {
+                        w.writeKeyAndValue("x", (obj->cell()->x() + origin.x()) * 300 + obj->x());
+                        w.writeKeyAndValue("y", (obj->cell()->y() + origin.y()) * 300 + obj->y());
+                        w.writeKeyAndValue("z", obj->level());
+                        w.writeKeyAndValue("width", obj->width());
+                        w.writeKeyAndValue("height", obj->height());
+                    } else {
+                        QString geometry;
+                        switch (obj->geometryType()) {
+                        case ObjectGeometryType::INVALID:
+                            break;
+                        case ObjectGeometryType::Point:
+                            geometry = QLatin1String("point");
+                            break;
+                        case ObjectGeometryType::Polygon:
+                            geometry = QLatin1String("polygon");
+                            break;
+                        case ObjectGeometryType::Polyline:
+                            geometry = QLatin1String("polyline");
+                            break;
+                        }
+                        w.writeKeyAndValue("z", obj->level());
+                        w.writeKeyAndValue("geometry", geometry);
+                        QBuffer buf;
+                        buf.open(QIODevice::ReadWrite);
+                        LuaTableWriter w2(&buf);
+                        w2.setSuppressNewlines(true);
+                        w2.writeStartTable();
+                        QString pointStr;
+                        for (const auto &point : obj->points()) {
+                            w2.writeValue((obj->cell()->x() + origin.x()) * 300 + point.x);
+                            w2.writeValue((obj->cell()->y() + origin.y()) * 300 + point.y);
+                        }
+                        w2.writeEndTable();
+                        buf.close();
+                        w.writeKeyAndUnquotedValue("points", buf.data());
+                    }
                     PropertyList properties;
                     resolveProperties(obj, properties);
                     if (properties.size()) {

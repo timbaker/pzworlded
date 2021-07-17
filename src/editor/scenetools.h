@@ -663,6 +663,7 @@ private slots:
     void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
     void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
     void selectedObjectsChanged();
+    void selectedObjectPointsChanged();
 
 private:
     void setSelectedItem(ObjectItem* feature);
@@ -670,6 +671,7 @@ private:
     ObjectItem *mSelectedObjectItem;
     WorldCellObject *mSelectedObject;
     QList<ObjectPointHandle*> mHandles;
+    QGraphicsRectItem *mRectItem;
 };
 
 /////

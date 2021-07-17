@@ -140,6 +140,8 @@ public:
     bool isPolygon() const;
     bool isPolyline() const;
 
+    int pointAt(qreal sceneX, qreal sceneY);
+
     void movePoint(int pointIndex, const WorldCellObjectPoint& point);
 
 protected:

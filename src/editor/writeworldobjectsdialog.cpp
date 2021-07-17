@@ -46,7 +46,7 @@ void WriteWorldObjectsDialog::browse()
     QString fileName = mFileName;
     if (fileName.isEmpty() && !mDocument->fileName().isEmpty()) {
         QFileInfo info(mDocument->fileName());
-        fileName = info.absolutePath() + QLatin1String("/worldobjects.lua");
+        fileName = info.absolutePath() + QLatin1String("/objects.lua");
     }
     QString f = QFileDialog::getSaveFileName(this, tr("Save World Objects"),
                                              fileName, tr("LUA files (*.lua)"));

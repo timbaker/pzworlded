@@ -1856,13 +1856,13 @@ AbstractCreatePolygonObjectTool::AbstractCreatePolygonObjectTool(ObjectGeometryT
     case ObjectGeometryType::INVALID:
         break;
     case ObjectGeometryType::Point:
-        setName(tr("Create Mapbox Point"));
+        setName(tr("Create Object (Point)"));
         break;
     case ObjectGeometryType::Polygon:
-        setName(tr("Create Mapbox Polygon"));
+        setName(tr("Create Object (Polygon)"));
         break;
     case ObjectGeometryType::Polyline:
-        setName(tr("Create Mapbox LineString"));
+        setName(tr("Create Object (Polyline)"));
         break;
     }
 }
@@ -1926,7 +1926,7 @@ void AbstractCreatePolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *
                                                               mScene->document()->currentLevel(),
                                                               MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
                 WorldCellObjectPoints points;
-                for (const QPoint& point : mPolygon) {
+                for (const QPoint& point : qAsConst(mPolygon)) {
                     points += WorldCellObjectPoint(point.x(), point.y());
                 }
                 object->setGeometryType(mGeometryType);
@@ -1942,7 +1942,7 @@ void AbstractCreatePolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *
                                                               mScene->document()->currentLevel(),
                                                               MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
                 WorldCellObjectPoints points;
-                for (const QPoint& point : mPolygon) {
+                for (const QPoint& point : qAsConst(mPolygon)) {
                     points += WorldCellObjectPoint(point.x(), point.y());
                 }
                 object->setGeometryType(mGeometryType);
@@ -1979,11 +1979,11 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
     }
 
     if (mPolygon.isEmpty()) {
-        QPointF tilePos = mScene->renderer()->pixelToTileCoordsInt(mScenePos);
+        QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
         QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
         path.addRect(scenePos.x() - 5, scenePos.y() - 5, 10, 10);
     } else {
-        for (const QPoint& point : mPolygon) {
+        for (const QPoint& point : qAsConst(mPolygon)) {
             QPointF p = mScene->renderer()->tileToPixelCoords(point);
             path.addRect(p.x() - 5, p.y() - 5, 10, 10);
         }
@@ -1997,7 +1997,7 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
         }
 
         // Line to mouse pointer
-        QPointF p2 = mScene->renderer()->pixelToTileCoordsInt(mScenePos);
+        QPointF p2 = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
         p2 = mScene->renderer()->tileToPixelCoords(p2);
         path.lineTo(p2);
     }
@@ -2020,7 +2020,7 @@ void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
 {
     if (mGeometryType == ObjectGeometryType::Point) {
         WorldObjectGroup *og = mScene->document()->currentObjectGroup();
-        QPointF cellPos = mScene->renderer()->pixelToTileCoordsInt(scenePos);
+        QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
         WorldCellObjectPoints points;
         points += WorldCellObjectPoint(cellPos.x(), cellPos.y());
         WorldCellObject* object = new WorldCellObject(mScene->cell(),
@@ -2034,7 +2034,7 @@ void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
         return;
     }
 
-    mPolygon += mScene->renderer()->pixelToTileCoordsInt(scenePos);
+    mPolygon += mScene->renderer()->pixelToTileCoordsNearest(scenePos);
 }
 
 /////
@@ -2047,11 +2047,13 @@ EditPolygonObjectTool::EditPolygonObjectTool()
                          QKeySequence())
     , mSelectedObjectItem(nullptr)
     , mSelectedObject(nullptr)
+    , mRectItem(nullptr)
 {
 }
 
 EditPolygonObjectTool::~EditPolygonObjectTool()
 {
+    delete mRectItem;
 }
 
 void EditPolygonObjectTool::setScene(BaseGraphicsScene *scene)
@@ -2075,6 +2077,8 @@ void EditPolygonObjectTool::setScene(BaseGraphicsScene *scene)
 
         connect(mScene->document(), &CellDocument::selectedObjectsChanged,
                 this, &EditPolygonObjectTool::selectedObjectsChanged);
+        connect(mScene->document(), &CellDocument::selectedObjectPointsChanged,
+                this, &EditPolygonObjectTool::selectedObjectPointsChanged);
     }
 }
 
@@ -2097,6 +2101,12 @@ void EditPolygonObjectTool::deactivate()
         mScene->document()->setSelectedObjectPoints(QList<int>());
     }
 
+    if (mRectItem != nullptr) {
+        mScene->removeItem(mRectItem);
+        delete mRectItem;
+        mRectItem = nullptr;
+    }
+
     BaseCellSceneTool::deactivate();
 }
 
@@ -2111,7 +2121,8 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         ObjectItem* clickedItem = nullptr;
-        for (QGraphicsItem *item : mScene->items(event->scenePos())) {
+        const QList<QGraphicsItem*> items = mScene->items(event->scenePos());
+        for (QGraphicsItem *item : items) {
             if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item)) {
                 clickedItem = objectItem;
                 break;
@@ -2119,8 +2130,11 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         }
         if ((clickedItem != nullptr) && (clickedItem == mSelectedObjectItem)) {
             if (mSelectedObjectItem->mAddPointIndex != -1) {
-                QPointF tilePos = mScene->renderer()->pixelToTileCoordsInt(mSelectedObjectItem->mAddPointPos);
+                QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedObjectItem->mAddPointPos);
                 WorldCellObjectPoint point(tilePos.x(), tilePos.y());
+                if (mSelectedObject->points().contains(point)) {
+                    return;
+                }
                 WorldCellObjectPoints coords = mSelectedObject->points();
                 coords.insert(mSelectedObjectItem->mAddPointIndex + 1, point);
                 mScene->worldDocument()->setCellObjectPoints(mScene->cell(), mSelectedObject->index(), coords);
@@ -2139,6 +2153,23 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void EditPolygonObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    if (mSelectedObjectItem && mSelectedObjectItem->mAddPointIndex != -1) {
+        if (mRectItem == nullptr) {
+            mRectItem = new QGraphicsRectItem();
+            mRectItem->setBrush(Qt::red);
+            mRectItem->setRect(0 - 5, 0 - 5, 10, 10);
+            mRectItem->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            scene()->addItem(mRectItem);
+        }
+        QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedObjectItem->mAddPointPos);
+        QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
+        mRectItem->setPos(scenePos);
+    } else {
+        if (mRectItem) {
+            delete mRectItem;
+            mRectItem = nullptr;
+        }
+    }
 }
 
 void EditPolygonObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -2185,7 +2216,7 @@ void EditPolygonObjectTool::cellObjectPointsChanged(WorldCell *cell, int objectI
 void EditPolygonObjectTool::selectedObjectsChanged()
 {
     auto& selected = mScene->document()->selectedObjects();
-    if (selected.size() == 1) {
+    if (selected.size() == 1 && isCurrent()) {
         WorldCellObject* object = selected.first();
         if (ObjectItem* item = mScene->itemForObject(object)) {
             setSelectedItem(item);
@@ -2195,12 +2226,19 @@ void EditPolygonObjectTool::selectedObjectsChanged()
     }
 }
 
+void EditPolygonObjectTool::selectedObjectPointsChanged()
+{
+    for (auto* handle : qAsConst(mHandles)) {
+        handle->update();
+    }
+}
+
 void EditPolygonObjectTool::setSelectedItem(ObjectItem *objectItem)
 {
     if (mSelectedObjectItem) {
         // The item may have been deleted if inside objectAboutToBeRemoved()
         if (mScene->itemForObject(mSelectedObject)) {
-            for (auto* handle : mHandles) {
+            for (auto* handle : qAsConst(mHandles)) {
                 mScene->removeItem(handle);
                 delete handle;
             }
