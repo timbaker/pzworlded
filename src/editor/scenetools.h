@@ -585,11 +585,13 @@ public:
     }
 
 private:
+    void finishItem();
     void updatePathItem();
     void addPoint(const QPointF& scenePos);
 
     ObjectGeometryType mGeometryType;
     QGraphicsPathItem* mPathItem;
+    QList<QGraphicsItem*> mPointItems;
     QPolygon mPolygon;
     QPointF mScenePos;
 };

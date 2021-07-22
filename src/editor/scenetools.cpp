@@ -1891,6 +1891,7 @@ void AbstractCreatePolygonObjectTool::deactivate()
         mScene->removeItem(mPathItem);
         delete mPathItem;
         mPathItem = nullptr;
+        mPointItems.clear();
     }
     mPolygon.clear();
     BaseCellSceneTool::deactivate();
@@ -1911,48 +1912,7 @@ void AbstractCreatePolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *
         updatePathItem();
     }
     if (event->button() == Qt::RightButton) {
-        WorldObjectGroup *og = mScene->document()->currentObjectGroup();
-
-        switch (mGeometryType) {
-        case ObjectGeometryType::INVALID:
-            break;
-        case ObjectGeometryType::Point:
-            break;
-        case ObjectGeometryType::Polygon:
-            if (mPolygon.size() > 2) {
-                WorldCellObject* object = new WorldCellObject(mScene->cell(),
-                                                              QString(), og->type(), og,
-                                                              mPolygon[0].x(), mPolygon[0].y(),
-                                                              mScene->document()->currentLevel(),
-                                                              MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
-                WorldCellObjectPoints points;
-                for (const QPoint& point : qAsConst(mPolygon)) {
-                    points += WorldCellObjectPoint(point.x(), point.y());
-                }
-                object->setGeometryType(mGeometryType);
-                object->setPoints(points);
-                mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
-            }
-            break;
-        case ObjectGeometryType::Polyline:
-            if (mPolygon.size() > 1) {
-                WorldCellObject* object = new WorldCellObject(mScene->cell(),
-                                                              QString(), og->type(), og,
-                                                              mPolygon[0].x(), mPolygon[0].y(),
-                                                              mScene->document()->currentLevel(),
-                                                              MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
-                WorldCellObjectPoints points;
-                for (const QPoint& point : qAsConst(mPolygon)) {
-                    points += WorldCellObjectPoint(point.x(), point.y());
-                }
-                object->setGeometryType(mGeometryType);
-                object->setPoints(points);
-                mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
-            }
-            break;
-        }
-        mPolygon.clear();
-        updatePathItem();
+        finishItem();
     }
 }
 
@@ -1968,6 +1928,53 @@ void AbstractCreatePolygonObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent
     }
 }
 
+void AbstractCreatePolygonObjectTool::finishItem()
+{
+    WorldObjectGroup *og = mScene->document()->currentObjectGroup();
+
+    switch (mGeometryType) {
+    case ObjectGeometryType::INVALID:
+        break;
+    case ObjectGeometryType::Point:
+        break;
+    case ObjectGeometryType::Polygon:
+        if (mPolygon.size() > 2) {
+            WorldCellObject* object = new WorldCellObject(mScene->cell(),
+                                                          QString(), og->type(), og,
+                                                          mPolygon[0].x(), mPolygon[0].y(),
+                                                          mScene->document()->currentLevel(),
+                                                          MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
+            WorldCellObjectPoints points;
+            for (const QPoint& point : qAsConst(mPolygon)) {
+                points += WorldCellObjectPoint(point.x(), point.y());
+            }
+            object->setGeometryType(mGeometryType);
+            object->setPoints(points);
+            mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
+        }
+        break;
+    case ObjectGeometryType::Polyline:
+        if (mPolygon.size() > 1) {
+            WorldCellObject* object = new WorldCellObject(mScene->cell(),
+                                                          QString(), og->type(), og,
+                                                          mPolygon[0].x(), mPolygon[0].y(),
+                                                          mScene->document()->currentLevel(),
+                                                          MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
+            WorldCellObjectPoints points;
+            for (const QPoint& point : qAsConst(mPolygon)) {
+                points += WorldCellObjectPoint(point.x(), point.y());
+            }
+            object->setGeometryType(mGeometryType);
+            object->setPoints(points);
+            mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
+        }
+        break;
+    }
+
+    mPolygon.clear();
+    updatePathItem();
+}
+
 void AbstractCreatePolygonObjectTool::updatePathItem()
 {
     QPainterPath path;
@@ -1977,7 +1984,7 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
             path.addPolygon(mScene->renderer()->tileToPixelCoords(mPolygon));
         }
     }
-
+#if 0
     if (mPolygon.isEmpty()) {
         QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
         QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
@@ -1988,6 +1995,7 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
             path.addRect(p.x() - 5, p.y() - 5, 10, 10);
         }
     }
+#endif
     if (!mPolygon.isEmpty()) {
         QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0]);
         path.moveTo(p1);
@@ -2007,13 +2015,41 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
         QPen pen(Qt::blue);
         pen.setJoinStyle(Qt::RoundJoin);
         pen.setCapStyle(Qt::RoundCap);
-        pen.setWidth(2);
+        pen.setWidth(3);
         pen.setCosmetic(true);
         mPathItem->setPen(pen);
         mScene->addItem(mPathItem);
     }
 
     mPathItem->setPath(path);
+
+    // Add an item for each new point.
+    for (int i = 0; i < mPolygon.size(); i++) {
+        QPoint point = mPolygon[i];
+        if (i >= mPointItems.size()) {
+            QGraphicsRectItem *item = new QGraphicsRectItem(-5, -5, 10, 10, mPathItem);
+            item->setBrush(Qt::blue);
+            item->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            item->setPos(mScene->renderer()->tileToPixelCoords(point.x(), point.y()));
+            mPointItems += item;
+        }
+    }
+
+    // Remove excess point items.
+    for (int i = mPolygon.size() + 1; i < mPointItems.size(); i++) {
+        delete mPointItems.takeAt(i--);
+    }
+
+    // Create and/or update the point at the cursor position.
+    if (mPointItems.size() == mPolygon.size()) {
+        QGraphicsRectItem *item = new QGraphicsRectItem(-5, -5, 10, 10, mPathItem);
+        item->setBrush(Qt::blue);
+        item->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        mPointItems += item;
+    }
+    QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
+    QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
+    mPointItems.last()->setPos(scenePos);
 }
 
 void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
@@ -2031,6 +2067,16 @@ void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
         object->setGeometryType(mGeometryType);
         object->setPoints(points);
         mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
+        return;
+    }
+
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
+    if ((mPolygon.isEmpty() == false) && (mPolygon[0] == tilePos)) {
+        // TODO: Allow Polyline to end where it starts?
+        finishItem();
+        return;
+    }
+    if (mPolygon.contains(tilePos)) {
         return;
     }
 
