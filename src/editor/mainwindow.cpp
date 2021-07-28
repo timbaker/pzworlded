@@ -325,13 +325,17 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
 #endif
+#if 0
     new CreatePointObjectTool;
-    new CreatePolygonObjectTool;
-    new CreatePolylineObjectTool;
-    new EditPolygonObjectTool;
     toolManager->registerTool(CreatePointObjectTool::instancePtr());
+#endif
+    new CreatePolygonObjectTool;
     toolManager->registerTool(CreatePolygonObjectTool::instancePtr());
+#if 0
+    new CreatePolylineObjectTool;
     toolManager->registerTool(CreatePolylineObjectTool::instancePtr());
+#endif
+    new EditPolygonObjectTool;
     toolManager->registerTool(EditPolygonObjectTool::instancePtr());
     addToolBar(toolManager->toolBar());
 
