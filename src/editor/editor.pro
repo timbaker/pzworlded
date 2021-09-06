@@ -56,6 +56,7 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
+    mapbox/clipper.cpp \
     mapbox/mapboxbuildings.cpp \
     mapbox/mapboxdock.cpp \
     mapbox/mapboxglwidget.cpp \
@@ -161,6 +162,7 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
+    mapbox/clipper.hpp \
     mapbox/mapboxbuildings.h \
     mapbox/mapboxcoordinate.h \
     mapbox/mapboxdock.h \

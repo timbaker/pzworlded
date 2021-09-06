@@ -42,6 +42,7 @@ public:
     };
     enum FeatureType {
         FeatureBuilding,
+        FeatureTree,
         FeatureWater
     };
 
@@ -58,6 +59,7 @@ private:
     bool processObjectGroups(WorldCell *cell, MapComposite *mapComposite);
     bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
     bool doWater(WorldCell* cell, MapInfo* mapInfo);
+    bool doTrees(WorldCell* cell, MapInfo *mapInfo);
 
 private:
     WorldDocument *mWorldDoc;

@@ -17,9 +17,9 @@
 
 #include "mapboxwindow.h"
 #include "ui_mapboxwindow.h"
-
+#if 0
 #include "mapboxgeojsongenerator.h"
-
+#endif
 #include "basegraphicsview.h"
 #include "celldocument.h"
 #include "cellscene.h"

@@ -94,17 +94,67 @@ class MapBoxProperty
 public:
     QString mKey;
     QString mValue;
+
+    MapBoxProperty()
+    {
+
+    }
+
+    MapBoxProperty(const QString& key, const QString &value)
+        : mKey(key)
+        , mValue(value)
+    {
+
+    }
+
+    MapBoxProperty(const QString& key, int value)
+        : mKey(key)
+        , mValue(QString::number(value))
+    {
+
+    }
 };
 
 class MapBoxProperties : public QList<MapBoxProperty>
 {
 public:
+    void set(const QString& key, const QString& value) {
+        for (auto& property : *this) {
+            if (property.mKey == key) {
+                property.mValue = value;
+                return;
+            }
+        }
+        push_back({key, value});
+    }
+
+    void set(const QString& key, int value) {
+        for (auto& property : *this) {
+            if (property.mKey == key) {
+                property.mValue = value;
+                return;
+            }
+        }
+        push_back({key, value});
+    }
+
     bool containsKey(const QString& key) const {
         for (auto& property : *this) {
             if (property.mKey == key)
                 return true;
         }
         return false;
+    }
+
+    int getInt(const QString& key, int defaultVal) const {
+        for (auto& property : *this) {
+            if (property.mKey == key) {
+                bool ok;
+                int result = property.mValue.toInt(&ok);
+                return ok ? result : defaultVal;
+            }
+        }
+        return defaultVal;
     }
 };
 

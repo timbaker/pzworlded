@@ -458,7 +458,7 @@ QVariant MapboxModel::data(const QModelIndex &index, int role) const
             if (mCellDoc) {
                 // Don't check SubMapItem::isVisible because it changes during CellScene::updateCurrentLevelHighlight()
                 MapboxFeatureItem *sceneItem = mCellDoc->scene()->itemForMapboxFeature(feature);
-                bool visible = true/*sceneItem ? sceneItem->subMap()->isVisible() : false*/;
+                bool visible = sceneItem ? sceneItem->isVisible() : false /*sceneItem ? sceneItem->subMap()->isVisible() : false*/;
                 return visible ? Qt::Checked : Qt::Unchecked;
             }
             break;

@@ -74,7 +74,6 @@
 
 #include "mapbox/mapboxbuildings.h"
 #include "mapbox/mapboxdock.h"
-#include "mapbox/mapboxgeojsongenerator.h"
 #include "mapbox/mapboxreader.h"
 #include "mapbox/mapboxscene.h"
 #include "mapbox/mapboxwindow.h"
@@ -293,7 +292,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showMapboxPreviewWindow);
     connect(ui->actionGenerateMapboxBuildingFeatures, &QAction::triggered, this, &MainWindow::generateMapboxBuildingFeatures);
+    connect(ui->actionGenerateMapboxTreeFeatures, &QAction::triggered, this, &MainWindow::generateMapboxTreeFeatures);
     connect(ui->actionGenerateMapboxWaterFeatures, &QAction::triggered, this, &MainWindow::generateMapboxWaterFeatures);
+    connect(ui->actionMapboxRemoveFeatures, &QAction::triggered, this, &MainWindow::removeMapboxFeatures);
     connect(ui->actionMapboxRemovePoints, &QAction::triggered, this, &MainWindow::removeMapboxPoint);
     connect(ui->actionMapboxSplitPolygon, &QAction::triggered, this, &MainWindow::splitMapboxPolygon);
     connect(ui->actionMapboxReadFeaturesXML, SIGNAL(triggered()), SLOT(mapboxReadFeaturesXML()));
@@ -1823,6 +1824,20 @@ void MainWindow::generateMapboxBuildingFeatures()
     }
 }
 
+void MainWindow::generateMapboxTreeFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        MapboxBuildings generator;
+        generator.generateWorld(cellDoc->worldDocument(), MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureTree);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        MapboxBuildings generator;
+        generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureTree);
+    }
+}
+
 void MainWindow::generateMapboxWaterFeatures()
 {
     if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
@@ -1834,6 +1849,29 @@ void MainWindow::generateMapboxWaterFeatures()
     if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
         MapboxBuildings generator;
         generator.generateWorld(worldDoc, MapboxBuildings::GenerateSelected, MapboxBuildings::FeatureWater);
+    }
+}
+
+void MainWindow::removeMapboxFeatures()
+{
+    if (mCurrentDocument == nullptr) {
+        return;
+    }
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->undoStack()->beginMacro(tr("Remove Mapbox Features"));
+        auto selected = cellDoc->selectedMapboxFeatures();
+        for (auto* feature : selected) {
+            cellDoc->worldDocument()->removeMapboxFeature(cellDoc->cell(), feature->index());
+        }
+        cellDoc->undoStack()->endMacro();
+    }
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        worldDoc->undoStack()->beginMacro(tr("Remove Mapbox Features"));
+        auto selected = worldDoc->selectedMapboxFeatures();
+        for (auto* feature : selected) {
+            worldDoc->removeMapboxFeature(feature->cell(), feature->index());
+        }
+        worldDoc->undoStack()->endMacro();
     }
 }
 

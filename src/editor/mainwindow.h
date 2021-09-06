@@ -138,7 +138,9 @@ public slots:
 
     void showMapboxPreviewWindow();
     void generateMapboxBuildingFeatures();
+    void generateMapboxTreeFeatures();
     void generateMapboxWaterFeatures();
+    void removeMapboxFeatures();
     void splitMapboxPolygon();
     void removeMapboxPoint();
     void mapboxReadFeaturesXML();
