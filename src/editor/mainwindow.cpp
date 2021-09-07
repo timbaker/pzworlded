@@ -349,10 +349,12 @@ MainWindow::MainWindow(QWidget *parent)
     new CreateMapboxPointTool;
     new CreateMapboxPolygonTool;
     new CreateMapboxPolylineTool;
+    new CreateMapboxRectangleTool;
     new EditMapboxFeatureTool;
     toolManager->registerTool(CreateMapboxPointTool::instancePtr());
     toolManager->registerTool(CreateMapboxPolygonTool::instancePtr());
     toolManager->registerTool(CreateMapboxPolylineTool::instancePtr());
+    toolManager->registerTool(CreateMapboxRectangleTool::instancePtr());
     toolManager->registerTool(EditMapboxFeatureTool::instancePtr());
     addToolBar(toolManager->toolBar());
 
@@ -594,6 +596,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
 #endif
+            connect(cellDoc, &CellDocument::selectedMapboxFeaturesChanged, this, &MainWindow::updateActions);
             connect(cellDoc, &CellDocument::selectedMapboxPointsChanged, this, &MainWindow::updateActions);
         }
 
@@ -2326,6 +2329,8 @@ void MainWindow::updateActions()
     bool selectedCells = (cellDoc != nullptr) || (worldDoc != nullptr && !worldDoc->selectedCells().isEmpty());
     ui->actionGenerateMapboxBuildingFeatures->setEnabled(selectedCells);
     ui->actionGenerateMapboxWaterFeatures->setEnabled(selectedCells);
+    ui->actionMapboxRemoveFeatures->setEnabled(((worldDoc != nullptr) && (worldDoc->selectedMapboxFeatureCount() > 0)) ||
+                                               (cellDoc != nullptr && cellDoc->selectedMapboxFeatures().isEmpty() == false));
     ui->actionMapboxRemovePoints->setEnabled(canRemoveMapBoxPoint());
     ui->actionMapboxSplitPolygon->setEnabled(canSplitMapBoxPolygon());
     ui->actionMapboxReadFeaturesXML->setEnabled(hasDoc);

@@ -853,6 +853,10 @@
    </property>
   </action>
   <action name="actionMapboxWriteFeaturesXML">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-save-as.png</normaloff>:/images/16x16/document-save-as.png</iconset>
+   </property>
    <property name="text">
     <string>Write Features XML...</string>
    </property>
@@ -876,6 +880,10 @@
    </property>
   </action>
   <action name="actionMapboxReadFeaturesXML">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-open.png</normaloff>:/images/16x16/document-open.png</iconset>
+   </property>
    <property name="text">
     <string>Read Features XML...</string>
    </property>
@@ -886,6 +894,10 @@
    </property>
   </action>
   <action name="actionMapboxRemovePoints">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
    <property name="text">
     <string>Remove Selected Points</string>
    </property>
@@ -896,8 +908,15 @@
    </property>
   </action>
   <action name="actionMapboxRemoveFeatures">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
    <property name="text">
     <string>Remove Selected Features</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
    </property>
   </action>
  </widget>

@@ -99,7 +99,16 @@ class CreateMapboxFeatureTool : public BaseCellSceneTool
     Q_OBJECT
 
 public:
-    explicit CreateMapboxFeatureTool(MapboxFeatureItem::Type type);
+    enum class Type
+    {
+        INVALID,
+        Point,
+        Polygon,
+        Polyline,
+        Rectangle,
+    };
+
+    explicit CreateMapboxFeatureTool(Type type);
     ~CreateMapboxFeatureTool();
 
     void setScene(BaseGraphicsScene *scene);
@@ -117,16 +126,19 @@ public:
 
     void languageChanged() {
         switch (mFeatureType) {
-        case MapboxFeatureItem::Type::INVALID:
+        case Type::INVALID:
             break;
-        case MapboxFeatureItem::Type::Point:
+        case Type::Point:
             setName(tr("Create Mapbox Point"));
             break;
-        case MapboxFeatureItem::Type::Polygon:
+        case Type::Polygon:
             setName(tr("Create Mapbox Polygon"));
             break;
-        case MapboxFeatureItem::Type::Polyline:
+        case Type::Polyline:
             setName(tr("Create Mapbox LineString"));
+            break;
+        case Type::Rectangle:
+            setName(tr("Create Mapbox Rectangle"));
             break;
         }
         //setShortcut(QKeySequence(tr("S")));
@@ -136,7 +148,7 @@ private:
     void updatePathItem();
     void addPoint(const QPointF& scenePos);
 
-    MapboxFeatureItem::Type mFeatureType;
+    Type mFeatureType;
     QGraphicsPathItem* mPathItem;
     QPolygonF mPolygon;
     QPointF mScenePos;
@@ -148,7 +160,7 @@ class CreateMapboxPointTool : public CreateMapboxFeatureTool, public Singleton<C
 
 public:
     CreateMapboxPointTool()
-        : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Point)
+        : CreateMapboxFeatureTool(Type::Point)
     {
         setIcon(QIcon(QLatin1Literal(":/images/22x22/road-tool-edit.png")));
     }
@@ -160,7 +172,7 @@ class CreateMapboxPolygonTool : public CreateMapboxFeatureTool, public Singleton
 
 public:
     CreateMapboxPolygonTool()
-        : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Polygon)
+        : CreateMapboxFeatureTool(Type::Polygon)
     {
         setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
     }
@@ -172,9 +184,21 @@ class CreateMapboxPolylineTool : public CreateMapboxFeatureTool, public Singleto
 
 public:
     CreateMapboxPolylineTool()
-        : CreateMapboxFeatureTool(MapboxFeatureItem::Type::Polyline)
+        : CreateMapboxFeatureTool(Type::Polyline)
     {
         setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polyline.png")));
+    }
+};
+
+class CreateMapboxRectangleTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxRectangleTool>
+{
+    Q_OBJECT
+
+public:
+    CreateMapboxRectangleTool()
+        : CreateMapboxFeatureTool(Type::Rectangle)
+    {
+        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
     }
 };
 

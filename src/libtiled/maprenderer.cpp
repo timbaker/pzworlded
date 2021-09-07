@@ -35,6 +35,12 @@ QPoint MapRenderer::pixelToTileCoordsInt(const QPointF &point, int level) const
     QPointF tileCoord = pixelToTileCoords(point.x(), point.y(), level);
     return QPoint(qFloor(tileCoord.x()), qFloor(tileCoord.y()));
 }
+
+QPoint MapRenderer::pixelToTileCoordsNearest(const QPointF &point, int level) const
+{
+    QPointF tileCoord = pixelToTileCoords(point.x(), point.y(), level);
+    return tileCoord.toPoint();
+}
 #endif
 
 /**

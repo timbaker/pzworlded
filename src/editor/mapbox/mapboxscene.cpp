@@ -99,6 +99,20 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
         painter->drawPolygon(screenPolygon);
         break;
     case Type::Polyline:
+#if 0
+    {
+        int width = feature()->properties().getInt(QStringLiteral("width"), -1);
+        if (width > 0) {
+            QPainterPathStroker stroker;
+            stroker.setWidth(width * 64);
+            QPainterPath path1;
+            path1.addPolygon(screenPolygon);
+            QPainterPath path = stroker.createStroke(path1);
+            painter->drawPath(path);
+            break;
+        }
+    }
+#endif
         painter->drawPolyline(screenPolygon);
 
         pen.setColor(color);
@@ -475,7 +489,7 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
             QPointF pixelPos = value.toPointF() + itemPos;
 
             // Calculate the new coordinates in tiles
-            QPointF tileCoords = renderer->pixelToTileCoords(pixelPos, 0);
+            QPointF tileCoords = renderer->pixelToTileCoordsNearest(pixelPos, 0);
 
             const QPointF objectPos = { 0, 0 };
             tileCoords -= objectPos;
@@ -489,7 +503,7 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
         }
         else if (change == ItemPositionHasChanged) {
             const QPointF newPos = value.toPointF();
-            QPointF tileCoords = renderer->pixelToTileCoords(newPos, 0);
+            QPointF tileCoords = renderer->pixelToTileCoordsNearest(newPos, 0);
             MapBoxPoint point = { tileCoords.x(), tileCoords.y()};
             mFeatureItem->movePoint(mPointIndex, point);
         }
@@ -503,8 +517,9 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
 SINGLETON_IMPL(CreateMapboxPointTool)
 SINGLETON_IMPL(CreateMapboxPolygonTool)
 SINGLETON_IMPL(CreateMapboxPolylineTool)
+SINGLETON_IMPL(CreateMapboxRectangleTool)
 
-CreateMapboxFeatureTool::CreateMapboxFeatureTool(MapboxFeatureItem::Type type)
+CreateMapboxFeatureTool::CreateMapboxFeatureTool(Type type)
     : BaseCellSceneTool(QString(),
                         QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                         QKeySequence())
@@ -512,16 +527,19 @@ CreateMapboxFeatureTool::CreateMapboxFeatureTool(MapboxFeatureItem::Type type)
     , mPathItem(nullptr)
 {
     switch (mFeatureType) {
-    case MapboxFeatureItem::Type::INVALID:
+    case Type::INVALID:
         break;
-    case MapboxFeatureItem::Type::Point:
+    case Type::Point:
         setName(tr("Create Mapbox Point"));
         break;
-    case MapboxFeatureItem::Type::Polygon:
+    case Type::Polygon:
         setName(tr("Create Mapbox Polygon"));
         break;
-    case MapboxFeatureItem::Type::Polyline:
+    case Type::Polyline:
         setName(tr("Create Mapbox LineString"));
+        break;
+    case Type::Rectangle:
+        setName(tr("Create Mapbox Rectangle"));
         break;
     }
 }
@@ -571,7 +589,7 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
     if (event->button() == Qt::RightButton) {
         switch (mFeatureType) {
-        case MapboxFeatureItem::Type::Polygon:
+        case Type::Polygon:
             if (mPolygon.size() > 2) {
                 MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
                 MapBoxCoordinates coords;
@@ -582,7 +600,7 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
             }
             break;
-        case MapboxFeatureItem::Type::Polyline:
+        case Type::Polyline:
             if (mPolygon.size() > 1) {
                 MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
                 MapBoxCoordinates coords;
@@ -592,6 +610,8 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 feature->mGeometry.mCoordinates += coords;
                 mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
             }
+            break;
+        default:
             break;
         }
         mPolygon.clear();
@@ -608,6 +628,21 @@ void CreateMapboxFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void CreateMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
+        switch (mFeatureType) {
+        case Type::Rectangle:
+        {
+            if (mPolygon.isEmpty())
+                break;
+            QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(event->scenePos());
+            if (tilePos != mPolygon.first()) {
+                // Click-drag-release
+                addPoint(event->scenePos());
+            }
+            break;
+        }
+        default:
+            break;
+        }
     }
 }
 
@@ -615,14 +650,14 @@ void CreateMapboxFeatureTool::updatePathItem()
 {
     QPainterPath path;
 
-    if (mFeatureType == MapboxFeatureItem::Type::Polygon) {
+    if (mFeatureType == Type::Polygon) {
         if (mPolygon.size() > 2) {
             path.addPolygon(mScene->renderer()->tileToPixelCoords(mPolygon));
         }
     }
 
     if (mPolygon.isEmpty()) {
-        QPointF tilePos = mScene->renderer()->pixelToTileCoordsInt(mScenePos);
+        QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
         QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
         path.addRect(scenePos.x() - 5, scenePos.y() - 5, 10, 10);
     } else {
@@ -630,19 +665,29 @@ void CreateMapboxFeatureTool::updatePathItem()
             QPointF p = mScene->renderer()->tileToPixelCoords(point);
             path.addRect(p.x() - 5, p.y() - 5, 10, 10);
         }
-    }
-    if (!mPolygon.isEmpty()) {
-        QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0]);
-        path.moveTo(p1);
-        for (int i = 1; i < mPolygon.size(); i++) {
-            QPointF p2 = mScene->renderer()->tileToPixelCoords(mPolygon[i]);
+
+        if (mFeatureType == Type::Rectangle) {
+            QPointF p2 = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
+            int minX = std::min(mPolygon[0].x(), p2.x());
+            int minY = std::min(mPolygon[0].y(), p2.y());
+            int maxX = std::max(mPolygon[0].x(), p2.x());
+            int maxY = std::max(mPolygon[0].y(), p2.y());
+            QPolygonF screenPoly = mScene->renderer()->tileToPixelCoords(QRect(minX, minY, maxX - minX, maxY - minY));
+            screenPoly += screenPoly.first();
+            path.addPolygon(screenPoly);
+        } else {
+            QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0]);
+            path.moveTo(p1);
+            for (int i = 1; i < mPolygon.size(); i++) {
+                QPointF p2 = mScene->renderer()->tileToPixelCoords(mPolygon[i]);
+                path.lineTo(p2);
+            }
+
+            // Line to mouse pointer
+            QPointF p2 = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
+            p2 = mScene->renderer()->tileToPixelCoords(p2);
             path.lineTo(p2);
         }
-
-        // Line to mouse pointer
-        QPointF p2 = mScene->renderer()->pixelToTileCoordsInt(mScenePos);
-        p2 = mScene->renderer()->tileToPixelCoords(p2);
-        path.lineTo(p2);
     }
 
     if (mPathItem == nullptr) {
@@ -661,9 +706,9 @@ void CreateMapboxFeatureTool::updatePathItem()
 
 void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
 {
-    if (mFeatureType == MapboxFeatureItem::Type::Point) {
+    if (mFeatureType == Type::Point) {
         MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
-        QPointF cellPos = mScene->renderer()->pixelToTileCoordsInt(scenePos);
+        QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
         MapBoxCoordinates coords;
         coords += MapBoxPoint(cellPos.x(), cellPos.y());
         feature->mGeometry.mType = QLatin1Literal("Point");
@@ -671,8 +716,29 @@ void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
         mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
         return;
     }
+    if (mFeatureType == Type::Rectangle) {
+        if (mPolygon.size() == 1) {
+            MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
+            QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
+            MapBoxCoordinates coords;
+            int minX = std::min(mPolygon[0].x(), cellPos.x());
+            int minY = std::min(mPolygon[0].y(), cellPos.y());
+            int maxX = std::max(mPolygon[0].x(), cellPos.x());
+            int maxY = std::max(mPolygon[0].y(), cellPos.y());
+            coords += MapBoxPoint(minX, minY);
+            coords += MapBoxPoint(maxX, minY);
+            coords += MapBoxPoint(maxX, maxY);
+            coords += MapBoxPoint(minX, maxY);
+            feature->mGeometry.mType = QLatin1Literal("Polygon");
+            feature->mGeometry.mCoordinates += coords;
+            mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+            mPolygon.clear();
+            updatePathItem();
+            return;
+        }
+    }
 
-    mPolygon += mScene->renderer()->pixelToTileCoordsInt(scenePos);
+    mPolygon += mScene->renderer()->pixelToTileCoordsNearest(scenePos);
 }
 
 /////
@@ -755,7 +821,7 @@ void EditMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         }
         if ((clickedItem != nullptr) && (clickedItem == mSelectedFeatureItem)) {
             if (mSelectedFeatureItem->mAddPointIndex != -1) {
-                QPointF tilePos = mScene->renderer()->pixelToTileCoordsInt(mSelectedFeatureItem->mAddPointPos);
+                QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedFeatureItem->mAddPointPos);
                 MapBoxPoint point(tilePos.x(), tilePos.y());
                 MapBoxCoordinates coords = mSelectedFeature->mGeometry.mCoordinates[0];
                 coords.insert(mSelectedFeatureItem->mAddPointIndex + 1, point);
