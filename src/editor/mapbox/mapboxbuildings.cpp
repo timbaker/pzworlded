@@ -26,8 +26,12 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include "bmpblender.h"
 #include "mapobject.h"
 #include "objectgroup.h"
+#include "tile.h"
+#include "tileset.h"
+#include "tilelayer.h"
 
 #include <qmath.h>
 #include <QDebug>
@@ -35,7 +39,18 @@
 #include <QMessageBox>
 #include <QUndoStack>
 
+#include "clipper.hpp"
+
 using namespace Tiled;
+
+namespace
+{
+struct pzPolygon
+{
+    ClipperLib::Path outer;
+    ClipperLib::Paths inner; // holes
+};
+}
 
 MapboxBuildings::MapboxBuildings(QObject *parent) :
     QObject(parent)
@@ -593,146 +608,13 @@ static void douglas_peucker(std::vector<DPPoint> &geom, size_t start, size_t n, 
     }
 }
 
-#include "bmpblender.h"
-#include "tile.h"
-#include "tileset.h"
-#include "tilelayer.h"
-
-bool MapboxBuildings::doWater(WorldCell *cell, MapInfo *mapInfo)
-{
-    // Remove all "water=" features
-    auto& features = cell->mapBox().features();
-    for (int i = features.size() - 1; i >= 0; i--) {
-        auto* feature = features[i];
-        for (auto& property : feature->properties()) {
-            if (property.mKey == QStringLiteral("water")) {
-                mWorldDoc->removeMapboxFeature(cell, feature->index());
-            }
-        }
-    }
-
-    DelayedMapLoader mapLoader;
-    mapLoader.addMap(mapInfo);
-
-    while (mapInfo->isLoading())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-
-    MapComposite staticMapComposite(mapInfo);
-    MapComposite *mapComposite = &staticMapComposite;
-    while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-
-    OutlineGrid grid;
-    const QRect bounds(QPoint(), mapInfo->map()->size());
-    grid.setSize(bounds.width(), bounds.height());
-
-    auto* layerGroup = mapComposite->layerGroupForLevel(0);
-    layerGroup->prepareDrawing2();
-
-    static QVector<const Tiled::Cell*> cells(40);
-
-    for (int y = 0; y < bounds.height(); y++) {
-        for (int x = 0; x < bounds.width(); x++) {
-            cells.resize(0);
-            layerGroup->orderedCellsAt2({x, y}, cells);
-            for (auto* cell : cells) {
-                if (cell->isEmpty())
-                    continue;
-                if (cell->tile->id() < 8 && cell->tile->tileset()->name() == QStringLiteral("blends_natural_02")) {
-                    grid.setInner(x, y);
-                }
-            }
-        }
-    }
-
-    grid.trace(false, [&](QPolygon& nodes) {
-#if 1 // Simplification of the polygon using Ramer-Douglas-Peucker algorithm
-        std::vector<DPPoint> points;
-        std::int64_t SCALE = 1000;
-        const size_t DI = 40;
-        int lastNecessary = -1;
-        for (int i = 0; i < nodes.size(); i++) {
-            QPoint& node = nodes[i];
-            bool necessary = i == 0 || i == nodes.size() - 1;
-
-            // Keep points on cell borders
-            if (node.x() == 0 || node.x() == 300 || node.y() == 0 || node.y() == 300)
-                necessary = true;
-
-            if (i - lastNecessary >= DI)
-                necessary = true;
-
-            if (necessary)
-                lastNecessary = i;
-
-            points.push_back( { std::int64_t(node.x() * SCALE), std::int64_t(node.y() * SCALE), necessary } );
-        }
-        nodes.clear();
-        double simplification = 2 * SCALE;
-        douglas_peucker(points, 0, points.size(), simplification, 2, 0);
-
-        for (auto& point : points) {
-            if (point.necessary)
-                nodes.push_back({int(point.x / SCALE), int(point.y / SCALE)});
-        }
-
-        // Merge horizontal/vertical spans (on cell borders)
-        for (int i = 0; i < nodes.size() - 1; i++) {
-            QPoint n0 = nodes[i];
-            int end = i;
-            for (int j = i + 1; j < nodes.size(); j++) {
-                QPoint n1 = nodes[j];
-                if (n0.y() != n1.y())
-                    break;
-                end = j;
-            }
-            if (i != end)
-                nodes.remove(i + 1, end - i - 1);
-        }
-        for (int i = 0; i < nodes.size() - 1; i++) {
-            QPoint n0 = nodes[i];
-            int end = i;
-            for (int j = i + 1; j < nodes.size(); j++) {
-                QPoint n1 = nodes[j];
-                if (n0.x() != n1.x())
-                    break;
-                end = j;
-            }
-            if (i < end)
-                nodes.remove(i + 1, end - i - 1);
-        }
-#endif
-        nodes.translate(bounds.left(), bounds.top());
-
-        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
-
-        MapBoxProperty property;
-        property.mKey = QStringLiteral("water");
-        property.mValue = QStringLiteral("river");
-        feature->properties() += property;
-
-        feature->mGeometry.mType = QStringLiteral("Polygon");
-        MapBoxCoordinates coords;
-        for (auto& point : nodes) {
-            coords += MapBoxPoint(point.x(), point.y());
-        }
-        feature->mGeometry.mCoordinates += coords;
-
-        mWorldDoc->addMapboxFeature(cell, cell->mapBox().features().size(), feature);
-    });
-
-    return true;
-}
-
-#include "clipper.hpp"
-
 static void simplifyPolygon(ClipperLib::Path& nodes)
 {
     // Simplification of the polygon using Ramer-Douglas-Peucker algorithm
     std::vector<DPPoint> points;
     std::int64_t SCALE = 1000;
     const size_t DI = 40;
-    int lastNecessary = -1;
+    size_t lastNecessary = -1;
     for (size_t i = 0; i < nodes.size(); i++) {
         const auto& node = nodes[i];
         bool necessary = i == 0 || i == nodes.size() - 1;
@@ -786,16 +668,14 @@ static void simplifyPolygon(ClipperLib::Path& nodes)
     }
 }
 
-bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
+bool MapboxBuildings::doWater(WorldCell *cell, MapInfo *mapInfo)
 {
-    // Remove all "natural=forest" features
+    // Remove all "water=" features
     auto& features = cell->mapBox().features();
     for (int i = features.size() - 1; i >= 0; i--) {
         auto* feature = features[i];
-        for (auto& property : feature->properties()) {
-            if (property.mKey == QStringLiteral("natural") && property.mValue == QStringLiteral("forest")) {
-                mWorldDoc->removeMapboxFeature(cell, feature->index());
-            }
+        if (feature->properties().containsKey(QStringLiteral("water"))) {
+            mWorldDoc->removeMapboxFeature(cell, feature->index());
         }
     }
 
@@ -810,9 +690,131 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
     while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    OutlineGrid grid;
     const QRect bounds(QPoint(), mapInfo->map()->size());
-    grid.setSize(bounds.width(), bounds.height());
+
+    auto* layerGroup = mapComposite->layerGroupForLevel(0);
+    layerGroup->prepareDrawing2();
+
+    ClipperLib::Clipper clipper;
+    ClipperLib::Path path;
+
+    static QVector<const Tiled::Cell*> cells(40);
+
+    auto isWaterAt = [&](int x, int y) {
+        cells.resize(0);
+        layerGroup->orderedCellsAt2({x, y}, cells);
+        for (auto* cell : qAsConst(cells)) {
+            if (cell->isEmpty())
+                continue;
+            if ((cell->tile->id() < 8) && (cell->tile->tileset()->name() == QStringLiteral("blends_natural_02"))) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    for (int y = 0; y < bounds.height(); y++) {
+        for (int x = 0; x < bounds.width(); x++) {
+            if (isWaterAt(x, y)) {
+#if 1
+                path.clear();
+                path << ClipperLib::IntPoint(x, y);
+                path << ClipperLib::IntPoint(x + 1, y);
+                path << ClipperLib::IntPoint(x + 1, y + 1);
+                path << ClipperLib::IntPoint(x, y + 1);
+                clipper.AddPath(path, ClipperLib::ptSubject, true);
+#else
+                // This should work...
+                int end = x + 1;
+                for (; end < bounds.width(); end++) {
+                    if (isWaterAt(end, y) == false)
+                        break;
+                }
+                path.clear();
+                path << ClipperLib::IntPoint(x, y);
+                path << ClipperLib::IntPoint(end, y);
+                path << ClipperLib::IntPoint(end, y + 1);
+                path << ClipperLib::IntPoint(x, y + 1);
+                clipper.AddPath(path, ClipperLib::ptSubject, true);
+                x = end - 1;
+#endif
+            }
+        }
+    }
+
+    ClipperLib::PolyTree polyTree;
+    if (clipper.Execute(ClipperLib::ctDifference, polyTree, ClipperLib::PolyFillType::pftPositive) == false) {
+        return true;
+    }
+
+    std::map<ClipperLib::PolyNode*,pzPolygon*> polyMap;
+    std::vector<pzPolygon*> allPolygons;
+    for (ClipperLib::PolyNode* node = polyTree.GetFirst(); node != nullptr; node = node->GetNext()) {
+        if (node->IsHole()) {
+            pzPolygon *outer = polyMap[node->Parent];
+            outer->inner.push_back(node->Contour);
+        } else {
+            pzPolygon* poly = new pzPolygon();
+            poly->outer = node->Contour;
+            polyMap[node] = poly;
+            allPolygons.push_back(poly);
+        }
+    }
+
+    for (pzPolygon *poly : allPolygons) {
+        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+        feature->properties().set(QStringLiteral("water"), QStringLiteral("river"));
+        ClipperLib::Path simple = poly->outer;
+        simplifyPolygon(simple);
+        feature->mGeometry.mType = QStringLiteral("Polygon");
+        MapBoxCoordinates coords;
+        for (auto& point : simple) {
+            coords += MapBoxPoint(point.X, point.Y);
+        }
+        feature->mGeometry.mCoordinates += coords;
+
+        if (poly->inner.empty() == false) {
+            for (auto& hole : poly->inner) {
+                simple = hole;
+                simplifyPolygon(simple);
+                coords.clear();
+                for (auto& point : simple) {
+                    coords += MapBoxPoint(point.X, point.Y);
+                }
+                feature->mGeometry.mCoordinates += coords;
+            }
+        }
+
+        mWorldDoc->addMapboxFeature(cell, cell->mapBox().features().size(), feature);
+    }
+
+    qDeleteAll(allPolygons);
+    return true;
+}
+
+bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
+{
+    // Remove all "natural=forest" features
+    auto& features = cell->mapBox().features();
+    for (int i = features.size() - 1; i >= 0; i--) {
+        auto* feature = features[i];
+        if (feature->properties().contains(QStringLiteral("natural"), QStringLiteral("forest"))) {
+            mWorldDoc->removeMapboxFeature(cell, feature->index());
+        }
+    }
+
+    DelayedMapLoader mapLoader;
+    mapLoader.addMap(mapInfo);
+
+    while (mapInfo->isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    MapComposite staticMapComposite(mapInfo);
+    MapComposite *mapComposite = &staticMapComposite;
+    while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    const QRect bounds(QPoint(), mapInfo->map()->size());
 
     auto* layerGroup = mapComposite->layerGroupForLevel(0);
     layerGroup->prepareDrawing2();
@@ -873,11 +875,6 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
         return true;
     }
 
-    struct pzPolygon
-    {
-        ClipperLib::Path outer;
-        ClipperLib::Paths inner; // holes
-    };
     std::map<ClipperLib::PolyNode*,pzPolygon*> polyMap;
     std::vector<pzPolygon*> allPolygons;
     for (ClipperLib::PolyNode* node = polyTree.GetFirst(); node != nullptr; node = node->GetNext()) {
@@ -892,16 +889,22 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
         }
     }
 
+#if 0
     int nextID = 0;
     for (auto *feature : cell->mapBox().features()) {
         nextID = std::max(nextID, feature->mProperties.getInt(QStringLiteral("id"), 0));
     }
+#endif
 
     for (pzPolygon *poly : allPolygons) {
-        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
-        feature->properties().set(QStringLiteral("natural"), QStringLiteral("forest"));
         ClipperLib::Path simple = poly->outer;
         simplifyPolygon(simple);
+        if (simple.size() < 3) {
+            continue;
+        }
+
+        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+        feature->properties().set(QStringLiteral("natural"), QStringLiteral("forest"));
         feature->mGeometry.mType = QStringLiteral("Polygon");
         MapBoxCoordinates coords;
         for (auto& point : simple) {
@@ -914,6 +917,9 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
             for (auto& hole : poly->inner) {
                 simple = hole;
                 simplifyPolygon(simple);
+                if (simple.size() < 3) {
+                    continue;
+                }
                 coords.clear();
                 for (auto& point : simple) {
                     coords += MapBoxPoint(point.X, point.Y);

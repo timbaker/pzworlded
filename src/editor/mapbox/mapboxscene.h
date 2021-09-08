@@ -81,6 +81,7 @@ protected:
     WorldDocument* mWorldDoc;
     MapBoxFeature* mFeature;
     QPolygonF mPolygon;
+    QList<QPolygonF> mHoles;
     Tiled::MapRenderer *mRenderer;
     bool mSyncing;
     bool mIsEditable;

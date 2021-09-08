@@ -71,6 +71,18 @@ public:
         }
         return *this;
     }
+
+    bool isClockwise() const
+    {
+        float sum = 0.0f;
+        for (int i = 0; i < size(); i++) {
+            auto& p1 = at(i);
+            auto& p2 = at((i + 1) % size());
+            sum += (p2.x - p1.x) * (p2.y + p1.y);
+        }
+        return sum > 0.0f;
+    }
+
 };
 
 class MapBoxGeometry
@@ -141,6 +153,14 @@ public:
     bool containsKey(const QString& key) const {
         for (auto& property : *this) {
             if (property.mKey == key)
+                return true;
+        }
+        return false;
+    }
+
+    bool contains(const QString& key, const QString &value) const {
+        for (auto& property : *this) {
+            if ((property.mKey == key) && (property.mValue == value))
                 return true;
         }
         return false;

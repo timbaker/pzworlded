@@ -90,14 +90,30 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
         painter->drawEllipse(screenPolygon[0], 10, 10);
         break;
     case Type::Polygon:
-        painter->drawPolygon(screenPolygon);
+    {
+        QPainterPath path;
+        if (screenPolygon.isClosed() == false) {
+            screenPolygon += screenPolygon.first();
+        }
+        path.addPolygon(screenPolygon);
+        QPainterPath path2;
+        for (auto& hole : mHoles) {
+            QPolygonF screenPolygon2 = mRenderer->tileToPixelCoords(hole.translated(mDragOffset));
+            if (screenPolygon2.isClosed() == false) {
+                screenPolygon2 += screenPolygon2.first();
+            }
+            path2.addPolygon(screenPolygon2);
+        }
+        path = path.subtracted(path2);
+        painter->drawPath(path);
 
         pen.setColor(color);
         painter->setPen(pen);
         painter->setBrush(brush);
-        screenPolygon.translate(0, -1);
-        painter->drawPolygon(screenPolygon);
+        path.translate(0, -1);
+        painter->drawPath(path);
         break;
+    }
     case Type::Polyline:
 #if 0
     {
@@ -248,6 +264,15 @@ QPainterPath MapboxFeatureItem::shape() const
     }
     path.addPolygon(polygon);
 
+    if (isPolygon() && (mHoles.isEmpty() == false)) {
+        // Holes
+        QPainterPath path2;
+        for (int i = 0; i < mHoles.size(); i++) {
+            path2.addPolygon(mRenderer->tileToPixelCoords(mHoles[i]));
+        }
+        path = path.subtracted(path2);
+    }
+
     QPainterPathStroker stroker;
     stroker.setWidth(20 / zoom);
     return stroker.createStroke(path);
@@ -261,6 +286,7 @@ bool MapboxFeatureItem::contains(const QPointF &point) const
 void MapboxFeatureItem::synchWithFeature()
 {
     mPolygon.clear();
+    mHoles.clear();
     mAddPointIndex = -1;
 
     switch (geometryType()) {
@@ -278,13 +304,32 @@ void MapboxFeatureItem::synchWithFeature()
         return;
     }
     case Type::Polygon:
-        for (auto& coords : mFeature->mGeometry.mCoordinates) {
-            for (auto& point : coords) {
-                mPolygon += QPointF(point.x, point.y);
+    {
+        if (mFeature->mGeometry.mCoordinates.isEmpty()) {
+            break;
+        }
+        const MapBoxCoordinates& outer = mFeature->mGeometry.mCoordinates.first();
+        for (auto& point : outer) {
+            mPolygon += QPointF(point.x, point.y);
+        }
+        bool bClockwise = outer.isClockwise();
+        for (int i = 1; i < mFeature->mGeometry.mCoordinates.size(); i++) {
+            const auto& inner = mFeature->mGeometry.mCoordinates[i];
+            QPolygonF hole;
+            if (bClockwise == inner.isClockwise()) {
+                for (int j = inner.size() - 1; j >= 0; j--) {
+                    auto& point = inner[j];
+                    hole += QPointF(point.x, point.y);
+                }
+            } else {
+                for (auto& point : inner) {
+                    hole += QPointF(point.x, point.y);
+                }
             }
-            break; // TODO: handle inner rings
+            mHoles += hole;
         }
         break;
+    }
     case Type::Polyline:
         for (auto& coords : mFeature->mGeometry.mCoordinates) {
             for (auto& point : coords) {
@@ -930,7 +975,7 @@ void EditMapboxFeatureTool::setSelectedItem(MapboxFeatureItem *featureItem)
             for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
                 for (int i = 0; i < coords.size(); i++)
                     createHandle(i);
-                break; // exterior loop only
+                break; // TODO: handle holes
             }
             break;
         case MapboxFeatureItem::Type::Polyline:
