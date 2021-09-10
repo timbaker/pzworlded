@@ -31,7 +31,7 @@ class LayersDock;
 class LotsDock;
 class LotPackWindow;
 class MapsDock;
-class MapboxDock;
+class InGameMapDock;
 class MapboxWindow;
 class ObjectsDock;
 class PropertiesDock;
@@ -136,15 +136,15 @@ public slots:
     void clearCells();
     void clearMapOnly();
 
-    void showMapboxPreviewWindow();
-    void generateMapboxBuildingFeatures();
-    void generateMapboxTreeFeatures();
-    void generateMapboxWaterFeatures();
-    void removeMapboxFeatures();
-    void splitMapboxPolygon();
-    void removeMapboxPoint();
-    void mapboxReadFeaturesXML();
-    void mapboxWriteFeaturesXML();
+    void showInGameMapPreviewWindow();
+    void generateInGameMapBuildingFeatures();
+    void generateInGameMapTreeFeatures();
+    void generateInGameMapWaterFeatures();
+    void removeInGameMapFeatures();
+    void splitInGameMapPolygon();
+    void removeInGameMapPoint();
+    void readInGameMapFeaturesXML();
+    void writeInGameMapFeaturesXML();
 
     void setStatusBarCoords(int x, int y);
 
@@ -178,8 +178,8 @@ private:
 
     WorldDocument *currentWorldDocument();
 
-    bool canSplitMapBoxPolygon();
-    bool canRemoveMapBoxPoint();
+    bool canSplitInGameMapPolygon();
+    bool canRemoveInGameMapPoint();
 
     struct ViewHint
     {
@@ -205,7 +205,7 @@ private:
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
     SearchDock* mSearchDock;
-    MapboxDock* mMapboxDock;
+    InGameMapDock* mInGameMapDock;
 #ifdef ROAD_UI
     RoadsDock *mRoadsDock;
 #endif

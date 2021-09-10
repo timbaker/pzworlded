@@ -15,5 +15,31 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "worldcellmapbox.h"
+#ifndef INGAMEMAPREADER_H
+#define INGAMEMAPREADER_H
 
+#include <QString>
+
+class World;
+
+class QIODevice;
+
+class InGameMapReaderPrivate;
+
+class InGameMapReader
+{
+public:
+    InGameMapReader();
+    ~InGameMapReader();
+
+    World *readWorld(QIODevice *device, const QString &path, World *world);
+    World *readWorld(const QString &fileName, World* world);
+
+    QString errorString() const;
+
+private:
+    friend class InGameMapReaderPrivate;
+    InGameMapReaderPrivate *d;
+};
+
+#endif // INGAMEMAPREADER_H

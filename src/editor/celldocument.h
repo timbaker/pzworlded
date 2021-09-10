@@ -33,7 +33,7 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
-class MapBoxFeature;
+class InGameMapFeature;
 
 namespace Tiled {
 class Layer;
@@ -70,11 +70,11 @@ public:
     const QList<WorldCellObject*> &selectedObjects() const { return mSelectedObjects; }
     int selectedObjectCount() const { return mSelectedObjects.count(); }
 
-    void setSelectedMapboxFeatures(const QList<MapBoxFeature*>& selected);
-    const QList<MapBoxFeature*>& selectedMapboxFeatures() const { return mSelectedMapboxFeatures; }
+    void setSelectedInGameMapFeatures(const QList<InGameMapFeature*>& selected);
+    const QList<InGameMapFeature*>& selectedInGameMapFeatures() const { return mSelectedInGameMapFeatures; }
 
-    void setSelectedMapboxPoints(const QList<int>& selected);
-    const QList<int>& selectedMapboxPoints() const { return mSelectedMapboxPoints; }
+    void setSelectedInGameMapPoints(const QList<int>& selected);
+    const QList<int>& selectedInGameMapPoints() const { return mSelectedInGameMapPoints; }
 
     void setLayerVisibility(Tiled::Layer *layer, bool visible);
     void setLayerGroupVisibility(Tiled::ZTileLayerGroup *layerGroup, bool visible);
@@ -109,8 +109,8 @@ signals:
     void objectGroupVisibilityChanged(WorldObjectGroup *og, int level);
     void selectedLotsChanged();
     void selectedObjectsChanged();
-    void selectedMapboxFeaturesChanged();
-    void selectedMapboxPointsChanged();
+    void selectedInGameMapFeaturesChanged();
+    void selectedInGameMapPointsChanged();
     void cellContentsAboutToChange();
     void cellContentsChanged();
     void cellMapFileAboutToChange();
@@ -132,7 +132,7 @@ private slots:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
 
-    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
 
     void objectGroupAboutToBeRemoved(int index);
 
@@ -142,8 +142,8 @@ private:
     CellScene *mCellScene;
     QList<WorldCellLot*> mSelectedLots;
     QList<WorldCellObject*> mSelectedObjects;
-    QList<MapBoxFeature*> mSelectedMapboxFeatures;
-    QList<int> mSelectedMapboxPoints;
+    QList<InGameMapFeature*> mSelectedInGameMapFeatures;
+    QList<int> mSelectedInGameMapPoints;
     int mCurrentLayerIndex;
     int mCurrentLevel;
     WorldObjectGroup *mCurrentObjectGroup;

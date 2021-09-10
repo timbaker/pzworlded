@@ -33,7 +33,7 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
-#include "mapbox/mapboxscene.h"
+#include "mapbox/ingamemapscene.h"
 
 #include "isometricrenderer.h"
 #include "map.h"
@@ -1240,8 +1240,8 @@ void CellScene::setTool(AbstractTool *tool)
     if (mActiveTool != CellSelectMoveRoadTool::instance())
         worldDocument()->setSelectedRoads(QList<Road*>());
 
-    if (mActiveTool != EditMapboxFeatureTool::instancePtr()) {
-        for (MapboxFeatureItem* item : mFeatureItems)
+    if (mActiveTool != EditInGameMapFeatureTool::instancePtr()) {
+        for (InGameMapFeatureItem* item : mFeatureItems)
             item->setEditable(false);
     }
 
@@ -1311,12 +1311,12 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &CellScene::propertiesChanged);
     connect(worldDocument(), &WorldDocument::templateRemoved, this, &CellScene::propertiesChanged);
 
-    connect(worldDocument(), &WorldDocument::mapboxFeatureAdded, this, &CellScene::mapboxFeatureAdded);
-    connect(worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellScene::mapboxFeatureAboutToBeRemoved);
-    connect(worldDocument(), &WorldDocument::mapboxPointMoved, this, &CellScene::mapboxPointMoved);
-    connect(worldDocument(), &WorldDocument::mapboxGeometryChanged, this, &CellScene::mapboxGeometryChanged);
-    connect(mDocument, &CellDocument::selectedMapboxFeaturesChanged, this, &CellScene::selectedMapboxFeaturesChanged);
-    connect(mDocument, &CellDocument::selectedMapboxPointsChanged, this, &CellScene::selectedMapboxPointsChanged);
+    connect(worldDocument(), &WorldDocument::inGameMapFeatureAdded, this, &CellScene::inGameMapFeatureAdded);
+    connect(worldDocument(), &WorldDocument::inGameMapFeatureAboutToBeRemoved, this, &CellScene::inGameMapFeatureAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::inGameMapPointMoved, this, &CellScene::inGameMapPointMoved);
+    connect(worldDocument(), &WorldDocument::inGameMapGeometryChanged, this, &CellScene::inGameMapGeometryChanged);
+    connect(mDocument, &CellDocument::selectedInGameMapFeaturesChanged, this, &CellScene::selectedInGameMapFeaturesChanged);
+    connect(mDocument, &CellDocument::selectedInGameMapPointsChanged, this, &CellScene::selectedInGameMapPointsChanged);
 
     connect(worldDocument(), SIGNAL(roadAdded(int)),
            SLOT(roadAdded(int)));
@@ -1395,7 +1395,7 @@ ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
     return 0;
 }
 
-MapboxFeatureItem *CellScene::itemForMapboxFeature(MapBoxFeature *feature)
+InGameMapFeatureItem *CellScene::itemForInGameMapFeature(InGameMapFeature *feature)
 {
     foreach (auto* item, mFeatureItems) {
         if (item->feature() == feature)
@@ -1422,13 +1422,13 @@ void CellScene::setSelectedObjectItems(const QSet<ObjectItem *> &selected)
     document()->setSelectedObjects(selection);
 }
 
-void CellScene::setSelectedMapboxFeatureItems(const QSet<MapboxFeatureItem *>& selected)
+void CellScene::setSelectedInGameMapFeatureItems(const QSet<InGameMapFeatureItem *>& selected)
 {
-    QList<MapBoxFeature*> selection;
-    for (MapboxFeatureItem *item : selected) {
+    QList<InGameMapFeature*> selection;
+    for (InGameMapFeatureItem *item : selected) {
         selection << item->feature();
     }
-    document()->setSelectedMapboxFeatures(selection);
+    document()->setSelectedInGameMapFeatures(selection);
 }
 
 // Determine sane Z-order for layers in and out of TileLayerGroups
@@ -1500,9 +1500,9 @@ void CellScene::setObjectVisible(WorldCellObject *obj, bool visible)
     }
 }
 
-void CellScene::setMapboxFeatureVisible(MapBoxFeature *feature, bool visible)
+void CellScene::setInGameMapFeatureVisible(InGameMapFeature *feature, bool visible)
 {
-    if (MapboxFeatureItem* item = itemForMapboxFeature(feature)) {
+    if (InGameMapFeatureItem* item = itemForInGameMapFeature(feature)) {
         item->setVisible(visible);
     }
 }
@@ -1702,8 +1702,8 @@ void CellScene::loadMap()
         mRoadItems += item;
     }
 
-    for (auto* feature : cell()->mapBox().mFeatures) {
-        MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
+    for (auto* feature : cell()->inGameMap().mFeatures) {
+        InGameMapFeatureItem* item = new InGameMapFeatureItem(feature, this);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
         mFeatureItems += item;
@@ -1965,26 +1965,26 @@ void CellScene::propertiesChanged(PropertyHolder* ph)
     }
 }
 
-void CellScene::mapboxFeatureAdded(WorldCell *cell, int index)
+void CellScene::inGameMapFeatureAdded(WorldCell *cell, int index)
 {
     if (cell != this->cell())
         return;
 
-    MapBoxFeature* feature = cell->mapBox().mFeatures[index];
-    MapboxFeatureItem* item = new MapboxFeatureItem(feature, this);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[index];
+    InGameMapFeatureItem* item = new InGameMapFeatureItem(feature, this);
     item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
     addItem(item);
     mFeatureItems += item;
     doLater(ZOrder);
 }
 
-void CellScene::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
+void CellScene::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
 {
     if (cell != this->cell())
         return;
 
-    MapBoxFeature *feature = cell->mapBox().mFeatures.at(index);
-    if (auto* item = itemForMapboxFeature(feature)) {
+    InGameMapFeature *feature = cell->inGameMap().mFeatures.at(index);
+    if (auto* item = itemForInGameMapFeature(feature)) {
         mFeatureItems.removeAll(item);
         mSelectedFeatureItems.remove(item);
         removeItem(item);
@@ -1994,36 +1994,36 @@ void CellScene::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
 
 }
 
-void CellScene::mapboxPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
+void CellScene::inGameMapPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
 {
     if (cell != this->cell())
         return;
 
-    MapBoxFeature *feature = cell->mapBox().mFeatures.at(featureIndex);
-    if (auto* item = itemForMapboxFeature(feature)) {
+    InGameMapFeature *feature = cell->inGameMap().mFeatures.at(featureIndex);
+    if (auto* item = itemForInGameMapFeature(feature)) {
         item->synchWithFeature();
     }
 }
 
-void CellScene::mapboxGeometryChanged(WorldCell *cell, int featureIndex)
+void CellScene::inGameMapGeometryChanged(WorldCell *cell, int featureIndex)
 {
     if (cell != this->cell())
         return;
 
-    MapBoxFeature *feature = cell->mapBox().mFeatures.at(featureIndex);
-    if (auto* item = itemForMapboxFeature(feature)) {
+    InGameMapFeature *feature = cell->inGameMap().mFeatures.at(featureIndex);
+    if (auto* item = itemForInGameMapFeature(feature)) {
         item->synchWithFeature();
         item->update();
     }
 }
 
-void CellScene::selectedMapboxFeaturesChanged()
+void CellScene::selectedInGameMapFeaturesChanged()
 {
-    auto& selected = document()->selectedMapboxFeatures();
+    auto& selected = document()->selectedInGameMapFeatures();
 
-    QSet<MapboxFeatureItem*> items;
+    QSet<InGameMapFeatureItem*> items;
     for (auto* feature : selected) {
-        items.insert(itemForMapboxFeature(feature));
+        items.insert(itemForInGameMapFeature(feature));
     }
 
     for (auto* item : mSelectedFeatureItems - items) {
@@ -2037,7 +2037,7 @@ void CellScene::selectedMapboxFeaturesChanged()
     mSelectedFeatureItems = items;
 }
 
-void CellScene::selectedMapboxPointsChanged()
+void CellScene::selectedInGameMapPointsChanged()
 {
     for (auto featureItem : mSelectedFeatureItems) {
         featureItem->update();

@@ -15,8 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAPBOX_BUILDINGS_H
-#define MAPBOX_BUILDINGS_H
+#ifndef INGAMEMAP_FEATURE_GENERATOR_H
+#define INGAMEMAP_FEATURE_GENERATOR_H
 
 #include <QImage>
 #include <QObject>
@@ -32,7 +32,7 @@ namespace Tiled {
 class ObjectGroup;
 }
 
-class MapboxBuildings : public QObject
+class InGameMapFeatureGenerator : public QObject
 {
     Q_OBJECT
 public:
@@ -46,7 +46,7 @@ public:
         FeatureWater
     };
 
-    explicit MapboxBuildings(QObject *parent = nullptr);
+    explicit InGameMapFeatureGenerator(QObject *parent = nullptr);
 
     bool generateWorld(WorldDocument *worldDoc, GenerateMode mode, FeatureType type);
 
@@ -67,4 +67,4 @@ private:
     FeatureType mFeatureType;
 };
 
-#endif // MAPBOX_BUILDINGS_H
+#endif // INGAMEMAP_FEATURE_GENERATOR_H

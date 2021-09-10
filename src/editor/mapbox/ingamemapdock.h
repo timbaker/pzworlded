@@ -15,8 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAPBOXDOCK_H
-#define MAPBOXDOCK_H
+#ifndef INGAMEMAPDOCK_H
+#define INGAMEMAPDOCK_H
 
 #include <QDockWidget>
 #include <QTreeView>
@@ -26,21 +26,21 @@ class Document;
 class WorldCell;
 class WorldDocument;
 
-class MapBoxFeature;
-class MapboxPropertiesForm;
+class InGameMapFeature;
+class InGameMapPropertiesForm;
 
 namespace Tiled {
 class Map;
 }
 
-class MapboxModel;
-class MapboxView;
+class InGameMapModel;
+class InGameMapView;
 
-class MapboxDock : public QDockWidget
+class InGameMapDock : public QDockWidget
 {
     Q_OBJECT
 public:
-    explicit MapboxDock(QWidget *parent = nullptr);
+    explicit InGameMapDock(QWidget *parent = nullptr);
 
     void changeEvent(QEvent *e);
     void retranslateUi();
@@ -56,24 +56,24 @@ private slots:
     void selectedFeaturesChanged();
 
 private:
-    MapboxView *mView;
+    InGameMapView *mView;
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
-    friend class MapboxView;
-    MapboxPropertiesForm* mPropertiesForm;
+    friend class InGameMapView;
+    InGameMapPropertiesForm* mPropertiesForm;
 };
 
-class MapboxView : public QTreeView
+class InGameMapView : public QTreeView
 {
     Q_OBJECT
 public:
-    explicit MapboxView(QWidget *parent = nullptr);
+    explicit InGameMapView(QWidget *parent = nullptr);
 
     void mousePressEvent(QMouseEvent *event);
 
     void setDocument(Document *doc);
 
-    MapboxModel *model() const { return mModel; }
+    InGameMapModel *model() const { return mModel; }
 
     void setSynchingSelection(bool synching) { mSynchingSelection = synching; }
     bool synchingSelection() const;
@@ -87,7 +87,7 @@ private slots:
     void modelSynched();
 
 private:
-    MapboxModel *mModel;
+    InGameMapModel *mModel;
     WorldCell *mCell;
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
@@ -95,12 +95,12 @@ private:
     bool mSynchingSelection;
 };
 
-class MapboxModel : public QAbstractItemModel
+class InGameMapModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
-    MapboxModel(QObject *parent = nullptr);
-    ~MapboxModel();
+    InGameMapModel(QObject *parent = nullptr);
+    ~InGameMapModel();
 
     QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
     QModelIndex parent(const QModelIndex &index) const;
@@ -120,9 +120,9 @@ public:
     QMimeData *mimeData(const QModelIndexList &indexes) const;
     bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent);
 
-    QModelIndex index(MapBoxFeature* feature) const;
+    QModelIndex index(InGameMapFeature* feature) const;
 
-    MapBoxFeature *toFeature(const QModelIndex &index) const;
+    InGameMapFeature *toFeature(const QModelIndex &index) const;
 
     void setDocument(Document *doc);
     void setCell(WorldCell *cell);
@@ -163,7 +163,7 @@ private:
             parent->children.insert(indexInParent, this);
         }
 
-        Item(Item *parent, int indexInParent, MapBoxFeature* feature)
+        Item(Item *parent, int indexInParent, InGameMapFeature* feature)
             : parent(parent)
             , feature(feature)
         {
@@ -172,11 +172,11 @@ private:
 
         Item *parent;
         QList<Item*> children;
-        MapBoxFeature *feature;
+        InGameMapFeature *feature;
     };
 
     Item *toItem(const QModelIndex &index) const;
-    Item *toItem(MapBoxFeature *feature) const;
+    Item *toItem(InGameMapFeature *feature) const;
 
     WorldCell *mCell;
     CellDocument *mCellDoc;
@@ -184,7 +184,7 @@ private:
     Item *mRootItem;
     bool mSynching;
 
-    static QString MapboxModelMimeType;
+    static QString InGameMapModelMimeType;
 };
 
-#endif // MAPBOXDOCK_H
+#endif // INGAMEMAPDOCK_H

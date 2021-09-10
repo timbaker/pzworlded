@@ -15,21 +15,21 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mapboxpropertiesform.h"
-#include "ui_mapboxpropertiesform.h"
+#include "ingamemappropertiesform.h"
+#include "ui_ingamemappropertiesform.h"
 
 #include "celldocument.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 
-#include "mapboxpropertydialog.h"
-#include "worldcellmapbox.h"
+#include "ingamemappropertydialog.h"
+#include "worldcellingamemap.h"
 
 #include <QUndoStack>
 
-MapboxPropertiesForm::MapboxPropertiesForm(QWidget *parent)
+InGameMapPropertiesForm::InGameMapPropertiesForm(QWidget *parent)
     : QWidget(parent)
-    , ui(new Ui::MapboxPropertiesForm)
+    , ui(new Ui::InGameMapPropertiesForm)
     , mWorldDoc(nullptr)
     , mCellDoc(nullptr)
     , mFeature(nullptr)
@@ -37,17 +37,17 @@ MapboxPropertiesForm::MapboxPropertiesForm(QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->listWidget, &QListWidget::itemDoubleClicked, this, &MapboxPropertiesForm::onItemDoubleClicked);
+    connect(ui->listWidget, &QListWidget::itemDoubleClicked, this, &InGameMapPropertiesForm::onItemDoubleClicked);
 
     syncUi();
 }
 
-MapboxPropertiesForm::~MapboxPropertiesForm()
+InGameMapPropertiesForm::~InGameMapPropertiesForm()
 {
     delete ui;
 }
 
-void MapboxPropertiesForm::setDocument(Document *doc)
+void InGameMapPropertiesForm::setDocument(Document *doc)
 {
     if (mWorldDoc)
         mWorldDoc->disconnect(this);
@@ -60,22 +60,22 @@ void MapboxPropertiesForm::setDocument(Document *doc)
     mCellDoc = doc ? doc->asCellDocument() : nullptr;
 
     if (mWorldDoc) {
-        connect(mWorldDoc, &WorldDocument::mapboxPropertiesChanged,
-                this, &MapboxPropertiesForm::propertiesChanged);
-        connect(mWorldDoc, &WorldDocument::selectedMapboxFeaturesChanged,
-                this, &MapboxPropertiesForm::selectedFeaturesChanged);
+        connect(mWorldDoc, &WorldDocument::inGameMapPropertiesChanged,
+                this, &InGameMapPropertiesForm::propertiesChanged);
+        connect(mWorldDoc, &WorldDocument::selectedInGameMapFeaturesChanged,
+                this, &InGameMapPropertiesForm::selectedFeaturesChanged);
     }
     if (mCellDoc) {
-        connect(mCellDoc->worldDocument(), &WorldDocument::mapboxPropertiesChanged,
-                this, &MapboxPropertiesForm::propertiesChanged);
-        connect(mCellDoc, &CellDocument::selectedMapboxFeaturesChanged,
-                this, &MapboxPropertiesForm::selectedFeaturesChanged);
+        connect(mCellDoc->worldDocument(), &WorldDocument::inGameMapPropertiesChanged,
+                this, &InGameMapPropertiesForm::propertiesChanged);
+        connect(mCellDoc, &CellDocument::selectedInGameMapFeaturesChanged,
+                this, &InGameMapPropertiesForm::selectedFeaturesChanged);
     }
 
     setFeature(nullptr); // FIXME: use single selected feature if any
 }
 
-void MapboxPropertiesForm::clearDocument()
+void InGameMapPropertiesForm::clearDocument()
 {
     if (mWorldDoc)
         mWorldDoc->disconnect(this);
@@ -90,7 +90,7 @@ void MapboxPropertiesForm::clearDocument()
     setFeature(nullptr);
 }
 
-void MapboxPropertiesForm::setFeature(MapBoxFeature *feature)
+void InGameMapPropertiesForm::setFeature(InGameMapFeature *feature)
 {
     mFeature = feature;
 
@@ -107,85 +107,85 @@ void MapboxPropertiesForm::setFeature(MapBoxFeature *feature)
     syncUi();
 }
 
-void MapboxPropertiesForm::onAddButton()
+void InGameMapPropertiesForm::onAddButton()
 {
-    MapboxPropertyDialog dialog(this);
+    InGameMapPropertyDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
         WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-        MapBoxProperty property;
+        InGameMapProperty property;
         property.mKey = dialog.getKey();
         property.mValue = dialog.getValue();
-        worldDoc->addMapboxProperty(mFeature->cell(), mFeature->index(), mFeature->properties().size(), property);
+        worldDoc->addInGameMapProperty(mFeature->cell(), mFeature->index(), mFeature->properties().size(), property);
     }
 }
 
-void MapboxPropertiesForm::onEditButton()
+void InGameMapPropertiesForm::onEditButton()
 {
     int index = selectedRow();
     if (index == -1)
         return;
 
-    MapboxPropertyDialog dialog(this);
+    InGameMapPropertyDialog dialog(this);
     auto& property = mFeature->properties().at(index);
     dialog.setProperty(property.mKey, property.mValue);
     if (dialog.exec() == QDialog::Accepted) {
         WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-        MapBoxProperty property;
+        InGameMapProperty property;
         property.mKey = dialog.getKey();
         property.mValue = dialog.getValue();
-        worldDoc->setMapboxProperty(mFeature->cell(), mFeature->index(), index, property);
+        worldDoc->setInGameMapProperty(mFeature->cell(), mFeature->index(), index, property);
     }
 }
 
-void MapboxPropertiesForm::onDeleteButton()
+void InGameMapPropertiesForm::onDeleteButton()
 {
     int index = selectedRow();
     if (index == -1)
         return;
 
     WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-    worldDoc->removeMapboxProperty(mFeature->cell(), mFeature->index(), index);
+    worldDoc->removeInGameMapProperty(mFeature->cell(), mFeature->index(), index);
 }
 
-void MapboxPropertiesForm::onCopy()
+void InGameMapPropertiesForm::onCopy()
 {
     if (!mFeature)
         return;
     if (!mProperties)
-        mProperties = new MapBoxProperties();
+        mProperties = new InGameMapProperties();
     *mProperties = mFeature->mProperties;
     syncUi();
 }
 
-void MapboxPropertiesForm::onPaste()
+void InGameMapPropertiesForm::onPaste()
 {
-    auto& selected = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
+    auto& selected = mWorldDoc ? mWorldDoc->selectedInGameMapFeatures() : mCellDoc->selectedInGameMapFeatures();
     WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-    worldDoc->undoStack()->beginMacro(QStringLiteral("Paste Mapbox Properties"));
+    worldDoc->undoStack()->beginMacro(QStringLiteral("Paste InGameMap Properties"));
     for (auto* feature : selected) {
-        worldDoc->setMapboxProperties(feature->cell(), feature->index(), *mProperties);
+        worldDoc->setInGameMapProperties(feature->cell(), feature->index(), *mProperties);
     }
     worldDoc->undoStack()->endMacro();
 }
 
-void MapboxPropertiesForm::onSelectionChanged()
+void InGameMapPropertiesForm::onSelectionChanged()
 {
     syncUi();
 }
 
-void MapboxPropertiesForm::onItemDoubleClicked(QListWidgetItem* item)
+void InGameMapPropertiesForm::onItemDoubleClicked(QListWidgetItem* item)
 {
     onEditButton();
 }
 
-void MapboxPropertiesForm::selectedFeaturesChanged()
+void InGameMapPropertiesForm::selectedFeaturesChanged()
 {
-    auto& selected = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
+    auto& selected = mWorldDoc ? mWorldDoc->selectedInGameMapFeatures() : mCellDoc->selectedInGameMapFeatures();
     auto feature = selected.size() == 1 ? selected.first() : nullptr;
     setFeature(feature);
 }
 
-void MapboxPropertiesForm::propertiesChanged(WorldCell *cell, int featureIndex)
+void InGameMapPropertiesForm::propertiesChanged(WorldCell *cell, int featureIndex)
 {
     if (!mFeature || mFeature->cell() != cell || mFeature->index() != featureIndex)
         return;
@@ -193,7 +193,7 @@ void MapboxPropertiesForm::propertiesChanged(WorldCell *cell, int featureIndex)
     setFeature(mFeature);
 }
 
-int MapboxPropertiesForm::selectedRow()
+int InGameMapPropertiesForm::selectedRow()
 {
     auto selected = ui->listWidget->selectedItems();
     if (selected.isEmpty())
@@ -202,14 +202,14 @@ int MapboxPropertiesForm::selectedRow()
     return ui->listWidget->row(item);
 }
 
-void MapboxPropertiesForm::syncUi()
+void InGameMapPropertiesForm::syncUi()
 {
     if (!mWorldDoc && !mCellDoc) {
         setEnabled(false);
         return;
     }
 
-    auto& selectedFeatures = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
+    auto& selectedFeatures = mWorldDoc ? mWorldDoc->selectedInGameMapFeatures() : mCellDoc->selectedInGameMapFeatures();
 
     ui->addButton->setEnabled(mFeature != nullptr);
 

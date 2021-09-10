@@ -361,19 +361,19 @@
    </widget>
    <widget class="QMenu" name="menuMapbox">
     <property name="title">
-     <string>Mapbox</string>
+     <string>InGameMap</string>
     </property>
-    <addaction name="actionMapboxRemoveFeatures"/>
-    <addaction name="actionMapboxRemovePoints"/>
-    <addaction name="actionMapboxSplitPolygon"/>
+    <addaction name="actionRemoveInGameMapFeatures"/>
+    <addaction name="actionRemoveInGameMapPoints"/>
+    <addaction name="actionSplitInGameMapPolygon"/>
     <addaction name="separator"/>
-    <addaction name="actionGenerateMapboxBuildingFeatures"/>
-    <addaction name="actionGenerateMapboxTreeFeatures"/>
-    <addaction name="actionGenerateMapboxWaterFeatures"/>
+    <addaction name="actionGenerateInGameMapBuildingFeatures"/>
+    <addaction name="actionGenerateInGameMapTreeFeatures"/>
+    <addaction name="actionGenerateInGameMapWaterFeatures"/>
     <addaction name="actionMapboxPreview"/>
     <addaction name="separator"/>
-    <addaction name="actionMapboxReadFeaturesXML"/>
-    <addaction name="actionMapboxWriteFeaturesXML"/>
+    <addaction name="actionReadInGameMapFeaturesXML"/>
+    <addaction name="actionWriteInGameMapFeaturesXML"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -852,7 +852,7 @@
     <string>Show Other Worlds</string>
    </property>
   </action>
-  <action name="actionMapboxWriteFeaturesXML">
+  <action name="actionWriteInGameMapFeaturesXML">
    <property name="icon">
     <iconset resource="editor.qrc">
      <normaloff>:/images/16x16/document-save-as.png</normaloff>:/images/16x16/document-save-as.png</iconset>
@@ -864,12 +864,12 @@
     <string>Don't forget to do this!</string>
    </property>
   </action>
-  <action name="actionGenerateMapboxBuildingFeatures">
+  <action name="actionGenerateInGameMapBuildingFeatures">
    <property name="text">
     <string>Generate Building Features</string>
    </property>
   </action>
-  <action name="actionGenerateMapboxWaterFeatures">
+  <action name="actionGenerateInGameMapWaterFeatures">
    <property name="text">
     <string>Generate Water Features</string>
    </property>
@@ -879,7 +879,7 @@
     <string>Preview</string>
    </property>
   </action>
-  <action name="actionMapboxReadFeaturesXML">
+  <action name="actionReadInGameMapFeaturesXML">
    <property name="icon">
     <iconset resource="editor.qrc">
      <normaloff>:/images/16x16/document-open.png</normaloff>:/images/16x16/document-open.png</iconset>
@@ -888,12 +888,12 @@
     <string>Read Features XML...</string>
    </property>
   </action>
-  <action name="actionMapboxSplitPolygon">
+  <action name="actionSplitInGameMapPolygon">
    <property name="text">
     <string>Split Polygon</string>
    </property>
   </action>
-  <action name="actionMapboxRemovePoints">
+  <action name="actionRemoveInGameMapPoints">
    <property name="icon">
     <iconset resource="editor.qrc">
      <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
@@ -902,12 +902,12 @@
     <string>Remove Selected Points</string>
    </property>
   </action>
-  <action name="actionGenerateMapboxTreeFeatures">
+  <action name="actionGenerateInGameMapTreeFeatures">
    <property name="text">
     <string>Generate Tree Features</string>
    </property>
   </action>
-  <action name="actionMapboxRemoveFeatures">
+  <action name="actionRemoveInGameMapFeatures">
    <property name="icon">
     <iconset resource="editor.qrc">
      <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>

@@ -15,10 +15,10 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mapboxscene.h"
+#include "ingamemapscene.h"
 
-#include "mapboxundo.h"
-#include "worldcellmapbox.h"
+#include "ingamemapundo.h"
+#include "worldcellingamemap.h"
 
 #include "celldocument.h"
 #include "cellscene.h"
@@ -35,7 +35,7 @@
 #include <QKeyEvent>
 #include <QPainter>
 
-MapboxFeatureItem::MapboxFeatureItem(MapBoxFeature* feature, CellScene *scene, QGraphicsItem *parent)
+InGameMapFeatureItem::InGameMapFeatureItem(InGameMapFeature* feature, CellScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
     , mWorldDoc(scene->worldDocument())
     , mFeature(feature)
@@ -49,12 +49,12 @@ MapboxFeatureItem::MapboxFeatureItem(MapBoxFeature* feature, CellScene *scene, Q
     synchWithFeature();
 }
 
-QRectF MapboxFeatureItem::boundingRect() const
+QRectF InGameMapFeatureItem::boundingRect() const
 {
     return mBoundingRect;
 }
 
-void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
+void InGameMapFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     QColor color = mHoverRefCount > 0 ? Qt::blue : Qt::darkBlue;
     if (isSelected())
@@ -149,7 +149,7 @@ void MapboxFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
     }
 }
 
-void MapboxFeatureItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+void InGameMapFeatureItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
     if (++mHoverRefCount == 1) {
@@ -180,7 +180,7 @@ static float distanceOfPointToLineSegment(QVector2D p1, QVector2D p2, QVector2D 
 
 #include <QtMath>
 
-void MapboxFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
+void InGameMapFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 {
     if (!isEditable()) {
         if (mAddPointIndex != -1) {
@@ -235,7 +235,7 @@ void MapboxFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 
 }
 
-void MapboxFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+void InGameMapFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
     if (--mHoverRefCount == 0) {
@@ -244,7 +244,7 @@ void MapboxFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     }
 }
 
-QPainterPath MapboxFeatureItem::shape() const
+QPainterPath InGameMapFeatureItem::shape() const
 {
     QPolygonF polygon = mRenderer->tileToPixelCoords(mPolygon, 0);
 
@@ -278,12 +278,12 @@ QPainterPath MapboxFeatureItem::shape() const
     return stroker.createStroke(path);
 }
 
-bool MapboxFeatureItem::contains(const QPointF &point) const
+bool InGameMapFeatureItem::contains(const QPointF &point) const
 {
     return QGraphicsItem::contains(point);
 }
 
-void MapboxFeatureItem::synchWithFeature()
+void InGameMapFeatureItem::synchWithFeature()
 {
     mPolygon.clear();
     mHoles.clear();
@@ -293,7 +293,7 @@ void MapboxFeatureItem::synchWithFeature()
     case Type::INVALID:
         break;
     case Type::Point: {
-        MapBoxPoint center = mFeature->mGeometry.mCoordinates[0][0];
+        InGameMapPoint center = mFeature->mGeometry.mCoordinates[0][0];
         mPolygon += { center.x , center.y };
         QPointF scenePos = mRenderer->tileToPixelCoords(mPolygon[0] + mDragOffset);
         QRectF bounds(scenePos.x() - 10, scenePos.y() - 10, 20, 20);
@@ -308,7 +308,7 @@ void MapboxFeatureItem::synchWithFeature()
         if (mFeature->mGeometry.mCoordinates.isEmpty()) {
             break;
         }
-        const MapBoxCoordinates& outer = mFeature->mGeometry.mCoordinates.first();
+        const InGameMapCoordinates& outer = mFeature->mGeometry.mCoordinates.first();
         for (auto& point : outer) {
             mPolygon += QPointF(point.x, point.y);
         }
@@ -347,26 +347,26 @@ void MapboxFeatureItem::synchWithFeature()
     }
 }
 
-void MapboxFeatureItem::setSelected(bool selected)
+void InGameMapFeatureItem::setSelected(bool selected)
 {
     mIsSelected = selected;
     update();
 }
 
-void MapboxFeatureItem::movePoint(int pointIndex, const MapBoxPoint &point)
+void InGameMapFeatureItem::movePoint(int pointIndex, const InGameMapPoint &point)
 {
     auto& coords = mFeature->mGeometry.mCoordinates[0];
     coords[pointIndex] = point;
     synchWithFeature();
 }
 
-void MapboxFeatureItem::setEditable(bool editable)
+void InGameMapFeatureItem::setEditable(bool editable)
 {
     mIsEditable = editable;
     update();
 }
 
-MapboxFeatureItem::Type MapboxFeatureItem::geometryType() const
+InGameMapFeatureItem::Type InGameMapFeatureItem::geometryType() const
 {
     if (isPoint()) return Type::Point;
     if (isPolygon()) return Type::Polygon;
@@ -374,17 +374,17 @@ MapboxFeatureItem::Type MapboxFeatureItem::geometryType() const
     return Type::INVALID;
 }
 
-bool MapboxFeatureItem::isPoint() const
+bool InGameMapFeatureItem::isPoint() const
 {
     return mFeature->mGeometry.isPoint();
 }
 
-bool MapboxFeatureItem::isPolygon() const
+bool InGameMapFeatureItem::isPolygon() const
 {
     return mFeature->mGeometry.isPolygon();
 }
 
-bool MapboxFeatureItem::isPolyline() const
+bool InGameMapFeatureItem::isPolyline() const
 {
     return mFeature->mGeometry.isLineString();
 }
@@ -394,7 +394,7 @@ bool MapboxFeatureItem::isPolyline() const
 class FeatureHandle : public QGraphicsItem
 {
 public:
-    FeatureHandle(MapboxFeatureItem *featureItem, int pointIndex)
+    FeatureHandle(InGameMapFeatureItem *featureItem, int pointIndex)
         : QGraphicsItem(featureItem)
         , mFeatureItem(featureItem)
         , mPointIndex(pointIndex)
@@ -423,7 +423,7 @@ public:
         }
     }
 
-    MapBoxPoint geometryPoint() const {
+    InGameMapPoint geometryPoint() const {
         auto& coords = mFeatureItem->feature()->mGeometry.mCoordinates;
         if (coords.isEmpty() || mPointIndex < 0 || mPointIndex >= coords[0].size())
             return { -1, -1 };
@@ -432,7 +432,7 @@ public:
 
     bool isSelected() const {
         CellScene *scene = static_cast<CellScene*>(this->scene());
-        return scene->document()->selectedMapboxPoints().contains(mPointIndex);
+        return scene->document()->selectedInGameMapPoints().contains(mPointIndex);
     }
 
 protected:
@@ -442,9 +442,9 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 protected:
-    MapboxFeatureItem *mFeatureItem;
+    InGameMapFeatureItem *mFeatureItem;
     int mPointIndex;
-    MapBoxPoint mOldPos;
+    InGameMapPoint mOldPos;
     bool mMoveAllPoints = false;
     int mHoverRefCount = 0;
 };
@@ -477,7 +477,7 @@ void FeatureHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
         mMoveAllPoints = (event->modifiers() & Qt::ShiftModifier) != 0;
 
         CellScene *scene = static_cast<CellScene*>(this->scene());
-        QList<int> selection = scene->document()->selectedMapboxPoints();
+        QList<int> selection = scene->document()->selectedInGameMapPoints();
         if (event->modifiers() & Qt::ControlModifier) {
             if (isSelected()) {
                 selection.removeOne(mPointIndex);
@@ -490,7 +490,7 @@ void FeatureHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 selection += mPointIndex;
             }
         }
-        scene->document()->setSelectedMapboxPoints(selection);
+        scene->document()->setSelectedInGameMapPoints(selection);
     }
 
     // Stop the object context menu messing us up.
@@ -504,15 +504,15 @@ void FeatureHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     if (event->button() == Qt::LeftButton && (mOldPos != geometryPoint())) {
         WorldDocument *document = mFeatureItem->mWorldDoc;
         int featureIndex = mFeatureItem->feature()->index();
-        MapBoxPoint newPos = geometryPoint();
+        InGameMapPoint newPos = geometryPoint();
         mFeatureItem->feature()->mGeometry.mCoordinates[0][mPointIndex] = mOldPos;
         if (mMoveAllPoints) {
-            MapBoxCoordinates coords = mFeatureItem->feature()->mGeometry.mCoordinates[0];
+            InGameMapCoordinates coords = mFeatureItem->feature()->mGeometry.mCoordinates[0];
             coords.translate(int(newPos.x - mOldPos.x), int(newPos.y - mOldPos.y));
-            QUndoCommand *cmd = new SetMapboxCoordinates(document, mFeatureItem->feature()->cell(), featureIndex, 0, coords);
+            QUndoCommand *cmd = new SetInGameMapCoordinates(document, mFeatureItem->feature()->cell(), featureIndex, 0, coords);
             document->undoStack()->push(cmd);
         } else {
-            QUndoCommand *cmd = new MoveMapboxPoint(document, mFeatureItem->feature()->cell(), featureIndex, mPointIndex, newPos);
+            QUndoCommand *cmd = new MoveInGameMapPoint(document, mFeatureItem->feature()->cell(), featureIndex, mPointIndex, newPos);
             document->undoStack()->push(cmd);
         }
     }
@@ -538,8 +538,8 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
 
             const QPointF objectPos = { 0, 0 };
             tileCoords -= objectPos;
-            tileCoords.setX(qMax(tileCoords.x(), qreal(0)));
-            tileCoords.setY(qMax(tileCoords.y(), qreal(0)));
+            tileCoords.setX(qMax(tileCoords.x(), qreal(-1)));
+            tileCoords.setY(qMax(tileCoords.y(), qreal(-1)));
             if (snapToGrid)
                 tileCoords = tileCoords.toPoint();
             tileCoords += objectPos;
@@ -549,7 +549,7 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
         else if (change == ItemPositionHasChanged) {
             const QPointF newPos = value.toPointF();
             QPointF tileCoords = renderer->pixelToTileCoordsNearest(newPos, 0);
-            MapBoxPoint point = { tileCoords.x(), tileCoords.y()};
+            InGameMapPoint point = { tileCoords.x(), tileCoords.y()};
             mFeatureItem->movePoint(mPointIndex, point);
         }
     }
@@ -559,12 +559,12 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
 
 /////
 
-SINGLETON_IMPL(CreateMapboxPointTool)
-SINGLETON_IMPL(CreateMapboxPolygonTool)
-SINGLETON_IMPL(CreateMapboxPolylineTool)
-SINGLETON_IMPL(CreateMapboxRectangleTool)
+SINGLETON_IMPL(CreateInGameMapPointTool)
+SINGLETON_IMPL(CreateInGameMapPolygonTool)
+SINGLETON_IMPL(CreateInGameMapPolylineTool)
+SINGLETON_IMPL(CreateInGameMapRectangleTool)
 
-CreateMapboxFeatureTool::CreateMapboxFeatureTool(Type type)
+CreateInGameMapFeatureTool::CreateInGameMapFeatureTool(Type type)
     : BaseCellSceneTool(QString(),
                         QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                         QKeySequence())
@@ -575,26 +575,26 @@ CreateMapboxFeatureTool::CreateMapboxFeatureTool(Type type)
     case Type::INVALID:
         break;
     case Type::Point:
-        setName(tr("Create Mapbox Point"));
+        setName(tr("Create InGameMap Point"));
         break;
     case Type::Polygon:
-        setName(tr("Create Mapbox Polygon"));
+        setName(tr("Create InGameMap Polygon"));
         break;
     case Type::Polyline:
-        setName(tr("Create Mapbox LineString"));
+        setName(tr("Create InGameMap LineString"));
         break;
     case Type::Rectangle:
-        setName(tr("Create Mapbox Rectangle"));
+        setName(tr("Create InGameMap Rectangle"));
         break;
     }
 }
 
-CreateMapboxFeatureTool::~CreateMapboxFeatureTool()
+CreateInGameMapFeatureTool::~CreateInGameMapFeatureTool()
 {
     delete mPathItem;
 }
 
-void CreateMapboxFeatureTool::setScene(BaseGraphicsScene *scene)
+void CreateInGameMapFeatureTool::setScene(BaseGraphicsScene *scene)
 {
     if (mScene)
         mScene->worldDocument()->disconnect(this);
@@ -602,12 +602,12 @@ void CreateMapboxFeatureTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asCellScene() : nullptr;
 }
 
-void CreateMapboxFeatureTool::activate()
+void CreateInGameMapFeatureTool::activate()
 {
     BaseCellSceneTool::activate();
 }
 
-void CreateMapboxFeatureTool::deactivate()
+void CreateInGameMapFeatureTool::deactivate()
 {
     if (mPathItem != nullptr) {
         mScene->removeItem(mPathItem);
@@ -618,7 +618,7 @@ void CreateMapboxFeatureTool::deactivate()
     BaseCellSceneTool::deactivate();
 }
 
-void CreateMapboxFeatureTool::keyPressEvent(QKeyEvent *event)
+void CreateInGameMapFeatureTool::keyPressEvent(QKeyEvent *event)
 {
     if ((event->key() == Qt::Key_Escape) && mPathItem) {
         mPolygon.clear();
@@ -626,7 +626,7 @@ void CreateMapboxFeatureTool::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+void CreateInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         addPoint(event->scenePos());
@@ -636,24 +636,24 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         switch (mFeatureType) {
         case Type::Polygon:
             if (mPolygon.size() > 2) {
-                MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
-                MapBoxCoordinates coords;
+                InGameMapFeature* feature = new InGameMapFeature(&mScene->cell()->inGameMap());
+                InGameMapCoordinates coords;
                 for (QPointF& point : mPolygon)
-                    coords += MapBoxPoint(point.x(), point.y());
+                    coords += InGameMapPoint(point.x(), point.y());
                 feature->mGeometry.mType = QLatin1Literal("Polygon");
                 feature->mGeometry.mCoordinates += coords;
-                mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+                mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
             }
             break;
         case Type::Polyline:
             if (mPolygon.size() > 1) {
-                MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
-                MapBoxCoordinates coords;
+                InGameMapFeature* feature = new InGameMapFeature(&mScene->cell()->inGameMap());
+                InGameMapCoordinates coords;
                 for (QPointF& point : mPolygon)
-                    coords += MapBoxPoint(point.x(), point.y());
+                    coords += InGameMapPoint(point.x(), point.y());
                 feature->mGeometry.mType = QLatin1Literal("LineString");
                 feature->mGeometry.mCoordinates += coords;
-                mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+                mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
             }
             break;
         default:
@@ -664,13 +664,13 @@ void CreateMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void CreateMapboxFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+void CreateInGameMapFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     mScenePos = event->scenePos();
     updatePathItem();
 }
 
-void CreateMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+void CreateInGameMapFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         switch (mFeatureType) {
@@ -691,7 +691,7 @@ void CreateMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void CreateMapboxFeatureTool::updatePathItem()
+void CreateInGameMapFeatureTool::updatePathItem()
 {
     QPainterPath path;
 
@@ -749,34 +749,34 @@ void CreateMapboxFeatureTool::updatePathItem()
     mPathItem->setPath(path);
 }
 
-void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
+void CreateInGameMapFeatureTool::addPoint(const QPointF &scenePos)
 {
     if (mFeatureType == Type::Point) {
-        MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
+        InGameMapFeature* feature = new InGameMapFeature(&mScene->cell()->inGameMap());
         QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
-        MapBoxCoordinates coords;
-        coords += MapBoxPoint(cellPos.x(), cellPos.y());
+        InGameMapCoordinates coords;
+        coords += InGameMapPoint(cellPos.x(), cellPos.y());
         feature->mGeometry.mType = QLatin1Literal("Point");
         feature->mGeometry.mCoordinates += coords;
-        mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+        mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
         return;
     }
     if (mFeatureType == Type::Rectangle) {
         if (mPolygon.size() == 1) {
-            MapBoxFeature* feature = new MapBoxFeature(&mScene->cell()->mapBox());
+            InGameMapFeature* feature = new InGameMapFeature(&mScene->cell()->inGameMap());
             QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
-            MapBoxCoordinates coords;
+            InGameMapCoordinates coords;
             int minX = std::min(mPolygon[0].x(), cellPos.x());
             int minY = std::min(mPolygon[0].y(), cellPos.y());
             int maxX = std::max(mPolygon[0].x(), cellPos.x());
             int maxY = std::max(mPolygon[0].y(), cellPos.y());
-            coords += MapBoxPoint(minX, minY);
-            coords += MapBoxPoint(maxX, minY);
-            coords += MapBoxPoint(maxX, maxY);
-            coords += MapBoxPoint(minX, maxY);
+            coords += InGameMapPoint(minX, minY);
+            coords += InGameMapPoint(maxX, minY);
+            coords += InGameMapPoint(maxX, maxY);
+            coords += InGameMapPoint(minX, maxY);
             feature->mGeometry.mType = QLatin1Literal("Polygon");
             feature->mGeometry.mCoordinates += coords;
-            mScene->worldDocument()->addMapboxFeature(mScene->cell(), mScene->cell()->mapBox().mFeatures.size(), feature);
+            mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
             mPolygon.clear();
             updatePathItem();
             return;
@@ -788,10 +788,10 @@ void CreateMapboxFeatureTool::addPoint(const QPointF &scenePos)
 
 /////
 
-SINGLETON_IMPL(EditMapboxFeatureTool)
+SINGLETON_IMPL(EditInGameMapFeatureTool)
 
-EditMapboxFeatureTool::EditMapboxFeatureTool()
-    : BaseCellSceneTool(tr("Edit Mapbox Features"),
+EditInGameMapFeatureTool::EditInGameMapFeatureTool()
+    : BaseCellSceneTool(tr("Edit InGameMap Features"),
                          QIcon(QLatin1String(":/images/24x24/tool-edit-polygons.png")),
                          QKeySequence())
     , mSelectedFeatureItem(nullptr)
@@ -799,11 +799,11 @@ EditMapboxFeatureTool::EditMapboxFeatureTool()
 {
 }
 
-EditMapboxFeatureTool::~EditMapboxFeatureTool()
+EditInGameMapFeatureTool::~EditInGameMapFeatureTool()
 {
 }
 
-void EditMapboxFeatureTool::setScene(BaseGraphicsScene *scene)
+void EditInGameMapFeatureTool::setScene(BaseGraphicsScene *scene)
 {
     if (mScene) {
         mScene->worldDocument()->disconnect(this);
@@ -813,24 +813,24 @@ void EditMapboxFeatureTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asCellScene() : nullptr;
 
     if (mScene) {
-        connect(mScene->worldDocument(), &WorldDocument::mapboxFeatureAboutToBeRemoved,
-                this, &EditMapboxFeatureTool::featureAboutToBeRemoved);
-        connect(mScene->worldDocument(), &WorldDocument::mapboxPointMoved,
-                this, &EditMapboxFeatureTool::featurePointMoved);
-        connect(mScene->worldDocument(), &WorldDocument::mapboxGeometryChanged,
-                this, &EditMapboxFeatureTool::geometryChanged);
+        connect(mScene->worldDocument(), &WorldDocument::inGameMapFeatureAboutToBeRemoved,
+                this, &EditInGameMapFeatureTool::featureAboutToBeRemoved);
+        connect(mScene->worldDocument(), &WorldDocument::inGameMapPointMoved,
+                this, &EditInGameMapFeatureTool::featurePointMoved);
+        connect(mScene->worldDocument(), &WorldDocument::inGameMapGeometryChanged,
+                this, &EditInGameMapFeatureTool::geometryChanged);
 
-        connect(mScene->document(), &CellDocument::selectedMapboxFeaturesChanged,
-                this, &EditMapboxFeatureTool::selectedFeaturesChanged);
+        connect(mScene->document(), &CellDocument::selectedInGameMapFeaturesChanged,
+                this, &EditInGameMapFeatureTool::selectedFeaturesChanged);
     }
 }
 
-void EditMapboxFeatureTool::activate()
+void EditInGameMapFeatureTool::activate()
 {
     BaseCellSceneTool::activate();
 }
 
-void EditMapboxFeatureTool::deactivate()
+void EditInGameMapFeatureTool::deactivate()
 {
     if (mSelectedFeatureItem) {
         mSelectedFeatureItem->setEditable(false);
@@ -841,25 +841,25 @@ void EditMapboxFeatureTool::deactivate()
         mHandles.clear();
         mSelectedFeatureItem = nullptr;
         mSelectedFeature = nullptr;
-        mScene->document()->setSelectedMapboxPoints(QList<int>());
+        mScene->document()->setSelectedInGameMapPoints(QList<int>());
     }
 
     BaseCellSceneTool::deactivate();
 }
 
-void EditMapboxFeatureTool::keyPressEvent(QKeyEvent *event)
+void EditInGameMapFeatureTool::keyPressEvent(QKeyEvent *event)
 {
     if ((event->key() == Qt::Key_Escape)) {
         event->accept();
     }
 }
 
-void EditMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+void EditInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        MapboxFeatureItem* clickedItem = nullptr;
+        InGameMapFeatureItem* clickedItem = nullptr;
         for (QGraphicsItem *item : mScene->items(event->scenePos())) {
-            if (MapboxFeatureItem *featureItem = dynamic_cast<MapboxFeatureItem*>(item)) {
+            if (InGameMapFeatureItem *featureItem = dynamic_cast<InGameMapFeatureItem*>(item)) {
                 clickedItem = featureItem;
                 break;
             }
@@ -867,66 +867,66 @@ void EditMapboxFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         if ((clickedItem != nullptr) && (clickedItem == mSelectedFeatureItem)) {
             if (mSelectedFeatureItem->mAddPointIndex != -1) {
                 QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedFeatureItem->mAddPointPos);
-                MapBoxPoint point(tilePos.x(), tilePos.y());
-                MapBoxCoordinates coords = mSelectedFeature->mGeometry.mCoordinates[0];
+                InGameMapPoint point(tilePos.x(), tilePos.y());
+                InGameMapCoordinates coords = mSelectedFeature->mGeometry.mCoordinates[0];
                 coords.insert(mSelectedFeatureItem->mAddPointIndex + 1, point);
-                mScene->worldDocument()->setMapboxCoordinates(mScene->cell(), mSelectedFeature->index(), 0, coords);
+                mScene->worldDocument()->setInGameMapCoordinates(mScene->cell(), mSelectedFeature->index(), 0, coords);
             }
             return;
         }
         if (clickedItem == nullptr)
-            mScene->setSelectedMapboxFeatureItems(QSet<MapboxFeatureItem*>());
+            mScene->setSelectedInGameMapFeatureItems(QSet<InGameMapFeatureItem*>());
         else
-            mScene->setSelectedMapboxFeatureItems(QSet<MapboxFeatureItem*>() << clickedItem);
-        mScene->document()->setSelectedMapboxPoints(QList<int>());
+            mScene->setSelectedInGameMapFeatureItems(QSet<InGameMapFeatureItem*>() << clickedItem);
+        mScene->document()->setSelectedInGameMapPoints(QList<int>());
     }
     if (event->button() == Qt::RightButton) {
     }
 }
 
-void EditMapboxFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+void EditInGameMapFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
 }
 
-void EditMapboxFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+void EditInGameMapFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
     }
 }
 
 // The feature being edited could be deleted via undo/redo.
-void EditMapboxFeatureTool::featureAboutToBeRemoved(WorldCell* cell, int featureIndex)
+void EditInGameMapFeatureTool::featureAboutToBeRemoved(WorldCell* cell, int featureIndex)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures.at(featureIndex);
     if (feature == mSelectedFeature) {
         setSelectedItem(nullptr);
-        mScene->document()->setSelectedMapboxPoints(QList<int>());
+        mScene->document()->setSelectedInGameMapPoints(QList<int>());
     }
 }
 
-void EditMapboxFeatureTool::featurePointMoved(WorldCell* cell, int featureIndex, int pointIndex)
+void EditInGameMapFeatureTool::featurePointMoved(WorldCell* cell, int featureIndex, int pointIndex)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures.at(featureIndex);
     if (feature == mSelectedFeature) {
 //        mSelectedFeatureItem->synchWithFeature();
         setSelectedItem(mSelectedFeatureItem);
     }
 }
 
-void EditMapboxFeatureTool::geometryChanged(WorldCell *cell, int featureIndex)
+void EditInGameMapFeatureTool::geometryChanged(WorldCell *cell, int featureIndex)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures.at(featureIndex);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures.at(featureIndex);
     if (feature == mSelectedFeature) {
         setSelectedItem(mSelectedFeatureItem);
     }
 }
 
-void EditMapboxFeatureTool::selectedFeaturesChanged()
+void EditInGameMapFeatureTool::selectedFeaturesChanged()
 {
-    auto& selected = mScene->document()->selectedMapboxFeatures();
+    auto& selected = mScene->document()->selectedInGameMapFeatures();
     if (selected.size() == 1) {
-        MapBoxFeature* feature = selected.first();
-        if (MapboxFeatureItem* item = mScene->itemForMapboxFeature(feature)) {
+        InGameMapFeature* feature = selected.first();
+        if (InGameMapFeatureItem* item = mScene->itemForInGameMapFeature(feature)) {
             setSelectedItem(item);
         }
     } else {
@@ -934,11 +934,11 @@ void EditMapboxFeatureTool::selectedFeaturesChanged()
     }
 }
 
-void EditMapboxFeatureTool::setSelectedItem(MapboxFeatureItem *featureItem)
+void EditInGameMapFeatureTool::setSelectedItem(InGameMapFeatureItem *featureItem)
 {
     if (mSelectedFeatureItem) {
         // The item may have been deleted if inside featureAboutToBeRemoved()
-        if (mScene->itemForMapboxFeature(mSelectedFeature)) {
+        if (mScene->itemForInGameMapFeature(mSelectedFeature)) {
             for (auto* handle : mHandles) {
                 mScene->removeItem(handle);
                 delete handle;
@@ -956,29 +956,29 @@ void EditMapboxFeatureTool::setSelectedItem(MapboxFeatureItem *featureItem)
 
         auto createHandle = [&](int pointIndex) {
             FeatureHandle* handle = new FeatureHandle(featureItem, pointIndex);
-            MapBoxPoint point = handle->geometryPoint();
+            InGameMapPoint point = handle->geometryPoint();
             handle->setPos(mScene->renderer()->tileToPixelCoords(point.x, point.y));
 //            mScene->addItem(handle);
             mHandles += handle;
         };
         switch (featureItem->geometryType()) {
-        case MapboxFeatureItem::Type::INVALID:
+        case InGameMapFeatureItem::Type::INVALID:
             break;
-        case MapboxFeatureItem::Type::Point:
+        case InGameMapFeatureItem::Type::Point:
             for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
                 for (int i = 0; i < coords.size(); i++)
                     createHandle(i);
                 break; // should be only one set of coordinates
             }
             break;
-        case MapboxFeatureItem::Type::Polygon:
+        case InGameMapFeatureItem::Type::Polygon:
             for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
                 for (int i = 0; i < coords.size(); i++)
                     createHandle(i);
                 break; // TODO: handle holes
             }
             break;
-        case MapboxFeatureItem::Type::Polyline:
+        case InGameMapFeatureItem::Type::Polyline:
             for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
                 for (int i = 0; i < coords.size(); i++)
                     createHandle(i);

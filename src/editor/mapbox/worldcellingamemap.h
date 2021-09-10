@@ -15,26 +15,26 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef WORLDCELLMAPBOX_H
-#define WORLDCELLMAPBOX_H
+#ifndef WORLDCELLINGAMEMAP_H
+#define WORLDCELLINGAMEMAP_H
 
 #include <QList>
 
 class WorldCell;
 
-class WorldCellMapBox;
+class WorldCellInGameMap;
 
-class MapBoxPoint
+class InGameMapPoint
 {
 public:
-    MapBoxPoint()
+    InGameMapPoint()
         : x(0.0)
         , y(0.0)
     {
 
     }
 
-    MapBoxPoint(double x, double y)
+    InGameMapPoint(double x, double y)
         : x(x)
         , y(y)
     {
@@ -44,27 +44,27 @@ public:
     double x;
     double y;
 
-    bool operator==(const MapBoxPoint& rhs) const {
+    bool operator==(const InGameMapPoint& rhs) const {
         return x == rhs.x && y == rhs.y;
     }
 
-    bool operator!=(const MapBoxPoint& rhs) const {
+    bool operator!=(const InGameMapPoint& rhs) const {
         return x != rhs.x || y != rhs.y;
     }
 
-    MapBoxPoint operator+(const MapBoxPoint& rhs) const {
+    InGameMapPoint operator+(const InGameMapPoint& rhs) const {
         return { x + rhs.x, y + rhs.y };
     }
 
-    MapBoxPoint operator-(const MapBoxPoint& rhs) const {
+    InGameMapPoint operator-(const InGameMapPoint& rhs) const {
         return { x - rhs.x, y - rhs.y };
     }
 };
 
-class MapBoxCoordinates : public QList<MapBoxPoint>
+class InGameMapCoordinates : public QList<InGameMapPoint>
 {
 public:
-    MapBoxCoordinates& translate(int dx, int dy) {
+    InGameMapCoordinates& translate(int dx, int dy) {
         for (auto& pt : *this) {
             pt.x += dx;
             pt.y += dy;
@@ -85,7 +85,7 @@ public:
 
 };
 
-class MapBoxGeometry
+class InGameMapGeometry
 {
 public:
     bool isLineString() const
@@ -98,28 +98,28 @@ public:
     { return mType == QLatin1Literal("Polygon"); }
 
     QString mType;
-    QList<MapBoxCoordinates> mCoordinates;
+    QList<InGameMapCoordinates> mCoordinates;
 };
 
-class MapBoxProperty
+class InGameMapProperty
 {
 public:
     QString mKey;
     QString mValue;
 
-    MapBoxProperty()
+    InGameMapProperty()
     {
 
     }
 
-    MapBoxProperty(const QString& key, const QString &value)
+    InGameMapProperty(const QString& key, const QString &value)
         : mKey(key)
         , mValue(value)
     {
 
     }
 
-    MapBoxProperty(const QString& key, int value)
+    InGameMapProperty(const QString& key, int value)
         : mKey(key)
         , mValue(QString::number(value))
     {
@@ -127,7 +127,7 @@ public:
     }
 };
 
-class MapBoxProperties : public QList<MapBoxProperty>
+class InGameMapProperties : public QList<InGameMapProperty>
 {
 public:
     void set(const QString& key, const QString& value) {
@@ -178,10 +178,10 @@ public:
     }
 };
 
-class MapBoxFeature
+class InGameMapFeature
 {
 public:
-    MapBoxFeature(WorldCellMapBox* owner)
+    InGameMapFeature(WorldCellInGameMap* owner)
         : mOwner(owner)
     {
 
@@ -189,33 +189,33 @@ public:
 
     inline int index();
     inline WorldCell* cell() const;
-    inline MapBoxProperties& properties() { return mProperties; }
+    inline InGameMapProperties& properties() { return mProperties; }
 
-    WorldCellMapBox* mOwner;
-    MapBoxGeometry mGeometry;
-    MapBoxProperties mProperties;
+    WorldCellInGameMap* mOwner;
+    InGameMapGeometry mGeometry;
+    InGameMapProperties mProperties;
 };
 
-class MapBoxFeatures : public QList<MapBoxFeature*>
+class InGameMapFeatures : public QList<InGameMapFeature*>
 {
 public:
-    MapBoxFeatures(WorldCellMapBox* owner)
+    InGameMapFeatures(WorldCellInGameMap* owner)
         : mOwner(owner)
     {
 
     }
 
-    ~MapBoxFeatures() {
+    ~InGameMapFeatures() {
         qDeleteAll(*this);
     }
 
-    WorldCellMapBox* mOwner;
+    WorldCellInGameMap* mOwner;
 };
 
-class WorldCellMapBox
+class WorldCellInGameMap
 {
 public:
-    WorldCellMapBox(WorldCell* cell)
+    WorldCellInGameMap(WorldCell* cell)
         : mCell(cell)
         , mFeatures(this)
     {
@@ -229,18 +229,18 @@ public:
     }
 
     WorldCell* cell() const { return mCell; }
-    MapBoxFeatures& features() { return mFeatures; }
+    InGameMapFeatures& features() { return mFeatures; }
 
     WorldCell* mCell;
-    MapBoxFeatures mFeatures;
+    InGameMapFeatures mFeatures;
 };
 
-int MapBoxFeature::index() {
+int InGameMapFeature::index() {
     return mOwner->mFeatures.indexOf(this);
 }
 
-WorldCell* MapBoxFeature::cell() const {
+WorldCell* InGameMapFeature::cell() const {
     return mOwner->cell();
 }
 
-#endif // WORLDCELLMAPBOX_H
+#endif // WORLDCELLINGAMEMAP_H

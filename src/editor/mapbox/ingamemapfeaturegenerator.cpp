@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mapboxbuildings.h"
+#include "ingamemapfeaturegenerator.h"
 
 #include "lotfilesmanager.h"
 #include "mainwindow.h"
@@ -52,12 +52,12 @@ struct pzPolygon
 };
 }
 
-MapboxBuildings::MapboxBuildings(QObject *parent) :
+InGameMapFeatureGenerator::InGameMapFeatureGenerator(QObject *parent) :
     QObject(parent)
 {
 }
 
-bool MapboxBuildings::generateWorld(WorldDocument *worldDoc, MapboxBuildings::GenerateMode mode, FeatureType type)
+bool InGameMapFeatureGenerator::generateWorld(WorldDocument *worldDoc, InGameMapFeatureGenerator::GenerateMode mode, FeatureType type)
 {
     mFeatureType = type;
 
@@ -74,7 +74,7 @@ bool MapboxBuildings::generateWorld(WorldDocument *worldDoc, MapboxBuildings::Ge
     }
     PROGRESS progress(QStringLiteral("Generating %1 features").arg(typeStr));
 
-    mWorldDoc->undoStack()->beginMacro(QStringLiteral("Generate Mabox %1 Features").arg(typeStr));
+    mWorldDoc->undoStack()->beginMacro(QStringLiteral("Generate InGameMap %1 Features").arg(typeStr));
 
     if (mode == GenerateSelected) {
         for (WorldCell *cell : worldDoc->selectedCells())
@@ -101,7 +101,7 @@ bool MapboxBuildings::generateWorld(WorldDocument *worldDoc, MapboxBuildings::Ge
     // changed .tmx files, which results in the PROGRESS dialog being displayed.
     // It's a bit odd to see the PROGRESS dialog blocked behind this messagebox.
     QMessageBox::information(MainWindow::instance(),
-                             tr("Mapbox Buildings"), tr("Finished!"));
+                             tr("InGameMap Feature Generator"), tr("Finished!"));
 #endif
     return true;
 
@@ -110,7 +110,7 @@ errorExit:
     return false;
 }
 
-bool MapboxBuildings::shouldGenerateCell(WorldCell *cell)
+bool InGameMapFeatureGenerator::shouldGenerateCell(WorldCell *cell)
 {
     switch (mFeatureType) {
     case FeatureBuilding:
@@ -119,10 +119,12 @@ bool MapboxBuildings::shouldGenerateCell(WorldCell *cell)
         return true;
     case FeatureWater:
         return true;
+    default:
+        return false;
     }
 }
 
-bool MapboxBuildings::generateCell(WorldCell *cell)
+bool InGameMapFeatureGenerator::generateCell(WorldCell *cell)
 {
     if (!shouldGenerateCell(cell))
         return true;
@@ -158,15 +160,15 @@ bool MapboxBuildings::generateCell(WorldCell *cell)
     return ok;
 }
 
-bool MapboxBuildings::doBuildings(WorldCell *cell, MapInfo *mapInfo)
+bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
 {
     // Remove all "building=" features
-    auto& features = cell->mapBox().features();
+    auto& features = cell->inGameMap().features();
     for (int i = features.size() - 1; i >= 0; i--) {
         auto* feature = features[i];
         for (auto& property : feature->properties()) {
             if (property.mKey == QStringLiteral("building")) {
-                mWorldDoc->removeMapboxFeature(cell, feature->index());
+                mWorldDoc->removeInGameMapFeature(cell, feature->index());
             }
         }
     }
@@ -208,7 +210,7 @@ bool MapboxBuildings::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     return processObjectGroups(cell, mapComposite);
 }
 
-bool MapboxBuildings::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
+bool InGameMapFeatureGenerator::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
 {
     foreach (Layer *layer, mapComposite->map()->layers()) {
         if (ObjectGroup *og = layer->asObjectGroup()) {
@@ -426,7 +428,7 @@ public:
 
 } // namespace
 
-bool MapboxBuildings::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
+bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
                                          int levelOffset, const QPoint &offset)
 {
     int level;
@@ -496,21 +498,21 @@ bool MapboxBuildings::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
     grid.trace(true, [&](QPolygon& nodes) {
         nodes.translate(bounds.left(), bounds.top());
 
-        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+        InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
 
-        MapBoxProperty property;
+        InGameMapProperty property;
         property.mKey = QStringLiteral("building");
         property.mValue = QStringLiteral("yes");
         feature->properties() += property;
 
         feature->mGeometry.mType = QStringLiteral("Polygon");
-        MapBoxCoordinates coords;
+        InGameMapCoordinates coords;
         for (auto& point : nodes) {
-            coords += MapBoxPoint(point.x(), point.y());
+            coords += InGameMapPoint(point.x(), point.y());
         }
         feature->mGeometry.mCoordinates += coords;
 
-        mWorldDoc->addMapboxFeature(cell, cell->mapBox().features().size(), feature);
+        mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
     });
 
     return true;
@@ -668,14 +670,14 @@ static void simplifyPolygon(ClipperLib::Path& nodes)
     }
 }
 
-bool MapboxBuildings::doWater(WorldCell *cell, MapInfo *mapInfo)
+bool InGameMapFeatureGenerator::doWater(WorldCell *cell, MapInfo *mapInfo)
 {
     // Remove all "water=" features
-    auto& features = cell->mapBox().features();
+    auto& features = cell->inGameMap().features();
     for (int i = features.size() - 1; i >= 0; i--) {
         auto* feature = features[i];
         if (feature->properties().containsKey(QStringLiteral("water"))) {
-            mWorldDoc->removeMapboxFeature(cell, feature->index());
+            mWorldDoc->removeInGameMapFeature(cell, feature->index());
         }
     }
 
@@ -762,14 +764,14 @@ bool MapboxBuildings::doWater(WorldCell *cell, MapInfo *mapInfo)
     }
 
     for (pzPolygon *poly : allPolygons) {
-        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+        InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
         feature->properties().set(QStringLiteral("water"), QStringLiteral("river"));
         ClipperLib::Path simple = poly->outer;
         simplifyPolygon(simple);
         feature->mGeometry.mType = QStringLiteral("Polygon");
-        MapBoxCoordinates coords;
+        InGameMapCoordinates coords;
         for (auto& point : simple) {
-            coords += MapBoxPoint(point.X, point.Y);
+            coords += InGameMapPoint(point.X, point.Y);
         }
         feature->mGeometry.mCoordinates += coords;
 
@@ -779,27 +781,29 @@ bool MapboxBuildings::doWater(WorldCell *cell, MapInfo *mapInfo)
                 simplifyPolygon(simple);
                 coords.clear();
                 for (auto& point : simple) {
-                    coords += MapBoxPoint(point.X, point.Y);
+                    coords += InGameMapPoint(point.X, point.Y);
                 }
                 feature->mGeometry.mCoordinates += coords;
             }
         }
 
-        mWorldDoc->addMapboxFeature(cell, cell->mapBox().features().size(), feature);
+        mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
     }
 
     qDeleteAll(allPolygons);
     return true;
 }
 
-bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
+#include <array>
+
+bool InGameMapFeatureGenerator::doTrees(WorldCell *cell, MapInfo *mapInfo)
 {
     // Remove all "natural=forest" features
-    auto& features = cell->mapBox().features();
+    auto& features = cell->inGameMap().features();
     for (int i = features.size() - 1; i >= 0; i--) {
         auto* feature = features[i];
         if (feature->properties().contains(QStringLiteral("natural"), QStringLiteral("forest"))) {
-            mWorldDoc->removeMapboxFeature(cell, feature->index());
+            mWorldDoc->removeInGameMapFeature(cell, feature->index());
         }
     }
 
@@ -834,18 +838,25 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
         return false;
     };
 
+    std::array<bool, 300 * 300> trees;
+    for (int y = 0; y < bounds.height(); y++) {
+        for (int x = 0; x < bounds.width(); x++) {
+            trees[x + y * 300] = isTreeAt(x, y);
+        }
+    }
+
     auto getTreesNear = [&](int _x, int _y) {
-        QRect bounds = { _x, _y, 1, 1 };
+        QRect box = { _x, _y, 1, 1 };
         for (int y = _y - 4; y < _y + 4; y++) {
             for (int x = _x - 4; x < _x + 4; x++) {
                 if (x == _x && y == _y)
                     continue;
-                if (isTreeAt(x, y)) {
-                    bounds |= { x, y, 1, 1 };
+                if (bounds.contains(x, y) && trees[x + y * 300]) {
+                    box |= { x, y, 1, 1 };
                 }
             }
         }
-        return bounds;
+        return box;
 
     };
 
@@ -854,7 +865,7 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
 
     for (int y = 0; y < bounds.height(); y++) {
         for (int x = 0; x < bounds.width(); x++) {
-            if (isTreeAt(x, y)) {
+            if (trees[x + y * 300]) {
                 QRect box = getTreesNear(x, y);
                 if (box.size() != QSize(1, 1)) {
                     path.clear();
@@ -891,7 +902,7 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
 
 #if 0
     int nextID = 0;
-    for (auto *feature : cell->mapBox().features()) {
+    for (auto *feature : cell->inGameMap().features()) {
         nextID = std::max(nextID, feature->mProperties.getInt(QStringLiteral("id"), 0));
     }
 #endif
@@ -902,13 +913,28 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
         if (simple.size() < 3) {
             continue;
         }
+#if 0
+        int minX = std::numeric_limits<int>::max();
+        int minY = std::numeric_limits<int>::max();
+        int maxX = std::numeric_limits<int>::min();
+        int maxY = std::numeric_limits<int>::min();
+        for (auto& point : simple) {
+            minX = std::min(minX, (int) point.X);
+            minY = std::min(minY, (int) point.Y);
+            maxX = std::max(maxX, (int) point.X);
+            maxY = std::max(maxY, (int) point.Y);
+        }
+        if ((maxX - minX + 1) * (maxY - minY + 1) < 1000) {
+            continue;
+        }
+#endif
 
-        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+        InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
         feature->properties().set(QStringLiteral("natural"), QStringLiteral("forest"));
         feature->mGeometry.mType = QStringLiteral("Polygon");
-        MapBoxCoordinates coords;
+        InGameMapCoordinates coords;
         for (auto& point : simple) {
-            coords += MapBoxPoint(point.X, point.Y);
+            coords += InGameMapPoint(point.X, point.Y);
         }
         feature->mGeometry.mCoordinates += coords;
 
@@ -922,7 +948,7 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
                 }
                 coords.clear();
                 for (auto& point : simple) {
-                    coords += MapBoxPoint(point.X, point.Y);
+                    coords += InGameMapPoint(point.X, point.Y);
                 }
                 feature->mGeometry.mCoordinates += coords;
             }
@@ -933,22 +959,22 @@ bool MapboxBuildings::doTrees(WorldCell *cell, MapInfo *mapInfo)
 #endif
         }
 
-        mWorldDoc->addMapboxFeature(cell, cell->mapBox().features().size(), feature);
+        mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
 
 #if 0
         for (auto& hole : poly->inner) {
-            MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+            InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
             feature->properties().set(QStringLiteral("natural"), QStringLiteral("forest"));
             feature->properties().set(QStringLiteral("hole"), nextID);
             feature->mGeometry.mType = QStringLiteral("Polygon");
-            MapBoxCoordinates coords;
+            InGameMapCoordinates coords;
             simple = hole;
             simplifyPolygon(simple);
             for (auto& point : simple) {
-                coords += MapBoxPoint(point.X, point.Y);
+                coords += InGameMapPoint(point.X, point.Y);
             }
             feature->mGeometry.mCoordinates += coords;
-            mWorldDoc->addMapboxFeature(cell, cell->mapBox().features().size(), feature);
+            mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
         }
 #endif
     }

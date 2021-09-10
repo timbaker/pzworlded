@@ -28,7 +28,7 @@
 #include "worldview.h"
 #include "worldwriter.h"
 
-#include "mapbox/mapboxundo.h"
+#include "mapbox/ingamemapundo.h"
 
 #include <QDebug>
 #include <QFileDialog>
@@ -151,16 +151,16 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
             SIGNAL(cellObjectReordered(WorldCellObject*)));
 
-    connect(&mUndoRedo, SIGNAL(mapboxFeatureAdded(WorldCell*,int)),
-            SIGNAL(mapboxFeatureAdded(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)),
-            SIGNAL(mapboxFeatureAboutToBeRemoved(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(mapboxPointMoved(WorldCell*,int,int)),
-            SIGNAL(mapboxPointMoved(WorldCell*,int,int)));
-    connect(&mUndoRedo, &WorldDocumentUndoRedo::mapboxPropertiesChanged,
-            this, &WorldDocument::mapboxPropertiesChanged);
-    connect(&mUndoRedo, &WorldDocumentUndoRedo::mapboxGeometryChanged,
-            this, &WorldDocument::mapboxGeometryChanged);
+    connect(&mUndoRedo, SIGNAL(inGameMapFeatureAdded(WorldCell*,int)),
+            SIGNAL(inGameMapFeatureAdded(WorldCell*,int)));
+    connect(&mUndoRedo, SIGNAL(inGameMapFeatureAboutToBeRemoved(WorldCell*,int)),
+            SIGNAL(inGameMapFeatureAboutToBeRemoved(WorldCell*,int)));
+    connect(&mUndoRedo, SIGNAL(inGameMapPointMoved(WorldCell*,int,int)),
+            SIGNAL(inGameMapPointMoved(WorldCell*,int,int)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapPropertiesChanged,
+            this, &WorldDocument::inGameMapPropertiesChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapGeometryChanged,
+            this, &WorldDocument::inGameMapGeometryChanged);
 
     connect(&mUndoRedo, SIGNAL(roadAdded(int)),
             SIGNAL(roadAdded(int)));
@@ -334,17 +334,17 @@ void WorldDocument::setSelectedBMPs(const QList<WorldBMP *> &selectedBMPs)
     emit selectedBMPsChanged();
 }
 
-void WorldDocument::setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selected)
+void WorldDocument::setSelectedInGameMapFeatures(const QList<InGameMapFeature *> &selected)
 {
-    QList<MapBoxFeature*> selection;
+    QList<InGameMapFeature*> selection;
     foreach (auto *feature, selected) {
         if (!selection.contains(feature))
             selection.append(feature);
         else
-            qWarning("duplicate features passed to setSelectedMapboxFeatures");
+            qWarning("duplicate features passed to setSelectedInGameMapFeatures");
     }
-    mSelectedMapboxFeatures = selection;
-    emit selectedMapboxFeaturesChanged();
+    mSelectedInGameMapFeatures = selection;
+    emit selectedInGameMapFeaturesChanged();
 }
 
 void WorldDocument::removeRoadFromSelection(Road *road)
@@ -481,53 +481,53 @@ void WorldDocument::reorderCellObject(WorldCellObject *obj, WorldCellObject *ins
     undoStack()->push(new ReorderCellObject(this, obj, index));
 }
 
-void WorldDocument::addMapboxFeature(WorldCell *cell, int index, MapBoxFeature *feature)
+void WorldDocument::addInGameMapFeature(WorldCell *cell, int index, InGameMapFeature *feature)
 {
-    Q_ASSERT(!cell->mapBox().mFeatures.contains(feature));
-    Q_ASSERT(index >= 0 && index <= cell->mapBox().mFeatures.size());
-    undoStack()->push(new AddMapboxFeature(this, cell, index, feature));
+    Q_ASSERT(!cell->inGameMap().mFeatures.contains(feature));
+    Q_ASSERT(index >= 0 && index <= cell->inGameMap().mFeatures.size());
+    undoStack()->push(new AddInGameMapFeature(this, cell, index, feature));
 }
 
-void WorldDocument::removeMapboxFeature(WorldCell *cell, int index)
+void WorldDocument::removeInGameMapFeature(WorldCell *cell, int index)
 {
-    Q_ASSERT(index >= 0 && index < cell->mapBox().mFeatures.size());
-    undoStack()->push(new RemoveMapboxFeature(this, cell, index));
+    Q_ASSERT(index >= 0 && index < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new RemoveInGameMapFeature(this, cell, index));
 }
 
-void WorldDocument::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)
+void WorldDocument::moveInGameMapPoint(WorldCell *cell, int featureIndex, int pointIndex, const InGameMapPoint &point)
 {
-    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
-    undoStack()->push(new MoveMapboxPoint(this, cell, featureIndex, pointIndex, point));
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new MoveInGameMapPoint(this, cell, featureIndex, pointIndex, point));
 }
 
-void WorldDocument::addMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+void WorldDocument::addInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex, const InGameMapProperty &property)
 {
-    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
-    undoStack()->push(new AddMapboxProperty(this, cell, featureIndex, propertyIndex, property));
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new AddInGameMapProperty(this, cell, featureIndex, propertyIndex, property));
 }
 
-void WorldDocument::removeMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex)
+void WorldDocument::removeInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex)
 {
-    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
-    undoStack()->push(new RemoveMapboxProperty(this, cell, featureIndex, propertyIndex));
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new RemoveInGameMapProperty(this, cell, featureIndex, propertyIndex));
 }
 
-void WorldDocument::setMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+void WorldDocument::setInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex, const InGameMapProperty &property)
 {
-    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
-    undoStack()->push(new SetMapboxProperty(this, cell, featureIndex, propertyIndex, property));
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new SetInGameMapProperty(this, cell, featureIndex, propertyIndex, property));
 }
 
-void WorldDocument::setMapboxProperties(WorldCell *cell, int featureIndex, const MapBoxProperties &properties)
+void WorldDocument::setInGameMapProperties(WorldCell *cell, int featureIndex, const InGameMapProperties &properties)
 {
-    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
-    undoStack()->push(new SetMapboxProperties(this, cell, featureIndex, properties));
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new SetInGameMapProperties(this, cell, featureIndex, properties));
 }
 
-void WorldDocument::setMapboxCoordinates(WorldCell *cell, int featureIndex, int coordsIndex, const MapBoxCoordinates &coords)
+void WorldDocument::setInGameMapCoordinates(WorldCell *cell, int featureIndex, int coordsIndex, const InGameMapCoordinates &coords)
 {
-    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->mapBox().mFeatures.size());
-    undoStack()->push(new SetMapboxCoordinates(this, cell, featureIndex, coordsIndex, coords));
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new SetInGameMapCoordinates(this, cell, featureIndex, coordsIndex, coords));
 }
 
 void WorldDocument::insertRoad(int index, Road *road)
@@ -1382,70 +1382,70 @@ int WorldDocumentUndoRedo::reorderCellObject(WorldCellObject *obj, int index)
     return oldIndex;
 }
 
-void WorldDocumentUndoRedo::addMapboxFeature(WorldCell *cell, int index, MapBoxFeature *feature)
+void WorldDocumentUndoRedo::addInGameMapFeature(WorldCell *cell, int index, InGameMapFeature *feature)
 {
-    cell->mapBox().mFeatures.insert(index, feature);
-    emit mapboxFeatureAdded(cell, index);
+    cell->inGameMap().mFeatures.insert(index, feature);
+    emit inGameMapFeatureAdded(cell, index);
 }
 
-MapBoxFeature *WorldDocumentUndoRedo::removeMapboxFeature(WorldCell *cell, int index)
+InGameMapFeature *WorldDocumentUndoRedo::removeInGameMapFeature(WorldCell *cell, int index)
 {
-    MapBoxFeature* feature = cell->mapBox().features().at(index);
-    mWorldDoc->mSelectedMapboxFeatures.removeAll(feature); // FIXME: no signal?
+    InGameMapFeature* feature = cell->inGameMap().features().at(index);
+    mWorldDoc->mSelectedInGameMapFeatures.removeAll(feature); // FIXME: no signal?
 
-    emit mapboxFeatureAboutToBeRemoved(cell, index);
-    return cell->mapBox().features().takeAt(index);
+    emit inGameMapFeatureAboutToBeRemoved(cell, index);
+    return cell->inGameMap().features().takeAt(index);
 }
 
-MapBoxPoint WorldDocumentUndoRedo::moveMapboxPoint(WorldCell *cell, int featureIndex, int pointIndex, const MapBoxPoint &point)
+InGameMapPoint WorldDocumentUndoRedo::moveInGameMapPoint(WorldCell *cell, int featureIndex, int pointIndex, const InGameMapPoint &point)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
-    MapBoxCoordinates& coords = feature->mGeometry.mCoordinates[0];
-    MapBoxPoint old = coords[pointIndex];
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    InGameMapCoordinates& coords = feature->mGeometry.mCoordinates[0];
+    InGameMapPoint old = coords[pointIndex];
     coords[pointIndex] = point;
-    emit mapboxPointMoved(cell, featureIndex, pointIndex);
+    emit inGameMapPointMoved(cell, featureIndex, pointIndex);
     return old;
 }
 
-void WorldDocumentUndoRedo::addMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+void WorldDocumentUndoRedo::addInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex, const InGameMapProperty &property)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
     feature->properties().insert(propertyIndex, property);
-    emit mapboxPropertiesChanged(cell, featureIndex);
+    emit inGameMapPropertiesChanged(cell, featureIndex);
 }
 
-MapBoxProperty WorldDocumentUndoRedo::removeMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex)
+InGameMapProperty WorldDocumentUndoRedo::removeInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
-    MapBoxProperty old = feature->properties().takeAt(propertyIndex);
-    emit mapboxPropertiesChanged(cell, featureIndex);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    InGameMapProperty old = feature->properties().takeAt(propertyIndex);
+    emit inGameMapPropertiesChanged(cell, featureIndex);
     return old;
 }
 
-MapBoxProperty WorldDocumentUndoRedo::setMapboxProperty(WorldCell *cell, int featureIndex, int propertyIndex, const MapBoxProperty &property)
+InGameMapProperty WorldDocumentUndoRedo::setInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex, const InGameMapProperty &property)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
-    MapBoxProperty old = feature->properties().at(propertyIndex);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    InGameMapProperty old = feature->properties().at(propertyIndex);
     feature->properties().replace(propertyIndex, property);
-    emit mapboxPropertiesChanged(cell, featureIndex);
+    emit inGameMapPropertiesChanged(cell, featureIndex);
     return old;
 }
 
-MapBoxProperties WorldDocumentUndoRedo::setMapboxProperties(WorldCell *cell, int featureIndex, const MapBoxProperties &properties)
+InGameMapProperties WorldDocumentUndoRedo::setInGameMapProperties(WorldCell *cell, int featureIndex, const InGameMapProperties &properties)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
-    MapBoxProperties old = feature->properties();
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    InGameMapProperties old = feature->properties();
     feature->properties() = properties;
-    emit mapboxPropertiesChanged(cell, featureIndex);
+    emit inGameMapPropertiesChanged(cell, featureIndex);
     return old;
 }
 
-MapBoxCoordinates WorldDocumentUndoRedo::setMapboxCoordinates(WorldCell *cell, int featureIndex, int coordsIndex, const MapBoxCoordinates &coords)
+InGameMapCoordinates WorldDocumentUndoRedo::setInGameMapCoordinates(WorldCell *cell, int featureIndex, int coordsIndex, const InGameMapCoordinates &coords)
 {
-    MapBoxFeature* feature = cell->mapBox().mFeatures[featureIndex];
-    MapBoxCoordinates old = feature->mGeometry.mCoordinates[coordsIndex];
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    InGameMapCoordinates old = feature->mGeometry.mCoordinates[coordsIndex];
     feature->mGeometry.mCoordinates[coordsIndex] = coords;
-    emit mapboxGeometryChanged(cell, featureIndex);
+    emit inGameMapGeometryChanged(cell, featureIndex);
     return old;
 }
 

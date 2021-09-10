@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mapboxreader.h"
+#include "ingamemapreader.h"
 
 #include "world.h"
 #include "worldcell.h"
@@ -27,12 +27,12 @@
 #include <QFileInfo>
 #include <QXmlStreamReader>
 
-class MapBoxReaderPrivate
+class InGameMapReaderPrivate
 {
-    Q_DECLARE_TR_FUNCTIONS(MapReader)
+    Q_DECLARE_TR_FUNCTIONS(InGameMapReader)
 
 public:
-    MapBoxReaderPrivate()
+    InGameMapReaderPrivate()
         : mWorld(nullptr)
     {
 
@@ -93,7 +93,7 @@ private:
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 if (WorldCell* cell = world->cellAt(x, y)) {
-                    cell->mapBox() = WorldCellMapBox(cell);
+                    cell->inGameMap() = WorldCellInGameCell(cell);
                 }
             }
         }
@@ -140,7 +140,7 @@ private:
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("feature"));
 
-        MapBoxFeature* feature = new MapBoxFeature(&cell->mapBox());
+        InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
 
         while (xml.readNextStartElement()) {
             if (xml.name() == QLatin1Literal("geometry"))
@@ -151,10 +151,10 @@ private:
                 readUnknownElement();
         }
 
-        cell->mapBox().mFeatures += feature;
+        cell->inGameMap().mFeatures += feature;
     }
 
-    void readFeatureGeometry(MapBoxFeature& feature)
+    void readFeatureGeometry(InGameMapFeature& feature)
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("geometry"));
 
@@ -170,11 +170,11 @@ private:
         }
     }
 
-    void readGeometryCoordinates(MapBoxGeometry& geometry)
+    void readGeometryCoordinates(InGameMapGeometry& geometry)
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("coordinates"));
 
-        MapBoxCoordinates coordinates;
+        InGameMapCoordinates coordinates;
 
         while (xml.readNextStartElement()) {
             if (xml.name() == QLatin1Literal("point"))
@@ -186,13 +186,13 @@ private:
         geometry.mCoordinates += coordinates;
     }
 
-    void readGeometryCoordinatePoint(MapBoxCoordinates& coordinates)
+    void readGeometryCoordinatePoint(InGameMapCoordinates& coordinates)
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("point"));
 
         const QXmlStreamAttributes atts = xml.attributes();
 
-        MapBoxPoint point;
+        InGameMapPoint point;
         point.x = atts.value(QLatin1Literal("x")).toDouble();
         point.y = atts.value(QLatin1Literal("y")).toDouble();
 
@@ -201,7 +201,7 @@ private:
         xml.skipCurrentElement();
     }
 
-    void readFeatureProperties(MapBoxFeature& feature)
+    void readFeatureProperties(InGameMapFeature& feature)
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("properties"));
 
@@ -213,12 +213,12 @@ private:
         }
     }
 
-    void readFeatureProperty(MapBoxFeature& feature)
+    void readFeatureProperty(InGameMapFeature& feature)
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("property"));
 
         const QXmlStreamAttributes atts = xml.attributes();
-        MapBoxProperty property;
+        InGameMapProperty property;
         property.mKey = atts.value(QLatin1Literal("name")).toString();
         property.mValue = atts.value(QLatin1Literal("value")).toString();
 
@@ -259,22 +259,22 @@ private:
 
 /////
 
-MapBoxReader::MapBoxReader()
-    : d(new MapBoxReaderPrivate)
+InGameMapReader::InGameMapReader()
+    : d(new InGameMapReaderPrivate)
 {
 }
 
-MapBoxReader::~MapBoxReader()
+InGameMapReader::~InGameMapReader()
 {
     delete d;
 }
 
-World *MapBoxReader::readWorld(QIODevice *device, const QString &path, World* world)
+World *InGameMapReader::readWorld(QIODevice *device, const QString &path, World* world)
 {
     return d->readWorld(device, path, world);
 }
 
-World *MapBoxReader::readWorld(const QString &fileName, World* world)
+World *InGameMapReader::readWorld(const QString &fileName, World* world)
 {
     QFile file(fileName);
     if (!d->openFile(&file))
@@ -283,7 +283,7 @@ World *MapBoxReader::readWorld(const QString &fileName, World* world)
     return readWorld(&file, QFileInfo(fileName).absolutePath(), world);
 }
 
-QString MapBoxReader::errorString() const
+QString InGameMapReader::errorString() const
 {
     return d->errorString();
 }

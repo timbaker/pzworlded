@@ -20,7 +20,7 @@
 
 #include "document.h"
 
-#include "mapbox/worldcellmapbox.h"
+#include "mapbox/worldcellingamemap.h"
 
 #include <QColor>
 #include <QObject>
@@ -113,14 +113,14 @@ public:
     ObjectType *setCellObjectType(WorldCellObject *obj, ObjectType *type);
     int reorderCellObject(WorldCellObject *obj, int index);
 
-    void addMapboxFeature(WorldCell* cell, int index, MapBoxFeature* feature);
-    MapBoxFeature* removeMapboxFeature(WorldCell* cell, int index);
-    MapBoxPoint moveMapboxPoint(WorldCell* cell, int featureIndex, int pointIndex, const MapBoxPoint& point);
-    void addMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
-    MapBoxProperty removeMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex);
-    MapBoxProperty setMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
-    MapBoxProperties setMapboxProperties(WorldCell* cell, int featureIndex, const MapBoxProperties& properties);
-    MapBoxCoordinates setMapboxCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const MapBoxCoordinates& coords);
+    void addInGameMapFeature(WorldCell* cell, int index, InGameMapFeature* feature);
+    InGameMapFeature* removeInGameMapFeature(WorldCell* cell, int index);
+    InGameMapPoint moveInGameMapPoint(WorldCell* cell, int featureIndex, int pointIndex, const InGameMapPoint& point);
+    void addInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
+    InGameMapProperty removeInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex);
+    InGameMapProperty setInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
+    InGameMapProperties setInGameMapProperties(WorldCell* cell, int featureIndex, const InGameMapProperties& properties);
+    InGameMapCoordinates setInGameMapCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const InGameMapCoordinates& coords);
 
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
@@ -209,11 +209,11 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
-    void mapboxFeatureAdded(WorldCell* cell, int index);
-    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
-    void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
-    void mapboxPropertiesChanged(WorldCell* cell, int featureIndex);
-    void mapboxGeometryChanged(WorldCell* cell, int featureIndex);
+    void inGameMapFeatureAdded(WorldCell* cell, int index);
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
+    void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
@@ -276,9 +276,9 @@ public:
     const QList<WorldBMP*> &selectedBMPs() const { return mSelectedBMPs; }
     int selectedBMPCount() const { return mSelectedBMPs.size(); }
 
-    void setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selected);
-    const QList<MapBoxFeature*> &selectedMapboxFeatures() const { return mSelectedMapboxFeatures; }
-    int selectedMapboxFeatureCount() const { return mSelectedMapboxFeatures.size(); }
+    void setSelectedInGameMapFeatures(const QList<InGameMapFeature *> &selected);
+    const QList<InGameMapFeature*> &selectedInGameMapFeatures() const { return mSelectedInGameMapFeatures; }
+    int selectedInGameMapFeatureCount() const { return mSelectedInGameMapFeatures.size(); }
 
     void editCell(WorldCell *cell);
     void editCell(int x, int y);
@@ -301,14 +301,14 @@ public:
     void setCellObjectType(WorldCellObject *obj, const QString &type);
     void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
 
-    void addMapboxFeature(WorldCell* cell, int index, MapBoxFeature* feature);
-    void removeMapboxFeature(WorldCell* cell, int index);
-    void moveMapboxPoint(WorldCell* cell, int featureIndex, int pointIndex, const MapBoxPoint& point);
-    void addMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
-    void removeMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex);
-    void setMapboxProperty(WorldCell* cell, int featureIndex, int propertyIndex, const MapBoxProperty& property);
-    void setMapboxProperties(WorldCell* cell, int featureIndex, const MapBoxProperties& properties);
-    void setMapboxCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const MapBoxCoordinates& coords);
+    void addInGameMapFeature(WorldCell* cell, int index, InGameMapFeature* feature);
+    void removeInGameMapFeature(WorldCell* cell, int index);
+    void moveInGameMapPoint(WorldCell* cell, int featureIndex, int pointIndex, const InGameMapPoint& point);
+    void addInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
+    void removeInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex);
+    void setInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
+    void setInGameMapProperties(WorldCell* cell, int featureIndex, const InGameMapProperties& properties);
+    void setInGameMapCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const InGameMapCoordinates& coords);
 
     void insertRoad(int index, Road *road);
     void removeRoad(int index);
@@ -491,13 +491,13 @@ signals:
     void objectLevelChanged(WorldCellObject *object);
     void cellObjectReordered(WorldCellObject *object);
 
-    void selectedMapboxFeaturesChanged();
-    void selectedMapboxPointsChanged();
-    void mapboxFeatureAdded(WorldCell* cell, int index);
-    void mapboxFeatureAboutToBeRemoved(WorldCell* cell, int index);
-    void mapboxPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
-    void mapboxPropertiesChanged(WorldCell* cell, int featureIndex);
-    void mapboxGeometryChanged(WorldCell* cell, int featureIndex);
+    void selectedInGameMapFeaturesChanged();
+    void selectedInGameMapPointsChanged();
+    void inGameMapFeatureAdded(WorldCell* cell, int index);
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
+    void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
@@ -535,7 +535,7 @@ private:
     QList<WorldCellObject*> mSelectedObjects;
     QList<WorldCellLot*> mSelectedLots;
     QList<Road*> mSelectedRoads;
-    QList<MapBoxFeature*> mSelectedMapboxFeatures;
+    QList<InGameMapFeature*> mSelectedInGameMapFeatures;
     QList<WorldBMP*> mSelectedBMPs;
     QString mFileName;
 

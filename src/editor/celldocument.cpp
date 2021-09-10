@@ -86,7 +86,7 @@ void CellDocument::setScene(CellScene *scene)
     connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
             SLOT(objectGroupAboutToBeRemoved(int)));
 
-    connect(mWorldDocument, &WorldDocument::mapboxFeatureAboutToBeRemoved, this, &CellDocument::mapboxFeatureAboutToBeRemoved);
+    connect(mWorldDocument, &WorldDocument::inGameMapFeatureAboutToBeRemoved, this, &CellDocument::inGameMapFeatureAboutToBeRemoved);
 
     connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
@@ -124,32 +124,32 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
     }
 }
 
-void CellDocument::setSelectedMapboxFeatures(const QList<MapBoxFeature *> &selected)
+void CellDocument::setSelectedInGameMapFeatures(const QList<InGameMapFeature *> &selected)
 {
-    mSelectedMapboxFeatures.clear();
+    mSelectedInGameMapFeatures.clear();
 
-    for (MapBoxFeature* feature : selected) {
-        if (!mSelectedMapboxFeatures.contains(feature))
-            mSelectedMapboxFeatures.append(feature);
+    for (InGameMapFeature* feature : selected) {
+        if (!mSelectedInGameMapFeatures.contains(feature))
+            mSelectedInGameMapFeatures.append(feature);
         else
-            qWarning("duplicate features passed to setSelectedMapboxFeatures");
+            qWarning("duplicate features passed to setSelectedInGameMapFeatures");
     }
 
-    emit selectedMapboxFeaturesChanged();
+    emit selectedInGameMapFeaturesChanged();
 }
 
-void CellDocument::setSelectedMapboxPoints(const QList<int> &selected)
+void CellDocument::setSelectedInGameMapPoints(const QList<int> &selected)
 {
-    mSelectedMapboxPoints.clear();
+    mSelectedInGameMapPoints.clear();
 
     for (int point : selected) {
-        if (!mSelectedMapboxPoints.contains(point))
-            mSelectedMapboxPoints.append(point);
+        if (!mSelectedInGameMapPoints.contains(point))
+            mSelectedInGameMapPoints.append(point);
         else
-            qWarning("duplicate points passed to setSelectedMapboxPoints");
+            qWarning("duplicate points passed to setSelectedInGameMapPoints");
     }
 
-    emit selectedMapboxPointsChanged();
+    emit selectedInGameMapPointsChanged();
 }
 
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
@@ -344,13 +344,13 @@ void CellDocument::cellLotMoved(WorldCellLot *lot)
     }
 }
 
-void CellDocument::mapboxFeatureAboutToBeRemoved(WorldCell *cell, int index)
+void CellDocument::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
 {
     if (cell != mCell)
         return;
-    QList<MapBoxFeature*> selection = mSelectedMapboxFeatures;
-    selection.removeAll(cell->mapBox().features().at(index));
-    setSelectedMapboxFeatures(selection);
+    QList<InGameMapFeature*> selection = mSelectedInGameMapFeatures;
+    selection.removeAll(cell->inGameMap().features().at(index));
+    setSelectedInGameMapFeatures(selection);
 }
 
 void CellDocument::objectGroupAboutToBeRemoved(int index)

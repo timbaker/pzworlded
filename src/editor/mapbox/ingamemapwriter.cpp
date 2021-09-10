@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mapboxwriter.h"
+#include "ingamemapwriter.h"
 
 #include "world.h"
 #include "worldcell.h"
@@ -27,12 +27,12 @@
 #include <QTemporaryFile>
 #include <QXmlStreamWriter>
 
-class MapboxWriterPrivate
+class InGameMapWriterPrivate
 {
-    Q_DECLARE_TR_FUNCTIONS(MapboxWriterPrivate)
+    Q_DECLARE_TR_FUNCTIONS(InGameMapWriter)
 
 public:
-    MapboxWriterPrivate()
+    InGameMapWriterPrivate()
         : mWorld(nullptr)
     {
     }
@@ -88,13 +88,13 @@ public:
         w.writeAttribute(QLatin1String("x"), QString::number(cell->x()));
         w.writeAttribute(QLatin1String("y"), QString::number(cell->y()));
 
-        for (auto* feature : cell->mapBox().mFeatures)
+        for (auto* feature : cell->inGameMap().mFeatures)
             writeFeature(w, feature);
 
         w.writeEndElement();
     }
 
-    void writeFeature(QXmlStreamWriter &w, MapBoxFeature* feature)
+    void writeFeature(QXmlStreamWriter &w, InGameMapFeature* feature)
     {
         w.writeStartElement(QLatin1String("feature"));
 
@@ -131,17 +131,17 @@ public:
 
 /////
 
-MapboxWriter::MapboxWriter()
-    : d(new MapboxWriterPrivate)
+InGameMapWriter::InGameMapWriter()
+    : d(new InGameMapWriterPrivate)
 {
 }
 
-MapboxWriter::~MapboxWriter()
+InGameMapWriter::~InGameMapWriter()
 {
     delete d;
 }
 
-bool MapboxWriter::writeWorld(World *world, const QString &filePath)
+bool InGameMapWriter::writeWorld(World *world, const QString &filePath)
 {
     QTemporaryFile tempFile;
     if (!d->openFile(&tempFile))
@@ -197,12 +197,12 @@ bool MapboxWriter::writeWorld(World *world, const QString &filePath)
     return true;
 }
 
-void MapboxWriter::writeWorld(World *world, QIODevice *device, const QString &absDirPath)
+void InGameMapWriter::writeWorld(World *world, QIODevice *device, const QString &absDirPath)
 {
     d->writeWorld(world, device, absDirPath);
 }
 
-QString MapboxWriter::errorString() const
+QString InGameMapWriter::errorString() const
 {
     return d->mError;
 }

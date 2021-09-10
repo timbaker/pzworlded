@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MapboxPropertiesForm</class>
- <widget class="QWidget" name="MapboxPropertiesForm">
+ <class>InGameMapPropertiesForm</class>
+ <widget class="QWidget" name="InGameMapPropertiesForm">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>276</width>
-    <height>237</height>
+    <height>240</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -97,7 +97,7 @@
   <connection>
    <sender>addButton</sender>
    <signal>clicked()</signal>
-   <receiver>MapboxPropertiesForm</receiver>
+   <receiver>InGameMapPropertiesForm</receiver>
    <slot>onAddButton()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -113,7 +113,7 @@
   <connection>
    <sender>listWidget</sender>
    <signal>itemSelectionChanged()</signal>
-   <receiver>MapboxPropertiesForm</receiver>
+   <receiver>InGameMapPropertiesForm</receiver>
    <slot>onSelectionChanged()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -129,7 +129,7 @@
   <connection>
    <sender>editButton</sender>
    <signal>clicked()</signal>
-   <receiver>MapboxPropertiesForm</receiver>
+   <receiver>InGameMapPropertiesForm</receiver>
    <slot>onEditButton()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -145,7 +145,7 @@
   <connection>
    <sender>deleteButton</sender>
    <signal>clicked()</signal>
-   <receiver>MapboxPropertiesForm</receiver>
+   <receiver>InGameMapPropertiesForm</receiver>
    <slot>onDeleteButton()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -161,7 +161,7 @@
   <connection>
    <sender>copyButton</sender>
    <signal>clicked()</signal>
-   <receiver>MapboxPropertiesForm</receiver>
+   <receiver>InGameMapPropertiesForm</receiver>
    <slot>onCopy()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -177,7 +177,7 @@
   <connection>
    <sender>pasteButton</sender>
    <signal>clicked()</signal>
-   <receiver>MapboxPropertiesForm</receiver>
+   <receiver>InGameMapPropertiesForm</receiver>
    <slot>onPaste()</slot>
    <hints>
     <hint type="sourcelabel">

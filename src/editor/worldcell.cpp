@@ -48,7 +48,7 @@ WorldCell::WorldCell(World *world, int x, int y)
     : mX(x)
     , mY(y)
     , mWorld(world)
-    , mMapBox(this)
+    , mInGameMap(this)
 {
 }
 

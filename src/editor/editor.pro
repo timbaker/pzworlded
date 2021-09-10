@@ -57,17 +57,17 @@ SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
     mapbox/clipper.cpp \
-    mapbox/mapboxbuildings.cpp \
-    mapbox/mapboxdock.cpp \
+    mapbox/ingamemapdock.cpp \
+    mapbox/ingamemapfeaturegenerator.cpp \
+    mapbox/ingamemappropertiesform.cpp \
+    mapbox/ingamemappropertydialog.cpp \
+    mapbox/ingamemapreader.cpp \
+    mapbox/ingamemapscene.cpp \
+    mapbox/ingamemapundo.cpp \
+    mapbox/ingamemapwriter.cpp \
     mapbox/mapboxglwidget.cpp \
-    mapbox/mapboxpropertiesform.cpp \
-    mapbox/mapboxpropertydialog.cpp \
-    mapbox/mapboxreader.cpp \
-    mapbox/mapboxscene.cpp \
-    mapbox/mapboxundo.cpp \
     mapbox/mapboxwindow.cpp \
-    mapbox/mapboxwriter.cpp \
-    mapbox/worldcellmapbox.cpp \
+    mapbox/worldcellingamemap.cpp \
     worldview.cpp \
     worldscene.cpp \
     world.cpp \
@@ -163,18 +163,18 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
     mapbox/clipper.hpp \
-    mapbox/mapboxbuildings.h \
+    mapbox/ingamemapdock.h \
+    mapbox/ingamemapfeaturegenerator.h \
+    mapbox/ingamemappropertiesform.h \
+    mapbox/ingamemappropertydialog.h \
+    mapbox/ingamemapreader.h \
+    mapbox/ingamemapscene.h \
+    mapbox/ingamemapundo.h \
+    mapbox/ingamemapwriter.h \
     mapbox/mapboxcoordinate.h \
-    mapbox/mapboxdock.h \
     mapbox/mapboxglwidget.h \
-    mapbox/mapboxpropertiesform.h \
-    mapbox/mapboxpropertydialog.h \
-    mapbox/mapboxreader.h \
-    mapbox/mapboxscene.h \
-    mapbox/mapboxundo.h \
     mapbox/mapboxwindow.h \
-    mapbox/mapboxwriter.h \
-    mapbox/worldcellmapbox.h \
+    mapbox/worldcellingamemap.h \
     worldview.h \
     worldscene.h \
     world.h \
@@ -268,8 +268,8 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     generatelotsfailuredialog.ui \
-    mapbox/mapboxpropertiesform.ui \
-    mapbox/mapboxpropertydialog.ui \
+    mapbox/ingamemappropertiesform.ui \
+    mapbox/ingamemappropertydialog.ui \
     mapbox/mapboxwindow.ui \
     propertiesview.ui \
     propertiesdialog.ui \

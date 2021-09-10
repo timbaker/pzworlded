@@ -15,8 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAPBOXPROPERTIESFORM_H
-#define MAPBOXPROPERTIESFORM_H
+#ifndef INGAMEMAP_PROPERTIESFORM_H
+#define INGAMEMAP_PROPERTIESFORM_H
 
 #include <QWidget>
 
@@ -25,27 +25,27 @@ class Document;
 class WorldCell;
 class WorldDocument;
 
-class MapBoxFeature;
-class MapBoxProperties;
+class InGameMapFeature;
+class InGameMapProperties;
 
 class QListWidgetItem;
 
 namespace Ui {
-class MapboxPropertiesForm;
+class InGameMapPropertiesForm;
 }
 
-class MapboxPropertiesForm : public QWidget
+class InGameMapPropertiesForm : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit MapboxPropertiesForm(QWidget *parent = nullptr);
-    ~MapboxPropertiesForm();
+    explicit InGameMapPropertiesForm(QWidget *parent = nullptr);
+    ~InGameMapPropertiesForm();
 
     void setDocument(Document *doc);
     void clearDocument();
 
-    void setFeature(MapBoxFeature* feature);
+    void setFeature(InGameMapFeature* feature);
 
 private slots:
     void onAddButton();
@@ -63,11 +63,11 @@ private:
     void syncUi();
 
 private:
-    Ui::MapboxPropertiesForm *ui;
+    Ui::InGameMapPropertiesForm *ui;
     WorldDocument* mWorldDoc;
     CellDocument* mCellDoc;
-    MapBoxFeature* mFeature;
-    MapBoxProperties* mProperties;
+    InGameMapFeature* mFeature;
+    InGameMapProperties* mProperties;
 };
 
-#endif // MAPBOXPROPERTIESFORM_H
+#endif // INGAMEMAP_PROPERTIESFORM_H

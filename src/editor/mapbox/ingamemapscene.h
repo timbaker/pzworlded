@@ -15,22 +15,22 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAPBOXSCENE_H
-#define MAPBOXSCENE_H
+#ifndef INGAMEMAPSCENE_H
+#define INGAMEMAPSCENE_H
 
 #include "scenetools.h"
 
 class CellScene;
 class WorldDocument;
 
-class MapBoxFeature;
-class MapBoxPoint;
+class InGameMapFeature;
+class InGameMapPoint;
 
 namespace Tiled {
 class MapRenderer;
 }
 
-class MapboxFeatureItem : public QGraphicsItem
+class InGameMapFeatureItem : public QGraphicsItem
 {
 public:
     enum class Type {
@@ -40,7 +40,7 @@ public:
         Polyline
     };
 
-    MapboxFeatureItem(MapBoxFeature* feature, CellScene *scene, QGraphicsItem *parent = nullptr);
+    InGameMapFeatureItem(InGameMapFeature* feature, CellScene *scene, QGraphicsItem *parent = nullptr);
 
     QRectF boundingRect() const;
 
@@ -63,11 +63,11 @@ public:
     void setSelected(bool selected);
     bool isSelected() const { return mIsSelected; }
 
-    void movePoint(int pointIndex, const MapBoxPoint& point);
+    void movePoint(int pointIndex, const InGameMapPoint& point);
 
     void synchWithFeature();
 
-    MapBoxFeature* feature() const { return mFeature; }
+    InGameMapFeature* feature() const { return mFeature; }
 
     Type geometryType() const;
     bool isPoint() const;
@@ -76,10 +76,10 @@ public:
 
 protected:
     friend class FeatureHandle;
-    friend class EditMapboxFeatureTool;
+    friend class EditInGameMapFeatureTool;
 
     WorldDocument* mWorldDoc;
-    MapBoxFeature* mFeature;
+    InGameMapFeature* mFeature;
     QPolygonF mPolygon;
     QList<QPolygonF> mHoles;
     Tiled::MapRenderer *mRenderer;
@@ -95,7 +95,7 @@ protected:
 
 class FeatureHandle;
 
-class CreateMapboxFeatureTool : public BaseCellSceneTool
+class CreateInGameMapFeatureTool : public BaseCellSceneTool
 {
     Q_OBJECT
 
@@ -109,8 +109,8 @@ public:
         Rectangle,
     };
 
-    explicit CreateMapboxFeatureTool(Type type);
-    ~CreateMapboxFeatureTool();
+    explicit CreateInGameMapFeatureTool(Type type);
+    ~CreateInGameMapFeatureTool();
 
     void setScene(BaseGraphicsScene *scene);
 
@@ -130,16 +130,16 @@ public:
         case Type::INVALID:
             break;
         case Type::Point:
-            setName(tr("Create Mapbox Point"));
+            setName(tr("Create InGameMap Point"));
             break;
         case Type::Polygon:
-            setName(tr("Create Mapbox Polygon"));
+            setName(tr("Create InGameMap Polygon"));
             break;
         case Type::Polyline:
-            setName(tr("Create Mapbox LineString"));
+            setName(tr("Create InGameMap LineString"));
             break;
         case Type::Rectangle:
-            setName(tr("Create Mapbox Rectangle"));
+            setName(tr("Create InGameMap Rectangle"));
             break;
         }
         //setShortcut(QKeySequence(tr("S")));
@@ -155,61 +155,61 @@ private:
     QPointF mScenePos;
 };
 
-class CreateMapboxPointTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPointTool>
+class CreateInGameMapPointTool : public CreateInGameMapFeatureTool, public Singleton<CreateInGameMapPointTool>
 {
     Q_OBJECT
 
 public:
-    CreateMapboxPointTool()
-        : CreateMapboxFeatureTool(Type::Point)
+    CreateInGameMapPointTool()
+        : CreateInGameMapFeatureTool(Type::Point)
     {
         setIcon(QIcon(QLatin1Literal(":/images/22x22/road-tool-edit.png")));
     }
 };
 
-class CreateMapboxPolygonTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPolygonTool>
+class CreateInGameMapPolygonTool : public CreateInGameMapFeatureTool, public Singleton<CreateInGameMapPolygonTool>
 {
     Q_OBJECT
 
 public:
-    CreateMapboxPolygonTool()
-        : CreateMapboxFeatureTool(Type::Polygon)
+    CreateInGameMapPolygonTool()
+        : CreateInGameMapFeatureTool(Type::Polygon)
     {
         setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
     }
 };
 
-class CreateMapboxPolylineTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxPolylineTool>
+class CreateInGameMapPolylineTool : public CreateInGameMapFeatureTool, public Singleton<CreateInGameMapPolylineTool>
 {
     Q_OBJECT
 
 public:
-    CreateMapboxPolylineTool()
-        : CreateMapboxFeatureTool(Type::Polyline)
+    CreateInGameMapPolylineTool()
+        : CreateInGameMapFeatureTool(Type::Polyline)
     {
         setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polyline.png")));
     }
 };
 
-class CreateMapboxRectangleTool : public CreateMapboxFeatureTool, public Singleton<CreateMapboxRectangleTool>
+class CreateInGameMapRectangleTool : public CreateInGameMapFeatureTool, public Singleton<CreateInGameMapRectangleTool>
 {
     Q_OBJECT
 
 public:
-    CreateMapboxRectangleTool()
-        : CreateMapboxFeatureTool(Type::Rectangle)
+    CreateInGameMapRectangleTool()
+        : CreateInGameMapFeatureTool(Type::Rectangle)
     {
         setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
     }
 };
 
-class EditMapboxFeatureTool : public BaseCellSceneTool, public Singleton<EditMapboxFeatureTool>
+class EditInGameMapFeatureTool : public BaseCellSceneTool, public Singleton<EditInGameMapFeatureTool>
 {
     Q_OBJECT
 
 public:
-    explicit EditMapboxFeatureTool();
-    ~EditMapboxFeatureTool();
+    explicit EditInGameMapFeatureTool();
+    ~EditInGameMapFeatureTool();
 
     void setScene(BaseGraphicsScene *scene);
 
@@ -226,7 +226,7 @@ public:
 
     void languageChanged()
     {
-        setName(tr("Edit Mapbox Features"));
+        setName(tr("Edit InGameMap Features"));
         //setShortcut(QKeySequence(tr("S")));
     }
 
@@ -237,11 +237,11 @@ private slots:
     void selectedFeaturesChanged();
 
 private:
-    void setSelectedItem(MapboxFeatureItem* feature);
+    void setSelectedItem(InGameMapFeatureItem* feature);
 
-    MapboxFeatureItem *mSelectedFeatureItem;
-    MapBoxFeature *mSelectedFeature;
+    InGameMapFeatureItem *mSelectedFeatureItem;
+    InGameMapFeature *mSelectedFeature;
     QList<FeatureHandle*> mHandles;
 };
 
-#endif // MAPBOXSCENE_H
+#endif // INGAMEMAPSCENE_H

@@ -15,21 +15,21 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAPBOXWRITER_H
-#define MAPBOXWRITER_H
+#ifndef INGAMEMAPWRITER_H
+#define INGAMEMAPWRITER_H
 
 #include <QString>
 
 class World;
-class MapboxWriterPrivate;
+class InGameMapWriterPrivate;
 
 class QIODevice;
 
-class MapboxWriter
+class InGameMapWriter
 {
 public:
-    MapboxWriter();
-    ~MapboxWriter();
+    InGameMapWriter();
+    ~InGameMapWriter();
 
     bool writeWorld(World *world, const QString &filePath);
     void writeWorld(World *world, QIODevice *device, const QString &absDirPath);
@@ -37,7 +37,7 @@ public:
     QString errorString() const;
 
 private:
-    MapboxWriterPrivate *d;
+    InGameMapWriterPrivate *d;
 };
 
-#endif // MAPBOXWRITER_H
+#endif // INGAMEMAPWRITER_H

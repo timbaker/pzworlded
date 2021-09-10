@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mapboxdock.h"
+#include "ingamemapdock.h"
 
 #include "celldocument.h"
 #include "cellscene.h"
@@ -29,8 +29,8 @@
 #include "maprenderer.h"
 #include "tilelayer.h"
 
-#include "mapboxpropertiesform.h"
-#include "mapboxscene.h"
+#include "ingamemappropertiesform.h"
+#include "ingamemapscene.h"
 
 #include <QDebug>
 #include <QDir>
@@ -44,13 +44,13 @@
 
 using namespace Tiled;
 
-MapboxDock::MapboxDock(QWidget *parent)
+InGameMapDock::InGameMapDock(QWidget *parent)
     : QDockWidget(parent)
-    , mView(new MapboxView(this))
+    , mView(new InGameMapView(this))
     , mCellDoc(nullptr)
     , mWorldDoc(nullptr)
 {
-    setObjectName(QLatin1String("MapboxDock"));
+    setObjectName(QLatin1String("InGameMapDock"));
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
@@ -58,7 +58,7 @@ MapboxDock::MapboxDock(QWidget *parent)
 
     layout->addWidget(mView);
 
-    mPropertiesForm = new MapboxPropertiesForm(widget);
+    mPropertiesForm = new InGameMapPropertiesForm(widget);
     layout->addWidget(mPropertiesForm);
     layout->setStretch(0, 2);
 
@@ -80,7 +80,7 @@ MapboxDock::MapboxDock(QWidget *parent)
             mView, SLOT(setVisible(bool)));
 }
 
-void MapboxDock::changeEvent(QEvent *e)
+void InGameMapDock::changeEvent(QEvent *e)
 {
     QDockWidget::changeEvent(e);
     switch (e->type()) {
@@ -92,12 +92,12 @@ void MapboxDock::changeEvent(QEvent *e)
     }
 }
 
-void MapboxDock::retranslateUi()
+void InGameMapDock::retranslateUi()
 {
-    setWindowTitle(tr("Mapbox"));
+    setWindowTitle(tr("InGameMap"));
 }
 
-void MapboxDock::setDocument(Document *doc)
+void InGameMapDock::setDocument(Document *doc)
 {
     if (mCellDoc)
         mCellDoc->disconnect(this);
@@ -108,12 +108,12 @@ void MapboxDock::setDocument(Document *doc)
     mPropertiesForm->setDocument(doc);
 
     if (mCellDoc) {
-        connect(mCellDoc, &CellDocument::selectedMapboxFeaturesChanged,
-                this, &MapboxDock::selectedFeaturesChanged);
+        connect(mCellDoc, &CellDocument::selectedInGameMapFeaturesChanged,
+                this, &InGameMapDock::selectedFeaturesChanged);
     }
 }
 
-void MapboxDock::clearDocument()
+void InGameMapDock::clearDocument()
 {
     if (mCellDoc)
         mCellDoc->disconnect(this);
@@ -124,14 +124,14 @@ void MapboxDock::clearDocument()
     mPropertiesForm->clearDocument();
 }
 
-void MapboxDock::selectionChanged()
+void InGameMapDock::selectionChanged()
 {
     if (mView->synchingSelection())
         return;
 
     if (mWorldDoc) {
         QModelIndexList selection = mView->selectionModel()->selectedIndexes();
-        QList<MapBoxFeature*> selectedFeatures;
+        QList<InGameMapFeature*> selectedFeatures;
         for (auto& index : selection) {
             if (index.column() > 0)
                 continue;
@@ -139,7 +139,7 @@ void MapboxDock::selectionChanged()
                 selectedFeatures += feature;
         }
         mView->setSynchingSelection(true);
-        mWorldDoc->setSelectedMapboxFeatures(selectedFeatures);
+        mWorldDoc->setSelectedInGameMapFeatures(selectedFeatures);
         mView->setSynchingSelection(false);
         return;
     }
@@ -149,39 +149,39 @@ void MapboxDock::selectionChanged()
 
     QModelIndexList selection = mView->selectionModel()->selectedIndexes();
     if (selection.size() == mView->model()->columnCount()) {
-        if (MapBoxFeature* feature = mView->model()->toFeature(selection.first())) {
+        if (InGameMapFeature* feature = mView->model()->toFeature(selection.first())) {
             if (!feature->mGeometry.mCoordinates.isEmpty() && !feature->mGeometry.mCoordinates[0].isEmpty()) {
-                MapBoxPoint& point = feature->mGeometry.mCoordinates[0][0];
+                InGameMapPoint& point = feature->mGeometry.mCoordinates[0][0];
                 QPointF scenePos = mCellDoc->scene()->renderer()->tileToPixelCoords(point.x, point.y);
                 mCellDoc->view()->centerOn(scenePos.x(), scenePos.y());
-    //            MapboxFeatureItem* item = mCellDoc->scene()->itemForMapboxFeature(feature);
+    //            InGameMapFeatureItem* item = mCellDoc->scene()->itemForInGameMapFeature(feature);
     //            mCellDoc->view()->ensureVisible(item);
             }
         }
     }
 
     // Select features in the scene only if they can be edited
-    if (!CreateMapboxPointTool::instance().isCurrent() &&
-            !CreateMapboxPolygonTool::instance().isCurrent() &&
-            !CreateMapboxPolylineTool::instance().isCurrent() &&
-            !EditMapboxFeatureTool::instance().isCurrent())
+    if (!CreateInGameMapPointTool::instance().isCurrent() &&
+            !CreateInGameMapPolygonTool::instance().isCurrent() &&
+            !CreateInGameMapPolylineTool::instance().isCurrent() &&
+            !EditInGameMapFeatureTool::instance().isCurrent())
         return;
 
-    QList<MapBoxFeature*> features;
+    QList<InGameMapFeature*> features;
     for (QModelIndex& index : selection) {
         if (index.column() > 0)
             continue;
-        if (MapBoxFeature* feature = mView->model()->toFeature(index)) {
+        if (InGameMapFeature* feature = mView->model()->toFeature(index)) {
             features << feature;
         }
     }
 
     mView->setSynchingSelection(true);
-    mCellDoc->setSelectedMapboxFeatures(features);
+    mCellDoc->setSelectedInGameMapFeatures(features);
     mView->setSynchingSelection(false);
 }
 
-void MapboxDock::itemClicked(const QModelIndex &index)
+void InGameMapDock::itemClicked(const QModelIndex &index)
 {
     if (mView->model()->toFeature(index)) {
         // Clicking an already-selected item should center it in the view
@@ -190,22 +190,22 @@ void MapboxDock::itemClicked(const QModelIndex &index)
     }
 }
 
-void MapboxDock::itemDoubleClicked(const QModelIndex &index)
+void InGameMapDock::itemDoubleClicked(const QModelIndex &index)
 {
     Q_UNUSED(index)
 }
 
-void MapboxDock::trashItem(const QModelIndex &index)
+void InGameMapDock::trashItem(const QModelIndex &index)
 {
-    if (MapBoxFeature* feature = mView->model()->toFeature(index)) {
+    if (InGameMapFeature* feature = mView->model()->toFeature(index)) {
         if (mWorldDoc)
-            mWorldDoc->removeMapboxFeature(feature->cell(), feature->index());
+            mWorldDoc->removeInGameMapFeature(feature->cell(), feature->index());
         if (mCellDoc)
-            mCellDoc->worldDocument()->removeMapboxFeature(feature->cell(), feature->index());
+            mCellDoc->worldDocument()->removeInGameMapFeature(feature->cell(), feature->index());
     }
 }
 
-void MapboxDock::selectedFeaturesChanged()
+void InGameMapDock::selectedFeaturesChanged()
 {
 }
 
@@ -215,12 +215,12 @@ void MapboxDock::selectedFeaturesChanged()
 #include <QLineEdit>
 #include <QSpinBox>
 
-class MapboxViewDelegate : public QStyledItemDelegate
+class InGameMapViewDelegate : public QStyledItemDelegate
  {
 //     Q_OBJECT
 
  public:
-     MapboxViewDelegate(QObject *parent = nullptr)
+     InGameMapViewDelegate(QObject *parent = nullptr)
          : QStyledItemDelegate(parent)
          , mTrashPixmap(QLatin1String(":/images/16x16/edit-delete.png"))
      {
@@ -252,9 +252,9 @@ private:
 
 /////
 
-MapboxView::MapboxView(QWidget *parent)
+InGameMapView::InGameMapView(QWidget *parent)
     : QTreeView(parent)
-    , mModel(new MapboxModel(this))
+    , mModel(new InGameMapModel(this))
     , mCell(nullptr)
     , mCellDoc(nullptr)
     , mWorldDoc(nullptr)
@@ -271,14 +271,14 @@ MapboxView::MapboxView(QWidget *parent)
 
     header()->hide();
 
-    setItemDelegate(new MapboxViewDelegate(this));
+    setItemDelegate(new InGameMapViewDelegate(this));
 
     setModel(mModel);
 
     connect(mModel, SIGNAL(synched()), SLOT(modelSynched()));
 }
 
-void MapboxView::mousePressEvent(QMouseEvent *event)
+void InGameMapView::mousePressEvent(QMouseEvent *event)
 {
     // Prevent drag-and-drop happening on unselected items
     QModelIndex index = indexAt(event->pos());
@@ -289,7 +289,7 @@ void MapboxView::mousePressEvent(QMouseEvent *event)
 
         if ((index.column() == 0) && mModel->toFeature(index)) {
             QRect itemRect = visualRect(index);
-            QRect rect = static_cast<MapboxViewDelegate*>(itemDelegate())->closeButtonRect(itemRect);
+            QRect rect = static_cast<InGameMapViewDelegate*>(itemDelegate())->closeButtonRect(itemRect);
             if (rect.contains(event->pos())) {
                 event->accept();
                 emit trashItem(index);
@@ -300,7 +300,7 @@ void MapboxView::mousePressEvent(QMouseEvent *event)
     QTreeView::mousePressEvent(event);
 }
 
-void MapboxView::setDocument(Document *doc)
+void InGameMapView::setDocument(Document *doc)
 {
     if (mWorldDoc)
         mWorldDoc->disconnect(this);
@@ -314,24 +314,24 @@ void MapboxView::setDocument(Document *doc)
 
     if (mWorldDoc) {
         connect(mWorldDoc, &WorldDocument::selectedCellsChanged,
-                this, &MapboxView::selectedCellsChanged);
-        connect(mWorldDoc, &WorldDocument::selectedMapboxFeaturesChanged,
-                this, &MapboxView::selectedFeaturesChanged);
+                this, &InGameMapView::selectedCellsChanged);
+        connect(mWorldDoc, &WorldDocument::selectedInGameMapFeaturesChanged,
+                this, &InGameMapView::selectedFeaturesChanged);
     }
     if (mCellDoc) {
-        connect(mCellDoc, &CellDocument::selectedMapboxFeaturesChanged,
-                this, &MapboxView::selectedFeaturesChanged);
+        connect(mCellDoc, &CellDocument::selectedInGameMapFeaturesChanged,
+                this, &InGameMapView::selectedFeaturesChanged);
     }
 }
 
-bool MapboxView::synchingSelection() const
+bool InGameMapView::synchingSelection() const
 {
     return mSynchingSelection || mModel->synching();
 }
 
-void MapboxView::selectedCellsChanged()
+void InGameMapView::selectedCellsChanged()
 {
-    mWorldDoc->setSelectedMapboxFeatures(QList<MapBoxFeature*>());
+    mWorldDoc->setSelectedInGameMapFeatures(QList<InGameMapFeature*>());
 
     if (mWorldDoc->selectedCellCount() == 1)
         mModel->setCell(mWorldDoc->selectedCells().first());
@@ -339,21 +339,21 @@ void MapboxView::selectedCellsChanged()
         mModel->setCell(nullptr);
 }
 
-void MapboxView::selectedFeaturesChanged()
+void InGameMapView::selectedFeaturesChanged()
 {
     if (synchingSelection())
         return;
     mSynchingSelection = true;
     clearSelection();
-    auto selected = mWorldDoc ? mWorldDoc->selectedMapboxFeatures() : mCellDoc->selectedMapboxFeatures();
-    for (MapBoxFeature* feature : selected) {
+    auto selected = mWorldDoc ? mWorldDoc->selectedInGameMapFeatures() : mCellDoc->selectedInGameMapFeatures();
+    for (InGameMapFeature* feature : selected) {
         selectionModel()->select(model()->index(feature),
                                  QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
     mSynchingSelection = false;
 }
 
-void MapboxView::modelSynched()
+void InGameMapView::modelSynched()
 {
     if (mWorldDoc)
         selectedFeaturesChanged();
@@ -365,9 +365,9 @@ void MapboxView::modelSynched()
 /////
 
 // FIXME: Are these global objects safe?
-QString MapboxModel::MapboxModelMimeType(QLatin1String("application/x-pzworlded-lot"));
+QString InGameMapModel::InGameMapModelMimeType(QLatin1String("application/x-pzworlded-lot"));
 
-MapboxModel::MapboxModel(QObject *parent)
+InGameMapModel::InGameMapModel(QObject *parent)
     : QAbstractItemModel(parent)
     , mCell(nullptr)
     , mCellDoc(nullptr)
@@ -377,12 +377,12 @@ MapboxModel::MapboxModel(QObject *parent)
 {
 }
 
-MapboxModel::~MapboxModel()
+InGameMapModel::~InGameMapModel()
 {
     delete mRootItem;
 }
 
-QModelIndex MapboxModel::index(int row, int column, const QModelIndex &parent) const
+QModelIndex InGameMapModel::index(int row, int column, const QModelIndex &parent) const
 {
     if (!mRootItem)
         return QModelIndex();
@@ -402,14 +402,14 @@ QModelIndex MapboxModel::index(int row, int column, const QModelIndex &parent) c
     return QModelIndex();
 }
 
-MapBoxFeature *MapboxModel::toFeature(const QModelIndex &index) const
+InGameMapFeature *InGameMapModel::toFeature(const QModelIndex &index) const
 {
     if (index.isValid())
         return toItem(index)->feature;
     return nullptr;
 }
 
-QModelIndex MapboxModel::parent(const QModelIndex &index) const
+QModelIndex InGameMapModel::parent(const QModelIndex &index) const
 {
     if (Item *item = toItem(index)) {
         if (item->parent != mRootItem) {
@@ -420,7 +420,7 @@ QModelIndex MapboxModel::parent(const QModelIndex &index) const
     return QModelIndex();
 }
 
-int MapboxModel::rowCount(const QModelIndex &parent) const
+int InGameMapModel::rowCount(const QModelIndex &parent) const
 {
     if (!mRootItem)
         return 0;
@@ -431,13 +431,13 @@ int MapboxModel::rowCount(const QModelIndex &parent) const
     return 0;
 }
 
-int MapboxModel::columnCount(const QModelIndex &parent) const
+int InGameMapModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent)
     return 1;
 }
 
-QVariant MapboxModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant InGameMapModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
         switch (section) {
@@ -448,16 +448,16 @@ QVariant MapboxModel::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-QVariant MapboxModel::data(const QModelIndex &index, int role) const
+QVariant InGameMapModel::data(const QModelIndex &index, int role) const
 {
-    if (MapBoxFeature* feature = toFeature(index)) {
+    if (InGameMapFeature* feature = toFeature(index)) {
         if (index.column())
             return QVariant();
         switch (role) {
         case Qt::CheckStateRole: {
             if (mCellDoc) {
                 // Don't check SubMapItem::isVisible because it changes during CellScene::updateCurrentLevelHighlight()
-                MapboxFeatureItem *sceneItem = mCellDoc->scene()->itemForMapboxFeature(feature);
+                InGameMapFeatureItem *sceneItem = mCellDoc->scene()->itemForInGameMapFeature(feature);
                 bool visible = sceneItem ? sceneItem->isVisible() : false /*sceneItem ? sceneItem->subMap()->isVisible() : false*/;
                 return visible ? Qt::Checked : Qt::Unchecked;
             }
@@ -481,14 +481,14 @@ QVariant MapboxModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-bool MapboxModel::setData(const QModelIndex &index, const QVariant &value, int role)
+bool InGameMapModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    if (MapBoxFeature * feature = toFeature(index)) {
+    if (InGameMapFeature * feature = toFeature(index)) {
         switch (role) {
         case Qt::CheckStateRole: {
             if (mCellDoc) {
                 Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
-                mCellDoc->scene()->setMapboxFeatureVisible(feature, c == Qt::Checked);
+                mCellDoc->scene()->setInGameMapFeatureVisible(feature, c == Qt::Checked);
                 emit dataChanged(index, index);
                 return true;
             }
@@ -499,7 +499,7 @@ bool MapboxModel::setData(const QModelIndex &index, const QVariant &value, int r
     return QAbstractItemModel::setData(index, value, role);
 }
 
-Qt::ItemFlags MapboxModel::flags(const QModelIndex &index) const
+Qt::ItemFlags InGameMapModel::flags(const QModelIndex &index) const
 {
     Qt::ItemFlags rc = QAbstractItemModel::flags(index);
     if (index.column() == 0) {
@@ -511,19 +511,19 @@ Qt::ItemFlags MapboxModel::flags(const QModelIndex &index) const
     return rc;
 }
 
-Qt::DropActions MapboxModel::supportedDropActions() const
+Qt::DropActions InGameMapModel::supportedDropActions() const
 {
     return /*Qt::CopyAction |*/ Qt::MoveAction;
 }
 
-QStringList MapboxModel::mimeTypes() const
+QStringList InGameMapModel::mimeTypes() const
 {
     QStringList types;
-    types << MapboxModelMimeType;
+    types << InGameMapModelMimeType;
     return types;
 }
 
-QMimeData *MapboxModel::mimeData(const QModelIndexList &indexes) const
+QMimeData *InGameMapModel::mimeData(const QModelIndexList &indexes) const
 {
     QMimeData *mimeData = new QMimeData();
     QByteArray encodedData;
@@ -531,17 +531,17 @@ QMimeData *MapboxModel::mimeData(const QModelIndexList &indexes) const
     QDataStream stream(&encodedData, QIODevice::WriteOnly);
 
     for (const QModelIndex& index : indexes) {
-        if (MapBoxFeature* feature = toFeature(index)) {
+        if (InGameMapFeature* feature = toFeature(index)) {
             QString text = QString::number(feature->index());
             stream << text;
         }
     }
 
-    mimeData->setData(MapboxModelMimeType, encodedData);
+    mimeData->setData(InGameMapModelMimeType, encodedData);
     return mimeData;
 }
 
-bool MapboxModel::dropMimeData(const QMimeData* data,
+bool InGameMapModel::dropMimeData(const QMimeData* data,
      Qt::DropAction action, int row, int column, const QModelIndex& parent)
  {
     Q_UNUSED(row)
@@ -549,7 +549,7 @@ bool MapboxModel::dropMimeData(const QMimeData* data,
     if (action == Qt::IgnoreAction)
          return true;
 
-     if (!data->hasFormat(MapboxModelMimeType))
+     if (!data->hasFormat(InGameMapModelMimeType))
          return false;
 
      if (column > 0)
@@ -561,15 +561,15 @@ bool MapboxModel::dropMimeData(const QMimeData* data,
 
      WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
 
-     QByteArray encodedData = data->data(MapboxModelMimeType);
+     QByteArray encodedData = data->data(InGameMapModelMimeType);
      QDataStream stream(&encodedData, QIODevice::ReadOnly);
-     QList<MapBoxFeature*> features;
+     QList<InGameMapFeature*> features;
      int rows = 0;
 
      while (!stream.atEnd()) {
          QString text;
          stream >> text;
-         features << mCell->mapBox().mFeatures.at(text.toInt());
+         features << mCell->inGameMap().mFeatures.at(text.toInt());
          ++rows;
      }
 #if 0
@@ -577,7 +577,7 @@ bool MapboxModel::dropMimeData(const QMimeData* data,
      int count = features.size();
      if (count > 1)
          worldDoc->undoStack()->beginMacro(tr("Change %1 Lots' Level").arg(count));
-     foreach (MapBoxFeature* feature, features)
+     foreach (InGameMapFeature* feature, features)
          worldDoc->setLotLevel(lot, level);
      if (count > 1)
          worldDoc->undoStack()->endMacro();
@@ -585,7 +585,7 @@ bool MapboxModel::dropMimeData(const QMimeData* data,
      return true;
 }
 
-QModelIndex MapboxModel::index(MapBoxFeature* feature) const
+QModelIndex InGameMapModel::index(InGameMapFeature* feature) const
 {
     if (Item *item = toItem(feature)) {
         int row = item->parent->children.indexOf(item);
@@ -595,14 +595,14 @@ QModelIndex MapboxModel::index(MapBoxFeature* feature) const
     return QModelIndex();
 }
 
-MapboxModel::Item *MapboxModel::toItem(const QModelIndex &index) const
+InGameMapModel::Item *InGameMapModel::toItem(const QModelIndex &index) const
 {
     if (index.isValid())
         return static_cast<Item*>(index.internalPointer());
     return nullptr;
 }
 
-MapboxModel::Item *MapboxModel::toItem(MapBoxFeature* feature) const
+InGameMapModel::Item *InGameMapModel::toItem(InGameMapFeature* feature) const
 {
     Item *parent = mRootItem;
     foreach (Item *item, parent->children)
@@ -611,7 +611,7 @@ MapboxModel::Item *MapboxModel::toItem(MapBoxFeature* feature) const
     return nullptr;
 }
 
-void MapboxModel::setModelData()
+void InGameMapModel::setModelData()
 {
     beginResetModel();
 
@@ -625,7 +625,7 @@ void MapboxModel::setModelData()
 
     mRootItem = new Item();
 
-    for (MapBoxFeature* feature : mCell->mapBox().mFeatures) {
+    for (InGameMapFeature* feature : mCell->inGameMap().mFeatures) {
         Item *parent = mRootItem;
         new Item(parent, parent->children.size(), feature);
     }
@@ -633,7 +633,7 @@ void MapboxModel::setModelData()
     endResetModel();
 }
 
-void MapboxModel::setDocument(Document *doc)
+void InGameMapModel::setDocument(Document *doc)
 {
     if (mWorldDoc)
         mWorldDoc->disconnect(this);
@@ -661,22 +661,22 @@ void MapboxModel::setDocument(Document *doc)
 
     if (worldDoc) {
         connect(worldDoc, &WorldDocument::cellContentsAboutToChange,
-                this, &MapboxModel::cellContentsAboutToChange);
+                this, &InGameMapModel::cellContentsAboutToChange);
         connect(worldDoc, &WorldDocument::cellContentsChanged,
-                this, &MapboxModel::cellContentsChanged);
+                this, &InGameMapModel::cellContentsChanged);
 
-        connect(worldDoc, &WorldDocument::mapboxFeatureAdded,
-                this, &MapboxModel::featureAdded);
-        connect(worldDoc, &WorldDocument::mapboxFeatureAboutToBeRemoved,
-                this, &MapboxModel::featureAboutToBeRemoved);
-        connect(worldDoc, &WorldDocument::mapboxPropertiesChanged,
-                this, &MapboxModel::propertiesChanged);
+        connect(worldDoc, &WorldDocument::inGameMapFeatureAdded,
+                this, &InGameMapModel::featureAdded);
+        connect(worldDoc, &WorldDocument::inGameMapFeatureAboutToBeRemoved,
+                this, &InGameMapModel::featureAboutToBeRemoved);
+        connect(worldDoc, &WorldDocument::inGameMapPropertiesChanged,
+                this, &InGameMapModel::propertiesChanged);
     }
 
     setCell(cell);
 }
 
-void MapboxModel::setCell(WorldCell *cell)
+void InGameMapModel::setCell(WorldCell *cell)
 {
     Q_ASSERT(!cell || (mWorldDoc || mCellDoc));
 
@@ -688,18 +688,18 @@ void MapboxModel::setCell(WorldCell *cell)
     emit synched();
 }
 
-void MapboxModel::featureAdded(WorldCell *cell, int index)
+void InGameMapModel::featureAdded(WorldCell *cell, int index)
 {
     Q_UNUSED(index)
     if (cell == mCell)
         setCell(mCell); // lazy, just reset the whole list
 }
 
-void MapboxModel::featureAboutToBeRemoved(WorldCell *cell, int index)
+void InGameMapModel::featureAboutToBeRemoved(WorldCell *cell, int index)
 {
     if (cell != mCell)
         return;
-    MapBoxFeature* feature = cell->mapBox().mFeatures.at(index);
+    InGameMapFeature* feature = cell->inGameMap().mFeatures.at(index);
     if (Item *item = toItem(feature)) {
         Item *parentItem = item->parent;
         QModelIndex parent = QModelIndex(); // root
@@ -710,16 +710,16 @@ void MapboxModel::featureAboutToBeRemoved(WorldCell *cell, int index)
     }
 }
 
-void MapboxModel::propertiesChanged(WorldCell *cell, int featureIndex)
+void InGameMapModel::propertiesChanged(WorldCell *cell, int featureIndex)
 {
     Q_UNUSED(featureIndex)
     if (cell == mCell)
         setCell(mCell); // lazy, just reset the whole list
 }
 
-void MapboxModel::cellContentsAboutToChange(WorldCell *cell)
+void InGameMapModel::cellContentsAboutToChange(WorldCell *cell)
 {
-    qDebug() << "MapboxModel::cellContentsAboutToChange" << cell->pos() << "(mine is" << (mCell ? mCell->pos() : QPoint()) << ")";
+    qDebug() << "InGameMapModel::cellContentsAboutToChange" << cell->pos() << "(mine is" << (mCell ? mCell->pos() : QPoint()) << ")";
     if (cell != mCell)
         return;
 
@@ -733,7 +733,7 @@ void MapboxModel::cellContentsAboutToChange(WorldCell *cell)
     mSynching = true; // ignore layerGroupAdded
 }
 
-void MapboxModel::cellContentsChanged(WorldCell *cell)
+void InGameMapModel::cellContentsChanged(WorldCell *cell)
 {
     if (cell != mCell)
         return;
