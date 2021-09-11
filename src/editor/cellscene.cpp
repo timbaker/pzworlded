@@ -2773,9 +2773,11 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     mCell(cell),
     mMapComposite(0),
     mMapInfo(0),
-    mObjectItemParent(new QGraphicsItemGroup)
+    mObjectItemParent(new QGraphicsItemGroup),
+    mInGameMapFeatureParent(new QGraphicsItemGroup)
 {
     mScene->addItem(mObjectItemParent);
+    mScene->addItem(mInGameMapFeatureParent);
 
     connect(worldDocument(), SIGNAL(cellMapFileChanged(WorldCell*)),
             SLOT(cellMapFileChanged(WorldCell*)));
@@ -2802,6 +2804,12 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
             SLOT(cellObjectGroupChanged(WorldCellObject*)));
     connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
             SLOT(cellObjectReordered(WorldCellObject*)));
+
+    connect(worldDocument(), &WorldDocument::inGameMapFeatureAdded, this, &AdjacentMap::inGameMapFeatureAdded);
+    connect(worldDocument(), &WorldDocument::inGameMapFeatureAboutToBeRemoved, this, &AdjacentMap::inGameMapFeatureAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::inGameMapPointMoved, this, &AdjacentMap::inGameMapPointMoved);
+    connect(worldDocument(), &WorldDocument::inGameMapPropertiesChanged, this, &AdjacentMap::inGameMapPropertiesChanged);
+    connect(worldDocument(), &WorldDocument::inGameMapGeometryChanged, this, &AdjacentMap::inGameMapGeometryChanged);
 
     connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged()));
 
@@ -2831,11 +2839,25 @@ ObjectItem *AdjacentMap::itemForObject(WorldCellObject *obj)
     return 0;
 }
 
+InGameMapFeatureItem *AdjacentMap::itemForFeature(InGameMapFeature *feature)
+{
+    for (InGameMapFeatureItem *item : mInGameMapFeatureItems) {
+        if (item->feature() == feature) {
+            return item;
+        }
+    }
+    return nullptr;
+}
+
 void AdjacentMap::removeItems()
 {
     delete mObjectItemParent;
-    mObjectItemParent = 0;
+    mObjectItemParent = nullptr;
     mObjectItems.clear(); // deleted with parent
+
+    delete mInGameMapFeatureParent;
+    mInGameMapFeatureParent = nullptr;
+    mInGameMapFeatureItems.clear(); // deleted with parent
 }
 
 void AdjacentMap::cellMapFileChanged(WorldCell *_cell)
@@ -3007,6 +3029,62 @@ void AdjacentMap::cellObjectReordered(WorldCellObject *obj)
     setZOrder();
 }
 
+void AdjacentMap::inGameMapFeatureAdded(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    InGameMapFeature *feature = cell->inGameMap().features().at(index);
+    InGameMapFeatureItem *item = new InGameMapFeatureItem(feature, scene(), mInGameMapFeatureParent);
+    item->setAdjacent(true);
+    item->synchWithFeature();
+    mInGameMapFeatureItems.insert(index, item);
+
+    setZOrder();
+}
+
+void AdjacentMap::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    InGameMapFeature *feature = cell->inGameMap().features().at(index);
+    if (InGameMapFeatureItem *item = itemForFeature(feature)) {
+        mInGameMapFeatureItems.removeAll(item);
+        mScene->removeItem(item);
+        delete item;
+
+        setZOrder();
+    }
+}
+
+void AdjacentMap::inGameMapPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
+{
+    Q_UNUSED(pointIndex)
+
+    InGameMapFeature *feature = cell->inGameMap().features().at(featureIndex);
+    if (InGameMapFeatureItem *item = itemForFeature(feature)) {
+        item->synchWithFeature();
+        setZOrder();
+    }
+}
+
+void AdjacentMap::inGameMapPropertiesChanged(WorldCell *cell, int featureIndex)
+{
+    Q_UNUSED(cell)
+    Q_UNUSED(featureIndex)
+
+}
+
+void AdjacentMap::inGameMapGeometryChanged(WorldCell *cell, int featureIndex)
+{
+    InGameMapFeature *feature = cell->inGameMap().features().at(featureIndex);
+    if (InGameMapFeatureItem *item = itemForFeature(feature)) {
+        item->synchWithFeature();
+        setZOrder();
+    }
+}
+
 void AdjacentMap::mapLoaded(MapInfo *mapInfo)
 {
     if (mapInfo == mMapInfo) {
@@ -3037,6 +3115,16 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
             mObjectItems += item;
             mMapComposite->ensureMaxLevels(obj->level());
         }
+
+        qDeleteAll(mInGameMapFeatureItems);
+        mInGameMapFeatureItems.clear();
+        for (InGameMapFeature* feature : cell()->inGameMap().features()) {
+            InGameMapFeatureItem *item = new InGameMapFeatureItem(feature, scene(), mInGameMapFeatureParent);
+            item->setAdjacent(true);
+            item->synchWithFeature();
+            mInGameMapFeatureItems += item;
+        }
+
         setZOrder();
 
         sceneRectChanged();
@@ -3113,6 +3201,11 @@ void AdjacentMap::sceneRectChanged()
 
     foreach (ObjectItem *item, mObjectItems)
         item->synchWithObject();
+
+    mInGameMapFeatureParent->setPos(offset);
+    for (InGameMapFeatureItem *item : mInGameMapFeatureItems) {
+        item->synchWithFeature();
+    }
 }
 
 void AdjacentMap::loadMap()
@@ -3150,6 +3243,7 @@ void AdjacentMap::setZOrder()
 {
     int z = scene()->mapComposite()->maxLevel() + 1;
     mObjectItemParent->setZValue(z);
+    mInGameMapFeatureParent->setZValue(z + 1);
 
     const ObjectGroupList &groups = cell()->world()->objectGroups();
     int objectIndex = 0;

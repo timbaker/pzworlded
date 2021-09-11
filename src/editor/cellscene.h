@@ -365,6 +365,7 @@ public:
     { return mCell; }
 
     ObjectItem *itemForObject(WorldCellObject *obj);
+    InGameMapFeatureItem *itemForFeature(InGameMapFeature *feature);
 
     void removeItems();
 
@@ -387,6 +388,12 @@ private slots:
     void objectXXXXChanged(WorldCellObject *obj);
     void cellObjectGroupChanged(WorldCellObject *obj);
     void cellObjectReordered(WorldCellObject *obj);
+
+    void inGameMapFeatureAdded(WorldCell* cell, int index);
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
+    void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
@@ -419,6 +426,8 @@ private:
     QMap<WorldCellLot*,MapComposite*> mLotToMC;
     QGraphicsItem *mObjectItemParent;
     QList<ObjectItem*> mObjectItems;
+    QGraphicsItem *mInGameMapFeatureParent;
+    QList<InGameMapFeatureItem*> mInGameMapFeatureItems;
 };
 
 class CellScene : public BaseGraphicsScene

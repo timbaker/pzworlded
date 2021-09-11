@@ -74,6 +74,9 @@ public:
     bool isPolygon() const;
     bool isPolyline() const;
 
+    void setAdjacent(bool adjacent) { mAdjacent = adjacent; }
+    bool isAdjacent() { return mAdjacent; }
+
 protected:
     friend class FeatureHandle;
     friend class EditInGameMapFeatureTool;
@@ -91,6 +94,7 @@ protected:
     QPointF mDragOffset;
     int mAddPointIndex = -1;
     QPointF mAddPointPos;
+    bool mAdjacent; // Displayed in an AdjacentMap
 };
 
 class FeatureHandle;
@@ -199,7 +203,7 @@ public:
     CreateInGameMapRectangleTool()
         : CreateInGameMapFeatureTool(Type::Rectangle)
     {
-        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
+        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-rectangle.png")));
     }
 };
 

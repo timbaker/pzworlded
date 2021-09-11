@@ -92,21 +92,28 @@ bool PNGBuildingDialog::generateWorld(World *world)
 
     PROGRESS progress(QLatin1String("Reading BMP images"));
 
-    mImage = QImage(world->size() * 300, QImage::Format_RGB555);
-    mImage.fill(Qt::black);
+    if (ui->onlyTreesCheckBox->isChecked()) {
+        mImage = QImage(world->size() * 300, QImage::Format_RGBA8888);
+        mImage.fill(Qt::transparent);
+    } else {
+        mImage = QImage(world->size() * 300, QImage::Format_RGB555);
+        mImage.fill(Qt::black);
+    }
     QPainter p(&mImage);
     mPainter = &p;
 
-    foreach (WorldBMP *bmp, world->bmps()) {
-        BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(),
-                                                                 bmp->pos(),
-                                                                 QImage::Format_RGB555);
-        if (!images) {
-            mError = BMPToTMX::instance()->errorString();
-            goto errorExit;
+    if (ui->onlyTreesCheckBox->isChecked() == false) {
+        for (WorldBMP *bmp : world->bmps()) {
+            BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(),
+                                                                     bmp->pos(),
+                                                                     QImage::Format_RGB555);
+            if (!images) {
+                mError = BMPToTMX::instance()->errorString();
+                goto errorExit;
+            }
+            p.drawImage(images->mBounds.topLeft() * 300, images->mBmp);
+            delete images;
         }
-        p.drawImage(images->mBounds.topLeft() * 300, images->mBmp);
-        delete images;
     }
 
     for (int y = 0; y < world->height(); y++) {
@@ -174,7 +181,9 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
         mapComposite->addMap(info, lot->pos(), lot->level());
     }
 
-    processObjectGroups(cell, mapComposite);
+    if (ui->buildingsCheckBox->isChecked() && (ui->onlyTreesCheckBox->isChecked() == false)) {
+        processObjectGroups(cell, mapComposite);
+    }
 
     CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(0);
     QList<Tileset*> tilesets;
@@ -185,6 +194,8 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
         QVector<const Cell*> cells(40);
         layerGroup->prepareDrawing2();
         QRgb treeColor = qRgb(47, 76, 64); // same dark green as MapImageManager uses
+        if (ui->onlyTreesCheckBox->isChecked())
+            treeColor = qRgb(255, 255, 255);
         for (int y = 0; y < mapInfo->map()->height(); y++) {
             for (int x = 0; x < mapInfo->map()->width(); x++) {
                 cells.resize(0);

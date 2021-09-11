@@ -44,6 +44,7 @@ InGameMapFeatureItem::InGameMapFeatureItem(InGameMapFeature* feature, CellScene 
     , mIsEditable(false)
     , mIsSelected(false)
     , mHoverRefCount(0)
+    , mAdjacent(false)
 {
     setAcceptHoverEvents(true);
     synchWithFeature();
@@ -693,6 +694,11 @@ void CreateInGameMapFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *eve
 
 void CreateInGameMapFeatureTool::updatePathItem()
 {
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    zoom = qMin(zoom, 1.0);
+
     QPainterPath path;
 
     if (mFeatureType == Type::Polygon) {
@@ -704,11 +710,11 @@ void CreateInGameMapFeatureTool::updatePathItem()
     if (mPolygon.isEmpty()) {
         QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
         QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
-        path.addRect(scenePos.x() - 5, scenePos.y() - 5, 10, 10);
+        path.addRect(scenePos.x() - 5 / zoom, scenePos.y() - 5 / zoom, 10 / zoom, 10 / zoom);
     } else {
         for (QPointF& point : mPolygon) {
             QPointF p = mScene->renderer()->tileToPixelCoords(point);
-            path.addRect(p.x() - 5, p.y() - 5, 10, 10);
+            path.addRect(p.x() - 5 / zoom, p.y() - 5 / zoom, 10 / zoom, 10 / zoom);
         }
 
         if (mFeatureType == Type::Rectangle) {
@@ -732,6 +738,7 @@ void CreateInGameMapFeatureTool::updatePathItem()
             QPointF p2 = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
             p2 = mScene->renderer()->tileToPixelCoords(p2);
             path.lineTo(p2);
+            path.addRect(p2.x() - 5 / zoom, p2.y() - 5 / zoom, 10 / zoom, 10 / zoom);
         }
     }
 
@@ -860,6 +867,8 @@ void EditInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         InGameMapFeatureItem* clickedItem = nullptr;
         for (QGraphicsItem *item : mScene->items(event->scenePos())) {
             if (InGameMapFeatureItem *featureItem = dynamic_cast<InGameMapFeatureItem*>(item)) {
+                if (featureItem->isAdjacent())
+                    continue;
                 clickedItem = featureItem;
                 break;
             }
