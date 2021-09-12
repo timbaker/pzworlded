@@ -39,6 +39,8 @@
 #include "map.h"
 #include "mapobject.h"
 #include "objectgroup.h"
+#include "tile.h"
+#include "tileset.h"
 #include "tilelayer.h"
 #include "zlevelrenderer.h"
 
@@ -267,16 +269,746 @@ void CellMiniMapItem::mapImageChanged(MapImage *mapImage)
     }
 }
 
+/////
+
+#include <QOpenGLBuffer>
+#include <QOpenGLFunctions_3_0>
+#include <QOpenGLTexture>
+
+#include "tilesetmanager.h"
+
+TilesetTexture *TilesetTextures::get(const QString& tilesetName)
+{
+    if (false) return nullptr;
+
+    if (mMissing.contains(tilesetName)) {
+        return nullptr;
+    }
+
+    if (mConnected == false) {
+        mConnected = true;
+        connect(Tiled::Internal::TilesetManager::instance(), &Internal::TilesetManager::tilesetChanged, this, &TilesetTextures::tilesetChanged);
+    }
+
+    QOpenGLContext *context = QOpenGLContext::currentContext();
+    if (context->shareContext() != nullptr)
+        context = context->shareContext();
+    TilesetTexturesPerContext *contextTextures = mContextToTextures[context];
+    TilesetTexture *texture = (contextTextures && contextTextures->mTextureMap.contains(tilesetName)) ? contextTextures->mTextureMap[tilesetName] : nullptr;
+    if (texture == nullptr) {
+        const QList<Tileset *> tilesets = Tiled::Internal::TilesetManager::instance()->tilesets();
+        for (Tileset *tileset : tilesets) {
+            if (tileset->name() == tilesetName) {
+                if (tileset->image().isNull()) {
+                    // The texture may still be loading
+                    mMissing += tilesetName;
+                    return nullptr;
+                }
+                texture = new TilesetTexture();
+                texture->mTexture = new QOpenGLTexture(tileset->image(), QOpenGLTexture::DontGenerateMipMaps);
+                texture->mTexture->setMagnificationFilter(QOpenGLTexture::Nearest);
+                texture->mTexture->setMinificationFilter(QOpenGLTexture::Nearest);
+                if (contextTextures == nullptr) {
+                    qDebug() << "TilesetTextures::get() added context" << context;
+                    contextTextures = new TilesetTexturesPerContext();
+                    contextTextures->mContext = context;
+                    mContextToTextures[context] = contextTextures;
+                    connect(context, &QOpenGLContext::aboutToBeDestroyed, this, &TilesetTextures::aboutToBeDestroyed);
+                }
+                contextTextures->mTextureMap[tilesetName] = texture;
+                contextTextures->mTextures += texture;
+                return texture;
+            }
+        }
+        mMissing += tilesetName;
+#if 0
+        if (path2x.isEmpty() == false) {
+            QImage image;
+            if (IMAGES.contains(path2x)) {
+                image = IMAGES[path2x];
+            } else {
+                image = QImage(path2x);
+                if (image.isNull()) {
+                    mMissing += tilesetName;
+                    return nullptr;
+                }
+                image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+                QColor transparentColor(255, 255, 255, 255);
+                QRgb transparentRGBA = transparentColor.rgba();
+                for (int y = 0; y < image.height(); y++) {
+                    for (int x = 0; x < image.width(); x++) {
+                        if (image.pixel(x, y) == transparentRGBA) {
+                            image.setPixel(x, y, qRgba(0,0,0,0));
+                        }
+                    }
+                }
+                IMAGES[path2x] = image;
+            }
+        } else {
+            mMissing += tilesetName;
+        }
+#endif
+    }
+    return texture;
+}
+
+void TilesetTextures::aboutToBeDestroyed()
+{
+    QObject *sender = this->sender();
+    QOpenGLContext *context = reinterpret_cast<QOpenGLContext*>(sender);
+    if (mContextToTextures.contains(context) == false) {
+        return;
+    }
+    qDebug() << "TilesetTextures::aboutToBeDestroyed" << context;
+    TilesetTexturesPerContext *contextTextures = mContextToTextures[context];
+    delete contextTextures;
+    mContextToTextures.remove(context);
+}
+
+void TilesetTextures::tilesetChanged(Tileset *tileset)
+{
+    QOpenGLContext *current = QOpenGLContext::currentContext();
+
+    if (mMissing.contains(tileset->name())) {
+        mMissing.remove(tileset->name());
+        return;
+    }
+
+    for (TilesetTexturesPerContext *contextTextures : qAsConst(mContextToTextures)) {
+        if (contextTextures->mTextureMap.contains(tileset->name()) == false) {
+            continue;
+        }
+        TilesetTexture *texture = contextTextures->mTextureMap[tileset->name()];
+        qDebug() << "TilesetTextures::tilesetChanged" << tileset->name() << contextTextures->mContext;
+        if (contextTextures->mContext->makeCurrent(contextTextures->mContext->surface())) {
+            texture->mTexture->destroy();
+            texture->mTexture->create();
+            texture->mTexture->setData(tileset->image(), QOpenGLTexture::DontGenerateMipMaps);
+            texture->mChanged = false;
+        } else {
+            texture->mChanged = true;
+        }
+    }
+
+    if (current != nullptr) {
+        current->makeCurrent(current->surface());
+    }
+}
+
+static QMap<QOpenGLContext*,TilesetTextures*> TILESET_TEXTURES;
+
+struct VBOTile
+{
+    QRect mRect;
+    QString mTilesetName;
+    QPoint mColRow;
+    QSize mTilesetSize;
+    TilesetTexture *mTexture = nullptr;
+};
+
+#include <array>
+
+struct VBOTiles
+{
+    VBOTiles()
+        : mIndexBuffer(QOpenGLBuffer::Type::IndexBuffer)
+        , mVertexBuffer(QOpenGLBuffer::Type::VertexBuffer)
+    {
+        mTileFirst.fill(-1);
+        mTileCount.fill(0);
+    }
+
+    QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mVertexBuffer;
+
+    QRect mBounds;
+    QList<VBOTile> mTiles;
+    std::array<int, 300*300> mTileFirst;
+    std::array<int, 300*300> mTileCount;
+};
+
+class LayerGroupVBO : public QOpenGLFunctions_3_0
+{
+public:
+    LayerGroupVBO();
+    ~LayerGroupVBO();
+
+    void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void gatherTiles(Tiled::MapRenderer *renderer);
+    VBOTiles *getTilesFor(const QPoint& square);
+    void getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposedRect, QList<QPoint>& out);
+
+    QOpenGLContext *mContext = nullptr;
+    CompositeLayerGroup *mLayerGroup = nullptr;
+    bool mCreated = false;
+    bool mDestroying = false;
+    std::array<VBOTiles *, 9> mTiles; // Including adjacent maps
+};
+
+LayerGroupVBO::LayerGroupVBO()
+    : mLayerGroup(nullptr)
+{
+    for (int i = 0; i < 9; i++) {
+        mTiles[i] = nullptr;
+    }
+    mTiles[4] = new VBOTiles();
+    mTiles[4]->mBounds = QRect(300, 300, 300, 300);
+}
+
+LayerGroupVBO::~LayerGroupVBO()
+{
+    mDestroying = true;
+
+    if (mCreated == false) {
+        for (int i = 0; i < 9; i++) {
+            delete mTiles[i];
+        }
+        return;
+    }
+    if (mContext != nullptr) {
+        if (mContext->makeCurrent(mContext->surface())) {
+            for (int i = 0; i < 9; i++) {
+                delete mTiles[i];
+            }
+            return;
+        }
+    }
+    Q_ASSERT(false);
+}
+
+void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect)
+{
+    if (mDestroying) {
+        return;
+    }
+
+    painter->beginNativePainting();
+
+    if (mCreated == false) {
+        initializeOpenGLFunctions();
+    }
+
+    if (mContext == nullptr) {
+        QOpenGLContext *context = QOpenGLContext::currentContext();
+        if (context->shareContext() != nullptr)
+            context = context->shareContext();
+        mContext = context;
+    }
+
+    bool pushPop = true;
+    if (pushPop) {
+        glPushAttrib(GL_ALL_ATTRIB_BITS);
+        glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+    }
+
+#define PZ_OPENGL_WIDGET 1
+#if PZ_OPENGL_WIDGET
+    // Set the model-view-projection matrices for QGraphicsScene.
+    // This isn't needed when using QGLWidget, but it with QOpenGLWidget.
+    QRect viewport = painter->viewport();
+//    glViewport(viewport.x(), viewport.y(), viewport.width(), viewport.height());
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+//    glOrtho(-viewport.width() / 2, viewport.width() / 2, -viewport.height() / 2, viewport.height() / 2, -1.f, 1.f);
+    glOrtho(0.f, viewport.width(), viewport.height(), 0, -1.f, 1.f);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    QTransform xfrm = painter->transform();
+    float scaleX = xfrm.m11();
+    float scaleY = xfrm.m22();
+    float translateX = xfrm.m31();
+    float translateY = xfrm.m32();
+    glTranslatef(translateX, translateY, 0.0f);
+    glScalef(scaleX, scaleY, 1.0f);
+#endif
+
+    paint2(painter, renderer, exposedRect);
+
+    if (pushPop) {
+        glPopAttrib();
+        glPopClientAttrib();
+    }
+
+    painter->endNativePainting();
+//    painter->restore();
+}
+
+void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect)
+{
+    Q_UNUSED(painter)
+
+    QOpenGLContext *context = QOpenGLContext::currentContext();
+    if (context->shareContext() != nullptr)
+        context = context->shareContext();
+
+    if (mCreated == false) {
+        mCreated = true;
+        gatherTiles(renderer);
+        for (int j = 0; j < 9; j++) {
+            auto* vboTiles = mTiles[j];
+            if (vboTiles == nullptr)
+                continue;
+            const QList<VBOTile>& tiles = vboTiles->mTiles;
+            if (tiles.isEmpty()) {
+                continue;
+            }
+
+            if (vboTiles->mIndexBuffer.create() == false) Q_ASSERT(false);
+            vboTiles->mIndexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+            if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
+            GLuint *indices = new GLuint[tiles.size() * 4];
+            for (int i = 0; i < tiles.size() * 4; i++) {
+                indices[i] = i;
+            }
+            vboTiles->mIndexBuffer.allocate(indices, tiles.size() * 4 * sizeof(GLuint));
+            delete[] indices;
+
+            if (vboTiles->mVertexBuffer.create() == false) Q_ASSERT(false);
+            vboTiles->mVertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+            if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
+            // x, y, u, v
+            GLfloat *vertices = new GLfloat[tiles.size() * 4 * 4];
+            for (int i = 0; i < tiles.size(); i++) {
+                const auto& tile = tiles[i];
+                int n = i * 4 * 4;
+                const QRect& bounds = tile.mRect;
+                float u0 = tile.mColRow.x() / float(tile.mTilesetSize.width());
+                float v0 = tile.mColRow.y() / float(tile.mTilesetSize.height());
+                float u1 = (tile.mColRow.x() + 1) / float(tile.mTilesetSize.width());
+                float v1 = (tile.mColRow.y() + 1) / float(tile.mTilesetSize.height());
+
+                vertices[n++] = bounds.x();
+                vertices[n++] = bounds.y();
+                vertices[n++] = u0;
+                vertices[n++] = v0;
+
+                vertices[n++] = bounds.right();
+                vertices[n++] = bounds.y();
+                vertices[n++] = u1;
+                vertices[n++] = v0;
+
+                vertices[n++] = bounds.right();
+                vertices[n++] = bounds.bottom();
+                vertices[n++] = u1;
+                vertices[n++] = v1;
+
+                vertices[n++] = bounds.left();
+                vertices[n++] = bounds.bottom();
+                vertices[n++] = u0;
+                vertices[n++] = v1;
+            }
+            vboTiles->mVertexBuffer.allocate(vertices, tiles.size() * 4 * 4 * sizeof(GL_FLOAT));
+            delete[] vertices;
+
+            qDebug() << "mTiles.size() == " << tiles.size();
+        }
+
+        GLint maxVertices, maxIndices;
+        glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &maxIndices);
+        glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &maxVertices);
+        qDebug() << "GL_MAX_ELEMENTS_INDICES" << maxIndices << "GL_MAX_ELEMENTS_VERTICES" << maxVertices;
+    }
+
+    if (mTiles[4]->mTiles.size() == 0) {
+        return;
+    }
+
+    glActiveTexture(GL_TEXTURE1);
+    glDisable(GL_TEXTURE_2D);
+
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_TEXTURE_2D);
+
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    bool wireframe = false;
+    if (wireframe) {
+        glLineWidth(1.0f);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDisable(GL_TEXTURE_2D);
+    }
+
+    glDisable(GL_DEPTH_TEST);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    TilesetTextures* tilesetTextures = TILESET_TEXTURES[context];
+    if (tilesetTextures == nullptr) {
+        qDebug() << "LayerGroupVBO: Creating TilesetTextures for context" << context;
+        tilesetTextures = new TilesetTextures();
+        TILESET_TEXTURES[context] = tilesetTextures;
+    }
+
+    bool drawAll = false;
+    if (drawAll) {
+        for (int vy = 0; vy < 3; vy++) {
+            for (int vx = 0; vx < 3; vx++) {
+                VBOTiles *vboTiles = mTiles[vx + vy * 3];
+                if (vboTiles == nullptr || vboTiles->mTiles.isEmpty())
+                    continue;
+                if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
+                if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
+                glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
+                glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), (void*)(2 * sizeof(GL_FLOAT)));
+
+                QList<VBOTile>& tiles = mTiles[4]->mTiles;
+                for (int i = 0; i < tiles.size(); i++) {
+                    GLuint start = i * 4;
+                    GLuint end = start + 4 - 1;
+                    GLuint count = 4;
+                    if (tiles[i].mTexture == nullptr) {
+                        tiles[i].mTexture = tilesetTextures->get(tiles[i].mTilesetName);
+                    }
+                    if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mTexture->isCreated() == false)
+                        continue;
+                    tiles[i].mTexture->mTexture->bind();
+                    glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
+                }
+            }
+        }
+    } else {
+        QList<QPoint> squares;
+        getSquaresInRect(renderer, exposedRect, squares);
+        for (int vy = 0; vy < 3; vy++) {
+            for (int vx = 0; vx < 3; vx++) {
+                VBOTiles *vboTiles = mTiles[vx + vy * 3];
+                if (vboTiles == nullptr || vboTiles->mTiles.isEmpty())
+                    continue;
+                if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
+                if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
+                glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
+                glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), (void*)(2 * sizeof(GL_FLOAT)));
+                auto& tileFirst = vboTiles->mTileFirst;
+                auto& tileCount = vboTiles->mTileCount;
+                QList<VBOTile>& tiles = vboTiles->mTiles;
+                for (const QPoint& square : qAsConst(squares)) {
+                    if (vboTiles->mBounds.contains(square.x() + 300, square.y() + 300) == false)
+                        continue;
+                    int x = (square.x() + 300) % 300;
+                    int y = (square.y() + 300) % 300;
+                    if (tileFirst[x + y * 300] == -1)
+                        continue;
+                    for (int i = tileFirst[x+y*300], n = i + tileCount[x+y*300]; i < n; i++) {
+                        GLuint start = i * 4;
+                        GLuint end = start + 4 - 1;
+                        GLuint count = 4;
+                        if (tiles[i].mTexture == nullptr) {
+                            tiles[i].mTexture = tilesetTextures->get(tiles[i].mTilesetName);
+                        }
+                        if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mTexture->isCreated() == false)
+                            continue;
+                        tiles[i].mTexture->mTexture->bind();
+                        glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
+                    }
+                }
+                vboTiles->mIndexBuffer.release();
+                vboTiles->mVertexBuffer.release();
+            }
+        }
+    }
+#if 0
+    GLuint start = 0;
+    GLuint end = mTiles.size() * 4 - 1;
+    GLuint count = mTiles.size() * 4;
+    glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_SHORT, (void*)(0));
+#endif
+
+    if (wireframe) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    {
+        glDisable(GL_TEXTURE_2D);
+
+        glLineWidth(10.0f);
+
+        glBegin(GL_LINES);
+        glColor3f(1.0f, 0.0f, 0.0f);
+        glVertex3f(0.f, 0.f, 0.f);
+        glVertex3f(10000.f, 0.f, 0.f);
+
+        glColor3f(0.0f, 1.0f, 0.0f);
+        glVertex3f(0.f, 0.f, 0.f);
+        glVertex3f(0.f, 10000.f, 0.f);
+
+        glColor3f(0.0f, 0.0f, 1.0f);
+        glVertex3f(0.f, 0.f, 0.f);
+        glVertex3f(0.f, 0.f, 10000.f);
+        glEnd();
+
+        glColor3f(1.0f, 1.0f, 1.0f);
+    }
+}
+
+#define DISPLAY_TILE_WIDTH (mLayerGroup->owner()->map()->tileWidth() * (renderer->is2x() ? 2 : 1))
+#define DISPLAY_TILE_HEIGHT (mLayerGroup->owner()->map()->tileHeight() * (renderer->is2x() ? 2 : 1))
+
+void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer)
+{
+    const int tileWidth = DISPLAY_TILE_WIDTH;
+    const int tileHeight = DISPLAY_TILE_HEIGHT;
+
+    auto* layerGroup = mLayerGroup;
+    QRectF exposed;
+
+    if (tileWidth <= 0 || tileHeight <= 1 || layerGroup->bounds().isEmpty())
+        return;
+
+    int level = layerGroup->level();
+
+    QRect rect = exposed.toAlignedRect();
+    if (rect.isNull())
+        rect = layerGroup->boundingRect(renderer).toAlignedRect();
+
+    QMargins drawMargins = layerGroup->drawMargins() * (renderer->is2x() ? 2 : 1);
+    drawMargins.setTop(drawMargins.top() - tileHeight);
+    drawMargins.setRight(drawMargins.right() - tileWidth);
+
+    rect.adjust(-drawMargins.right(),
+                -drawMargins.bottom(),
+                drawMargins.left(),
+                drawMargins.top());
+
+    // Determine the tile and pixel coordinates to start at
+    QPointF tilePos = renderer->pixelToTileCoords(rect.x(), rect.y(), level);
+    QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
+                           (int) std::floor(tilePos.y()));
+    QPointF startPos = renderer->tileToPixelCoords(rowItr, level);
+    startPos.rx() -= tileWidth / 2;
+    startPos.ry() += tileHeight;
+
+    /* Determine in which half of the tile the top-left corner of the area we
+     * need to draw is. If we're in the upper half, we need to start one row
+     * up due to those tiles being visible as well. How we go up one row
+     * depends on whether we're in the left or right half of the tile.
+     */
+    const bool inUpperHalf = startPos.y() - rect.y() > tileHeight / 2;
+    const bool inLeftHalf = rect.x() - startPos.x() < tileWidth / 2;
+
+    if (inUpperHalf) {
+        if (inLeftHalf) {
+            --rowItr.rx();
+            startPos.rx() -= tileWidth / 2;
+        } else {
+            --rowItr.ry();
+            startPos.rx() += tileWidth / 2;
+        }
+        startPos.ry() -= tileHeight / 2;
+    }
+
+    // Determine whether the current row is shifted half a tile to the right
+    bool shifted = inUpperHalf ^ inLeftHalf;
+
+#if 0
+    QThreadStorage<QVector<const Cell*> > cellStorage;
+    QThreadStorage<QVector<qreal> > opacityStorage;
+    QVector<const Cell*> &cells = cellStorage.localData();
+    QVector<qreal> &opacities = opacityStorage.localData();
+#else
+    /*static*/ QVector<const Cell*> cells(40); // or QVarLengthArray
+    /*static*/ QVector<qreal> opacities(40); // or QVarLengthArray
+#endif
+
+    layerGroup->prepareDrawing(renderer, rect);
+
+    for (int y = startPos.y(); y - tileHeight < rect.bottom(); y += tileHeight / 2) {
+        QPoint columnItr = rowItr;
+
+        for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
+            cells.resize(0);
+#if 0
+            if (columnItr.x() % 10 != 0 || columnItr.y() % 10 != 0)
+                continue;
+#endif
+            VBOTiles *vboTiles = getTilesFor(columnItr);
+            if (vboTiles == nullptr) {
+                ++columnItr.rx();
+                --columnItr.ry();
+                continue; // FIXME: adjacent maps are outside this
+            }
+
+            if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
+                for (int i = 0; i < cells.size(); i++) {
+                    const Cell *cell = cells[i];
+                    if (!cell->isEmpty()) {
+                        Tile *tile = cell->tile;
+//                        if (tile->image().isNull()) {
+//                            continue;
+//                        }
+//                        QImage img = tile->image();
+//                        const QPoint offset = tile->tileset()->tileOffset() + tile->offset();
+                        VBOTile vboTile;
+//                        vboTile.mRect = QRect(offset.x() + x, offset.y() + y - tile->height(), img.width(), img.height());
+                        vboTile.mRect = QRect(x, y - tile->height(), tile->width(), tile->height());
+                        vboTile.mTilesetName = tile->tileset()->name();
+                        vboTile.mColRow = QPoint(tile->id() % tile->tileset()->columnCount(), tile->id() / tile->tileset()->columnCount());
+                        vboTile.mTilesetSize = QSize(tile->tileset()->columnCount(), tile->tileset()->tileCount() / tile->tileset()->columnCount());
+
+                        if (tileWidth == cell->tile->width() * 2) {
+                            vboTile.mRect.translate(cell->tile->offset().x(), cell->tile->offset().y() - cell->tile->height());
+//                            vboTile.mRect.setWidth(img.width() * 2);
+//                            vboTile.mRect.setHeight(img.height() * 2);
+                            vboTile.mRect.setWidth(tile->width() * 2);
+                            vboTile.mRect.setHeight(tile->height() * 2);
+                        }
+
+                        int vx = (columnItr.x() + 300) % 300;
+                        int vy = (columnItr.y() + 300) % 300;
+                        if (vboTiles->mTileCount[vx + vy * 300] == 0) {
+                            vboTiles->mTileFirst[vx + vy * 300] = vboTiles->mTiles.size();
+                        }
+                        vboTiles->mTileCount[vx + vy * 300]++;
+                        vboTiles->mTiles += vboTile;
+                    }
+                }
+            }
+
+            // Advance to the next column
+            ++columnItr.rx();
+            --columnItr.ry();
+        }
+
+        // Advance to the next row
+        if (!shifted) {
+            ++rowItr.rx();
+            startPos.rx() += tileWidth / 2;
+            shifted = true;
+        } else {
+            ++rowItr.ry();
+            startPos.rx() -= tileWidth / 2;
+            shifted = false;
+        }
+    }
+}
+
+VBOTiles *LayerGroupVBO::getTilesFor(const QPoint &square)
+{
+    if (square.x() < 0 || square.x() > 899 || square.y() < 0 || square.y() > 899)
+        return nullptr;
+
+    int col = (square.x() + 300) / 300;
+    int row = (square.y() + 300) / 300;
+    if (col < 0 || col > 2 || row < 0 || row > 2)
+        return nullptr;
+    if (VBOTiles *vboTiles = mTiles[col + row * 3]) {
+        return vboTiles;
+    }
+    VBOTiles *vboTiles = new VBOTiles();
+    vboTiles->mBounds = QRect(col * 300, row * 300, 300, 300);
+    mTiles[col + row * 3] = vboTiles;
+    return vboTiles;
+}
+
+void LayerGroupVBO::getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposed, QList<QPoint> &out)
+{
+    const int tileWidth = DISPLAY_TILE_WIDTH;
+    const int tileHeight = DISPLAY_TILE_HEIGHT;
+
+    auto* layerGroup = mLayerGroup;
+
+    if (tileWidth <= 0 || tileHeight <= 1 || layerGroup->bounds().isEmpty())
+        return;
+
+    int level = layerGroup->level();
+
+    QRect rect = exposed.toAlignedRect();
+    if (rect.isNull())
+        rect = layerGroup->boundingRect(renderer).toAlignedRect();
+
+    QMargins drawMargins = layerGroup->drawMargins() * (renderer->is2x() ? 2 : 1);
+    drawMargins.setTop(drawMargins.top() - tileHeight);
+    drawMargins.setRight(drawMargins.right() - tileWidth);
+
+    rect.adjust(-drawMargins.right(),
+                -drawMargins.bottom(),
+                drawMargins.left(),
+                drawMargins.top());
+
+    // Determine the tile and pixel coordinates to start at
+    QPointF tilePos = renderer->pixelToTileCoords(rect.x(), rect.y(), level);
+    QPoint rowItr = QPoint((int) std::floor(tilePos.x()),
+                           (int) std::floor(tilePos.y()));
+    QPointF startPos = renderer->tileToPixelCoords(rowItr, level);
+    startPos.rx() -= tileWidth / 2;
+    startPos.ry() += tileHeight;
+
+    /* Determine in which half of the tile the top-left corner of the area we
+     * need to draw is. If we're in the upper half, we need to start one row
+     * up due to those tiles being visible as well. How we go up one row
+     * depends on whether we're in the left or right half of the tile.
+     */
+    const bool inUpperHalf = startPos.y() - rect.y() > tileHeight / 2;
+    const bool inLeftHalf = rect.x() - startPos.x() < tileWidth / 2;
+
+    if (inUpperHalf) {
+        if (inLeftHalf) {
+            --rowItr.rx();
+            startPos.rx() -= tileWidth / 2;
+        } else {
+            --rowItr.ry();
+            startPos.rx() += tileWidth / 2;
+        }
+        startPos.ry() -= tileHeight / 2;
+    }
+
+    // Determine whether the current row is shifted half a tile to the right
+    bool shifted = inUpperHalf ^ inLeftHalf;
+
+    for (int y = startPos.y(); y - tileHeight < rect.bottom(); y += tileHeight / 2) {
+        QPoint columnItr = rowItr;
+
+        for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
+#if 0
+            if (columnItr.x() % 10 != 0 || columnItr.y() % 10 != 0)
+                continue;
+#endif
+            if (QRect(-300, -300, 900, 900).contains(columnItr)) {
+                out += columnItr;
+            }
+
+            // Advance to the next column
+            ++columnItr.rx();
+            --columnItr.ry();
+        }
+
+        // Advance to the next row
+        if (!shifted) {
+            ++rowItr.rx();
+            startPos.rx() += tileWidth / 2;
+            shifted = true;
+        } else {
+            ++rowItr.ry();
+            startPos.rx() -= tileWidth / 2;
+            shifted = false;
+        }
+    }
+}
+
+
 ///// ///// ///// ///// /////
 
-CompositeLayerGroupItem::CompositeLayerGroupItem(CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent)
+CompositeLayerGroupItem::CompositeLayerGroupItem(CellScene *cellScene, CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent)
     : QGraphicsItem(parent)
+    , mScene(cellScene)
     , mLayerGroup(layerGroup)
     , mRenderer(renderer)
 {
     setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
 
     mBoundingRect = layerGroup->boundingRect(mRenderer);
+}
+
+CompositeLayerGroupItem::~CompositeLayerGroupItem()
+{
+    delete mVBO;
 }
 
 void CompositeLayerGroupItem::synchWithTileLayers()
@@ -297,14 +1029,65 @@ QRectF CompositeLayerGroupItem::boundingRect() const
 
 void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *)
 {
+    if (mScene->isDestroying()) {
+        return;
+    }
+
     if (mLayerGroup->needsSynch())
         return; // needed, see MapComposite::mapAboutToChange
+#if 0
+    QImage image = createZoomedOutImage(mRenderer);
+    if (image.isNull() == false) {
+        p->drawImage(mLayerGroup->boundingRect(mRenderer).toAlignedRect(), image);
+        return;
+    }
+#endif
 
-    mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
+//    mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
+
+    if (mVBO == nullptr) {
+        mVBO = new LayerGroupVBO();
+        mVBO->mLayerGroup = mLayerGroup;
+    }
+    mVBO->paint(p, mRenderer, option->exposedRect);
+
 #ifdef _DEBUG
     p->drawRect(mBoundingRect);
 #endif
 }
+
+#if 0
+#include "cellview.h"
+#include "zoomable.h"
+QImage CompositeLayerGroupItem::createZoomedOutImage(MapRenderer *renderer)
+{
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    if (zoom > 0.12)
+        return QImage();
+
+    QRect sceneRect = mLayerGroup->boundingRect(renderer).toAlignedRect();
+    QSize size = sceneRect.size() * zoom;
+
+    QImage *destImage = zoom == 0.12 ? &mZoomedOutImage12 : &mZoomedOutImage6;
+
+    if (size != destImage->size()) {
+        QImage newImage(size, QImage::Format_RGBA8888);
+        newImage.fill(Qt::transparent);
+        QPainter painter(&newImage);
+
+        painter.setRenderHints(QPainter::SmoothPixmapTransform |
+                               QPainter::HighQualityAntialiasing);
+        painter.setTransform(QTransform::fromScale(zoom, zoom).translate(-sceneRect.left(), -sceneRect.top()));
+
+        renderer->drawTileLayerGroup(&painter, mLayerGroup);
+        painter.end();
+        *destImage = newImage;
+    }
+    return *destImage;
+}
+#endif
 
 /////
 
@@ -1168,6 +1951,7 @@ CellScene::CellScene(QObject *parent)
     , mActiveTool(0)
     , mLightSwitchOverlays(this)
     , mWaterFlowOverlay(new WaterFlowOverlay(this))
+    , mDestroying(false)
 {
     setBackgroundBrush(Qt::darkGray);
 
@@ -1199,6 +1983,7 @@ CellScene::CellScene(QObject *parent)
 
 CellScene::~CellScene()
 {
+    mDestroying = true;
     // mMap, mMapInfo are shared, don't destroy
     delete mMapComposite;
     delete mRenderer;
@@ -2254,7 +3039,7 @@ void CellScene::handlePendingUpdates()
     // all the submap layers can be viewed.
     foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups()) {
         if (!mTileLayerGroupItems.contains(layerGroup->level())) {
-            CompositeLayerGroupItem *item = new CompositeLayerGroupItem(layerGroup, mRenderer);
+            CompositeLayerGroupItem *item = new CompositeLayerGroupItem(this, layerGroup, mRenderer);
             addItem(item);
             mTileLayerGroupItems[layerGroup->level()] = item;
 

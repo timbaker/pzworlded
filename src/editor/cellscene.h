@@ -328,25 +328,35 @@ private:
     QVector<LotImage> mLotImages;
 };
 
+class LayerGroupVBO;
+
 /**
   * Item that draws all the TileLayers on a single level.
   */
 class CompositeLayerGroupItem : public QGraphicsItem
 {
 public:
-    CompositeLayerGroupItem(CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
+    CompositeLayerGroupItem(CellScene *scene, CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
+    ~CompositeLayerGroupItem() override;
 
     void synchWithTileLayers();
 
-    QRectF boundingRect() const;
-    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *);
+    QRectF boundingRect() const override;
+    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *) override;
 
     CompositeLayerGroup *layerGroup() const { return mLayerGroup; }
 
+    QImage createZoomedOutImage(Tiled::MapRenderer *renderer);
+
 private:
+    CellScene *mScene;
     CompositeLayerGroup *mLayerGroup;
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
+    QImage mZoomedOutImage6;
+    QImage mZoomedOutImage12;
+
+    LayerGroupVBO* mVBO = nullptr;
 };
 
 class AdjacentMap : public QObject
@@ -428,6 +438,40 @@ private:
     QList<ObjectItem*> mObjectItems;
     QGraphicsItem *mInGameMapFeatureParent;
     QList<InGameMapFeatureItem*> mInGameMapFeatureItems;
+};
+
+class QOpenGLContext;
+class QOpenGLTexture;
+
+class TilesetTexture
+{
+public:
+    QOpenGLTexture *mTexture = nullptr;
+    bool mChanged = false;
+};
+
+class TilesetTexturesPerContext
+{
+public:
+    QOpenGLContext *mContext;
+    QMap<QString, TilesetTexture*> mTextureMap;
+    QList<TilesetTexture*> mTextures;
+};
+
+class TilesetTextures : public QObject
+{
+    Q_OBJECT
+public:
+    TilesetTexture *get(const QString& tilesetName);
+
+public slots:
+    void aboutToBeDestroyed();
+    void tilesetChanged(Tiled::Tileset *tileset);
+
+private:
+    QSet<QString> mMissing;
+    QMap<QOpenGLContext*,TilesetTexturesPerContext*> mContextToTextures;
+    bool mConnected = false;
 };
 
 class CellScene : public BaseGraphicsScene
@@ -513,6 +557,9 @@ public:
     static const int ZVALUE_ROADITEM_CREATING;
     static const int ZVALUE_ROADITEM_SELECTED;
     static const int ZVALUE_ROADITEM_UNSELECTED;
+
+    bool isDestroying() const
+    { return mDestroying; }
 
 protected:
     void loadMap();
@@ -658,6 +705,8 @@ private:
     friend class LightSwitchOverlays;
 
     WaterFlowOverlay* mWaterFlowOverlay;
+
+    bool mDestroying;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

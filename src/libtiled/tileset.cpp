@@ -67,20 +67,14 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
     int tileNum = 0;
 #ifdef ZOMBOID
     QImage image2 = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    replaceTransparentColor(image2, mTransparentColor);
+    // This is used to create an OpenGL texture.
+    setImage(image2);
 #endif
     for (int y = mMargin; y <= stopHeight; y += mTileHeight + mTileSpacing) {
         for (int x = mMargin; x <= stopWidth; x += mTileWidth + mTileSpacing) {
 #ifdef ZOMBOID
             QImage tileImage = image2.copy(x, y, mTileWidth, mTileHeight);
-
-            if (mTransparentColor.isValid()) {
-                for (int x = 0; x < mTileWidth; x++) {
-                    for (int y = 0; y < mTileHeight; y++) {
-                        if (tileImage.pixel(x, y) == mTransparentColor.rgba())
-                            tileImage.setPixel(x, y, qRgba(0,0,0,0));
-                    }
-                }
-            }
 
             if (tileNum < oldTilesetSize) {
                 mTiles.at(tileNum)->setImage(tileImage);
@@ -167,6 +161,7 @@ bool Tileset::loadFromCache(Tileset *cached)
     mImageSource2x = cached->imageSource2x();
     mColumnCount = columnCountForWidth(mImageWidth);
     mImageSource = cached->imageSource();
+    mImage = cached->image();
     mLoaded = true;
     return true;
 }
@@ -253,6 +248,24 @@ Tileset *Tileset::clone() const
     return clone;
 }
 
+void Tileset::replaceTransparentColor(QImage &image, const QColor &transparentColor)
+{
+    if (transparentColor.isValid() == false) {
+        return;
+    }
+    QRgb rgba = transparentColor.rgba();
+    QRgb transparent = qRgba(0,0,0,0);
+    for (int y = 0, y2 = image.height(); y < y2; y++) {
+        for (int x = 0, x2 = image.width(); x < x2; x++) {
+            if (image.pixel(x, y) == rgba ) {
+                image.setPixel(x, y, transparent);
+            }
+        }
+    }
+}
+
+// // // // //
+
 TilesetImageCache::~TilesetImageCache()
 {
     qDeleteAll(mTilesets);
@@ -266,6 +279,7 @@ Tileset *TilesetImageCache::addTileset(Tileset *ts)
     cached->mTransparentColor = ts->transparentColor();
     cached->mImageSource = ts->imageSource(); // FIXME: make canonical
     cached->mImageSource2x = ts->imageSource2x();
+    cached->mImage = ts->image();
     cached->mTiles.reserve(ts->tileCount());
     cached->mImageWidth = ts->imageWidth();
     cached->mImageHeight = ts->imageHeight();

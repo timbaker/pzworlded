@@ -32,6 +32,9 @@ using namespace Tiled::Internal;
 
 int main(int argc, char *argv[])
 {
+#if ZOMBOID
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
     QApplication a(argc, argv);
 
     a.setOrganizationName(QLatin1String("TheIndieStone"));

@@ -36,6 +36,7 @@
 #include <QList>
 #include <QPoint>
 #ifdef ZOMBOID
+#include <QImage>
 #include <QSize>
 #endif
 #include <QString>
@@ -269,6 +270,15 @@ public:
     { mImageSource2x = source; }
 
     const QString &imageSource2x() const { return mImageSource2x; }
+
+    void setImage(QImage image)
+    { mImage = image; }
+
+    QImage image() const
+    { return mImage; }
+
+    static void replaceTransparentColor(QImage &image, const QColor &transparentColor);
+
 #endif
 
 private:
@@ -289,6 +299,7 @@ private:
     bool mMissing;
     bool mLoaded;
     QString mImageSource2x;
+    QImage mImage; // With transparent color replaced
 #endif
 };
 
