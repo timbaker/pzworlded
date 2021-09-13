@@ -25,10 +25,15 @@
 #include "map.h"
 
 #include <QGraphicsItem>
+#include <QOpenGLBuffer>
+#include <QOpenGLFunctions_3_0>
+#include <QOpenGLTexture>
 #include <QPoint>
 #include <QSet>
 #include <QSizeF>
 #include <QTimer>
+
+#include <array>
 
 class BaseCellSceneTool;
 class CellDocument;
@@ -356,6 +361,7 @@ private:
     QImage mZoomedOutImage6;
     QImage mZoomedOutImage12;
 
+    friend class LayerGroupVBO;
     LayerGroupVBO* mVBO = nullptr;
 };
 
@@ -446,14 +452,23 @@ class QOpenGLTexture;
 class TilesetTexture
 {
 public:
+#define TILESET_TEXTURE_GL 0
+#if TILESET_TEXTURE_GL
     QOpenGLTexture *mTexture = nullptr;
+#else
+    int mID = -1; // OpenGL ID
+#endif
     bool mChanged = false;
 };
 
 class TilesetTexturesPerContext
 {
 public:
+    ~TilesetTexturesPerContext();
+
     QOpenGLContext *mContext;
+    QSet<QString> mChanged;
+    QSet<QString> mMissing;
     QMap<QString, TilesetTexture*> mTextureMap;
     QList<TilesetTexture*> mTextures;
 };
@@ -462,16 +477,70 @@ class TilesetTextures : public QObject
 {
     Q_OBJECT
 public:
-    TilesetTexture *get(const QString& tilesetName);
+    TilesetTexture *get(const QString& tilesetName, const QList<Tiled::Tileset*> &tilesets);
+    Tiled::Tileset *findTileset(const QString& tilesetName, const QList<Tiled::Tileset*> &tilesets);
 
 public slots:
     void aboutToBeDestroyed();
     void tilesetChanged(Tiled::Tileset *tileset);
 
 private:
-    QSet<QString> mMissing;
     QMap<QOpenGLContext*,TilesetTexturesPerContext*> mContextToTextures;
     bool mConnected = false;
+};
+
+struct VBOTile
+{
+    QRect mRect;
+    QString mTilesetName;
+    QPoint mColRow;
+    QSize mTilesetSize;
+    TilesetTexture *mTexture = nullptr;
+};
+
+struct VBOTiles
+{
+    VBOTiles()
+        : mIndexBuffer(QOpenGLBuffer::Type::IndexBuffer)
+        , mVertexBuffer(QOpenGLBuffer::Type::VertexBuffer)
+    {
+        mTileFirst.fill(-1);
+        mTileCount.fill(0);
+    }
+
+    QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mVertexBuffer;
+
+    QRect mBounds;
+    QList<VBOTile> mTiles;
+    std::array<int, 300*300> mTileFirst;
+    std::array<int, 300*300> mTileCount;
+};
+
+class LayerGroupVBO : public QObject, QOpenGLFunctions_3_0
+{
+    Q_OBJECT
+public:
+    LayerGroupVBO();
+    ~LayerGroupVBO();
+
+    void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void gatherTiles(Tiled::MapRenderer *renderer);
+    VBOTiles *getTilesFor(const QPoint& square);
+    void getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposedRect, QList<QPoint>& out);
+
+public slots:
+    void aboutToBeDestroyed();
+
+public:
+    QOpenGLContext *mContext = nullptr;
+    CompositeLayerGroupItem *mLayerGroupItem = nullptr;
+    CompositeLayerGroup *mLayerGroup = nullptr;
+    bool mCreated = false;
+    bool mDestroying = false;
+    std::array<VBOTiles *, 9> mTiles; // Including adjacent maps
+    QList<Tiled::Tileset*> mUsedTilesets;
 };
 
 class CellScene : public BaseGraphicsScene

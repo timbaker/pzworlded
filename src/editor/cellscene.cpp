@@ -271,19 +271,40 @@ void CellMiniMapItem::mapImageChanged(MapImage *mapImage)
 
 /////
 
-#include <QOpenGLBuffer>
-#include <QOpenGLFunctions_3_0>
-#include <QOpenGLTexture>
 
 #include "tilesetmanager.h"
+#include <QOpenGLFunctions>
 
-TilesetTexture *TilesetTextures::get(const QString& tilesetName)
+TilesetTexturesPerContext::~TilesetTexturesPerContext()
+{
+    if (mContext != nullptr) {
+        QOpenGLContext *context = mContext->shareContext() ? mContext->shareContext() : mContext;
+        if (context->makeCurrent(context->surface())) {
+            for (TilesetTexture *texture : qAsConst(mTextures)) {
+#if TILESET_TEXTURE_GL
+                texture->mTexture->destroy();
+                delete texture->mTexture;
+#else
+                if (texture->mID != -1) {
+                    GLuint id = texture->mID;
+                    mContext->functions()->glDeleteTextures(1, &id);
+                }
+#endif
+            }
+        } else {
+            qDebug() << "~TilesetTexturesPerContext() failed to set OpenGL context";
+        }
+    }
+    qDeleteAll(mTextures);
+}
+
+/////
+
+#include <QSurface>
+
+TilesetTexture *TilesetTextures::get(const QString& tilesetName, const QList<Tiled::Tileset*> &tilesets)
 {
     if (false) return nullptr;
-
-    if (mMissing.contains(tilesetName)) {
-        return nullptr;
-    }
 
     if (mConnected == false) {
         mConnected = true;
@@ -293,63 +314,128 @@ TilesetTexture *TilesetTextures::get(const QString& tilesetName)
     QOpenGLContext *context = QOpenGLContext::currentContext();
     if (context->shareContext() != nullptr)
         context = context->shareContext();
+
     TilesetTexturesPerContext *contextTextures = mContextToTextures[context];
-    TilesetTexture *texture = (contextTextures && contextTextures->mTextureMap.contains(tilesetName)) ? contextTextures->mTextureMap[tilesetName] : nullptr;
+    if (contextTextures == nullptr) {
+        qDebug() << "TilesetTextures::get() added context" << context;
+        contextTextures = new TilesetTexturesPerContext();
+        contextTextures->mContext = context;
+        mContextToTextures[context] = contextTextures;
+        connect(context, &QOpenGLContext::aboutToBeDestroyed, this, &TilesetTextures::aboutToBeDestroyed);
+    }
+
+//    if (QSurface *surface = context->surface()) {
+//        qDebug() << surface->format() << "r=" << surface->format().redBufferSize() << "g=" << surface->format().greenBufferSize() << "b=" << surface->format().blueBufferSize();
+//    }
+
+    if (contextTextures->mChanged.contains(tilesetName)) {
+        contextTextures->mChanged.remove(tilesetName);
+        contextTextures->mMissing.remove(tilesetName);
+
+        if (contextTextures->mTextureMap.contains(tilesetName)) {
+            TilesetTexture *texture = contextTextures->mTextureMap[tilesetName];
+#if TILESET_TEXTURE_GL == 0
+            if (Tiled::Tileset *tileset = findTileset(tilesetName, tilesets)) {
+                const QImage image = tileset->image().convertToFormat(QImage::Format_RGBA8888);
+                const uchar *pixels = image.constBits();
+                if (texture->mID == -1) {
+                    GLuint id;
+                    context->functions()->glGenTextures(1, &id);
+                    texture->mID = id;
+                }
+                context->functions()->glActiveTexture(GL_TEXTURE0);
+                Q_ASSERT(context->functions()->glGetError() == 0);
+                context->functions()->glBindTexture(GL_TEXTURE_2D, texture->mID);
+                Q_ASSERT(context->functions()->glGetError() == 0);
+                context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//                GLint swizzleMask[] = {GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA}; // FIXME: red/blue swapped
+//                context->functions()->glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+                context->functions()->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                context->functions()->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tileset->image().width(), tileset->image().height(), 0, GL_RGBA8, GL_UNSIGNED_BYTE, pixels);
+                Q_ASSERT(context->functions()->glGetError() == 0);
+                context->functions()->glBindTexture(GL_TEXTURE_2D, 0);
+                qDebug() << "TilesetTextures UPLOAD" << tilesetName << image << image.format() << "id=" << texture->mID;
+            }
+#else
+            texture->mTexture->destroy();
+            texture->mTexture->create();
+            if (Tiled::Tileset *tileset = findTileset(tilesetName, tilesets)) {
+                texture->mTexture->setData(tileset->image(), QOpenGLTexture::DontGenerateMipMaps);
+            }
+#endif
+            return texture;
+        }
+    }
+
+    if (contextTextures->mMissing.contains(tilesetName)) {
+        return nullptr;
+    }
+
+    TilesetTexture *texture = contextTextures->mTextureMap.contains(tilesetName) ? contextTextures->mTextureMap[tilesetName] : nullptr;
     if (texture == nullptr) {
         const QList<Tileset *> tilesets = Tiled::Internal::TilesetManager::instance()->tilesets();
-        for (Tileset *tileset : tilesets) {
-            if (tileset->name() == tilesetName) {
-                if (tileset->image().isNull()) {
-                    // The texture may still be loading
-                    mMissing += tilesetName;
-                    return nullptr;
-                }
-                texture = new TilesetTexture();
-                texture->mTexture = new QOpenGLTexture(tileset->image(), QOpenGLTexture::DontGenerateMipMaps);
-                texture->mTexture->setMagnificationFilter(QOpenGLTexture::Nearest);
-                texture->mTexture->setMinificationFilter(QOpenGLTexture::Nearest);
-                if (contextTextures == nullptr) {
-                    qDebug() << "TilesetTextures::get() added context" << context;
-                    contextTextures = new TilesetTexturesPerContext();
-                    contextTextures->mContext = context;
-                    mContextToTextures[context] = contextTextures;
-                    connect(context, &QOpenGLContext::aboutToBeDestroyed, this, &TilesetTextures::aboutToBeDestroyed);
-                }
-                contextTextures->mTextureMap[tilesetName] = texture;
-                contextTextures->mTextures += texture;
-                return texture;
+        if (Tiled::Tileset *tileset = findTileset(tilesetName, tilesets)) {
+            if (tileset->image().isNull()) {
+                // The texture may still be loading
+                qDebug() << "TilesetTextures MISSING" << tilesetName;
+                contextTextures->mMissing += tilesetName;
+                return nullptr;
             }
-        }
-        mMissing += tilesetName;
-#if 0
-        if (path2x.isEmpty() == false) {
-            QImage image;
-            if (IMAGES.contains(path2x)) {
-                image = IMAGES[path2x];
-            } else {
-                image = QImage(path2x);
-                if (image.isNull()) {
-                    mMissing += tilesetName;
-                    return nullptr;
-                }
-                image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-                QColor transparentColor(255, 255, 255, 255);
-                QRgb transparentRGBA = transparentColor.rgba();
-                for (int y = 0; y < image.height(); y++) {
-                    for (int x = 0; x < image.width(); x++) {
-                        if (image.pixel(x, y) == transparentRGBA) {
-                            image.setPixel(x, y, qRgba(0,0,0,0));
-                        }
-                    }
-                }
-                IMAGES[path2x] = image;
+            texture = new TilesetTexture();
+#if TILESET_TEXTURE_GL == 0
+            const QImage image = tileset->image().convertToFormat(QImage::Format_RGBA8888);
+            const uchar *pixels = image.constBits();
+//            uchar *pixels2 = new uchar[image.width() * image.height() * 4];
+//            memset(pixels2, 0xF0, image.width() * image.height() * 4);
+            if (texture->mID == -1) {
+                GLuint id;
+                context->functions()->glGenTextures(1, &id);
+                Q_ASSERT(context->functions()->glGetError() == 0);
+                texture->mID = id;
             }
-        } else {
-            mMissing += tilesetName;
-        }
+            context->functions()->glActiveTexture(GL_TEXTURE0);
+            Q_ASSERT(context->functions()->glGetError() == 0);
+            context->functions()->glBindTexture(GL_TEXTURE_2D, texture->mID);
+            Q_ASSERT(context->functions()->glGetError() == 0);
+            context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//            GLint swizzleMask[] = {GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA}; // FIXME: red/blue swapped
+//            context->functions()->glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+            context->functions()->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            context->functions()->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tileset->image().width(), tileset->image().height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            Q_ASSERT(context->functions()->glGetError() == 0);
+            context->functions()->glBindTexture(GL_TEXTURE_2D, 0);
+            Q_ASSERT(context->functions()->glGetError() == 0);
+            qDebug() << "TilesetTextures CREATE" << tilesetName << image << image.format() << " id=" << texture->mID;
+            Q_ASSERT(context->functions()->glGetError() == 0);
+//            delete [] pixels2;
+#else
+            texture->mTexture = new QOpenGLTexture(tileset->image(), QOpenGLTexture::DontGenerateMipMaps);
+            texture->mTexture->setMagnificationFilter(QOpenGLTexture::Nearest);
+            texture->mTexture->setMinificationFilter(QOpenGLTexture::Nearest);
 #endif
+            contextTextures->mTextureMap[tilesetName] = texture;
+            contextTextures->mTextures += texture;
+            return texture;
+        }
+        if (contextTextures->mMissing.contains(tilesetName) == false) {
+            qDebug() << "TilesetTextures MISSING" << tilesetName;
+            contextTextures->mMissing += tilesetName;
+        }
     }
     return texture;
+}
+
+Tileset *TilesetTextures::findTileset(const QString &tilesetName, const QList<Tiled::Tileset*> &tilesets)
+{
+//    const QList<Tileset *> tilesets = Tiled::Internal::TilesetManager::instance()->tilesets();
+    for (Tileset *tileset : tilesets) {
+        if ((tileset->name() == tilesetName) && (tileset->image().isNull() == false)) {
+            return tileset;
+        }
+    }
+    return nullptr;
 }
 
 void TilesetTextures::aboutToBeDestroyed()
@@ -367,10 +453,16 @@ void TilesetTextures::aboutToBeDestroyed()
 
 void TilesetTextures::tilesetChanged(Tileset *tileset)
 {
+    qDebug() << "TilesetTextures CHANGED" << tileset->name();
+    for (auto *contextTextures : qAsConst(mContextToTextures)) {
+        contextTextures->mChanged += tileset->name();
+    }
+#if 0
     QOpenGLContext *current = QOpenGLContext::currentContext();
 
     if (mMissing.contains(tileset->name())) {
         mMissing.remove(tileset->name());
+        get(tileset->name());
         return;
     }
 
@@ -393,58 +485,10 @@ void TilesetTextures::tilesetChanged(Tileset *tileset)
     if (current != nullptr) {
         current->makeCurrent(current->surface());
     }
+#endif
 }
 
-static QMap<QOpenGLContext*,TilesetTextures*> TILESET_TEXTURES;
-
-struct VBOTile
-{
-    QRect mRect;
-    QString mTilesetName;
-    QPoint mColRow;
-    QSize mTilesetSize;
-    TilesetTexture *mTexture = nullptr;
-};
-
-#include <array>
-
-struct VBOTiles
-{
-    VBOTiles()
-        : mIndexBuffer(QOpenGLBuffer::Type::IndexBuffer)
-        , mVertexBuffer(QOpenGLBuffer::Type::VertexBuffer)
-    {
-        mTileFirst.fill(-1);
-        mTileCount.fill(0);
-    }
-
-    QOpenGLBuffer mIndexBuffer;
-    QOpenGLBuffer mVertexBuffer;
-
-    QRect mBounds;
-    QList<VBOTile> mTiles;
-    std::array<int, 300*300> mTileFirst;
-    std::array<int, 300*300> mTileCount;
-};
-
-class LayerGroupVBO : public QOpenGLFunctions_3_0
-{
-public:
-    LayerGroupVBO();
-    ~LayerGroupVBO();
-
-    void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
-    void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
-    void gatherTiles(Tiled::MapRenderer *renderer);
-    VBOTiles *getTilesFor(const QPoint& square);
-    void getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposedRect, QList<QPoint>& out);
-
-    QOpenGLContext *mContext = nullptr;
-    CompositeLayerGroup *mLayerGroup = nullptr;
-    bool mCreated = false;
-    bool mDestroying = false;
-    std::array<VBOTiles *, 9> mTiles; // Including adjacent maps
-};
+static TilesetTextures TILESET_TEXTURES;
 
 LayerGroupVBO::LayerGroupVBO()
     : mLayerGroup(nullptr)
@@ -491,9 +535,10 @@ void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const
 
     if (mContext == nullptr) {
         QOpenGLContext *context = QOpenGLContext::currentContext();
-        if (context->shareContext() != nullptr)
-            context = context->shareContext();
+//        if (context->shareContext() != nullptr)
+//            context = context->shareContext();
         mContext = context;
+        connect(mContext, &QOpenGLContext::aboutToBeDestroyed, this, &LayerGroupVBO::aboutToBeDestroyed);
     }
 
     bool pushPop = true;
@@ -540,11 +585,12 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
     Q_UNUSED(painter)
 
     QOpenGLContext *context = QOpenGLContext::currentContext();
-    if (context->shareContext() != nullptr)
-        context = context->shareContext();
+//    if (context->shareContext() != nullptr)
+//        context = context->shareContext();
 
     if (mCreated == false) {
         mCreated = true;
+        mUsedTilesets = mLayerGroup->owner()->usedTilesets();
         gatherTiles(renderer);
         for (int j = 0; j < 9; j++) {
             auto* vboTiles = mTiles[j];
@@ -615,6 +661,9 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         return;
     }
 
+    glActiveTexture(GL_TEXTURE2);
+    glDisable(GL_TEXTURE_2D);
+
     glActiveTexture(GL_TEXTURE1);
     glDisable(GL_TEXTURE_2D);
 
@@ -640,12 +689,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
     glDisableClientState(GL_COLOR_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    TilesetTextures* tilesetTextures = TILESET_TEXTURES[context];
-    if (tilesetTextures == nullptr) {
-        qDebug() << "LayerGroupVBO: Creating TilesetTextures for context" << context;
-        tilesetTextures = new TilesetTextures();
-        TILESET_TEXTURES[context] = tilesetTextures;
-    }
+    GLuint textureID = 0;
 
     bool drawAll = false;
     if (drawAll) {
@@ -665,12 +709,21 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                     GLuint end = start + 4 - 1;
                     GLuint count = 4;
                     if (tiles[i].mTexture == nullptr) {
-                        tiles[i].mTexture = tilesetTextures->get(tiles[i].mTilesetName);
+                        tiles[i].mTexture = TILESET_TEXTURES.get(tiles[i].mTilesetName, mUsedTilesets);
                     }
+#if TILESET_TEXTURE_GL == 0
+                    if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mID == -1)
+                        continue;
+                    if (textureID != tiles[i].mTexture->mID) {
+                        glBindTexture(GL_TEXTURE_2D, tiles[i].mTexture->mID);
+                        textureID = tiles[i].mTexture->mID;
+                    }
+#else
                     if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mTexture->isCreated() == false)
                         continue;
                     tiles[i].mTexture->mTexture->bind();
                     glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
+#endif
                 }
             }
         }
@@ -700,13 +753,25 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         GLuint start = i * 4;
                         GLuint end = start + 4 - 1;
                         GLuint count = 4;
-                        if (tiles[i].mTexture == nullptr) {
-                            tiles[i].mTexture = tilesetTextures->get(tiles[i].mTilesetName);
+                        auto& tile = tiles[i];
+                        if (tile.mTexture == nullptr) {
+                            tile.mTexture = TILESET_TEXTURES.get(tile.mTilesetName, mUsedTilesets);
                         }
-                        if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mTexture->isCreated() == false)
+#if TILESET_TEXTURE_GL == 0
+                        if (tile.mTexture == nullptr || tile.mTexture->mID == -1)
                             continue;
-                        tiles[i].mTexture->mTexture->bind();
+                        if (textureID != tile.mTexture->mID) {
+                            glBindTexture(GL_TEXTURE_2D, tile.mTexture->mID);
+                            textureID = tile.mTexture->mID;
+                        }
                         glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
+                        Q_ASSERT(glGetError() == 0);
+#else
+                        if (tile.mTexture == nullptr || tile.mTexture->mTexture->isCreated() == false)
+                            continue;
+                        tile.mTexture->mTexture->bind();
+                        glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
+#endif
                     }
                 }
                 vboTiles->mIndexBuffer.release();
@@ -720,6 +785,8 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
     GLuint count = mTiles.size() * 4;
     glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_SHORT, (void*)(0));
 #endif
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     if (wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -825,8 +892,11 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer)
         for (int x = startPos.x(); x < rect.right(); x += tileWidth) {
             cells.resize(0);
 #if 0
-            if (columnItr.x() % 10 != 0 || columnItr.y() % 10 != 0)
+            if (columnItr.x() % 10 != 0 || columnItr.y() % 10 != 0) {
+                ++columnItr.rx();
+                --columnItr.ry();
                 continue;
+            }
 #endif
             VBOTiles *vboTiles = getTilesFor(columnItr);
             if (vboTiles == nullptr) {
@@ -992,6 +1062,13 @@ void LayerGroupVBO::getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF 
     }
 }
 
+void LayerGroupVBO::aboutToBeDestroyed()
+{
+    // The QOpenGLContext is going away and QOpenGLFunctions_3_0 becomes invalid.
+    mLayerGroupItem->mVBO = nullptr;
+    delete this;
+}
+
 
 ///// ///// ///// ///// /////
 
@@ -1043,13 +1120,22 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
     }
 #endif
 
-//    mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
-
+#if 1
     if (mVBO == nullptr) {
         mVBO = new LayerGroupVBO();
+        mVBO->mLayerGroupItem = this;
         mVBO->mLayerGroup = mLayerGroup;
     }
+
+    QRect exposed = option->exposedRect.toAlignedRect();
+    if (exposed.isNull())
+        exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
+    mLayerGroup->prepareDrawing(mRenderer, exposed);
+
     mVBO->paint(p, mRenderer, option->exposedRect);
+#else
+    mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
+#endif
 
 #ifdef _DEBUG
     p->drawRect(mBoundingRect);

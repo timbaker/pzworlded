@@ -200,6 +200,7 @@ bool Tileset::loadFromNothing(const QSize &imageSize, const QString &fileName)
     mImageHeight = imageSize.height();
     mColumnCount = columnCountForWidth(mImageWidth);
     mImageSource = fileName;
+    mImage = QImage();
 //    mLoaded = true;
     return true;
 }
