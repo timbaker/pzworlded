@@ -334,6 +334,8 @@ TilesetTexture *TilesetTextures::get(const QString& tilesetName, const QList<Til
 
         if (contextTextures->mTextureMap.contains(tilesetName)) {
             TilesetTexture *texture = contextTextures->mTextureMap[tilesetName];
+            if (texture->mID != -1)
+                return texture; // TODO: Check file modification time or something
 #if TILESET_TEXTURE_GL == 0
             if (Tiled::Tileset *tileset = findTileset(tilesetName, tilesets)) {
                 const QImage image = tileset->image().convertToFormat(QImage::Format_RGBA8888);
@@ -493,11 +495,8 @@ static TilesetTextures TILESET_TEXTURES;
 LayerGroupVBO::LayerGroupVBO()
     : mLayerGroup(nullptr)
 {
-    for (int i = 0; i < 9; i++) {
-        mTiles[i] = nullptr;
-    }
-    mTiles[4] = new VBOTiles();
-    mTiles[4]->mBounds = QRect(300, 300, 300, 300);
+    mTiles = new VBOTiles();
+    mTiles->mBounds = QRect(0, 0, 300, 300);
 }
 
 LayerGroupVBO::~LayerGroupVBO()
@@ -505,16 +504,12 @@ LayerGroupVBO::~LayerGroupVBO()
     mDestroying = true;
 
     if (mCreated == false) {
-        for (int i = 0; i < 9; i++) {
-            delete mTiles[i];
-        }
+        delete mTiles;
         return;
     }
     if (mContext != nullptr) {
         if (mContext->makeCurrent(mContext->surface())) {
-            for (int i = 0; i < 9; i++) {
-                delete mTiles[i];
-            }
+            delete mTiles;
             return;
         }
     }
@@ -550,7 +545,7 @@ void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const
 #define PZ_OPENGL_WIDGET 1
 #if PZ_OPENGL_WIDGET
     // Set the model-view-projection matrices for QGraphicsScene.
-    // This isn't needed when using QGLWidget, but it with QOpenGLWidget.
+    // This isn't needed when using QGLWidget, but is with QOpenGLWidget.
     QRect viewport = painter->viewport();
 //    glViewport(viewport.x(), viewport.y(), viewport.width(), viewport.height());
     glMatrixMode(GL_PROJECTION);
@@ -588,21 +583,37 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 //    if (context->shareContext() != nullptr)
 //        context = context->shareContext();
 
+    if (mLayerGroup->owner()->changeCount() != mChangeCount) {
+        mChangeCount = mLayerGroup->owner()->changeCount();
+        if (mCreated) {
+            qDebug() << "LayerGroupVBO recreate";
+            mCreated = false;
+            auto* vboTiles = mTiles;
+            if (vboTiles != nullptr) {
+                vboTiles->mTiles.clear();
+                vboTiles->mTileCount.fill(0);
+                vboTiles->mTileFirst.fill(-1);
+            }
+            mMapCompositeVBO->mUsedTilesets = mMapCompositeVBO->mMapComposite->usedTilesets();
+        }
+    }
+
     if (mCreated == false) {
         mCreated = true;
-        mUsedTilesets = mLayerGroup->owner()->usedTilesets();
         gatherTiles(renderer);
-        for (int j = 0; j < 9; j++) {
-            auto* vboTiles = mTiles[j];
+        {
+            auto* vboTiles = mTiles;
             if (vboTiles == nullptr)
-                continue;
+                return;
             const QList<VBOTile>& tiles = vboTiles->mTiles;
             if (tiles.isEmpty()) {
-                continue;
+                return;
             }
 
-            if (vboTiles->mIndexBuffer.create() == false) Q_ASSERT(false);
-            vboTiles->mIndexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+            if (vboTiles->mIndexBuffer.isCreated() == false) {
+                if (vboTiles->mIndexBuffer.create() == false) Q_ASSERT(false);
+                vboTiles->mIndexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+            }
             if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
             GLuint *indices = new GLuint[tiles.size() * 4];
             for (int i = 0; i < tiles.size() * 4; i++) {
@@ -611,8 +622,10 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
             vboTiles->mIndexBuffer.allocate(indices, tiles.size() * 4 * sizeof(GLuint));
             delete[] indices;
 
-            if (vboTiles->mVertexBuffer.create() == false) Q_ASSERT(false);
-            vboTiles->mVertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+            if (vboTiles->mVertexBuffer.isCreated() == false) {
+                if (vboTiles->mVertexBuffer.create() == false) Q_ASSERT(false);
+                vboTiles->mVertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+            }
             if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
             // x, y, u, v
             GLfloat *vertices = new GLfloat[tiles.size() * 4 * 4];
@@ -657,7 +670,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         qDebug() << "GL_MAX_ELEMENTS_INDICES" << maxIndices << "GL_MAX_ELEMENTS_VERTICES" << maxVertices;
     }
 
-    if (mTiles[4]->mTiles.size() == 0) {
+    if (mTiles == nullptr || mTiles->mTiles.isEmpty()) {
         return;
     }
 
@@ -693,23 +706,21 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 
     bool drawAll = false;
     if (drawAll) {
-        for (int vy = 0; vy < 3; vy++) {
-            for (int vx = 0; vx < 3; vx++) {
-                VBOTiles *vboTiles = mTiles[vx + vy * 3];
-                if (vboTiles == nullptr || vboTiles->mTiles.isEmpty())
-                    continue;
+        {
+            {
+                VBOTiles *vboTiles = mTiles;
                 if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
                 if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
                 glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
                 glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), (void*)(2 * sizeof(GL_FLOAT)));
 
-                QList<VBOTile>& tiles = mTiles[4]->mTiles;
+                QList<VBOTile>& tiles = mTiles->mTiles;
                 for (int i = 0; i < tiles.size(); i++) {
                     GLuint start = i * 4;
                     GLuint end = start + 4 - 1;
                     GLuint count = 4;
                     if (tiles[i].mTexture == nullptr) {
-                        tiles[i].mTexture = TILESET_TEXTURES.get(tiles[i].mTilesetName, mUsedTilesets);
+                        tiles[i].mTexture = TILESET_TEXTURES.get(tiles[i].mTilesetName, mMapCompositeVBO->mUsedTilesets);
                     }
 #if TILESET_TEXTURE_GL == 0
                     if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mID == -1)
@@ -730,11 +741,9 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
     } else {
         QList<QPoint> squares;
         getSquaresInRect(renderer, exposedRect, squares);
-        for (int vy = 0; vy < 3; vy++) {
-            for (int vx = 0; vx < 3; vx++) {
-                VBOTiles *vboTiles = mTiles[vx + vy * 3];
-                if (vboTiles == nullptr || vboTiles->mTiles.isEmpty())
-                    continue;
+        {
+            {
+                VBOTiles *vboTiles = mTiles;
                 if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
                 if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
                 glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
@@ -743,7 +752,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                 auto& tileCount = vboTiles->mTileCount;
                 QList<VBOTile>& tiles = vboTiles->mTiles;
                 for (const QPoint& square : qAsConst(squares)) {
-                    if (vboTiles->mBounds.contains(square.x() + 300, square.y() + 300) == false)
+                    if (vboTiles->mBounds.contains(square.x(), square.y()) == false)
                         continue;
                     int x = (square.x() + 300) % 300;
                     int y = (square.y() + 300) % 300;
@@ -755,7 +764,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         GLuint count = 4;
                         auto& tile = tiles[i];
                         if (tile.mTexture == nullptr) {
-                            tile.mTexture = TILESET_TEXTURES.get(tile.mTilesetName, mUsedTilesets);
+                            tile.mTexture = TILESET_TEXTURES.get(tile.mTilesetName, mMapCompositeVBO->mUsedTilesets);
                         }
 #if TILESET_TEXTURE_GL == 0
                         if (tile.mTexture == nullptr || tile.mTexture->mID == -1)
@@ -884,7 +893,8 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer)
     /*static*/ QVector<qreal> opacities(40); // or QVarLengthArray
 #endif
 
-    layerGroup->prepareDrawing(renderer, rect);
+//    layerGroup->prepareDrawing(renderer, rect);
+    layerGroup->prepareDrawing2();
 
     for (int y = startPos.y(); y - tileHeight < rect.bottom(); y += tileHeight / 2) {
         QPoint columnItr = rowItr;
@@ -898,11 +908,18 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer)
                 continue;
             }
 #endif
-            VBOTiles *vboTiles = getTilesFor(columnItr);
+
+            if (mMapCompositeVBO->mBounds.contains(columnItr) == false) {
+                ++columnItr.rx();
+                --columnItr.ry();
+                continue;
+            }
+
+            VBOTiles *vboTiles = mTiles;
             if (vboTiles == nullptr) {
                 ++columnItr.rx();
                 --columnItr.ry();
-                continue; // FIXME: adjacent maps are outside this
+                continue;
             }
 
             if (layerGroup->orderedCellsAt(columnItr, cells, opacities)) {
@@ -959,9 +976,10 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer)
     }
 }
 
+#if 0
 VBOTiles *LayerGroupVBO::getTilesFor(const QPoint &square)
 {
-    if (square.x() < 0 || square.x() > 899 || square.y() < 0 || square.y() > 899)
+    if (square.x() < -300 || square.x() > 599 || square.y() < -300 || square.y() > 599)
         return nullptr;
 
     int col = (square.x() + 300) / 300;
@@ -976,6 +994,7 @@ VBOTiles *LayerGroupVBO::getTilesFor(const QPoint &square)
     mTiles[col + row * 3] = vboTiles;
     return vboTiles;
 }
+#endif
 
 void LayerGroupVBO::getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposed, QList<QPoint> &out)
 {
@@ -1040,7 +1059,8 @@ void LayerGroupVBO::getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF 
             if (columnItr.x() % 10 != 0 || columnItr.y() % 10 != 0)
                 continue;
 #endif
-            if (QRect(-300, -300, 900, 900).contains(columnItr)) {
+            if (mMapCompositeVBO->mBounds.contains(columnItr)) {
+                // TODO: change x,y,x2 spans
                 out += columnItr;
             }
 
@@ -1065,10 +1085,45 @@ void LayerGroupVBO::getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF 
 void LayerGroupVBO::aboutToBeDestroyed()
 {
     // The QOpenGLContext is going away and QOpenGLFunctions_3_0 becomes invalid.
-    mLayerGroupItem->mVBO = nullptr;
+    for (int i = 0; i < 9; i++) {
+        if (mLayerGroupItem->mVBO[i] == this) {
+            mLayerGroupItem->mVBO[i] = nullptr;
+            break;
+        }
+    }
     delete this;
 }
 
+/////
+
+MapCompositeVBO::MapCompositeVBO()
+{
+    mLayerVBOs.fill(nullptr);
+    mBounds = QRect(0, 0, 300, 300);
+}
+
+MapCompositeVBO::~MapCompositeVBO()
+{
+
+}
+
+LayerGroupVBO *MapCompositeVBO::getLayerVBO(CompositeLayerGroupItem *item)
+{
+    if (mMapComposite == nullptr) {
+        mMapComposite = mScene->mapComposite();
+        mUsedTilesets = mMapComposite->usedTilesets();
+    }
+    LayerGroupVBO* layerVBO = mLayerVBOs[item->layerGroup()->level()];
+    if (layerVBO == nullptr) {
+        layerVBO = new LayerGroupVBO();
+        layerVBO->mMapCompositeVBO = this;
+        layerVBO->mTiles->mBounds = mBounds;
+        layerVBO->mLayerGroupItem = item;
+        layerVBO->mLayerGroup = item->layerGroup();
+        mLayerVBOs[item->layerGroup()->level()] = layerVBO;
+    }
+    return layerVBO;
+}
 
 ///// ///// ///// ///// /////
 
@@ -1081,11 +1136,13 @@ CompositeLayerGroupItem::CompositeLayerGroupItem(CellScene *cellScene, Composite
     setFlag(QGraphicsItem::ItemUsesExtendedStyleOption);
 
     mBoundingRect = layerGroup->boundingRect(mRenderer);
+
+    mVBO.fill(nullptr);
 }
 
 CompositeLayerGroupItem::~CompositeLayerGroupItem()
 {
-    delete mVBO;
+    qDeleteAll(mVBO);
 }
 
 void CompositeLayerGroupItem::synchWithTileLayers()
@@ -1121,18 +1178,29 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
 #endif
 
 #if 1
-    if (mVBO == nullptr) {
-        mVBO = new LayerGroupVBO();
-        mVBO->mLayerGroupItem = this;
-        mVBO->mLayerGroup = mLayerGroup;
-    }
-
     QRect exposed = option->exposedRect.toAlignedRect();
     if (exposed.isNull())
         exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
     mLayerGroup->prepareDrawing(mRenderer, exposed);
 
-    mVBO->paint(p, mRenderer, option->exposedRect);
+    for (int y = 0; y < 3; y++) {
+        for (int x = 0; x < 3; x++) {
+            MapComposite *mc = (x == 1 && y == 1) ? layerGroup()->owner() : layerGroup()->owner()->adjacentMap(x - 1, y - 1);
+            if (mc == nullptr)
+                continue;
+            if (mVBO[x + y * 3] == nullptr) {
+                MapCompositeVBO *mcVBO = mScene->mapCompositeVBO(x + y * 3);
+                mcVBO->mBounds = QRect((x - 1) * 300, (y - 1) * 300, 300, 300);
+                if (x == 2 && y == 2) {
+                    qDebug() << mcVBO->mBounds;
+                }
+                if (mcVBO->mScene == nullptr)
+                    mcVBO->mScene = mScene;
+                mVBO[x + y * 3] = mcVBO->getLayerVBO(this);
+            }
+            mVBO[x + y * 3]->paint(p, mRenderer, option->exposedRect);
+        }
+    }
 #else
     mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
 #endif

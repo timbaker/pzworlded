@@ -362,7 +362,7 @@ private:
     QImage mZoomedOutImage12;
 
     friend class LayerGroupVBO;
-    LayerGroupVBO* mVBO = nullptr;
+    std::array<LayerGroupVBO*,9> mVBO;
 };
 
 class AdjacentMap : public QObject
@@ -517,6 +517,8 @@ struct VBOTiles
     std::array<int, 300*300> mTileCount;
 };
 
+class MapCompositeVBO;
+
 class LayerGroupVBO : public QObject, QOpenGLFunctions_3_0
 {
     Q_OBJECT
@@ -534,12 +536,28 @@ public slots:
     void aboutToBeDestroyed();
 
 public:
+    MapCompositeVBO *mMapCompositeVBO = nullptr;
     QOpenGLContext *mContext = nullptr;
     CompositeLayerGroupItem *mLayerGroupItem = nullptr;
+    int mChangeCount = 0;
     CompositeLayerGroup *mLayerGroup = nullptr;
     bool mCreated = false;
     bool mDestroying = false;
-    std::array<VBOTiles *, 9> mTiles; // Including adjacent maps
+    VBOTiles *mTiles = nullptr;
+};
+
+class MapCompositeVBO
+{
+public:
+    MapCompositeVBO();
+    ~MapCompositeVBO();
+
+    LayerGroupVBO *getLayerVBO(CompositeLayerGroupItem *item);
+
+    CellScene *mScene = nullptr;
+    MapComposite *mMapComposite = nullptr;
+    QRect mBounds;
+    std::array<LayerGroupVBO*,8> mLayerVBOs;
     QList<Tiled::Tileset*> mUsedTilesets;
 };
 
@@ -707,6 +725,16 @@ public slots:
 
     void mapCompositeNeedsSynch();
 
+    MapCompositeVBO *mapCompositeVBO()
+    {
+        return &mMapCompositeVBO[4];
+    }
+
+    MapCompositeVBO *mapCompositeVBO(int adjacent)
+    {
+        return &mMapCompositeVBO[adjacent];
+    }
+
 public:
     enum Pending {
         None = 0,
@@ -776,6 +804,7 @@ private:
     WaterFlowOverlay* mWaterFlowOverlay;
 
     bool mDestroying;
+    std::array<MapCompositeVBO,9> mMapCompositeVBO;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

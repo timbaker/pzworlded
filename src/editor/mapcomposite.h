@@ -335,6 +335,9 @@ public:
     Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }
 #endif // ROAD_CRUD
 
+    int changeCount() const
+    { return mChangeCount; }
+
 signals:
     void layerGroupAdded(int level);
     void layerAddedToGroup(int index);
@@ -412,6 +415,8 @@ public:
     int mKeepFloorLayerCount;
 
     QString mNoBlendLayer;
+
+    int mChangeCount = 0;
 };
 
 #endif // MAPCOMPOSITE_H

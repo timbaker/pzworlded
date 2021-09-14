@@ -1032,6 +1032,8 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
         mc = mc->mParent;
     }
 
+    mChangeCount++;
+
     return subMap;
 }
 
@@ -1043,6 +1045,8 @@ void MapComposite::removeMap(MapComposite *subMap)
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->setNeedsSynch(true);
+
+    mChangeCount++;
 }
 
 void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
@@ -1052,6 +1056,8 @@ void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->setNeedsSynch(true);
+
+    mChangeCount++;
 }
 
 void MapComposite::layerAdded(int index)
@@ -1400,6 +1406,7 @@ bool MapComposite::mapChanged(MapInfo *mapInfo)
 {
     if (mapInfo == mMapInfo) {
         recreate();
+        mChangeCount++;
         return true;
     }
 
@@ -1686,6 +1693,7 @@ void MapComposite::mapLoaded(MapInfo *mapInfo)
             mc = mc->mParent;
         }
 #endif
+        mChangeCount++;
         emit needsSynch();
     }
 }
