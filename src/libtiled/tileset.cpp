@@ -47,6 +47,85 @@ Tile *Tileset::tileAt(int id) const
 static QMap<QString,QImage> TILESET_IMAGES;
 static size_t TILESET_BYTES = 0L;
 #include <QDebug>
+#include "texture_atlas.h"
+#include <QPainter>
+
+static bool tryCreateAtlas(Tileset *tileset, const QImage &image, int size)
+{
+    // TODO: sort from largest to smallest or vice-versa before adding
+    Atlas *atlas = nullptr;
+    const int padding = 1;
+    QMap<int,uint32_t> ids;
+    if (atlas_create(&atlas, size, padding)) {
+        for (int i = 0; i < tileset->tileCount(); i++) {
+            Tile *tile = tileset->tileAt(i);
+            if (tile->image().isNull())
+                continue;
+            uint32_t id;
+            if (atlas_gen_texture(atlas, &id)) {
+                if (atlas_allocate_vtex_space(atlas, id, tile->image().width(), tile->image().height())) {
+                    ids[i] = id;
+                } else {
+                    atlas_destroy(atlas);
+                    return false;
+                }
+            }
+        }
+    } else {
+        qDebug() << "NOPE";
+        return false;
+    }
+
+    if (ids.empty() == false) {
+        uint32_t extents[4];
+        extents[0] = std::numeric_limits<uint16_t>::max();
+        extents[1] = std::numeric_limits<uint16_t>::max();
+        extents[2] = extents[3] = 0;
+        for (uint32_t id : qAsConst(ids)) {
+            uint16_t xywh[4];
+            atlas_get_vtex_xywh_coords(atlas, id, 0, xywh);
+            extents[0] = std::min(extents[0], (uint32_t) xywh[0] - padding);
+            extents[1] = std::min(extents[1], (uint32_t) xywh[1] - padding);
+            extents[2] = std::max(extents[2], uint32_t(xywh[0] + xywh[2] + padding));
+            extents[3] = std::max(extents[3], uint32_t(xywh[1] + xywh[3] + padding));
+        }
+        int width = extents[2] - extents[0];
+        int height = extents[3] - extents[1];
+//        qDebug() << fileName << image.width() << image.height() << "->" << width << height;
+        QImage image4(width, height, image.format());
+        image4.fill(Qt::transparent);
+        QPainter painter(&image4);
+        for (auto it = ids.cbegin(); it != ids.cend(); it++) {
+            uint16_t xywh[4];
+            atlas_get_vtex_xywh_coords(atlas, it.value(), 0, xywh);
+
+            Tile *tile = tileset->tileAt(it.key());
+
+            Tile::UVST uvst1;
+            uvst1.u = xywh[0] / float(width);
+            uvst1.v = xywh[1] / float(height);
+            uvst1.s = (xywh[0] + xywh[2]) / float(width);
+            uvst1.t = (xywh[1] + xywh[3]) / float(height);
+            tile->setAtlasUVST(uvst1);
+
+            tile->setAtlasSize(tile->image().size());
+
+            painter.drawImage(QRect(xywh[0], xywh[1], xywh[2], xywh[3]), tile->image());
+
+            /////
+            tile->setEmptyImage();
+            /////
+        }
+        painter.end();
+        tileset->setImage(image4);
+    }
+
+    if (atlas != nullptr) {
+        atlas_destroy(atlas);
+    }
+
+    return true;
+}
 
 bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
 {
@@ -71,9 +150,10 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
     int tileNum = 0;
 #ifdef ZOMBOID
     QImage image3 = image;
+    // For some reason this changes the const 'image'
     replaceTransparentColor(image3, mTransparentColor);
-    setImage(image3); // This is used to create an OpenGL texture.
-    TILESET_IMAGES[fileName] = image3;
+//    setImage(image3); // This is used to create an OpenGL texture.
+    TILESET_IMAGES[fileName] = QImage();// image3;
 #if 0
     TILESET_BYTES = 0L;
     for (const QImage& image : TILESET_IMAGES) {
@@ -126,6 +206,12 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
         ++tileNum;
     }
 
+    if (tryCreateAtlas(this, image3, 1024) == false) {
+        if (tryCreateAtlas(this, image3, 2048) == false) {
+            tryCreateAtlas(this, image3, 4096);
+        }
+    }
+
     mImageWidth = image.width();
     mImageHeight = image.height();
     mColumnCount = columnCountForWidth(mImageWidth);
@@ -158,6 +244,8 @@ bool Tileset::loadFromCache(Tileset *cached)
         Tile *tile = cached->tileAt(tileNum);
         if (tileNum < oldTilesetSize) {
             mTiles.at(tileNum)->setImage(tile);
+            mTiles.at(tileNum)->setAtlasUVST(tile->atlasUVST());
+            mTiles.at(tileNum)->setAtlasSize(tile->atlasSize());
         } else {
             mTiles.append(new Tile(tile, tileNum, this));
         }

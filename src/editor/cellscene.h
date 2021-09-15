@@ -23,6 +23,7 @@
 #include "sceneoverlay.h"
 
 #include "map.h"
+#include "tile.h"
 
 #include <QGraphicsItem>
 #include <QOpenGLBuffer>
@@ -493,8 +494,7 @@ struct VBOTile
 {
     QRect mRect;
     QString mTilesetName;
-    QPoint mColRow;
-    QSize mTilesetSize;
+    Tiled::Tile::UVST mAtlasUVST;
     TilesetTexture *mTexture = nullptr;
 };
 

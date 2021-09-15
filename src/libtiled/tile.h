@@ -93,6 +93,9 @@ public:
     void setImage(const Tile *tile);
     void setEmptyImage(int width, int height);
 
+    void setEmptyImage()
+    { mImage = QImage(); }
+
     /**
      * Returns the width of this tile.
      */
@@ -112,6 +115,25 @@ public:
 
     QMargins drawMargins(float scale);
     QImage finalImage(int width, int height);
+
+    struct UVST
+    {
+        float u, v, s, t;
+    };
+
+    const UVST& atlasUVST() const
+    { return mAtlasUVST; }
+
+    void setAtlasUVST(const UVST& uvst)
+    {
+        mAtlasUVST = uvst;
+    }
+
+    const QSize& atlasSize() const
+    { return mAtlasSize; }
+
+    void setAtlasSize(const QSize& size)
+    { mAtlasSize = size; }
 
 private:
     bool isRowTransparent(const QImage &image, int row);
@@ -150,6 +172,8 @@ private:
     QImage mImage;
     QPoint mImageOffset;
     QSize mImageSize;
+    UVST mAtlasUVST;
+    QSize mAtlasSize;
 #else
     QPixmap mImage;
 #endif

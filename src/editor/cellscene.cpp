@@ -376,7 +376,7 @@ TilesetTexture *TilesetTextures::get(const QString& tilesetName, const QList<Til
 
     TilesetTexture *texture = contextTextures->mTextureMap.contains(tilesetName) ? contextTextures->mTextureMap[tilesetName] : nullptr;
     if (texture == nullptr) {
-//        const QList<Tileset *> tilesets = Tiled::Internal::TilesetManager::instance()->tilesets();
+        const QList<Tileset *> tilesets = Tiled::Internal::TilesetManager::instance()->tilesets();
         if (Tiled::Tileset *tileset = findTileset(tilesetName, tilesets)) {
             if (tileset->image().isNull()) {
                 // The texture may still be loading
@@ -616,7 +616,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 #endif
     }
 
-    for (VBOTiles *vboTiles : exposedTiles) {
+    for (VBOTiles *vboTiles : qAsConst(exposedTiles)) {
 //        VBOTiles *vboTiles = mTiles[vxy.x() + vxy.y() * VBO_PER_CELL];
 //        if (vboTiles == nullptr)
 //            continue;
@@ -652,28 +652,29 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
             const auto& tile = tiles[i];
             int n = i * 4 * 4;
             const QRect& bounds = tile.mRect;
-            float u0 = tile.mColRow.x() / float(tile.mTilesetSize.width());
-            float v0 = tile.mColRow.y() / float(tile.mTilesetSize.height());
-            float u1 = (tile.mColRow.x() + 1) / float(tile.mTilesetSize.width());
-            float v1 = (tile.mColRow.y() + 1) / float(tile.mTilesetSize.height());
+            const Tile::UVST uvst = tile.mAtlasUVST;
+            float u0 = uvst.u;
+            float v0 = uvst.v;
+            float u1 = uvst.s;
+            float v1 = uvst.t;
 
             vertices[n++] = bounds.x();
             vertices[n++] = bounds.y();
             vertices[n++] = u0;
             vertices[n++] = v0;
 
-            vertices[n++] = bounds.right();
+            vertices[n++] = bounds.right() + 1;
             vertices[n++] = bounds.y();
             vertices[n++] = u1;
             vertices[n++] = v0;
 
-            vertices[n++] = bounds.right();
-            vertices[n++] = bounds.bottom();
+            vertices[n++] = bounds.right() + 1;
+            vertices[n++] = bounds.bottom() + 1;
             vertices[n++] = u1;
             vertices[n++] = v1;
 
             vertices[n++] = bounds.left();
-            vertices[n++] = bounds.bottom();
+            vertices[n++] = bounds.bottom() + 1;
             vertices[n++] = u0;
             vertices[n++] = v1;
         }
@@ -984,16 +985,14 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                     Tile *tile = cell->tile;
                     VBOTile vboTile;
                     Tileset *tileset = tile->tileset();
-                    int columnCount = tileset->columnCount();
-                    vboTile.mRect = QRect(screenPos.x(), screenPos.y() - tile->height(), tile->width(), tile->height());
+                    vboTile.mRect = QRect(screenPos.x() + tile->offset().x(), screenPos.y() + tile->offset().y() - tile->height(), tile->atlasSize().width(), tile->atlasSize().height());
                     vboTile.mTilesetName = tileset->name();
-                    vboTile.mColRow = QPoint(tile->id() % columnCount, tile->id() / columnCount);
-                    vboTile.mTilesetSize = QSize(columnCount, tileset->tileCount() / columnCount);
+                    vboTile.mAtlasUVST = tile->atlasUVST();
 
                     if (tileWidth == tile->width() * 2) {
                         vboTile.mRect.translate(tile->offset().x(), tile->offset().y() - tile->height());
-                        vboTile.mRect.setWidth(tile->width() * 2);
-                        vboTile.mRect.setHeight(tile->height() * 2);
+                        vboTile.mRect.setWidth(tile->atlasSize().width() * 2);
+                        vboTile.mRect.setHeight(tile->atlasSize().height() * 2);
                     }
 
                     if (tileCount[vx + vy * VBO_SQUARES] == 0) {
@@ -1400,6 +1399,12 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
 
 #ifdef _DEBUG
     p->drawRect(mBoundingRect);
+#endif
+#if 0
+    Tileset *tileset = TILESET_TEXTURES.findTileset(QStringLiteral("blends_street_01"), Tiled::Internal::TilesetManager::instance()->tilesets());
+    if (tileset != nullptr) {
+        p->drawImage(QRect(exposed.topLeft(), tileset->image().size()), tileset->image());
+    }
 #endif
 }
 

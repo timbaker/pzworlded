@@ -33,6 +33,7 @@ SOURCES += compression.cpp \
     orthogonalrenderer.cpp \
     properties.cpp \
     staggeredrenderer.cpp \
+    texture_atlas.c \
     tilelayer.cpp \
     tileset.cpp \
     gidmapper.cpp \
@@ -53,6 +54,7 @@ HEADERS += compression.h \
     orthogonalrenderer.h \
     properties.h \
     staggeredrenderer.h \
+    texture_atlas.h \
     tile.h \
     tiled_global.h \
     tilelayer.h \
