@@ -44,6 +44,10 @@ Tile *Tileset::tileAt(int id) const
     return (id < mTiles.size()) ? mTiles.at(id) : 0;
 }
 
+static QMap<QString,QImage> TILESET_IMAGES;
+static size_t TILESET_BYTES = 0L;
+#include <QDebug>
+
 bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
 {
     Q_ASSERT(mTileWidth > 0 && mTileHeight > 0);
@@ -69,6 +73,14 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
     QImage image3 = image;
     replaceTransparentColor(image3, mTransparentColor);
     setImage(image3); // This is used to create an OpenGL texture.
+    TILESET_IMAGES[fileName] = image3;
+#if 0
+    TILESET_BYTES = 0L;
+    for (const QImage& image : TILESET_IMAGES) {
+        TILESET_BYTES += image.bytesPerLine() * image.height();
+    }
+    qDebug() << TILESET_IMAGES.size() << "images" << (TILESET_BYTES / (1024 * 1024)) << "MB";
+#endif
     QImage image2 = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
 //    replaceTransparentColor(image2, mTransparentColor);
 #endif

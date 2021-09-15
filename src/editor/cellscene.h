@@ -498,6 +498,9 @@ struct VBOTile
     TilesetTexture *mTexture = nullptr;
 };
 
+const int VBO_SQUARES = 10 * 3;
+const int VBO_PER_CELL = 300 / VBO_SQUARES;
+
 struct VBOTiles
 {
     VBOTiles()
@@ -511,10 +514,12 @@ struct VBOTiles
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mVertexBuffer;
 
+    bool mCreated = false;
+    bool mGathered = false;
     QRect mBounds;
     QList<VBOTile> mTiles;
-    std::array<int, 300*300> mTileFirst;
-    std::array<int, 300*300> mTileCount;
+    std::array<int, VBO_SQUARES * VBO_SQUARES> mTileFirst; // Index into mTiles, or -1 for none. Per-square.
+    std::array<int, VBO_SQUARES * VBO_SQUARES> mTileCount; // Number of VBOTile in mTiles. Per-square.
 };
 
 class MapCompositeVBO;
@@ -528,9 +533,10 @@ public:
 
     void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
     void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
-    void gatherTiles(Tiled::MapRenderer *renderer);
-    VBOTiles *getTilesFor(const QPoint& square);
+    void gatherTiles(Tiled::MapRenderer *renderer, const QRectF& exposedRect, QList<VBOTiles *> &exposedTiles);
+    VBOTiles *getTilesFor(const QPoint& square, bool bCreate);
     void getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposedRect, QList<QPoint>& out);
+    bool isEmpty() const;
 
 public slots:
     void aboutToBeDestroyed();
@@ -543,7 +549,7 @@ public:
     CompositeLayerGroup *mLayerGroup = nullptr;
     bool mCreated = false;
     bool mDestroying = false;
-    VBOTiles *mTiles = nullptr;
+    std::array<VBOTiles*,VBO_PER_CELL * VBO_PER_CELL> mTiles;
 };
 
 class MapCompositeVBO
