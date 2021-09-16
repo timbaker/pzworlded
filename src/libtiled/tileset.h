@@ -89,8 +89,10 @@ public:
         mImageHeight(0),
         mColumnCount(0)
   #ifdef ZOMBOID
-        , mMissing(false),
-        mLoaded(false)
+        ,
+        mMissing(false),
+        mLoaded(false),
+        mChangeCount(0)
   #endif
     {
         Q_ASSERT(tileSpacing >= 0);
@@ -279,6 +281,8 @@ public:
 
     static void replaceTransparentColor(QImage &image, const QColor &transparentColor);
 
+    int changeCount() const
+    { return mChangeCount; }
 #endif
 
 private:
@@ -300,6 +304,7 @@ private:
     bool mLoaded;
     QString mImageSource2x;
     QImage mImage; // With transparent color replaced
+    int mChangeCount = 0;
 #endif
 };
 

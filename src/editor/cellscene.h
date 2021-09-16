@@ -459,7 +459,7 @@ public:
 #else
     int mID = -1; // OpenGL ID
 #endif
-    bool mChanged = false;
+    int mChangeCount = -1;
 };
 
 class TilesetTexturesPerContext
@@ -468,7 +468,7 @@ public:
     ~TilesetTexturesPerContext();
 
     QOpenGLContext *mContext;
-    QSet<QString> mChanged;
+    QMap<QString,int> mChanged;
     QSet<QString> mMissing;
     QMap<QString, TilesetTexture*> mTextureMap;
     QList<TilesetTexture*> mTextures;
@@ -492,6 +492,7 @@ private:
 
 struct VBOTile
 {
+    int mLayerIndex;
     QRect mRect;
     QString mTilesetName;
     Tiled::Tile::UVST mAtlasUVST;
@@ -545,7 +546,7 @@ public:
     MapCompositeVBO *mMapCompositeVBO = nullptr;
     QOpenGLContext *mContext = nullptr;
     CompositeLayerGroupItem *mLayerGroupItem = nullptr;
-    int mChangeCount = 0;
+    int mChangeCount = -1;
     CompositeLayerGroup *mLayerGroup = nullptr;
     bool mCreated = false;
     bool mDestroying = false;
@@ -565,6 +566,7 @@ public:
     QRect mBounds;
     std::array<LayerGroupVBO*,8> mLayerVBOs;
     QList<Tiled::Tileset*> mUsedTilesets;
+    QMap<QString,int> mLayerNameToIndex;
 };
 
 class CellScene : public BaseGraphicsScene
@@ -616,6 +618,9 @@ public:
 
     void setLevelOpacity(int level, qreal opacity);
     qreal levelOpacity(int level);
+
+    void setLayerOpacity(int level, Tiled::TileLayer *tl, qreal opacity);
+    qreal layerOpacity(int level, Tiled::TileLayer *tl) const;
 
     void setHighlightRoomPosition(const QPoint &tilePos);
     QRegion getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn);

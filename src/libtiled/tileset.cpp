@@ -217,6 +217,7 @@ bool Tileset::loadFromImage(const QImage &image, const QString &fileName)
     mColumnCount = columnCountForWidth(mImageWidth);
 #ifdef ZOMBOID
     mLoaded = true;
+    mChangeCount++;
 #endif
     mImageSource = fileName;
     return true;
@@ -263,6 +264,7 @@ bool Tileset::loadFromCache(Tileset *cached)
     mColumnCount = columnCountForWidth(mImageWidth);
     mImageSource = cached->imageSource();
     mImage = cached->image();
+    mChangeCount = cached->mChangeCount;
     mLoaded = true;
     return true;
 }

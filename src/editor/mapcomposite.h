@@ -45,6 +45,41 @@ class BmpBlender;
 
 class MapComposite;
 
+struct TilePlusLayer
+{
+    TilePlusLayer()
+        : mLayerName()
+        , mTile(nullptr)
+        , mVisible(true)
+        , mOpacity(1.0)
+    {
+
+    }
+
+    TilePlusLayer(const TilePlusLayer& rhs)
+        : mLayerName(rhs.mLayerName)
+        , mTile(rhs.mTile)
+        , mVisible(rhs.mVisible)
+        , mOpacity(rhs.mOpacity)
+    {
+
+    }
+
+    TilePlusLayer(const QString &layerName, const Tiled::Tile *tile, bool visible, qreal opacity)
+        : mLayerName(layerName)
+        , mTile(tile)
+        , mVisible(visible)
+        , mOpacity(opacity)
+    {
+
+    }
+
+    QString mLayerName;
+    const Tiled::Tile* mTile;
+    bool mVisible;
+    qreal mOpacity;
+};
+
 class CompositeLayerGroup : public Tiled::ZTileLayerGroup
 {
 public:
@@ -65,6 +100,8 @@ public:
     void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
 
+    bool orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer>& cells) const;
+
     bool setLayerVisibility(const QString &layerName, bool visible);
     bool setLayerVisibility(Tiled::TileLayer *tl, bool visible);
     bool isLayerVisible(Tiled::TileLayer *tl);
@@ -72,6 +109,7 @@ public:
 
     bool setLayerOpacity(const QString &layerName, qreal opacity);
     bool setLayerOpacity(Tiled::TileLayer *tl, qreal opacity);
+    qreal layerOpacity(Tiled::TileLayer *tl) const;
     void synchSubMapLayerOpacity(const QString &layerName, qreal opacity);
 
     MapComposite *owner() const { return mOwner; }
