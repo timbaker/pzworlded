@@ -23,7 +23,12 @@
 
 #include <QApplication>
 #include <QDebug>
+#define PZ_OPENGL_WIDGET 1
+#if PZ_OPENGL_WIDGET
+#include <QOpenGLWidget>
+#else
 #include <QGLWidget>
+#endif
 #include <QMouseEvent>
 #include <QScrollBar>
 
@@ -88,19 +93,33 @@ void BaseGraphicsView::setUseOpenGL(bool useOpenGL)
 #ifndef QT_NO_OPENGL
     QWidget *oldViewport = viewport();
     QWidget *newViewport = viewport();
+#if PZ_OPENGL_WIDGET
+    if (useOpenGL) {
+        if (!qobject_cast<QOpenGLWidget*>(viewport())) {
+            QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+            format.setDepthBufferSize(0);
+            QOpenGLWidget *openGLWidget = new QOpenGLWidget();
+//            openGLWidget->setFormat(format);
+            newViewport = openGLWidget;
+        }
+    } else {
+        if (qobject_cast<QOpenGLWidget*>(viewport())) {
+            newViewport = nullptr;
+        }
+    }
+#else
     if (useOpenGL && QGLFormat::hasOpenGL()) {
         if (!qobject_cast<QGLWidget*>(viewport())) {
             QGLFormat format = QGLFormat::defaultFormat();
             format.setDepth(false); // No need for a depth buffer
             format.setSampleBuffers(true); // Enable anti-aliasing
-            newViewport = new QGLWidget(format, this);
-            newViewport->setMinimumSize(200, 200);
+            newViewport = new QGLWidget(format);
         }
     } else {
         if (qobject_cast<QGLWidget*>(viewport()))
             newViewport = 0;
     }
-
+#endif
     if (newViewport != oldViewport) {
         if (mMiniMap) {
             mMiniMap->setVisible(false);

@@ -86,8 +86,8 @@ void LayersDock::setCellDocument(CellDocument *doc)
     mView->setCellDocument(mCellDocument);
 
     if (mCellDocument) {
-        connect(mCellDocument, SIGNAL(currentLevelChanged(int)),
-                SLOT(updateOpacitySlider()));
+        connect(mCellDocument, &CellDocument::currentLayerIndexChanged,
+                this, &LayersDock::updateOpacitySlider);
 
         // These connections won't break until the document is closed
         connect(mCellDocument->worldDocument(), SIGNAL(cellMapFileAboutToChange(WorldCell*)),
@@ -162,16 +162,28 @@ void LayersDock::cellMapFileAboutToChange(WorldCell *cell)
 
 void LayersDock::opacitySliderValueChanged(int value)
 {
-    if (mCellDocument)
+    if (mCellDocument) {
+#if 1
+        if (TileLayer *tl = mCellDocument->currentTileLayer()) {
+            mCellDocument->scene()->setLayerOpacity(mCellDocument->currentLevel(), tl, qreal(value) / 100.0);
+        }
+
+#else
         mCellDocument->scene()->setLevelOpacity(
                     mCellDocument->currentLevel(),
                     qreal(value) / 100.0);
+#endif
+    }
 }
 
 void LayersDock::updateOpacitySlider()
 {
     if (mCellDocument) {
+#if 1
+        qreal opacity = mCellDocument->scene()->layerOpacity(mCellDocument->currentLevel(), mCellDocument->currentTileLayer());
+#else
         qreal opacity = mCellDocument->scene()->levelOpacity(mCellDocument->currentLevel());
+#endif
         mOpacitySlider->setValue(opacity * 100);
         mOpacitySlider->setEnabled(true);
     } else {

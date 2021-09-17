@@ -23,12 +23,18 @@
 #include "sceneoverlay.h"
 
 #include "map.h"
+#include "tile.h"
 
 #include <QGraphicsItem>
+#include <QOpenGLBuffer>
+#include <QOpenGLFunctions_3_0>
+#include <QOpenGLTexture>
 #include <QPoint>
 #include <QSet>
 #include <QSizeF>
 #include <QTimer>
+
+#include <array>
 
 class BaseCellSceneTool;
 class CellDocument;
@@ -325,25 +331,31 @@ private:
     QVector<LotImage> mLotImages;
 };
 
+class LayerGroupVBO;
+
 /**
   * Item that draws all the TileLayers on a single level.
   */
 class CompositeLayerGroupItem : public QGraphicsItem
 {
 public:
-    CompositeLayerGroupItem(CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
+    CompositeLayerGroupItem(CellScene *scene, CompositeLayerGroup *layerGroup, Tiled::MapRenderer *renderer, QGraphicsItem *parent = 0);
+    ~CompositeLayerGroupItem() override;
 
     void synchWithTileLayers();
 
-    QRectF boundingRect() const;
-    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *);
+    QRectF boundingRect() const override;
+    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *) override;
 
     CompositeLayerGroup *layerGroup() const { return mLayerGroup; }
 
 private:
+    CellScene *mScene;
     CompositeLayerGroup *mLayerGroup;
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
+    friend class LayerGroupVBO;
+    std::array<LayerGroupVBO*,9> mVBO;
 };
 
 class AdjacentMap : public QObject
@@ -419,6 +431,128 @@ private:
     QList<ObjectItem*> mObjectItems;
 };
 
+class QOpenGLContext;
+class QOpenGLTexture;
+
+class TilesetTexture
+{
+public:
+#define TILESET_TEXTURE_GL 0
+#if TILESET_TEXTURE_GL
+    QOpenGLTexture *mTexture = nullptr;
+#else
+    int mID = -1; // OpenGL ID
+#endif
+    int mChangeCount = -1;
+};
+
+class TilesetTexturesPerContext
+{
+public:
+    ~TilesetTexturesPerContext();
+
+    QOpenGLContext *mContext;
+    QMap<QString,int> mChanged;
+    QSet<QString> mMissing;
+    QMap<QString, TilesetTexture*> mTextureMap;
+    QList<TilesetTexture*> mTextures;
+};
+
+class TilesetTextures : public QObject
+{
+    Q_OBJECT
+public:
+    TilesetTexture *get(const QString& tilesetName, const QList<Tiled::Tileset*> &tilesets);
+    Tiled::Tileset *findTileset(const QString& tilesetName, const QList<Tiled::Tileset*> &tilesets);
+
+public slots:
+    void aboutToBeDestroyed();
+    void tilesetChanged(Tiled::Tileset *tileset);
+
+private:
+    QMap<QOpenGLContext*,TilesetTexturesPerContext*> mContextToTextures;
+    bool mConnected = false;
+};
+
+struct VBOTile
+{
+    int mLayerIndex;
+    QRect mRect;
+    QString mTilesetName;
+    Tiled::Tile::UVST mAtlasUVST;
+    TilesetTexture *mTexture = nullptr;
+};
+
+const int VBO_SQUARES = 10 * 3;
+const int VBO_PER_CELL = 300 / VBO_SQUARES;
+
+struct VBOTiles
+{
+    VBOTiles()
+        : mIndexBuffer(QOpenGLBuffer::Type::IndexBuffer)
+        , mVertexBuffer(QOpenGLBuffer::Type::VertexBuffer)
+    {
+        mTileFirst.fill(-1);
+        mTileCount.fill(0);
+    }
+
+    QOpenGLBuffer mIndexBuffer;
+    QOpenGLBuffer mVertexBuffer;
+
+    bool mCreated = false;
+    bool mGathered = false;
+    QRect mBounds;
+    QList<VBOTile> mTiles;
+    std::array<int, VBO_SQUARES * VBO_SQUARES> mTileFirst; // Index into mTiles, or -1 for none. Per-square.
+    std::array<int, VBO_SQUARES * VBO_SQUARES> mTileCount; // Number of VBOTile in mTiles. Per-square.
+};
+
+class MapCompositeVBO;
+
+class LayerGroupVBO : public QObject, QOpenGLFunctions_3_0
+{
+    Q_OBJECT
+public:
+    LayerGroupVBO();
+    ~LayerGroupVBO();
+
+    void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void gatherTiles(Tiled::MapRenderer *renderer, const QRectF& exposedRect, QList<VBOTiles *> &exposedTiles);
+    VBOTiles *getTilesFor(const QPoint& square, bool bCreate);
+    void getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposedRect, QList<QPoint>& out);
+    bool isEmpty() const;
+
+public slots:
+    void aboutToBeDestroyed();
+
+public:
+    MapCompositeVBO *mMapCompositeVBO = nullptr;
+    QOpenGLContext *mContext = nullptr;
+    CompositeLayerGroupItem *mLayerGroupItem = nullptr;
+    int mChangeCount = -1;
+    CompositeLayerGroup *mLayerGroup = nullptr;
+    bool mCreated = false;
+    bool mDestroying = false;
+    std::array<VBOTiles*,VBO_PER_CELL * VBO_PER_CELL> mTiles;
+};
+
+class MapCompositeVBO
+{
+public:
+    MapCompositeVBO();
+    ~MapCompositeVBO();
+
+    LayerGroupVBO *getLayerVBO(CompositeLayerGroupItem *item);
+
+    CellScene *mScene = nullptr;
+    MapComposite *mMapComposite = nullptr;
+    QRect mBounds;
+    std::array<LayerGroupVBO*,8> mLayerVBOs;
+    QList<Tiled::Tileset*> mUsedTilesets;
+    QMap<QString,int> mLayerNameToIndex;
+};
+
 class CellScene : public BaseGraphicsScene
 {
     Q_OBJECT
@@ -463,6 +597,9 @@ public:
     void setLevelOpacity(int level, qreal opacity);
     qreal levelOpacity(int level);
 
+    void setLayerOpacity(int level, Tiled::TileLayer *tl, qreal opacity);
+    qreal layerOpacity(int level, Tiled::TileLayer *tl) const;
+
     void setHighlightRoomPosition(const QPoint &tilePos);
     QRegion getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn);
     QString roomNameAt(const QPointF &scenePos);
@@ -496,6 +633,9 @@ public:
     static const int ZVALUE_ROADITEM_CREATING;
     static const int ZVALUE_ROADITEM_SELECTED;
     static const int ZVALUE_ROADITEM_UNSELECTED;
+
+    bool isDestroying() const
+    { return mDestroying; }
 
 protected:
     void loadMap();
@@ -569,6 +709,16 @@ public slots:
 
     void mapCompositeNeedsSynch();
 
+    MapCompositeVBO *mapCompositeVBO()
+    {
+        return &mMapCompositeVBO[4];
+    }
+
+    MapCompositeVBO *mapCompositeVBO(int adjacent)
+    {
+        return &mMapCompositeVBO[adjacent];
+    }
+
 public:
     enum Pending {
         None = 0,
@@ -634,6 +784,9 @@ private:
     friend class LightSwitchOverlays;
 
     WaterFlowOverlay* mWaterFlowOverlay;
+
+    bool mDestroying;
+    std::array<MapCompositeVBO,9> mMapCompositeVBO;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

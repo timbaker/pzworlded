@@ -24,6 +24,7 @@
 #include "preferences.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
+#include "progress.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 using namespace Tiled;
@@ -32,6 +33,9 @@ using namespace Tiled::Internal;
 
 int main(int argc, char *argv[])
 {
+#if ZOMBOID
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
     QApplication a(argc, argv);
 
     a.setOrganizationName(QLatin1String("TheIndieStone"));
@@ -56,6 +60,11 @@ int main(int argc, char *argv[])
     QObject::connect(&a, SIGNAL(fileOpenRequest(QString)),
                      &w, SLOT(openFile(QString)));
 #endif
+
+    PROGRESS progress(QStringLiteral("Loading Tilesets"), &w);
+    TileMetaInfoMgr::instance()->loadTilesets(true);
+    TilesetManager::instance()->waitForTilesets();
+    progress.release();
 
     w.openLastFiles();
 

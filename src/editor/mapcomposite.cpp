@@ -107,6 +107,11 @@ CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
 
 }
 
+CompositeLayerGroup::~CompositeLayerGroup()
+{
+    int dbg = 1;
+}
+
 void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 {
 #ifndef WORLDED
@@ -193,7 +198,7 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
     mPreparedSubMapLayers.resize(0);
     if (mAnyVisibleLayers == false)
         return;
-    for (const SubMapLayers &subMapLayer : mVisibleSubMapLayers) {
+    for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
         CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
         if (subMapLayer.mSubMap->isHiddenDuringDrag())
             continue;
@@ -458,6 +463,77 @@ void CompositeLayerGroup::prepareDrawingNoBmpBlender(const MapRenderer *renderer
             layerGroup->prepareDrawingNoBmpBlender(renderer, rect);
         }
     }
+}
+
+bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer> &cells) const
+{
+    MapComposite *root = mOwner->root();
+    if (root == mOwner)
+        root->mKeepFloorLayerCount = 0;
+
+    QVector<TilePlusLayer> aboveLotCells;
+
+    bool cleared = false;
+    int index = -1;
+    for (TileLayer *tl : mLayers) {
+        ++index;
+        TileLayer *tlBmpBlend = mBmpBlendLayers[index];
+        MapNoBlend *noBlend = mNoBlends[index];
+        QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
+        if (tl->contains(subPos)) {
+#if WORLDED // ROAD_CRUD
+            if (tl == mRoadLayer0 || tl == mRoadLayer1) {
+                const Cell *cell = (tl == mRoadLayer0)
+                        ? &mOwner->roadLayer0()->cellAt(subPos)
+                        : &mOwner->roadLayer1()->cellAt(subPos);
+                if (!cell->isEmpty()) {
+                    if (!cleared) {
+                        bool isFloor = !mLevel && !index && (tl->name() == sFloor);
+                        if (isFloor) root->mKeepFloorLayerCount = 0;
+                        cells.resize(root->mKeepFloorLayerCount);
+                        cleared = true;
+                    }
+                    cells.append(TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
+                    if (mMaxFloorLayer >= index)
+                        mOwner->mKeepFloorLayerCount = cells.size();
+                    continue;
+                }
+            }
+#endif // ROAD_CRUD
+            const Cell *cell = &tl->cellAt(subPos);
+            if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty()) {
+                if (!noBlend || !noBlend->get(subPos)) {
+                    cell = &tlBmpBlend->cellAt(subPos);
+                }
+            }
+            if (!cell->isEmpty() && (root == mOwner) && tl->name().contains(sAboveLot)) {
+                aboveLotCells += TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]);
+                continue;
+            }
+            if (!cell->isEmpty()) {
+                if (!cleared) {
+                    bool isFloor = !mLevel && !index && (tl->name() == sFloor);
+                    if (isFloor) root->mKeepFloorLayerCount = 0;
+                    cells.resize(root->mKeepFloorLayerCount);
+                    cleared = true;
+                }
+                cells.append(TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
+                if (mMaxFloorLayer >= index)
+                    mOwner->mKeepFloorLayerCount = cells.size();
+            }
+        }
+    }
+
+    // Overwrite map cells with sub-map cells at this location
+    for (const SubMapLayers& subMapLayer : mPreparedSubMapLayers) {
+        if (!subMapLayer.mBounds.contains(pos))
+            continue;
+        subMapLayer.mLayerGroup->orderedCellsAt3(pos - subMapLayer.mSubMap->origin(), cells);
+    }
+
+    cells += aboveLotCells;
+
+    return !cells.isEmpty();
 }
 
 bool CompositeLayerGroup::isLayerEmpty(int index) const
@@ -777,6 +853,12 @@ bool CompositeLayerGroup::setLayerOpacity(TileLayer *tl, qreal opacity)
     return false;
 }
 
+qreal CompositeLayerGroup::layerOpacity(Tiled::TileLayer *tl) const
+{
+    int index = mLayers.indexOf(tl);
+    return (index == -1) ? 1.0f : mLayerOpacity[index];
+}
+
 void CompositeLayerGroup::synchSubMapLayerOpacity(const QString &layerName, qreal opacity)
 {
     foreach (MapComposite *subMap, mOwner->subMaps()) {
@@ -1057,6 +1139,8 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
         mc = mc->mParent;
     }
 
+    mChangeCount++;
+
     return subMap;
 }
 
@@ -1068,6 +1152,8 @@ void MapComposite::removeMap(MapComposite *subMap)
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->setNeedsSynch(true);
+
+    mChangeCount++;
 }
 
 void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
@@ -1077,6 +1163,8 @@ void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
         layerGroup->setNeedsSynch(true);
+
+    mChangeCount++;
 }
 
 void MapComposite::sortSubMaps(const QVector<MapComposite *> &order)
@@ -1442,6 +1530,7 @@ bool MapComposite::mapChanged(MapInfo *mapInfo)
 {
     if (mapInfo == mMapInfo) {
         recreate();
+        mChangeCount++;
         return true;
     }
 
@@ -1489,8 +1578,10 @@ QList<Tileset *> MapComposite::usedTilesets()
 void MapComposite::synch()
 {
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
-        if (layerGroup->needsSynch())
+        if (layerGroup->needsSynch()) {
             layerGroup->synch();
+            mChangeCount++;
+        }
     }
 }
 
@@ -1728,6 +1819,7 @@ void MapComposite::mapLoaded(MapInfo *mapInfo)
             mc = mc->mParent;
         }
 #endif
+        mChangeCount++;
         emit needsSynch();
     }
 }
