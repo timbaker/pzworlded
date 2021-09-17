@@ -688,13 +688,15 @@ void MainWindow::openFile()
             QFileDialog::getOpenFileNames(this, tr("Open World"),
                                           Preferences::instance()->openFileDirectory(),
                                           filter, &selectedFilter);
-    if (fileNames.isEmpty())
+    if (fileNames.isEmpty()) {
         return;
+    }
 
     Preferences::instance()->setOpenFileDirectory(QFileInfo(fileNames[0]).absolutePath());
 
-    foreach (const QString &fileName, fileNames)
+    foreach (const QString &fileName, fileNames) {
         openFile(fileName/*, mapReader*/);
+    }
 }
 
 bool MainWindow::openFile(const QString &fileName)
@@ -1237,7 +1239,7 @@ WorldDocument *MainWindow::currentWorldDocument()
             return cellDoc->worldDocument();
         return mCurrentDocument->asWorldDocument();
     }
-    return 0;
+    return nullptr;
 }
 
 bool MainWindow::saveFile()
@@ -1760,8 +1762,10 @@ void MainWindow::extractObjects()
                 height = qMax(MIN_OBJECT_SIZE, qreal(height));
 
                 // Adjust for map orientation
-                if (map->orientation() == Map::Isometric)
-                    x += 3 * og->level(), y += 3 * og->level();
+                if (map->orientation() == Map::Isometric) {
+                    x += 3 * og->level();
+                    y += 3 * og->level();
+                }
 
                 WorldCellObject *obj = new WorldCellObject(cell, o->type(),
                                                            type, group, x, y,
@@ -1778,7 +1782,7 @@ void MainWindow::extractObjects()
 void MainWindow::clearCells()
 {
     Q_ASSERT(mCurrentDocument);
-    WorldDocument *worldDoc = 0;
+    WorldDocument *worldDoc = nullptr;
     QList<WorldCell*> cells;
     if ((worldDoc = mCurrentDocument->asWorldDocument())) {
         Q_ASSERT(worldDoc->selectedCellCount());
@@ -1801,7 +1805,7 @@ void MainWindow::clearCells()
 void MainWindow::clearMapOnly()
 {
     Q_ASSERT(mCurrentDocument);
-    WorldDocument *worldDoc = 0;
+    WorldDocument *worldDoc = nullptr;
     QList<WorldCell*> cells;
     if ((worldDoc = mCurrentDocument->asWorldDocument())) {
         Q_ASSERT(worldDoc->selectedCellCount());

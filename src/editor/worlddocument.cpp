@@ -548,7 +548,8 @@ void WorldDocument::addTemplate(const QString &name, const QString &desc)
 {
     int index = mWorld->propertyTemplates().size();
     PropertyTemplate *pt = new PropertyTemplate;
-    pt->mName = name, pt->mDescription = desc;
+    pt->mName = name;
+    pt->mDescription = desc;
     undoStack()->push(new AddTemplateToWorld(this, index, pt));
 }
 
