@@ -272,7 +272,6 @@ void CellMiniMapItem::mapImageChanged(MapImage *mapImage)
 
 /////
 
-
 TilesetTexturesPerContext::~TilesetTexturesPerContext()
 {
     if (mContext != nullptr) {
@@ -400,13 +399,17 @@ TilesetTexture *TilesetTextures::get(const QString& tilesetName, const QList<Til
             Q_ASSERT(context->functions()->glGetError() == 0);
             context->functions()->glBindTexture(GL_TEXTURE_2D, texture->mID);
             Q_ASSERT(context->functions()->glGetError() == 0);
-            context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            bool mipmap = false; // would need Zac's alpha-padding magic for this to look ok
+            context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST);
             context->functions()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 //            GLint swizzleMask[] = {GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA}; // FIXME: red/blue swapped
 //            context->functions()->glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
             context->functions()->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
             context->functions()->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tileset->image().width(), tileset->image().height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
             Q_ASSERT(context->functions()->glGetError() == 0);
+            if (mipmap) {
+                context->functions()->glGenerateMipmap(GL_TEXTURE_2D);
+            }
             context->functions()->glBindTexture(GL_TEXTURE_2D, 0);
             Q_ASSERT(context->functions()->glGetError() == 0);
             qDebug() << "TilesetTextures CREATE" << tilesetName << image << image.format() << " id=" << texture->mID;
@@ -505,12 +508,24 @@ LayerGroupVBO::~LayerGroupVBO()
     if (mCreated == false) {
         qDeleteAll(mTiles);
         mTiles.fill(nullptr);
+        for (int i = 0; i < 8; i++) {
+            if (mMapCompositeVBO->mLayerVBOs[i] == this) {
+                mMapCompositeVBO->mLayerVBOs[i] = nullptr;
+                break;
+            }
+        }
         return;
     }
     if (mContext != nullptr) {
         if (mContext->makeCurrent(mContext->surface())) {
             qDeleteAll(mTiles);
             mTiles.fill(nullptr);
+            for (int i = 0; i < 8; i++) {
+                if (mMapCompositeVBO->mLayerVBOs[i] == this) {
+                    mMapCompositeVBO->mLayerVBOs[i] = nullptr;
+                    break;
+                }
+            }
             return;
         }
     }
@@ -525,7 +540,7 @@ void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const
 
     painter->beginNativePainting();
 
-    if (mCreated == false) {
+    if (mCreated == false || mContext != QOpenGLContext::currentContext()) {
         initializeOpenGLFunctions();
     }
 
@@ -771,6 +786,11 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         qreal opacity = 1.0f;
         glColor4f(1.f, 1.f, 1.f, opacity);
 
+        MapComposite *mapComposite = mLayerGroup->owner();
+        QRegion suppressRgn;
+        if (mapComposite->levelRecursive() + mLayerGroup->level() == mapComposite->root()->suppressLevel())
+            suppressRgn = mapComposite->root()->suppressRegion();
+
         QList<QPoint> squares;
         getSquaresInRect(renderer, exposedRect, squares);
         {
@@ -801,6 +821,8 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                     if (tileFirst[x + y * VBO_SQUARES] == -1)
                         continue;
                     for (int i = tileFirst[x+y*VBO_SQUARES], n = i + tileCount[x+y*VBO_SQUARES]; i < n; i++) {
+                        if ((i > tileFirst[x+y*VBO_SQUARES]) && suppressRgn.contains(square))
+                            continue;
                         GLuint start = i * 4;
                         GLuint end = start + 4 - 1;
                         GLuint count = 4;
@@ -856,7 +878,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
-    {
+    if (false) {
         glDisable(GL_TEXTURE_2D);
 
         glLineWidth(10.0f);
@@ -1244,43 +1266,44 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
     }
 #endif
 
-#if 1
-    QRect exposed = option->exposedRect.toAlignedRect();
- exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
-    if (exposed.isNull())
-        exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
-    mLayerGroup->prepareDrawing(mRenderer, exposed);
+    if (Preferences::instance()->useOpenGL()) {
+        QRect exposed = option->exposedRect.toAlignedRect();
+exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
+        if (exposed.isNull())
+            exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
+        mLayerGroup->prepareDrawing(mRenderer, exposed);
 
-    for (int y = 0; y < 3; y++) {
-        for (int x = 0; x < 3; x++) {
-            // FIXME: can these MapComposites be recreated?
-            MapComposite *mc = (x == 1 && y == 1) ? layerGroup()->owner() : layerGroup()->owner()->adjacentMap(x - 1, y - 1);
-            if (mc == nullptr)
-                continue;
-            MapCompositeVBO *mcVBO = mScene->mapCompositeVBO(x + y * 3);
-            if (mVBO[x + y * 3] == nullptr) {
-                mcVBO->mMapComposite = mc;
-                mcVBO->mBounds = QRect((x - 1) * 300, (y - 1) * 300, 300, 300);
-//                if (mcVBO->mScene == nullptr)
-                    mcVBO->mScene = mScene;
-                mVBO[x + y * 3] = mcVBO->getLayerVBO(this);
-            }
-
-            mcVBO->mUsedTilesets = mc->usedTilesets();
-            mcVBO->mLayerNameToIndex.clear();
-            if (CompositeLayerGroup *rootLayerGroup = mc->root()->layerGroupForLevel(mLayerGroup->level())) {
-                for (int i = 0; i < rootLayerGroup->layerCount(); i++) {
-                    TileLayer *layer = rootLayerGroup->layers()[i];
-                    mcVBO->mLayerNameToIndex[layer->name()] = i;
+        for (int y = 0; y < 3; y++) {
+            for (int x = 0; x < 3; x++) {
+                // FIXME: can these MapComposites be recreated?
+                MapComposite *mc = (x == 1 && y == 1) ? layerGroup()->owner() : layerGroup()->owner()->adjacentMap(x - 1, y - 1);
+                if (mc == nullptr)
+                    continue;
+                MapCompositeVBO *mcVBO = mScene->mapCompositeVBO(x + y * 3);
+                if (mVBO[x + y * 3] == nullptr) {
+                    mcVBO->mMapComposite = mc;
+                    mcVBO->mBounds = QRect((x - 1) * 300, (y - 1) * 300, 300, 300);
+    //                if (mcVBO->mScene == nullptr)
+                        mcVBO->mScene = mScene;
+                    mVBO[x + y * 3] = mcVBO->getLayerVBO(this);
                 }
-            }
 
-            mVBO[x + y * 3]->paint(p, mRenderer, option->exposedRect);
+                mcVBO->mUsedTilesets = mc->usedTilesets();
+                mcVBO->mLayerNameToIndex.clear();
+                if (CompositeLayerGroup *rootLayerGroup = mc->root()->layerGroupForLevel(mLayerGroup->level())) {
+                    for (int i = 0; i < rootLayerGroup->layerCount(); i++) {
+                        TileLayer *layer = rootLayerGroup->layers()[i];
+                        mcVBO->mLayerNameToIndex[layer->name()] = i;
+                    }
+                }
+
+                mVBO[x + y * 3]->paint(p, mRenderer, option->exposedRect);
+            }
         }
+    } else {
+        mLayerGroup->prepareDrawing(mRenderer, option->exposedRect.toAlignedRect());
+        mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
     }
-#else
-    mRenderer->drawTileLayerGroup(p, mLayerGroup, option->exposedRect);
-#endif
 
 #ifdef _DEBUG
     p->drawRect(mBoundingRect);
@@ -1292,39 +1315,6 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
     }
 #endif
 }
-
-#if 0
-#include "cellview.h"
-#include "zoomable.h"
-QImage CompositeLayerGroupItem::createZoomedOutImage(MapRenderer *renderer)
-{
-    auto scene = static_cast<CellScene*>(this->scene());
-    auto view = static_cast<CellView*>(scene->views().first());
-    qreal zoom = view->zoomable()->scale();
-    if (zoom > 0.12)
-        return QImage();
-
-    QRect sceneRect = mLayerGroup->boundingRect(renderer).toAlignedRect();
-    QSize size = sceneRect.size() * zoom;
-
-    QImage *destImage = zoom == 0.12 ? &mZoomedOutImage12 : &mZoomedOutImage6;
-
-    if (size != destImage->size()) {
-        QImage newImage(size, QImage::Format_RGBA8888);
-        newImage.fill(Qt::transparent);
-        QPainter painter(&newImage);
-
-        painter.setRenderHints(QPainter::SmoothPixmapTransform |
-                               QPainter::HighQualityAntialiasing);
-        painter.setTransform(QTransform::fromScale(zoom, zoom).translate(-sceneRect.left(), -sceneRect.top()));
-
-        renderer->drawTileLayerGroup(&painter, mLayerGroup);
-        painter.end();
-        *destImage = newImage;
-    }
-    return *destImage;
-}
-#endif
 
 /////
 
@@ -2292,6 +2282,7 @@ void CellScene::setDocument(CellDocument *doc)
     connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
     connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
     connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)), SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotReordered, this, &CellScene::cellLotReordered);
     connect(mDocument, SIGNAL(selectedLotsChanged()), SLOT(selectedLotsChanged()));
 
     connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
@@ -2414,7 +2405,7 @@ ObjectItem *CellScene::itemForObject(WorldCellObject *obj)
         if (item->object() == obj)
             return item;
     }
-    return 0;
+    return nullptr;
 }
 
 InGameMapFeatureItem *CellScene::itemForInGameMapFeature(InGameMapFeature *feature)
@@ -2823,36 +2814,10 @@ void CellScene::cellLotAdded(WorldCell *_cell, int index)
             subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
         }
         if (subMapInfo) {
-#if 1
             mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            if (!subMapInfo->isLoading())
+            if (!subMapInfo->isLoading()) {
                 mapLoaded(subMapInfo);
-#else
-            if (subMapInfo->isLoading())
-                mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            else {
-                MapComposite *subMap = mMapComposite->addMap(subMapInfo, lot->pos(), lot->level());
-                SubMapItem *item = new SubMapItem(subMap, lot, mRenderer);
-                mMapBuildingsInvalid = true;
-
-                // Don't just call mSubMapItems.insert(), due to asynchronous loading.
-                QMap<int,SubMapItem*> zzz;
-                foreach (SubMapItem *item, mSubMapItems)
-                    zzz[cell()->lots().indexOf(item->lot())] = item;
-                zzz[index] = item;
-                mSubMapItems = zzz.values();
-
-                // Update with most recent information
-                lot->setMapName(subMapInfo->path());
-                lot->setWidth(subMapInfo->width());
-                lot->setHeight(subMapInfo->height());
-
-                // Schedule update *before* addItem() schedules its update.
-                doLater(AllGroups | Bounds | Synch | ZOrder);
-
-                addItem(item);
             }
-#endif
         }
     }
 }
@@ -3095,6 +3060,10 @@ void CellScene::cellObjectReordered(WorldCellObject *obj)
 {
     if (obj->cell() != cell())
         return;
+    if (ObjectItem *item = itemForObject(obj)) {
+        mObjectItems.removeAll(item);
+        mObjectItems.insert(cell()->indexOf(obj), item);
+    }
     doLater(ZOrder);
 }
 
@@ -3219,6 +3188,14 @@ void CellScene::selectedLotsChanged()
     mSelectedSubMapItems = items;
 
     // TODO: Select a layer in the level that this object is on
+}
+
+void CellScene::cellLotReordered(WorldCellLot *lot)
+{
+    if (lot->cell() != cell())
+        return;
+    sortSubMaps();
+    doLater(AllGroups | Bounds | Synch | ZOrder);
 }
 
 void CellScene::setGridVisible(bool visible)
@@ -3522,6 +3499,22 @@ void CellScene::synchAdjacentMapObjectItemVisibility()
     }
 }
 
+void CellScene::sortSubMaps()
+{
+    QMap<int,SubMapItem*> zzz;
+    for (SubMapItem *item : mSubMapItems) {
+        int index = cell()->indexOf(item->lot());
+        zzz[index] = item;
+    }
+    mSubMapItems = zzz.values();
+
+    QVector<MapComposite*> orderedMaps;
+    for (SubMapItem *item : mSubMapItems) {
+        orderedMaps += item->subMap();
+    }
+    mMapComposite->sortSubMaps(orderedMaps);
+}
+
 void CellScene::tilesetChanged(Tileset *tileset)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
@@ -3767,10 +3760,18 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
             // Don't just call mSubMapItems.insert(), due to asynchronous loading.
             QMap<int,SubMapItem*> zzz;
-            foreach (SubMapItem *item, mSubMapItems)
-                zzz[cell()->lots().indexOf(item->lot())] = item;
-            zzz[cell()->lots().indexOf(sm.lot)] = item;
+            for (SubMapItem *item : mSubMapItems) {
+                int index = cell()->indexOf(item->lot());
+                zzz[index] = item;
+            }
+            zzz[cell()->indexOf(sm.lot)] = item;
             mSubMapItems = zzz.values();
+
+            QVector<MapComposite*> orderedMaps;
+            for (SubMapItem *item : mSubMapItems) {
+                orderedMaps += item->subMap();
+            }
+            mMapComposite->sortSubMaps(orderedMaps);
 
             // Update with most-recent information
             sm.lot->setMapName(sm.mapInfo->path());
@@ -3808,10 +3809,9 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     QObject(scene), // DELETE WITH SCENE
     mScene(scene),
     mCell(cell),
-    mMapComposite(0),
-    mMapInfo(0),
-    mObjectItemParent(new QGraphicsItemGroup),
-    mInGameMapFeatureParent(new QGraphicsItemGroup)
+    mMapComposite(nullptr),
+    mMapInfo(nullptr),
+    mObjectItemParent(new QGraphicsItemGroup)
 {
     mScene->addItem(mObjectItemParent);
     mScene->addItem(mInGameMapFeatureParent);
@@ -3829,6 +3829,8 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
             SLOT(cellLotMoved(WorldCellLot*)));
     connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)),
             SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotReordered,
+            this, &AdjacentMap::cellLotReordered);
 
     connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
     connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
@@ -3972,6 +3974,13 @@ void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
 
         scene()->mapCompositeNeedsSynch();
     }
+}
+
+void AdjacentMap::cellLotReordered(WorldCellLot *lot)
+{
+    if (lot->cell() != cell())
+        return;
+
 }
 
 void AdjacentMap::cellObjectAdded(WorldCell *cell, int index)
@@ -4181,8 +4190,16 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
             if (mMapComposite) {
                 MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, sm.lot->pos(),
                                                              sm.lot->level());
-
                 mLotToMC[sm.lot] = subMap;
+
+                QVector<MapComposite*> orderedMaps;
+                for (WorldCellLot *lot : cell()->lots()) {
+                    if (mLotToMC.contains(lot)) {
+                        orderedMaps += mLotToMC[lot];
+                    }
+                }
+                mMapComposite->sortSubMaps(orderedMaps);
+
                 scene()->mapCompositeNeedsSynch();
                 scene()->update(lotSceneBounds(sm.lot));
             }

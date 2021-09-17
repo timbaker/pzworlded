@@ -108,7 +108,7 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
 {
     // x and y are scene coordinates
     // Perform per-pixel hit detection
-    Tile *tile = 0;
+    Tile *tile = nullptr;
 
     for (int level = 0; level < mBuilding->floorCount(); level++) {
         if (!visibleLevels[level]) continue;
@@ -138,11 +138,11 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                         QRect imageBox(test->offset(), test->image().size());
                         QPoint p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, test->height()));
                         // Handle double-size tiles
-                        if (tileBox.width() == test->width() * 2) {
+                        if (qRound(tileBox.width()) == test->width() * 2) {
                             p = QPoint(x, y) - (tileBox.bottomLeft().toPoint() - QPoint(0, test->height() * 2));
                             p.rx() /= 2;
                             p.ry() /= 2;
-                        } else if (tileBox.width() == test->width() / 2) {
+                        } else if (qRound(tileBox.width()) == test->width() / 2) {
 
                         }
                         // Hit test a small box around the cursor?
@@ -200,7 +200,7 @@ static const char *gLayerNames[] = {
     "Roof",
     "Roof2",
     "RoofTop",
-    0
+    nullptr
 };
 
 QStringList BuildingMap::layerNames(int level)
@@ -223,7 +223,7 @@ void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object)
         if (mCursorObjectFloor->floorAbove())
             pendingLayoutToSquares.insert(mCursorObjectFloor->floorAbove());
         schedulePending();
-        mCursorObjectFloor = 0;
+        mCursorObjectFloor = nullptr;
     }
 
     if (mShadowBuilding->setCursorObject(floor, object)) {
@@ -231,7 +231,7 @@ void BuildingMap::setCursorObject(BuildingFloor *floor, BuildingObject *object)
         if (floor && floor->floorAbove())
             pendingLayoutToSquares.insert(floor->floorAbove());
         schedulePending();
-        mCursorObjectFloor = object ? floor : 0;
+        mCursorObjectFloor = object ? floor : nullptr;
     }
 }
 
@@ -468,7 +468,7 @@ void BuildingMap::BuildingToMap()
     if (mShadowBuilding)
         delete mShadowBuilding;
     mShadowBuilding = new ShadowBuilding(mBuilding);
-    mCursorObjectFloor = 0;
+    mCursorObjectFloor = nullptr;
 
     Map::Orientation orient = static_cast<Map::Orientation>(defaultOrientation());
 
@@ -610,7 +610,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
                                    const QRect &bounds)
 {
     CompositeLayerGroup *layerGroup = mMapComposite->layerGroupForLevel(floor->level());
-    TileLayer *layer = 0;
+    TileLayer *layer = nullptr;
     foreach (TileLayer *tl, layerGroup->layers()) {
         if (layerName == MapComposite::layerNameWithoutPrefix(tl)) {
             layer = tl;
@@ -641,7 +641,7 @@ void BuildingMap::userTilesToLayer(BuildingFloor *floor,
                 continue;
             }
             QString tileName = shadowFloor->grimeAt(layerName, x, y);
-            Tile *tile = 0;
+            Tile *tile = nullptr;
             if (!tileName.isEmpty()) {
                 tile = TilesetManager::instance()->missingTile();
                 QString tilesetName;
@@ -1099,7 +1099,7 @@ public:
 
 ShadowBuilding::ShadowBuilding(const Building *building) :
     mBuilding(building),
-    mCursorObjectModifier(0)
+    mCursorObjectModifier(nullptr)
 {
     mShadowBuilding = new Building(mBuilding->width(), mBuilding->height());
     mShadowBuilding->setTiles(mBuilding->tiles());
@@ -1180,7 +1180,7 @@ void ShadowBuilding::objectAdded(BuildingObject *object)
     foreach (BuildingModifier *bmod, mModifiers) {
         if (AddObjectModifier *mod = dynamic_cast<AddObjectModifier*>(bmod)) {
             if (mod->mObject == object) {
-                mod->mObject = 0;
+                mod->mObject = nullptr;
             }
         }
     }
@@ -1298,7 +1298,7 @@ bool ShadowBuilding::setCursorObject(BuildingFloor *floor, BuildingObject *objec
     if (!object) {
         if (mCursorObjectModifier) {
             delete mCursorObjectModifier;
-            mCursorObjectModifier = 0;
+            mCursorObjectModifier = nullptr;
             return true;
         }
         return false;
@@ -1326,7 +1326,7 @@ bool ShadowBuilding::setCursorObject(BuildingFloor *floor, BuildingObject *objec
 
 void ShadowBuilding::dragObject(BuildingFloor *floor, BuildingObject *object, const QPoint &offset)
 {
-    if (object->floor() == 0) {
+    if (object->floor() == nullptr) {
         foreach (BuildingModifier *bmod, mModifiers) {
             if (AddObjectModifier *mod = dynamic_cast<AddObjectModifier*>(bmod)) {
                 if (mod->mObject == object) {

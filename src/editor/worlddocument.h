@@ -102,6 +102,7 @@ public:
     WorldCellLot *removeCellLot(WorldCell *cell, int index);
     QPoint moveCellLot(WorldCellLot *lot, const QPoint &pos);
     int setLotLevel(WorldCellLot *lot, int level);
+    int reorderCellLot(WorldCellLot *lot, int index);
 
     void addCellObject(WorldCell *cell, int index, WorldCellObject *obj);
     WorldCellObject *removeCellObject(WorldCell *cell, int index);
@@ -196,6 +197,7 @@ signals:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
     void lotLevelChanged(WorldCellLot *lot);
+    void cellLotReordered(WorldCellLot *lot);
 
     void cellObjectAdded(WorldCell *cell, int index);
     void cellObjectAboutToBeRemoved(WorldCell *cell, int index);
@@ -290,6 +292,7 @@ public:
     void removeCellLot(WorldCell *cell, int index);
     void moveCellLot(WorldCellLot *lot, const QPoint &pos);
     void setLotLevel(WorldCellLot *lot, int level);
+    void reorderCellLot(WorldCellLot *lot, WorldCellLot *insertBefore);
 
     void addCellObject(WorldCell *cell, int index, WorldCellObject *obj);
     void removeCellObject(WorldCell *cell, int index);
@@ -478,6 +481,7 @@ signals:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
     void lotLevelChanged(WorldCellLot *lot);
+    void cellLotReordered(WorldCellLot *object);
 
     void cellObjectAdded(WorldCell* cell, int index);
     void cellObjectAboutToBeRemoved(WorldCell *cell, int index);

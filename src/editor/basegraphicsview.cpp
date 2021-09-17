@@ -385,6 +385,8 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     , mSmallerButton(new QToolButton(mButtons))
 {
     setFrameStyle(NoFrame);
+    setMinimumWidth(20);
+    setMinimumHeight(20);
 
     // For the smaller/bigger buttons
     setMouseTracking(true);

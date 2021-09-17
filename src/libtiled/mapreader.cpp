@@ -956,6 +956,11 @@ void MapReaderPrivate::readBmpSettings()
                 mMap->rbmpSettings()->setBlendsFile(fileName);
             }
             xml.skipCurrentElement();
+        } else if (xml.name() == QLatin1Literal("edges-everywhere")) {
+            const QXmlStreamAttributes atts = xml.attributes();
+            bool everywhere = atts.value(QLatin1Literal("value")).toString() == QLatin1Literal("true");
+            mMap->rbmpSettings()->setBlendEdgesEverywhere(everywhere);
+            xml.skipCurrentElement();
         } else if (xml.name() == QLatin1String("aliases")) {
             readBmpAliases();
         } else if (xml.name() == QLatin1String("rules")) {

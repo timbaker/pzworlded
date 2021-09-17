@@ -408,6 +408,7 @@ QString BmpBlend::dirAsString() const
 /////
 
 BmpSettings::BmpSettings()
+    : mBlendEdgesEverywhere(false)
 {
 }
 
@@ -467,6 +468,7 @@ void BmpSettings::clone(const BmpSettings &other)
     mAliases = other.aliasesCopy();
     mRules = other.rulesCopy();
     mBlends = other.blendsCopy();
+    mBlendEdgesEverywhere = other.mBlendEdgesEverywhere;
 }
 
 /////

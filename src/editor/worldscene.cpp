@@ -189,6 +189,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 
     foreach (WorldBMP *bmp, world()->bmps()) {
         WorldBMPItem *item = new WorldBMPItem(this, bmp);
+        item->setVisible(prefs->showBMPs());
         addItem(item);
         mBMPItems += item;
     }

@@ -158,6 +158,24 @@ private:
 
 /////
 
+class ReorderCellLot : public QUndoCommand
+{
+public:
+    ReorderCellLot(WorldDocument *doc, WorldCellLot *lot, int newIndex);
+
+    void undo() { swap(); }
+    void redo() { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCellLot *mLot;
+    int mIndex;
+};
+
+/////
+
 class SetLotLevel : public QUndoCommand
 {
 public:

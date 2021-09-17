@@ -24,6 +24,7 @@
 #include "preferences.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
+#include "progress.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 using namespace Tiled;
@@ -59,6 +60,11 @@ int main(int argc, char *argv[])
     QObject::connect(&a, SIGNAL(fileOpenRequest(QString)),
                      &w, SLOT(openFile(QString)));
 #endif
+
+    PROGRESS progress(QStringLiteral("Loading Tilesets"), &w);
+    TileMetaInfoMgr::instance()->loadTilesets(true);
+    TilesetManager::instance()->waitForTilesets();
+    progress.release();
 
     w.openLastFiles();
 

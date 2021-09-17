@@ -84,10 +84,10 @@ public:
     { return keyValue(QLatin1String(name), kv); }
     bool keyValue(const QString &name, SimpleFileKeyValue &kv);
 
-    QString value(const char *key)
+    QString value(const char *key) const
     { return value(QLatin1String(key)); }
 
-    QString value(const QString &key);
+    QString value(const QString &key) const;
 
     void addValue(const char *key, const QString &value)
     { addValue(QLatin1String(key), value); }

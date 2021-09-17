@@ -153,7 +153,7 @@ QString Preferences::appConfigPath() const
 #ifdef Q_OS_WIN
     return QCoreApplication::applicationDirPath();
 #elif defined(Q_OS_UNIX)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../share/tilezed/config");
+    return QCoreApplication::applicationDirPath() + QLatin1String("/../../TileZed/share/tilezed/config");
 #elif defined(Q_OS_MAC)
     return QCoreApplication::applicationDirPath() + QLatin1String("/../Config");
 #else

@@ -68,6 +68,7 @@ SOURCES += main.cpp\
     mapbox/mapboxglwidget.cpp \
     mapbox/mapboxwindow.cpp \
     mapbox/worldcellingamemap.cpp \
+    tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
     world.cpp \
@@ -175,6 +176,7 @@ HEADERS  += mainwindow.h \
     mapbox/mapboxglwidget.h \
     mapbox/mapboxwindow.h \
     mapbox/worldcellingamemap.h \
+    tilesetstxtfile.h \
     worldview.h \
     worldscene.h \
     world.h \

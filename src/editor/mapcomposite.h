@@ -84,6 +84,7 @@ class CompositeLayerGroup : public Tiled::ZTileLayerGroup
 {
 public:
     CompositeLayerGroup(MapComposite *owner, int level);
+    ~CompositeLayerGroup();
 
     void addTileLayer(Tiled::TileLayer *layer, int index);
     void removeTileLayer(Tiled::TileLayer *layer);
@@ -99,6 +100,8 @@ public:
 
     void prepareDrawing2();
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
+
+    void prepareDrawingNoBmpBlender(const Tiled::MapRenderer *renderer, const QRect &rect);
 
     bool orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer>& cells) const;
 
@@ -182,8 +185,8 @@ private:
     struct SubMapLayers
     {
         SubMapLayers()
-            : mSubMap(0)
-            , mLayerGroup(0)
+            : mSubMap(nullptr)
+            , mLayerGroup(nullptr)
         {
         }
         SubMapLayers(MapComposite *subMap, CompositeLayerGroup *layerGroup);
@@ -203,7 +206,7 @@ private:
     QVector<Tiled::TileLayer*> mBlendOverLayers;
     struct ToolLayer
     {
-        ToolLayer() : mLayer(0), mPos(QPoint()), mRegion(QRegion()) {}
+        ToolLayer() : mLayer(nullptr), mPos(QPoint()), mRegion(QRegion()) {}
         const Tiled::TileLayer *mLayer;
         QPoint mPos;
         QRegion mRegion;
@@ -231,12 +234,12 @@ class MapComposite : public QObject
     Q_OBJECT
 public:
     MapComposite(MapInfo *mapInfo, Tiled::Map::Orientation orientRender = Tiled::Map::Unknown,
-                 MapComposite *parent = 0, const QPoint &positionInParent = QPoint(),
+                 MapComposite *parent = nullptr, const QPoint &positionInParent = QPoint(),
                  int levelOffset = 0);
     ~MapComposite();
 
-    static bool levelForLayer(const QString &layerName, int *levelPtr = 0);
-    static bool levelForLayer(Tiled::Layer *layer, int *levelPtr = 0);
+    static bool levelForLayer(const QString &layerName, int *levelPtr = nullptr);
+    static bool levelForLayer(Tiled::Layer *layer, int *levelPtr = nullptr);
     static QString layerNameWithoutPrefix(const QString &name);
     static QString layerNameWithoutPrefix(Tiled::Layer *layer);
 
@@ -244,6 +247,8 @@ public:
                          bool creating = false);
     void removeMap(MapComposite *subMap);
     void moveSubMap(MapComposite *subMap, const QPoint &pos);
+
+    void sortSubMaps(const QVector<MapComposite *> &order);
 
     Tiled::Map *map() const { return mMap; }
     MapInfo *mapInfo() const { return mMapInfo; }
@@ -308,9 +313,9 @@ public:
     struct ZOrderItem
     {
         ZOrderItem(CompositeLayerGroup *group)
-            : layer(0), layerIndex(-1), group(group) {}
+            : layer(nullptr), layerIndex(-1), group(group) {}
         ZOrderItem(Tiled::Layer *layer, int layerIndex)
-            : layer(layer), layerIndex(layerIndex), group(0) {}
+            : layer(layer), layerIndex(layerIndex), group(nullptr) {}
         Tiled::Layer *layer;
         int layerIndex;
         CompositeLayerGroup *group;

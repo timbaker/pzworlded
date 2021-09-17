@@ -21,6 +21,7 @@
 #include "preferences.h"
 #include "simplefile.h"
 #include "tilesetmanager.h"
+#include "tilesetstxtfile.h"
 
 #include "tile.h"
 #include "tileset.h"
@@ -126,9 +127,149 @@ QString TileMetaInfoMgr::txtPath()
     return Preferences::instance()->configPath(txtName());
 }
 
-#define VERSION0 0
-#define VERSION_LATEST VERSION0
+#if 1
+bool TileMetaInfoMgr::readTxt()
+{
+#ifdef WORLDEDxxx
+    // Make sure the user has chosen the Tiles directory.
+    QString tilesDirectory = this->tilesDirectory();
+    QDir dir(tilesDirectory);
+    if (tilesDirectory.isEmpty() || !dir.exists()) {
+        mError = tr("The Tiles directory specified in the preferences doesn't exist!\n%1")
+                .arg(tilesDirectory);
+        return false;
+    }
+#endif
 
+    QFileInfo info(txtPath());
+    if (!info.exists()) {
+        mError = tr("The %1 file doesn't exist.").arg(txtName());
+        return false;
+    }
+
+    if (!upgradeTxt())
+        return false;
+
+    if (!mergeTxt())
+        return false;
+
+    TilesetsTxtFile reader;
+    if (!reader.read(txtPath())) {
+        mError = reader.errorString();
+        return false;
+    }
+
+    if (reader.mVersion != TilesetsTxtFile::VERSION_LATEST) {
+        mError = tr("Expected %1 version %2, got %3")
+                .arg(txtName()).arg(TilesetsTxtFile::VERSION_LATEST).arg(reader.mVersion);
+        return false;
+    }
+
+    mRevision = reader.mRevision;
+    mSourceRevision = reader.mSourceRevision;
+
+    for (const TilesetsTxtFile::MetaEnum& metaEnum : reader.mEnums) {
+        mEnumNames += metaEnum.mName;
+        mEnums.insert(metaEnum.mName, metaEnum.mValue);
+    }
+
+    for (const TilesetsTxtFile::Tileset* fileTileset : reader.mTilesets) {
+        Tileset *tileset = new Tileset(fileTileset->mName, 64, 128);
+
+        // Don't load the tilesets yet because the user might not have
+        // chosen the Tiles directory. The tilesets will be loaded when
+        // other code asks for them or when the Tiles directory is changed.
+        int width = fileTileset->mColumns * 64;
+        int height = fileTileset->mRows * 128;
+        QString tilesetFileName = fileTileset->mFile + QLatin1String(".png");
+        tileset->loadFromNothing(QSize(width, height), tilesetFileName);
+        Tile *missingTile = TilesetManager::instance()->missingTile();
+        for (int i = 0; i < tileset->tileCount(); i++) {
+            tileset->tileAt(i)->setImage(missingTile);
+        }
+        tileset->setMissing(true);
+        addTileset(tileset);
+
+        TilesetMetaInfo *info = new TilesetMetaInfo;
+        for (const TilesetsTxtFile::Tile& fileTile : fileTileset->mTiles) {
+            QString coordString = QString(QLatin1Literal("%1,%2")).arg(fileTile.mX).arg(fileTile.mY);
+            info->mInfo[coordString].mMetaGameEnum = fileTile.mMetaEnum;
+        }
+        mTilesetInfo[fileTileset->mName] = info;
+    }
+
+    for (const QString& enumName : mEnumNames) {
+        if (isEnumWest(enumName) || isEnumNorth(enumName)) {
+            if (mEnums.values().contains(mEnums[enumName] + 1)) {
+                QString enumImplicit = enumName;
+                enumImplicit.replace(
+                            QLatin1Char(isEnumWest(enumName) ? 'W' : 'N'),
+                            QLatin1String(isEnumWest(enumName) ? "E" : "S"));
+                mError = tr("Meta-enum %1=%2 requires an implicit %3=%4 but that value is used by %5=%6.")
+                        .arg(enumName).arg(mEnums[enumName])
+                        .arg(enumImplicit).arg(mEnums[enumName]+1)
+                        .arg(mEnums.key(mEnums[enumName] + 1)).arg(mEnums[enumName] + 1);
+                return false;
+            }
+        }
+    }
+
+    mHasReadTxt = true;
+
+    return true;
+}
+
+bool TileMetaInfoMgr::writeTxt()
+{
+    QList<TilesetsTxtFile::Tileset*> fileTilesets;
+    QList<TilesetsTxtFile::MetaEnum> fileMetaEnums;
+
+    for (const QString& name : mEnumNames) {
+        fileMetaEnums += TilesetsTxtFile::MetaEnum(name, mEnums[name]);
+    }
+
+    QDir tilesDir(tilesDirectory());
+    for (Tiled::Tileset *tileset : tilesets()) {
+        QString relativePath = tilesDir.relativeFilePath(tileset->imageSource());
+        relativePath.truncate(relativePath.length() - 4); // remove .png
+        TilesetsTxtFile::Tileset* fileTileset = new TilesetsTxtFile::Tileset();
+        fileTileset->mName = tileset->name();
+        fileTileset->mFile = relativePath;
+
+        int columns = tileset->columnCount();
+        int rows = tileset->tileCount() / columns;
+        if (tileset->isLoaded()) {
+            columns = tileset->columnCountForWidth(tileset->imageWidth());
+            rows = tileset->imageHeight() / (tileset->imageSource2x().isEmpty() ? 128 : (128 * 2));
+        }
+        fileTileset->mColumns = columns;
+        fileTileset->mRows = rows;
+
+        if (mTilesetInfo.contains(tileset->name())) {
+            QMap<QString,TileMetaInfo> &info = mTilesetInfo[tileset->name()]->mInfo;
+            for (const QString& key : info.keys()) {
+                Q_ASSERT(info[key].mMetaGameEnum.isEmpty() == false);
+                if (info[key].mMetaGameEnum.isEmpty())
+                    continue;
+                TilesetsTxtFile::Tile fileTile;
+                parse2Ints(key, &fileTile.mX, &fileTile.mY);
+                fileTile.mMetaEnum = info[key].mMetaGameEnum;
+                fileTileset->mTiles += fileTile;
+            }
+        }
+
+        fileTilesets += fileTileset;
+    }
+
+    TilesetsTxtFile writer;
+    if (!writer.write(txtPath(), ++mRevision, mSourceRevision, fileTilesets, fileMetaEnums)) {
+        mError = writer.errorString();
+        return false;
+    }
+
+    return true;
+}
+#else
 bool TileMetaInfoMgr::readTxt()
 {
     QFileInfo info(txtPath());
@@ -328,6 +469,7 @@ bool TileMetaInfoMgr::writeTxt()
     }
     return true;
 }
+#endif
 
 bool TileMetaInfoMgr::upgradeTxt()
 {
@@ -336,6 +478,74 @@ bool TileMetaInfoMgr::upgradeTxt()
 
 bool TileMetaInfoMgr::mergeTxt()
 {
+#ifdef WORLDED
+    // There isn't a source Tilesets.txt in WorldEd.
+    return true;
+#endif
+    QString userPath = txtPath();
+
+    QString sourcePath = Preferences::instance()->appConfigPath(txtName());
+
+    TilesetsTxtFile sourceFileX;
+    if (!sourceFileX.read(sourcePath)) {
+        mError = sourceFileX.errorString();
+        return false;
+    }
+
+    TilesetsTxtFile userFileX;
+    if (!userFileX.read(userPath)) {
+        mError = userFileX.errorString();
+        return false;
+    }
+
+    int userSourceRevision = userFileX.mSourceRevision;
+    int sourceRevision = sourceFileX.mRevision;
+    if (sourceRevision == userSourceRevision) {
+        return true;
+    }
+
+    // MERGE HERE
+
+    // Overwrite all user-defined meta-enums.
+    userFileX.mEnums = sourceFileX.mEnums;
+
+    QSet<QString> enumNameSet;
+    for (auto& metaEnum : userFileX.mEnums) {
+        enumNameSet += metaEnum.mName;
+    }
+
+    for (auto& tilesetUser : userFileX.mTilesets) {
+        QList<TilesetsTxtFile::Tile> userTiles = tilesetUser->mTiles;
+        int tileIndex = 0;
+        for (auto& tileUser : userTiles) {
+            if (!enumNameSet.contains(tileUser.mMetaEnum)) {
+                tilesetUser->mTiles.removeAt(tileIndex);
+            } else {
+                ++tileIndex;
+            }
+        }
+    }
+
+    QMap<QString,TilesetsTxtFile::Tileset*> userTilesetMap;
+    for (auto& tilesetUser : userFileX.mTilesets) {
+        userTilesetMap[tilesetUser->mName] = tilesetUser;
+    }
+
+    for (auto& tilesetSource : sourceFileX.mTilesets) {
+        if (userTilesetMap.contains(tilesetSource->mName)) {
+            TilesetsTxtFile::Tileset* userTileset = userTilesetMap[tilesetSource->mName];
+            // Add missing tiles to the user file.
+            for (auto& tileSource : tilesetSource->mTiles) {
+                userTileset->setTile(tileSource);
+            }
+        }
+    }
+
+    if (!userFileX.write(userPath, sourceRevision + 1, sourceRevision, userFileX.mTilesets, userFileX.mEnums)) {
+        mError = userFileX.errorString();
+        return false;
+    }
+
     return true;
 }
 

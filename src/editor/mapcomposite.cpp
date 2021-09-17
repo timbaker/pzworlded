@@ -107,6 +107,11 @@ CompositeLayerGroup::CompositeLayerGroup(MapComposite *owner, int level)
 
 }
 
+CompositeLayerGroup::~CompositeLayerGroup()
+{
+    int dbg = 1;
+}
+
 void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
 {
 #ifndef WORLDED
@@ -136,10 +141,10 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
             : layer->isEmpty() || layer->name().contains(QLatin1String("NoRender"));
     mEmptyLayers.insert(index, empty);
 
-    mBmpBlendLayers.insert(index, 0);
-    mNoBlends.insert(index, 0);
+    mBmpBlendLayers.insert(index, nullptr);
+    mNoBlends.insert(index, nullptr);
 #ifdef BUILDINGED
-    mBlendOverLayers.insert(index, 0);
+    mBlendOverLayers.insert(index, nullptr);
     mToolLayers.insert(index, ToolLayer());
     mToolNoBlends.insert(index, ToolNoBlend());
     mForceNonEmpty.insert(index, false);
@@ -378,6 +383,9 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
         ++index;
         TileLayer *tlBmpBlend = mBmpBlendLayers[index];
         MapNoBlend *noBlend = mNoBlends[index];
+#ifdef BUILDINGED
+        const TileLayer *tlBlendOver = mBlendOverLayers[index];
+#endif // BUILDINGED
         QPoint subPos = pos - mOwner->orientAdjustTiles() * mLevel;
         if (tl->contains(subPos)) {
 #if WORLDED // ROAD_CRUD
@@ -405,6 +413,11 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                     cell = &tlBmpBlend->cellAt(subPos);
                 }
             }
+#ifdef BUILDINGED
+            if (cell->isEmpty() && tlBlendOver && tlBlendOver->contains(subPos)) {
+                cell = &tlBlendOver->cellAt(subPos);
+            }
+#endif // BUILDINGED
             if (!cell->isEmpty() && (root == mOwner) && tl->name().contains(sAboveLot)) {
                 aboveLotCells += cell;
                 continue;
@@ -433,6 +446,23 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
     cells += aboveLotCells;
 
     return !cells.isEmpty();
+}
+
+void CompositeLayerGroup::prepareDrawingNoBmpBlender(const MapRenderer *renderer, const QRect &rect)
+{
+    mPreparedSubMapLayers.resize(0);
+    for (MapComposite *subMap : mOwner->subMaps()) {
+        int levelOffset = subMap->levelOffset();
+        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
+        if (layerGroup == nullptr) {
+            continue;
+        }
+        QRectF bounds = layerGroup->boundingRect(renderer);
+        if ((bounds & rect).isValid()) {
+            mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
+            layerGroup->prepareDrawingNoBmpBlender(renderer, rect);
+        }
+    }
 }
 
 bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer> &cells) const
@@ -705,7 +735,7 @@ bool CompositeLayerGroup::setBmpBlendLayers(const QList<TileLayer *> &layers)
 {
     QVector<TileLayer*> old = mBmpBlendLayers;
 
-    mBmpBlendLayers.fill(0);
+    mBmpBlendLayers.fill(nullptr);
     foreach (TileLayer *tl, layers) {
         for (int i = 0; i < mLayers.size(); i++) {
             if (mLayers[i]->name() == tl->name()) {
@@ -1135,6 +1165,23 @@ void MapComposite::moveSubMap(MapComposite *subMap, const QPoint &pos)
         layerGroup->setNeedsSynch(true);
 
     mChangeCount++;
+}
+
+void MapComposite::sortSubMaps(const QVector<MapComposite *> &order)
+{
+    std::sort(mSubMaps.begin(), mSubMaps.end(), [order,this](MapComposite *a, MapComposite *b) {
+        int indexA = order.indexOf(a);
+        int indexB = order.indexOf(b);
+        if (indexA == -1)
+            indexA = mSubMaps.indexOf(a);
+        if (indexB == -1)
+            indexB = mSubMaps.indexOf(b);
+        return indexA < indexB;
+    });
+
+    for (CompositeLayerGroup *layerGroup : mLayerGroups) {
+        layerGroup->setNeedsSynch(true);
+    }
 }
 
 void MapComposite::layerAdded(int index)

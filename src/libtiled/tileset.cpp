@@ -113,7 +113,7 @@ static bool tryCreateAtlas(Tileset *tileset, const QImage &image, int size)
             painter.drawImage(QRect(xywh[0], xywh[1], xywh[2], xywh[3]), tile->image());
 
             /////
-            tile->setEmptyImage();
+//            tile->setEmptyImage();
             /////
         }
         painter.end();

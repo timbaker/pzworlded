@@ -74,7 +74,7 @@ AddRemoveCellLot::~AddRemoveCellLot()
 void AddRemoveCellLot::addLot()
 {
     mDocument->undoRedo().addCellLot(mCell, mIndex, mLot);
-    mLot = 0;
+    mLot = nullptr;
 }
 
 void AddRemoveCellLot::removeLot()
@@ -95,6 +95,21 @@ MoveCellLot::MoveCellLot(WorldDocument *doc, WorldCellLot *lot, const QPoint &ne
 void MoveCellLot::swap()
 {
     mTilePos = mDocument->undoRedo().moveCellLot(mLot, mTilePos);
+}
+
+/////
+
+ReorderCellLot::ReorderCellLot(WorldDocument *doc, WorldCellLot *lot, int newIndex)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Reorder Lot"))
+    , mDocument(doc)
+    , mLot(lot)
+    , mIndex(newIndex)
+{
+}
+
+void ReorderCellLot::swap()
+{
+    mIndex = mDocument->undoRedo().reorderCellLot(mLot, mIndex);
 }
 
 /////
@@ -230,7 +245,6 @@ void SetObjectType::swap()
 
 /////
 
-
 ReorderCellObject::ReorderCellObject(WorldDocument *doc, WorldCellObject *obj, int newIndex)
     : QUndoCommand(QCoreApplication::translate("Undo Commands", "Reorder Object"))
     , mDocument(doc)
@@ -245,7 +259,6 @@ void ReorderCellObject::swap()
 }
 
 /////
-
 
 AddRemoveRoad::AddRemoveRoad(WorldDocument *doc, int index, Road *road)
     : mDocument(doc)

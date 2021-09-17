@@ -112,8 +112,8 @@ class BmpBlender : public QObject
 {
     Q_OBJECT
 public:
-    BmpBlender(QObject *parent = 0);
-    BmpBlender(Map *map, QObject *parent = 0);
+    BmpBlender(QObject *parent = nullptr);
+    BmpBlender(Map *map, QObject *parent = nullptr);
     ~BmpBlender();
 
     void setMap(Map *map);
@@ -151,6 +151,9 @@ public:
     void tilesToPixels(int x1, int y1, int x2, int y2);
     bool expectTile(const QString &layerName, int x, int y, Tile *tile);
 
+    void setBlendEdgesEverywhere(bool enabled);
+    void testBlendEdgesEverywhere(bool enabled, QRegion &tileSelection);
+
 signals:
     void layersRecreated();
     void regionAltered(const QRegion &region);
@@ -160,10 +163,12 @@ public slots:
     void updateWarnings();
 
 private:
+    QList<Tile *> &tileNameToTiles(const QString& name, QList<Tile *>& tiles);
+    QList<Tile *> tileNameToTiles(const QString& name);
     QList<Tile *> tileNamesToTiles(const QStringList &names);
     void initTiles();
     void imagesToTileGrids(int x1, int y1, int x2, int y2);
-    void blend(int x1, int y1, int x2, int y2);
+    void addEdgeTiles(int x1, int y1, int x2, int y2);
     void tileGridsToLayers(int x1, int y1, int x2, int y2);
     QString resolveAlias(const QString &tileName, int randForPos) const;
 
@@ -233,6 +238,7 @@ private:
 
     QSet<Tile*> mKnownBlendTiles;
     bool mHack;
+    bool mBlendEdgesEverywhere;
     typedef QHash<int,BlendWrapper*> BlendGrid;
     QMap<QString,BlendGrid> mBlendGrids; // blend at each x,y
 

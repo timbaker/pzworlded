@@ -801,6 +801,7 @@ void MainWindow::openLastFiles()
                 int cellY = mSettings.value(QLatin1String("cellY")).toInt();
                 WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
                 if (WorldCell *cell = worldDoc->world()->cellAt(cellX, cellY)) {
+                    progress.update(tr("Loading cell %1,%2").arg(cellX).arg(cellY));
                     CellDocument *cellDoc = new CellDocument(worldDoc, cell);
                     docman()->addDocument(cellDoc); // switches document
                     // If the cell map couldn't be loaded, the document

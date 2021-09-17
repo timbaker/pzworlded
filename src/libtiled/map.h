@@ -241,6 +241,11 @@ public:
     { return mBlends; }
     QList<BmpBlend*> blendsCopy() const;
 
+    void setBlendEdgesEverywhere(bool everywhere)
+    { mBlendEdgesEverywhere = everywhere; }
+    bool isBlendEdgesEverywhere() const
+    { return mBlendEdgesEverywhere; }
+
     void clone(const BmpSettings &other);
 
 private:
@@ -249,6 +254,7 @@ private:
     QList<BmpAlias*> mAliases;
     QList<BmpRule*> mRules;
     QList<BmpBlend*> mBlends;
+    bool mBlendEdgesEverywhere;
 };
 
 #endif // ZOMBOID
