@@ -566,7 +566,7 @@ SINGLETON_IMPL(CreateInGameMapPolylineTool)
 SINGLETON_IMPL(CreateInGameMapRectangleTool)
 
 CreateInGameMapFeatureTool::CreateInGameMapFeatureTool(Type type)
-    : BaseCellSceneTool(QString(),
+    : BaseInGameMapFeatureTool(QString(),
                         QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")),
                         QKeySequence())
     , mFeatureType(type)
@@ -798,9 +798,9 @@ void CreateInGameMapFeatureTool::addPoint(const QPointF &scenePos)
 SINGLETON_IMPL(EditInGameMapFeatureTool)
 
 EditInGameMapFeatureTool::EditInGameMapFeatureTool()
-    : BaseCellSceneTool(tr("Edit InGameMap Features"),
-                         QIcon(QLatin1String(":/images/24x24/tool-edit-polygons.png")),
-                         QKeySequence())
+    : BaseInGameMapFeatureTool(tr("Edit InGameMap Features"),
+                               QIcon(QLatin1String(":/images/24x24/tool-edit-polygons.png")),
+                               QKeySequence())
     , mSelectedFeatureItem(nullptr)
     , mSelectedFeature(nullptr)
 {
@@ -841,7 +841,7 @@ void EditInGameMapFeatureTool::deactivate()
 {
     if (mSelectedFeatureItem) {
         mSelectedFeatureItem->setEditable(false);
-        for (FeatureHandle* handle : mHandles) {
+        for (FeatureHandle* handle : qAsConst(mHandles)) {
             mScene->removeItem(handle);
             delete handle;
         }

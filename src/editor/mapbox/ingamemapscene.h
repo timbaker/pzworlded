@@ -99,7 +99,20 @@ protected:
 
 class FeatureHandle;
 
-class CreateInGameMapFeatureTool : public BaseCellSceneTool
+class BaseInGameMapFeatureTool : public BaseCellSceneTool
+{
+public:
+    BaseInGameMapFeatureTool(const QString &name,
+                             const QIcon &icon,
+                             const QKeySequence &shortcut,
+                             QObject *parent = nullptr)
+        : BaseCellSceneTool(name, icon, shortcut, parent)
+    {
+
+    }
+};
+
+class CreateInGameMapFeatureTool : public BaseInGameMapFeatureTool
 {
     Q_OBJECT
 
@@ -207,7 +220,7 @@ public:
     }
 };
 
-class EditInGameMapFeatureTool : public BaseCellSceneTool, public Singleton<EditInGameMapFeatureTool>
+class EditInGameMapFeatureTool : public BaseInGameMapFeatureTool, public Singleton<EditInGameMapFeatureTool>
 {
     Q_OBJECT
 

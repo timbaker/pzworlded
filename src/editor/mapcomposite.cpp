@@ -465,6 +465,25 @@ void CompositeLayerGroup::prepareDrawingNoBmpBlender(const MapRenderer *renderer
     }
 }
 
+void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, const QRect &rect)
+{
+    mPreparedSubMapLayers.resize(0);
+    for (MapComposite *subMap : mOwner->subMaps()) {
+        int levelOffset = subMap->levelOffset();
+        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
+        if (layerGroup) {
+            QRectF bounds = layerGroup->boundingRect(renderer);
+            if ((bounds & rect).isValid() == false)
+                continue;
+            mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
+            layerGroup->prepareDrawing3(renderer, rect);
+        }
+    }
+    if ((level() == 0) && mOwner->bmpBlender()) {
+        mOwner->bmpBlender()->flush(renderer, rect, mOwner->originRecursive());
+    }
+}
+
 bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer> &cells) const
 {
     MapComposite *root = mOwner->root();
@@ -512,12 +531,24 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
             }
             if (!cell->isEmpty()) {
                 if (!cleared) {
-                    bool isFloor = !mLevel && !index && (tl->name() == sFloor);
-                    if (isFloor) root->mKeepFloorLayerCount = 0;
-                    cells.resize(root->mKeepFloorLayerCount);
+                    if (mLevel == 0) {
+                        bool isFloor = (index == 0) && (tl->name() == sFloor);
+                        if (isFloor) {
+                            for (int i = 0; i < root->mKeepFloorLayerCount; i++) {
+                                cells[i].mHideIfVisible = owner();
+                            }
+//                            root->mKeepFloorLayerCount = 0;
+                        }
+                        cells.resize(root->mKeepFloorLayerCount);
+                    } else {
+                        cells.resize(0);
+                    }
                     cleared = true;
                 }
                 cells.append(TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
+                if (owner()->parent() == root) {
+                    cells.last().mSubMap = owner();
+                }
                 if (mMaxFloorLayer >= index)
                     mOwner->mKeepFloorLayerCount = cells.size();
             }
