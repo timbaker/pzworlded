@@ -43,12 +43,15 @@ class BmpBlender;
 }
 }
 
+class CompositeLayerGroup;
 class MapComposite;
 
 struct TilePlusLayer
 {
     TilePlusLayer()
-        : mLayerName()
+        : mSubMap(nullptr)
+        , mHideIfVisible(nullptr)
+        , mLayerName()
         , mTile(nullptr)
         , mVisible(true)
         , mOpacity(1.0)
@@ -57,7 +60,9 @@ struct TilePlusLayer
     }
 
     TilePlusLayer(const TilePlusLayer& rhs)
-        : mLayerName(rhs.mLayerName)
+        : mSubMap(rhs.mSubMap)
+        , mHideIfVisible(rhs.mHideIfVisible)
+        , mLayerName(rhs.mLayerName)
         , mTile(rhs.mTile)
         , mVisible(rhs.mVisible)
         , mOpacity(rhs.mOpacity)
@@ -66,7 +71,9 @@ struct TilePlusLayer
     }
 
     TilePlusLayer(const QString &layerName, const Tiled::Tile *tile, bool visible, qreal opacity)
-        : mLayerName(layerName)
+        : mSubMap(nullptr)
+        , mHideIfVisible(nullptr)
+        , mLayerName(layerName)
         , mTile(tile)
         , mVisible(visible)
         , mOpacity(opacity)
@@ -74,6 +81,8 @@ struct TilePlusLayer
 
     }
 
+    MapComposite *mSubMap; // This tile belongs to a Lot
+    MapComposite *mHideIfVisible; // This tile belongs to a Cell, hide it if the Lot=mHideIfVisible is visible
     QString mLayerName;
     const Tiled::Tile* mTile;
     bool mVisible;
@@ -103,6 +112,7 @@ public:
 
     void prepareDrawingNoBmpBlender(const Tiled::MapRenderer *renderer, const QRect &rect);
 
+    void prepareDrawing3(const Tiled::MapRenderer *renderer, const QRect &rect);
     bool orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer>& cells) const;
 
     bool setLayerVisibility(const QString &layerName, bool visible);

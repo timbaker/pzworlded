@@ -476,6 +476,8 @@ private:
 
 struct VBOTile
 {
+    MapComposite *mSubMap = nullptr; // This tile belongs to a Lot.
+    MapComposite *mHideIfVisible = nullptr; // This tile belongs to a Cell, hide it if the Lot=mHideIfVisible is visible.
     int mLayerIndex;
     QRect mRect;
     QString mTilesetName;

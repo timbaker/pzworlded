@@ -589,6 +589,11 @@ void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const
 //    painter->restore();
 }
 
+static inline bool isLotVisible(MapComposite *lot)
+{
+    return lot->isGroupVisible() && lot->isVisible() && (lot->isHiddenDuringDrag() == false);
+};
+
 void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect)
 {
     Q_UNUSED(painter)
@@ -825,6 +830,10 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         GLuint end = start + 4 - 1;
                         GLuint count = 4;
                         auto& tile = tiles[i];
+                        if ((tile.mHideIfVisible != nullptr) && isLotVisible(tile.mHideIfVisible))
+                            continue;
+                        if ((tile.mSubMap != nullptr) && (isLotVisible(tile.mSubMap) == false))
+                            continue;
                         if ((tile.mLayerIndex >= 0) && (tile.mLayerIndex < layerCount)) {
                             if (visibleLayers[tile.mLayerIndex] == false)
                                 continue;
@@ -1027,6 +1036,8 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                     const Tile *tile = cell.mTile;
                     VBOTile vboTile;
                     Tileset *tileset = tile->tileset();
+                    vboTile.mSubMap = cell.mSubMap;
+                    vboTile.mHideIfVisible = cell.mHideIfVisible;
                     vboTile.mLayerIndex = mMapCompositeVBO->mLayerNameToIndex.value(cell.mLayerName, -1);
                     vboTile.mRect = QRect(screenPos.x() + tile->offset().x(), screenPos.y() + tile->offset().y() - tile->height(), tile->atlasSize().width(), tile->atlasSize().height());
                     vboTile.mTilesetName = tileset->name();
@@ -1269,7 +1280,7 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
 exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
         if (exposed.isNull())
             exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
-        mLayerGroup->prepareDrawing(mRenderer, exposed);
+        mLayerGroup->prepareDrawing3(mRenderer, exposed);
 
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
