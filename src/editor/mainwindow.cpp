@@ -90,6 +90,7 @@
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QDebug>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -2028,9 +2029,11 @@ void MainWindow::readInGameMapFeaturesXML()
         return;
     }
 
-    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absolutePath());
+    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absoluteFilePath());
 
-    worldDoc->undoStack()->beginMacro(tr("Read WorldMap XML"));
+    PROGRESS progress(QStringLiteral("Reading InGameMap XML"), this);
+
+    worldDoc->undoStack()->beginMacro(tr("Read InGameMap XML"));
     for (auto* cell : world->cells()) {
         for (int i = cell->inGameMap().features().size() - 1; i >= 0; i--) {
             worldDoc->removeInGameMapFeature(cell, i);
@@ -2116,7 +2119,7 @@ void MainWindow::writeInGameMapFeaturesXML()
     WorldDocument *worldDoc = currentWorldDocument();
 
     QString suggestedFileName = Preferences::instance()->worldMapXMLFile();
-    if (suggestedFileName.isEmpty() || !QFileInfo(suggestedFileName).exists()) {
+    if (suggestedFileName.isEmpty() || !QFileInfo::exists(suggestedFileName)) {
         if (worldDoc->fileName().isEmpty()) {
             suggestedFileName = QDir::currentPath();
             suggestedFileName += QLatin1String("/worldmap.xml");
@@ -2132,14 +2135,15 @@ void MainWindow::writeInGameMapFeaturesXML()
         return;
     }
 
-    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absolutePath());
+    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absoluteFilePath());
+
+    PROGRESS progress(QStringLiteral("Writing InGameMap XML"), this);
 
     InGameMapWriter writer;
     if (!writer.writeWorld(worldDoc->world(), fileName)) {
-        qWarning("Failed to write worldmap.xml.");
+        qWarning("Failed to write InGameMap XML.");
         return;
     }
-    QMessageBox::information(MainWindow::instance(), tr("Write InGameMap XML"), tr("Finished!"));
 }
 
 bool MainWindow::confirmSave()

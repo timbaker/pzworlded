@@ -164,6 +164,7 @@ void InGameMapDock::selectionChanged()
     if (!CreateInGameMapPointTool::instance().isCurrent() &&
             !CreateInGameMapPolygonTool::instance().isCurrent() &&
             !CreateInGameMapPolylineTool::instance().isCurrent() &&
+            !CreateInGameMapRectangleTool::instance().isCurrent() &&
             !EditInGameMapFeatureTool::instance().isCurrent())
         return;
 
