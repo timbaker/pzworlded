@@ -3308,6 +3308,15 @@ void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
         scene->document()->setSelectedObjectPoints(selection);
     }
 
+    if (event->button() == Qt::RightButton) {
+        if (event->buttons() & Qt::LeftButton) {
+            if (mOldPos != geometryPoint()) {
+                mObjectItem->movePoint(mPointIndex, mOldPos);
+                setPos(mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y));
+            }
+        }
+    }
+
     // Stop the object context menu messing us up.
     event->accept();
 }

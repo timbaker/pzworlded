@@ -318,13 +318,6 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(SubMapTool::instance());
     toolManager->registerTool(SelectMoveObjectTool::instance());
     toolManager->registerTool(CreateObjectTool::instance());
-    new SpawnPointTool;
-    toolManager->registerTool(SpawnPointTool::instancePtr());
-#ifdef ROAD_UI
-    toolManager->registerTool(CellSelectMoveRoadTool::instance());
-    toolManager->registerTool(CellCreateRoadTool::instance());
-    toolManager->registerTool(CellEditRoadTool::instance());
-#endif
 #if 0
     new CreatePointObjectTool;
     toolManager->registerTool(CreatePointObjectTool::instancePtr());
@@ -337,6 +330,13 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     new EditPolygonObjectTool;
     toolManager->registerTool(EditPolygonObjectTool::instancePtr());
+    new SpawnPointTool;
+    toolManager->registerTool(SpawnPointTool::instancePtr());
+#ifdef ROAD_UI
+    toolManager->registerTool(CellSelectMoveRoadTool::instance());
+    toolManager->registerTool(CellCreateRoadTool::instance());
+    toolManager->registerTool(CellEditRoadTool::instance());
+#endif
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
