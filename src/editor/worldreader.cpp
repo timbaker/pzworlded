@@ -419,22 +419,89 @@ private:
             return;
         }
 
-        const qreal x =
-                atts.value(QLatin1String("x")).toString().toDouble();
-        const qreal y =
-                atts.value(QLatin1String("y")).toString().toDouble();
-        int level =
-                atts.value(QLatin1String("level")).toString().toInt();
-        if (level < 0) level = 0;
-        if (level > 500) level = 500;
-        const qreal width =
-                atts.value(QLatin1String("width")).toString().toDouble();
-        const qreal height =
-                atts.value(QLatin1String("height")).toString().toDouble();
+        WorldCellObject *obj = nullptr;
 
-        // No check wanted/needed on Object coordinates
-        WorldCellObject *obj = new WorldCellObject(cell, name, objType, objGroup,
-                                                   x, y, level, width, height);
+        if (atts.hasAttribute(QLatin1String("geometry"))) {
+            const QString geometry = atts.value(QLatin1String("geometry")).toString();
+            ObjectGeometryType geometryType = ObjectGeometryType::INVALID;
+            if (geometry == QLatin1String("point")) {
+                geometryType = ObjectGeometryType::Point;
+            } else if (geometry == QLatin1String("polygon")) {
+                geometryType = ObjectGeometryType::Polygon;
+            } else if (geometry == QLatin1String("polyline")) {
+                geometryType = ObjectGeometryType::Polyline;
+            } else {
+                xml.raiseError(tr("Unrecognized object geometry \"%1\"").arg(geometry));
+                return;
+            }
+
+            int level = atts.value(QLatin1String("level")).toString().toInt();
+            if (level < 0) level = 0;
+            if (level > 500) level = 500; // MAX_WORLD_LEVELS
+
+            WorldCellObjectPoints points;
+            {
+                const QString pointStr = atts.value(QLatin1String("points")).toString();
+                int start = 0;
+                int end = pointStr.length();
+                while ((start < end) && pointStr.at(start).isSpace()) {
+                    start++;
+                }
+                const QChar sep(QLatin1Char(','));
+                while ((end = pointStr.indexOf(sep, start, Qt::CaseSensitive)) != -1) {
+                    bool conversionOk;
+                    int x = pointStr.mid(start, end - start).toInt(&conversionOk);
+                    if (!conversionOk) {
+                        xml.raiseError(tr("Unable to parse object point"));
+                        return;
+                    }
+                    start = end + 1;
+                    end = start;
+                    while (end < pointStr.length() && pointStr.at(end).isDigit()) {
+                        end++;
+                    }
+                    int y = pointStr.mid(start, end - start).toInt(&conversionOk);
+                    if (!conversionOk) {
+                        xml.raiseError(tr("Unable to parse object point"));
+                        return;
+                    }
+                    points += { x, y };
+                    start = end + 1;
+                }
+            }
+            int minX = std::numeric_limits<int>::max();
+            int minY = std::numeric_limits<int>::max();
+            int maxX = std::numeric_limits<int>::min();
+            int maxY = std::numeric_limits<int>::min();
+            for (const auto& point : points) {
+                minX = std::min(minX, point.x);
+                minY = std::min(minY, point.y);
+                maxX = std::max(maxX, point.x);
+                maxY = std::max(maxY, point.y);
+            }
+            // No check wanted/needed on Object coordinates
+            obj = new WorldCellObject(cell, name, objType, objGroup, minX, minY, level, maxX - minX + 1, maxY - minY + 1);
+            obj->setGeometryType(geometryType);
+            obj->setPoints(points);
+        } else {
+
+            const qreal x =
+                    atts.value(QLatin1String("x")).toString().toDouble();
+            const qreal y =
+                    atts.value(QLatin1String("y")).toString().toDouble();
+            int level =
+                    atts.value(QLatin1String("level")).toString().toInt();
+            if (level < 0) level = 0;
+            if (level > 500) level = 500;
+            const qreal width =
+                    atts.value(QLatin1String("width")).toString().toDouble();
+            const qreal height =
+                    atts.value(QLatin1String("height")).toString().toDouble();
+
+            // No check wanted/needed on Object coordinates
+            obj = new WorldCellObject(cell, name, objType, objGroup, x, y, level, width, height);
+        }
+
         cell->insertObject(cell->objects().size(), obj);
 
         while (xml.readNextStartElement()) {

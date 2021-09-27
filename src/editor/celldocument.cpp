@@ -122,6 +122,20 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
     }
 }
 
+void CellDocument::setSelectedObjectPoints(const QList<int> &selected)
+{
+    mSelectedObjectPoints.clear();
+
+    for (int point : selected) {
+        if (!mSelectedObjectPoints.contains(point))
+            mSelectedObjectPoints.append(point);
+        else
+            qWarning("duplicate points passed to setSelectedObjectPoints");
+    }
+
+    emit selectedObjectPointsChanged();
+}
+
 void CellDocument::setLayerVisibility(Layer *layer, bool visible)
 {
     if (TileLayer *tl = layer->asTileLayer()) {

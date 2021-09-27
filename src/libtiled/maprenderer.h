@@ -166,6 +166,7 @@ public:
     { return pixelToTileCoords(point.x(), point.y(), level); }
 
     QPoint pixelToTileCoordsInt(const QPointF &point, int level = 0) const;
+    QPoint pixelToTileCoordsNearest(const QPointF &point, int level = 0) const;
 
     /**
      * Returns the pixel coordinates matching the given tile coordinates.
