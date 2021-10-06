@@ -2688,12 +2688,11 @@ static QRegion cleanupRegion(QRegion region)
 void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     if (mObject->points().isEmpty() == false) {
-
-        QColor color = mHoverRefCount > 0 ? Qt::blue : Qt::darkBlue;
-        if (isSelected())
-            color = mHoverRefCount ? Qt::green : Qt::darkGreen;
-        if (isEditable())
-            color = mHoverRefCount ? Qt::red : Qt::darkRed;
+        QColor color = mObject->group()->color();
+        if (mIsSelected)
+            color = QColor(0x33,0x99,0xff/*,255/8*/);
+        if (isMouseOverHighlighted())
+            color = color.lighter();
 
     //    if (mHoverRefCount)
     //        painter->drawPath(shape());
