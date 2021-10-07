@@ -750,7 +750,7 @@ void MainWindow::openLastFiles()
     // MapImageManager's threads will load in the thumbnail images in the
     // background.  But defer updating the display with those images until
     // all the documents are loaded.
-    MapImageManagerDeferral defer;
+//    MapImageManagerDeferral defer;
 
     mSettings.beginGroup(QLatin1String("openFiles"));
 
