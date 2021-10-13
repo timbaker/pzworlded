@@ -20,7 +20,7 @@
 
 #include "document.h"
 
-#include "mapbox/worldcellingamemap.h"
+#include "mapbox/ingamemapcell.h"
 
 #include <QColor>
 #include <QObject>

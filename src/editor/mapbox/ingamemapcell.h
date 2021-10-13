@@ -15,14 +15,14 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef WORLDCELLINGAMEMAP_H
-#define WORLDCELLINGAMEMAP_H
+#ifndef INGAMEMAPCELL_H
+#define INGAMEMAPCELL_H
 
 #include <QList>
 
 class WorldCell;
 
-class WorldCellInGameMap;
+class InGameMapCell;
 
 class InGameMapPoint
 {
@@ -181,7 +181,7 @@ public:
 class InGameMapFeature
 {
 public:
-    InGameMapFeature(WorldCellInGameMap* owner)
+    InGameMapFeature(InGameMapCell* owner)
         : mOwner(owner)
     {
 
@@ -191,7 +191,7 @@ public:
     inline WorldCell* cell() const;
     inline InGameMapProperties& properties() { return mProperties; }
 
-    WorldCellInGameMap* mOwner;
+    InGameMapCell* mOwner;
     InGameMapGeometry mGeometry;
     InGameMapProperties mProperties;
 };
@@ -199,7 +199,7 @@ public:
 class InGameMapFeatures : public QList<InGameMapFeature*>
 {
 public:
-    InGameMapFeatures(WorldCellInGameMap* owner)
+    InGameMapFeatures(InGameMapCell* owner)
         : mOwner(owner)
     {
 
@@ -209,13 +209,13 @@ public:
         qDeleteAll(*this);
     }
 
-    WorldCellInGameMap* mOwner;
+    InGameMapCell* mOwner;
 };
 
-class WorldCellInGameMap
+class InGameMapCell
 {
 public:
-    WorldCellInGameMap(WorldCell* cell)
+    InGameMapCell(WorldCell* cell)
         : mCell(cell)
         , mFeatures(this)
     {
@@ -243,4 +243,4 @@ WorldCell* InGameMapFeature::cell() const {
     return mOwner->cell();
 }
 
-#endif // WORLDCELLINGAMEMAP_H
+#endif // INGAMEMAPCELL_H

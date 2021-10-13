@@ -1,7 +1,7 @@
 #include "ingamemappropertydialog.h"
 #include "ui_ingamemappropertydialog.h"
 
-#include "worldcellingamemap.h"
+#include "ingamemapcell.h"
 
 InGameMapPropertyDialog::InGameMapPropertyDialog(QWidget *parent) :
     QDialog(parent),

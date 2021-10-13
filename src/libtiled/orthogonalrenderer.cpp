@@ -35,6 +35,8 @@
 #include "tileset.h"
 #include "imagelayer.h"
 
+#include <QPainterPath>
+
 #include <cmath>
 
 using namespace Tiled;

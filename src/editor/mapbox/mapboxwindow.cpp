@@ -29,6 +29,7 @@
 #include "worlddocument.h"
 #include "worldscene.h"
 
+#include <QCloseEvent>
 #include <QDebug>
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)

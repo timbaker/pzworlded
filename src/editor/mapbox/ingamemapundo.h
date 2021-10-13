@@ -18,7 +18,7 @@
 #ifndef INGAMEMAPUNDO_H
 #define INGAMEMAPUNDO_H
 
-#include "worldcellingamemap.h"
+#include "ingamemapcell.h"
 
 #include <QCoreApplication>
 #include <QUndoCommand>

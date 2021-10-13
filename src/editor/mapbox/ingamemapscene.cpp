@@ -18,7 +18,7 @@
 #include "ingamemapscene.h"
 
 #include "ingamemapundo.h"
-#include "worldcellingamemap.h"
+#include "ingamemapcell.h"
 
 #include "celldocument.h"
 #include "cellscene.h"
@@ -213,8 +213,9 @@ void InGameMapFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
     // Find the line segment the mouse pointer is over
     int closestIndex = -1;
     float closestDist = 10000;
-    for (int i = 0; i < poly.size() - 1; i++) {
-        QVector2D p1(poly[i]), p2(poly[i+1]);
+    for (int i = 0; i < poly.size(); i++) {
+        QVector2D p1(poly[i]);
+        QVector2D p2(poly[(i+1) % poly.size()]);
 //        QVector2D dir = (p2 - p1).normalized();
 //        float d = QVector2D(event->scenePos()).distanceToLine(p1, dir);
         float d = distanceOfPointToLineSegment(p1, p2, QVector2D(event->scenePos()));

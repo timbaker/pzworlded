@@ -2333,6 +2333,7 @@ void MainWindow::updateActions()
     ui->actionMapboxPreview->setEnabled(hasDoc);
     bool selectedCells = (cellDoc != nullptr) || (worldDoc != nullptr && !worldDoc->selectedCells().isEmpty());
     ui->actionGenerateInGameMapBuildingFeatures->setEnabled(selectedCells);
+    ui->actionGenerateInGameMapTreeFeatures->setEnabled(selectedCells);
     ui->actionGenerateInGameMapWaterFeatures->setEnabled(selectedCells);
     ui->actionRemoveInGameMapFeatures->setEnabled(((worldDoc != nullptr) && (worldDoc->selectedInGameMapFeatureCount() > 0)) ||
                                                (cellDoc != nullptr && cellDoc->selectedInGameMapFeatures().isEmpty() == false));

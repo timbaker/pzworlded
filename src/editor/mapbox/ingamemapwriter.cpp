@@ -84,12 +84,15 @@ public:
         if (cell->isEmpty())
             return;
 
-        w.writeStartElement(QLatin1String("cell"));
-        w.writeAttribute(QLatin1String("x"), QString::number(cell->x()));
-        w.writeAttribute(QLatin1String("y"), QString::number(cell->y()));
+        const QPoint worldOrigin = cell->world()->getGenerateLotsSettings().worldOrigin;
 
-        for (auto* feature : cell->inGameMap().mFeatures)
+        w.writeStartElement(QLatin1String("cell"));
+        w.writeAttribute(QLatin1String("x"), QString::number(worldOrigin.x() + cell->x()));
+        w.writeAttribute(QLatin1String("y"), QString::number(worldOrigin.y() + cell->y()));
+
+        for (auto* feature : qAsConst(cell->inGameMap().mFeatures)) {
             writeFeature(w, feature);
+        }
 
         w.writeEndElement();
     }

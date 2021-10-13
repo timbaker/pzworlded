@@ -19,7 +19,7 @@
 #define WORLDCELL_H
 
 #include "worldproperties.h"
-#include "mapbox/worldcellingamemap.h"
+#include "mapbox/ingamemapcell.h"
 
 #include <QColor>
 #include <QPoint>
@@ -302,7 +302,7 @@ public:
     const WorldCellObjectList &objects() const { return mObjects; }
     int indexOf(WorldCellObject *obj) { return mObjects.indexOf(obj); }
 
-    WorldCellInGameMap& inGameMap() { return mInGameMap; }
+    InGameMapCell& inGameMap() { return mInGameMap; }
 
     bool isEmpty() const;
 
@@ -312,7 +312,7 @@ private:
     QString mMapFilePath;
     WorldCellLotList mLots;
     WorldCellObjectList mObjects;
-    WorldCellInGameMap mInGameMap;
+    InGameMapCell mInGameMap;
 
     friend class WorldCellContents;
 };

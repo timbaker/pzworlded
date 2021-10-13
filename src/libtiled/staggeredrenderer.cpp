@@ -30,6 +30,7 @@
 #include <cmath>
 
 #include <QDebug>
+#include <QPainterPath>
 
 using namespace Tiled;
 

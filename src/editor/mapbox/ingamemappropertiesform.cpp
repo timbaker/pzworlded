@@ -23,7 +23,7 @@
 #include "worlddocument.h"
 
 #include "ingamemappropertydialog.h"
-#include "worldcellingamemap.h"
+#include "ingamemapcell.h"
 
 #include <QUndoStack>
 

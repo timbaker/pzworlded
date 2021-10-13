@@ -2688,11 +2688,12 @@ void CellScene::loadMap()
     for (int level = 0; level < MAX_WORLD_LEVELS; level++)
     {
         QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
-        for (QString layerName : defaultLayerNames) {
+        for (const QString& layerName : defaultLayerNames) {
             QString withoutPrefix = MapComposite::layerNameWithoutPrefix(layerName);
             QString withPrefix = QStringLiteral("%1_%2").arg(level).arg(withoutPrefix);
             bool exists = false;
-            for (TileLayer* layer : mMap->tileLayers()) {
+            const QList<TileLayer*> tileLayers = mMap->tileLayers();
+            for (TileLayer* layer : tileLayers) {
                 if (layer->name() == withPrefix) {
                     exists = true;
                     break;
@@ -3827,8 +3828,11 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     mCell(cell),
     mMapComposite(nullptr),
     mMapInfo(nullptr),
-    mObjectItemParent(new QGraphicsItemGroup)
+    mObjectItemParent(new QGraphicsItemGroup),
+    mInGameMapFeatureParent(new QGraphicsItemGroup)
 {
+    PROGRESS progress(tr("Loading adjacent cell %1,%2").arg(cell->x()).arg(cell->y()));
+
     mScene->addItem(mObjectItemParent);
     mScene->addItem(mInGameMapFeatureParent);
 
@@ -3887,7 +3891,7 @@ WorldDocument *AdjacentMap::worldDocument() const
 
 ObjectItem *AdjacentMap::itemForObject(WorldCellObject *obj)
 {
-    foreach (ObjectItem *item, mObjectItems) {
+    for (ObjectItem *item : qAsConst(mObjectItems)) {
         if (item->object() == obj)
             return item;
     }
@@ -3896,7 +3900,7 @@ ObjectItem *AdjacentMap::itemForObject(WorldCellObject *obj)
 
 InGameMapFeatureItem *AdjacentMap::itemForFeature(InGameMapFeature *feature)
 {
-    for (InGameMapFeatureItem *item : mInGameMapFeatureItems) {
+    for (InGameMapFeatureItem *item : qAsConst(mInGameMapFeatureItems)) {
         if (item->feature() == feature) {
             return item;
         }

@@ -57,6 +57,7 @@ SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
     mapbox/clipper.cpp \
+    mapbox/ingamemapcell.cpp \
     mapbox/ingamemapdock.cpp \
     mapbox/ingamemapfeaturegenerator.cpp \
     mapbox/ingamemappropertiesform.cpp \
@@ -67,7 +68,6 @@ SOURCES += main.cpp\
     mapbox/ingamemapwriter.cpp \
     mapbox/mapboxglwidget.cpp \
     mapbox/mapboxwindow.cpp \
-    mapbox/worldcellingamemap.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -164,6 +164,7 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
     mapbox/clipper.hpp \
+    mapbox/ingamemapcell.h \
     mapbox/ingamemapdock.h \
     mapbox/ingamemapfeaturegenerator.h \
     mapbox/ingamemappropertiesform.h \
@@ -175,7 +176,6 @@ HEADERS  += mainwindow.h \
     mapbox/mapboxcoordinate.h \
     mapbox/mapboxglwidget.h \
     mapbox/mapboxwindow.h \
-    mapbox/worldcellingamemap.h \
     tilesetstxtfile.h \
     worldview.h \
     worldscene.h \

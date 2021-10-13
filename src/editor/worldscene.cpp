@@ -163,7 +163,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
             addItem(item);
             item->setZValue(ZVALUE_CELLITEM); // below mGridItem
             mCellItems[y * world()->width() + x] = item;
-            mPendingThumbnails += item;
+//            mPendingThumbnails += item;
         }
     }
 
@@ -694,7 +694,7 @@ void WorldScene::worldThumbnailsChanged(bool thumbs)
         otherWorld->mPendingThumbnails.clear();
         foreach (OtherWorldCellItem *item, otherWorld->mCellItems) {
             if (thumbs)
-                otherWorld->mPendingThumbnails += item;
+                /*otherWorld->mPendingThumbnails += item*/;
             else
                 item->thumbnailsAreFail();
         }
@@ -702,8 +702,8 @@ void WorldScene::worldThumbnailsChanged(bool thumbs)
 
     mPendingThumbnails.clear();
     if (thumbs) {
-        foreach (WorldCellItem *item, mCellItems)
-            mPendingThumbnails += item;
+//        foreach (WorldCellItem *item, mCellItems)
+//            mPendingThumbnails += item;
         handlePendingThumbnails();
     } else {
         foreach (WorldCellItem *item, mCellItems)
@@ -741,6 +741,12 @@ void WorldScene::handlePendingThumbnails()
             }
         }
     }
+}
+
+void WorldScene::addPendingThumbnail(WorldCellItem *item)
+{
+    mPendingThumbnails += item;
+    handlePendingThumbnails();
 }
 
 void WorldScene::keyPressEvent(QKeyEvent *event)
@@ -915,8 +921,9 @@ BaseCellItem::BaseCellItem(WorldScene *scene, QGraphicsItem *parent)
     , mScene(scene)
     , mMapImage(0)
     , mWantsImages(true)
+    , mScheduledLoadImage(false)
 {
-    setAcceptedMouseButtons(0);
+    setAcceptedMouseButtons(Qt::MouseButton::NoButton);
 #ifndef QT_NO_DEBUG
     mUpdatingImage = false;
 #endif
@@ -1145,6 +1152,11 @@ void WorldCellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 {
     BaseCellItem::paint(painter, option, widget);
 
+    if (mMapImage == nullptr && mScheduledLoadImage == false && Preferences::instance()->worldThumbnails()) {
+        mScheduledLoadImage = true;
+        mScene->addPendingThumbnail(this);
+    }
+
     if (mHoverRefCount > 0)
     {
 //        QPen pen(Qt::darkGray);
@@ -1216,6 +1228,8 @@ void WorldCellItem::thumbnailsAreFail()
 {
     if (mWantsImages) {
         mWantsImages = false;
+        if (Preferences::instance()->worldThumbnails() == false)
+            mScheduledLoadImage = false;
         cellContentsChanged();
     }
 }

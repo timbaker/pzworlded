@@ -36,6 +36,8 @@
 
 #include <cmath>
 
+#include <QPainterPath>
+
 using namespace Tiled;
 
 #define DISPLAY_TILE_WIDTH (map()->tileWidth() * (is2x() ? 2 : 1))

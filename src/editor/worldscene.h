@@ -171,6 +171,7 @@ protected:
     QVector<LotImage> mLotImages;
     QPointF mDrawOffset;
     bool mWantsImages;
+    bool mScheduledLoadImage;
 #ifndef QT_NO_DEBUG
     bool mUpdatingImage;
 #endif
@@ -489,6 +490,7 @@ public slots:
 
     void worldThumbnailsChanged(bool thumbs);
     void handlePendingThumbnails();
+    void addPendingThumbnail(WorldCellItem *item);
 
 protected:
     void keyPressEvent(QKeyEvent *event);

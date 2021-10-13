@@ -117,9 +117,11 @@ private:
     {
         Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("cell"));
 
+        const QPoint& worldOrigin = mWorld->getGenerateLotsSettings().worldOrigin;
+
         const QXmlStreamAttributes atts = xml.attributes();
-        const int x = atts.value(QLatin1Literal("x")).toString().toInt();
-        const int y = atts.value(QLatin1Literal("y")).toString().toInt();
+        const int x = atts.value(QLatin1Literal("x")).toString().toInt() - worldOrigin.x();
+        const int y = atts.value(QLatin1Literal("y")).toString().toInt() - worldOrigin.y();
 
         if (!mWorld->contains(x, y))
             xml.raiseError(tr("Invalid cell coordinates %1,%2").arg(x).arg(y));
@@ -150,6 +152,11 @@ private:
             else
                 readUnknownElement();
         }
+
+//        if (feature->properties().contains(QStringLiteral("natural"), QStringLiteral("forest"))) {
+//            delete feature;
+//            return;
+//        }
 
         cell->inGameMap().mFeatures += feature;
     }
