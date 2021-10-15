@@ -3,16 +3,16 @@ if {[llength [info commands console]]} {
     update
 }
 
-set BIN C:/Programming/PZWorldEd/dist64
-set SRC C:/Programming/PZWorldEd/pzworlded
-set QT_DIR C:/Programming/QtSDK2015/5.9.3/msvc2017_64
-set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd}
+set BIN C:/Programming/PZWorldEd-worldmap/dist64
+set SRC C:/Programming/PZWorldEd-worldmap/pzworlded
+set QT_DIR C:/Programming/QtSDK2015/5.15.2/msvc2019_64
+set DEST {C:\Programming\PZWorldEd-worldmap\WorldEd}
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
         32bit {
             puts "dist.tcl: 32-bit"
-            set BIN C:/Programming/PZWorldEd/dist32
+            set BIN C:/Programming/PZWorldEd-worldmap/dist32
             set QT_DIR C:/Programming/QtSDK2015/5.9.3/msvc2017
             set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd32}
         }
@@ -93,6 +93,8 @@ copyFile $QT_PLUGINS_DIR $DEST/plugins imageformats/qtiff.dll
 
 copyFile $QT_PLUGINS_DIR $DEST/plugins platforms/qwindows.dll
 
+copyFile $QT_PLUGINS_DIR $DEST/plugins styles/qwindowsvistastyle.dll
+
 proc removeFD {dir name} {
     foreach f [glob -nocomplain -types {d f} -dir $dir $name] {
         puts "removing $f"
@@ -105,10 +107,10 @@ proc removeFD {dir name} {
     return
 }
 if 1 {
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} vcredist*
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} .pzeditor
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} lots
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} *.bak
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} EnableDeveloperFeatures.txt
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} Qt*4.dll
+removeFD {C:\Programming\PZWorldEd-worldmap} vcredist*
+removeFD {C:\Programming\PZWorldEd-worldmap} .pzeditor
+removeFD {C:\Programming\PZWorldEd-worldmap} lots
+removeFD {C:\Programming\PZWorldEd-worldmap} *.bak
+removeFD {C:\Programming\PZWorldEd-worldmap} EnableDeveloperFeatures.txt
+removeFD {C:\Programming\PZWorldEd-worldmap} Qt*4.dll
 }

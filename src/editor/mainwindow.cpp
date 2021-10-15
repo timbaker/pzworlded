@@ -78,6 +78,7 @@
 #include "mapbox/ingamemapscene.h"
 #include "mapbox/mapboxwindow.h"
 #include "mapbox/ingamemapwriter.h"
+#include "mapbox/ingamemapwriterbinary.h"
 
 #include "layer.h"
 #include "mapobject.h"
@@ -352,6 +353,7 @@ MainWindow::MainWindow(QWidget *parent)
     new CreateInGameMapPolylineTool;
     new CreateInGameMapRectangleTool;
     new EditInGameMapFeatureTool;
+    toolManager->addSeparator();
     toolManager->registerTool(CreateInGameMapPointTool::instancePtr());
     toolManager->registerTool(CreateInGameMapPolygonTool::instancePtr());
     toolManager->registerTool(CreateInGameMapPolylineTool::instancePtr());
@@ -774,7 +776,7 @@ void MainWindow::openLastFiles()
     // MapImageManager's threads will load in the thumbnail images in the
     // background.  But defer updating the display with those images until
     // all the documents are loaded.
-    MapImageManagerDeferral defer;
+//    MapImageManagerDeferral defer;
 
     mSettings.beginGroup(QLatin1String("openFiles"));
 
@@ -2142,6 +2144,12 @@ void MainWindow::writeInGameMapFeaturesXML()
     InGameMapWriter writer;
     if (!writer.writeWorld(worldDoc->world(), fileName)) {
         qWarning("Failed to write InGameMap XML.");
+        return;
+    }
+
+    InGameMapWriterBinary writerBinary;
+    if (!writerBinary.writeWorld(worldDoc->world(), fileName + QStringLiteral(".bin"))) {
+        qWarning("Failed to write InGameMap Binary.");
         return;
     }
 }

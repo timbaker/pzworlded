@@ -66,6 +66,7 @@ SOURCES += main.cpp\
     mapbox/ingamemapscene.cpp \
     mapbox/ingamemapundo.cpp \
     mapbox/ingamemapwriter.cpp \
+    mapbox/ingamemapwriterbinary.cpp \
     mapbox/mapboxglwidget.cpp \
     mapbox/mapboxwindow.cpp \
     tilesetstxtfile.cpp \
@@ -173,6 +174,7 @@ HEADERS  += mainwindow.h \
     mapbox/ingamemapscene.h \
     mapbox/ingamemapundo.h \
     mapbox/ingamemapwriter.h \
+    mapbox/ingamemapwriterbinary.h \
     mapbox/mapboxcoordinate.h \
     mapbox/mapboxglwidget.h \
     mapbox/mapboxwindow.h \

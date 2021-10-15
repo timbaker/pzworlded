@@ -171,7 +171,6 @@ protected:
     QVector<LotImage> mLotImages;
     QPointF mDrawOffset;
     bool mWantsImages;
-    bool mScheduledLoadImage;
 #ifndef QT_NO_DEBUG
     bool mUpdatingImage;
 #endif
@@ -198,7 +197,15 @@ public:
     void lotMoved(WorldCellLot *lot);
     void cellContentsChanged();
     void mapFileCreated(const QString &path);
-    int thumbnailsAreGo();
+
+    enum struct ThumbnailStatus
+    {
+        Missing,
+        Loading,
+        Loaded
+    };
+
+    ThumbnailStatus thumbnailsAreGo();
     void thumbnailsAreFail();
 
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
@@ -368,7 +375,7 @@ public:
     WorldCell *cell() const { return mCell; }
 
     void cellContentsChanged();
-    int thumbnailsAreGo();
+    WorldCellItem::ThumbnailStatus thumbnailsAreGo();
     void thumbnailsAreFail();
 
 protected:
@@ -490,7 +497,6 @@ public slots:
 
     void worldThumbnailsChanged(bool thumbs);
     void handlePendingThumbnails();
-    void addPendingThumbnail(WorldCellItem *item);
 
 protected:
     void keyPressEvent(QKeyEvent *event);
