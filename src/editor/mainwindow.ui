@@ -374,6 +374,7 @@
     <addaction name="separator"/>
     <addaction name="actionReadInGameMapFeaturesXML"/>
     <addaction name="actionWriteInGameMapFeaturesXML"/>
+    <addaction name="actionCreateImagePyramid"/>
    </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
@@ -917,6 +918,11 @@
    </property>
    <property name="shortcut">
     <string>Del</string>
+   </property>
+  </action>
+  <action name="actionCreateImagePyramid">
+   <property name="text">
+    <string>Create Image Pyramid...</string>
    </property>
   </action>
  </widget>

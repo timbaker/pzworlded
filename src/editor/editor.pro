@@ -2,6 +2,8 @@ include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
 include(../qtlockedfile/qtlockedfile.pri)
 include(../lua/lua.pri)
+include(../quazip-1.1/quazip/quazip.pri)
+include(../zlib/zlib.pri)
 
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
@@ -60,6 +62,7 @@ SOURCES += main.cpp\
     mapbox/ingamemapcell.cpp \
     mapbox/ingamemapdock.cpp \
     mapbox/ingamemapfeaturegenerator.cpp \
+    mapbox/ingamemapimagepyramidwindow.cpp \
     mapbox/ingamemappropertiesform.cpp \
     mapbox/ingamemappropertydialog.cpp \
     mapbox/ingamemapreader.cpp \
@@ -168,6 +171,7 @@ HEADERS  += mainwindow.h \
     mapbox/ingamemapcell.h \
     mapbox/ingamemapdock.h \
     mapbox/ingamemapfeaturegenerator.h \
+    mapbox/ingamemapimagepyramidwindow.h \
     mapbox/ingamemappropertiesform.h \
     mapbox/ingamemappropertydialog.h \
     mapbox/ingamemapreader.h \
@@ -272,6 +276,7 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     generatelotsfailuredialog.ui \
+    mapbox/ingamemapimagepyramidwindow.ui \
     mapbox/ingamemappropertiesform.ui \
     mapbox/ingamemappropertydialog.ui \
     mapbox/mapboxwindow.ui \

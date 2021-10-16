@@ -74,6 +74,7 @@
 
 #include "mapbox/ingamemapfeaturegenerator.h"
 #include "mapbox/ingamemapdock.h"
+#include "mapbox/ingamemapimagepyramidwindow.h"
 #include "mapbox/ingamemapreader.h"
 #include "mapbox/ingamemapscene.h"
 #include "mapbox/mapboxwindow.h"
@@ -293,6 +294,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
     connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showInGameMapPreviewWindow);
+    ui->actionMapboxPreview->setVisible(false);
     connect(ui->actionGenerateInGameMapBuildingFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapBuildingFeatures);
     connect(ui->actionGenerateInGameMapTreeFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapTreeFeatures);
     connect(ui->actionGenerateInGameMapWaterFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapWaterFeatures);
@@ -301,6 +303,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionSplitInGameMapPolygon, &QAction::triggered, this, &MainWindow::splitInGameMapPolygon);
     connect(ui->actionReadInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::readInGameMapFeaturesXML);
     connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML);
+    connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
 
     connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
@@ -2152,6 +2155,12 @@ void MainWindow::writeInGameMapFeaturesXML()
         qWarning("Failed to write InGameMap Binary.");
         return;
     }
+}
+
+void MainWindow::creaeInGameMapImagePyramid()
+{
+    InGameMapImagePyramidWindow *window = new InGameMapImagePyramidWindow(this);
+    window->show();
 }
 
 bool MainWindow::confirmSave()
