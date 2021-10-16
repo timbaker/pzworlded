@@ -18,66 +18,41 @@
 #include "ingamemapimagepyramidwindow.h"
 #include "ui_ingamemapimagepyramidwindow.h"
 
+#include "celldocument.h"
+#include "documentmanager.h"
+#include "worlddocument.h"
+#include "world.h"
+
 #include <quazip.h>
 #include <quazipfile.h>
 
 #include <QFileDialog>
-
-#if 0
-namespace
-{
-
-class MipMapLevel
-{
-public:
-    QImage mImage;
-};
-
-class ImageData
-{
-public:
-    bool read(const QString& fileName)
-    {
-        mImage = QImage(fileName);
-        if (mImage.isNull()) {
-            return false;
-        }
-        return true;
-    }
-
-    int getWidth()
-    {
-        return mImage.width();
-    }
-
-    int getHeight()
-    {
-        return mImage.height();
-    }
-
-    MipMapLevel *getMipMapData(int level)
-    {
-        MipMapLevel *mipMapLevel = new MipMapLevel();
-        return mipMapLevel;
-    }
-
-    QImage mImage;
-    QList<MipMapLevel*> mMipMaps;
-};
-
-// namespace anonymous
-}
-#endif
 
 InGameMapImagePyramidWindow::InGameMapImagePyramidWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::InGameMapImagePyramidWindow)
 {
     ui->setupUi(this);
+
     setAttribute(Qt::WA_DeleteOnClose, true);
+
     connect(ui->inputBrowseButton, &QToolButton::clicked, this, &InGameMapImagePyramidWindow::chooseInputFile);
     connect(ui->outputBrowseButton, &QToolButton::clicked, this, &InGameMapImagePyramidWindow::chooseOutputFile);
     connect(ui->createZipButton, &QPushButton::clicked, this, &InGameMapImagePyramidWindow::createZip);
+
+    if (Document *doc = DocumentManager::instance()->currentDocument()) {
+        World *world = nullptr;
+        if (doc->asWorldDocument()) {
+            world = doc->asWorldDocument()->world();
+        } else {
+            world = doc->asCellDocument()->world();
+        }
+        auto settings = world->getGenerateLotsSettings();
+        ui->xMin->setValue(settings.worldOrigin.x() * 300);
+        ui->yMin->setValue(settings.worldOrigin.y() * 300);
+        ui->xMax->setValue((settings.worldOrigin.x() + world->width()) * 300);
+        ui->yMax->setValue((settings.worldOrigin.y() + world->height()) * 300);
+    }
 }
 
 InGameMapImagePyramidWindow::~InGameMapImagePyramidWindow()
@@ -110,10 +85,11 @@ void InGameMapImagePyramidWindow::chooseOutputFile()
 void InGameMapImagePyramidWindow::createZip()
 {
     ui->logText->clear();
-
-    QImage image(ui->inputNameEdit->text());
+    QString inputFileName = ui->inputNameEdit->text();
+    log(QStringLiteral("Reading %1").arg(inputFileName));
+    QImage image(inputFileName);
     if (image.isNull()) {
-        log(QStringLiteral("Error reading %1").arg(ui->inputNameEdit->text()));
+        log(QStringLiteral("Error reading %1").arg(inputFileName));
         return;
     }
 
@@ -129,8 +105,8 @@ void InGameMapImagePyramidWindow::createZip()
         float width = float(image.width()) / (1 << level);
         float height = float(image.height()) / (1 << level);
         QImage scaledImage = image.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        int columns = std::ceil(width / tileSize);
-        int rows = std::ceil(height / tileSize);
+        int columns = ceil(width / tileSize);
+        int rows = ceil(height / tileSize);
         log(QStringLiteral("Creating images for level %1. width x height = %2 x %3").arg(level).arg(columns).arg(rows));
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
@@ -142,6 +118,8 @@ void InGameMapImagePyramidWindow::createZip()
             break;
         }
     }
+
+    writePyramidTxt(zip);
 
     zip.close();
 
@@ -159,6 +137,7 @@ void InGameMapImagePyramidWindow::writeImageToZip(QuaZip &zip, const QImage &ima
     QuaZipFile file(&zip);
     QuaZipNewInfo newInfo(fileName);
     if (file.open(QIODevice::WriteOnly, newInfo) == false) {
+        log(QStringLiteral("Error opening %1 in ZIP file").arg(fileName));
         return;
     }
     if (image.save(&file, "PNG") == false) {
@@ -166,6 +145,23 @@ void InGameMapImagePyramidWindow::writeImageToZip(QuaZip &zip, const QImage &ima
         file.close();
         return;
     }
+    file.close();
+}
+
+void InGameMapImagePyramidWindow::writePyramidTxt(QuaZip &zip)
+{
+    QString fileName = QStringLiteral("pyramid.txt");
+    log(QStringLiteral("Writing %1").arg(fileName));
+    QuaZipFile file(&zip);
+    QuaZipNewInfo newInfo(fileName);
+    if (file.open(QIODevice::WriteOnly, newInfo) == false) {
+        log(QStringLiteral("Error opening %1 in ZIP file").arg(fileName));
+        return;
+    }
+    QTextStream ts(&file);
+    ts << "VERSION=1\n";
+    ts << QStringLiteral("bounds=%1 %2 %3 %4\n").arg(ui->xMin->value()).arg(ui->yMin->value()).arg(ui->xMax->value()).arg(ui->yMax->value());
+    ts.flush();
     file.close();
 }
 

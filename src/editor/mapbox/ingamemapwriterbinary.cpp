@@ -21,9 +21,11 @@
 #include "worldcell.h"
 
 #include <QCoreApplication>
+#include <QDataStream>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QMap>
 #include <QTemporaryFile>
 #include <QXmlStreamWriter>
 

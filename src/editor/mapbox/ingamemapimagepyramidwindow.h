@@ -42,6 +42,7 @@ private slots:
 
 private:
     void writeImageToZip(QuaZip& zip, const QImage &image, int col, int row, int level);
+    void writePyramidTxt(QuaZip& zip);
     void log(const QString& str);
 
     Ui::InGameMapImagePyramidWindow *ui;
