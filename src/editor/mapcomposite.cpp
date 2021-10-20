@@ -556,7 +556,13 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
     }
 
     // Overwrite map cells with sub-map cells at this location
+    // Chop off sub-map cells that aren't in the root- or adjacent-map's bounds.
+    QRect rootBounds(root->originRecursive(), root->mapInfo()->size());
+    const QPoint rootPos = pos + mOwner->originRecursive();
+    bool inRoot = (rootBounds.size() != QSize(300, 300)) || rootBounds.contains(rootPos);
     for (const SubMapLayers& subMapLayer : mPreparedSubMapLayers) {
+        if (!inRoot && !subMapLayer.mSubMap->isAdjacentMap())
+            continue;
         if (!subMapLayer.mBounds.contains(pos))
             continue;
         subMapLayer.mLayerGroup->orderedCellsAt3(pos - subMapLayer.mSubMap->origin(), cells);
@@ -1573,6 +1579,7 @@ bool MapComposite::mapChanged(MapInfo *mapInfo)
                 foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
                     layerGroup->setNeedsSynch(true);
                 changed = true;
+                mChangeCount++;
             }
         }
     }

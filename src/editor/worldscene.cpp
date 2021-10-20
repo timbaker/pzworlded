@@ -201,12 +201,14 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
             SLOT(mapImageChanged(MapImage*)));
 
-    PROGRESS progress(QStringLiteral("Loading thumbnails"));
-    int numThumbnails = mPendingThumbnails.size();
-    handlePendingThumbnails();
-    while (mPendingThumbnails.isEmpty() == false) {
-        PROGRESS progress(QStringLiteral("Loading thumbnails %1 / %2").arg(mPendingThumbnails.size()).arg(numThumbnails));
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    if (Preferences::instance()->worldThumbnails()) {
+        PROGRESS progress(QStringLiteral("Loading thumbnails"));
+        int numThumbnails = mPendingThumbnails.size();
+        handlePendingThumbnails();
+        while (mPendingThumbnails.isEmpty() == false) {
+            PROGRESS progress(QStringLiteral("Loading thumbnails %1 / %2").arg(numThumbnails - mPendingThumbnails.size()).arg(numThumbnails));
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
     }
 }
 
@@ -711,7 +713,15 @@ void WorldScene::worldThumbnailsChanged(bool thumbs)
     if (thumbs) {
         foreach (WorldCellItem *item, mCellItems)
             mPendingThumbnails += item;
+
+        PROGRESS progress(QStringLiteral("Loading thumbnails"));
+        int numThumbnails = mPendingThumbnails.size();
         handlePendingThumbnails();
+        while (mPendingThumbnails.isEmpty() == false) {
+            PROGRESS progress(QStringLiteral("Loading thumbnails %1 / %2").arg(numThumbnails - mPendingThumbnails.size()).arg(numThumbnails));
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+
     } else {
         foreach (WorldCellItem *item, mCellItems)
             item->thumbnailsAreFail();

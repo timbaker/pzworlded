@@ -68,12 +68,12 @@ void PreferencesDialog::gridColorChanged(const QColor &gridColor)
 
 void PreferencesDialog::accept()
 {
+    QDialog::accept();
+
     Preferences *prefs = Preferences::instance();
     Tiled::TileMetaInfoMgr::instance()->changeTilesDirectory(mTilesDirectory);
     prefs->setUseOpenGL(ui->openGL->isChecked());
     prefs->setWorldThumbnails(ui->thumbnails->isChecked());
     prefs->setGridColor(mGridColor);
     prefs->setShowAdjacentMaps(ui->showAdjacent->isChecked());
-
-    QDialog::accept();
 }

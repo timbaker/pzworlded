@@ -195,7 +195,8 @@ public:
     TilesetImageCache *imageCache() const { return mTilesetImageCache; }
 
     void loadTileset(Tileset *tileset, const QString &imageSource);
-    void waitForTilesets(const QList<Tileset *> &tilesets = QList<Tileset*>());
+    void waitForTilesets(const QList<Tileset *> &tilesets = QList<Tileset*>(), QWidget *parent = nullptr);
+    int countLoadingTilesets(const QList<Tileset *> &tilesets) const;
 #endif
 
 signals:

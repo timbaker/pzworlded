@@ -27,6 +27,7 @@
 #include <QImage>
 #ifdef ZOMBOID
 #include "preferences.h"
+#include "progress.h"
 #include "tile.h"
 #include <QDebug>
 #include <QDir>
@@ -465,11 +466,20 @@ void TilesetManager::loadTileset(Tileset *tileset, const QString &imageSource_)
     }
 }
 
-void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
+void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets, QWidget *parent)
 {
+    QSharedPointer<PROGRESS> progress;
+    int numTilesets = 0;
+    if (parent != nullptr) {
+        numTilesets = countLoadingTilesets(tilesets);
+        if (numTilesets > 0) {
+            progress.reset(new PROGRESS(QStringLiteral("Loading Tilesets 0 / %1").arg(numTilesets)));
+        }
+    }
+
     while (true) {
         bool busy = false;
-        for (TilesetImageReaderWorker *worker : mImageReaderWorkers) {
+        for (TilesetImageReaderWorker *worker : qAsConst(mImageReaderWorkers)) {
             if (worker->busy()) {
                 busy = true;
                 break;
@@ -477,6 +487,9 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
         }
         if (!busy)
             break;
+        if (progress) {
+            progress->update(QStringLiteral("Loading Tilesets %1 / %2").arg(numTilesets - countLoadingTilesets(tilesets)).arg(numTilesets));
+        }
         Sleep::msleep(10);
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
@@ -496,6 +509,17 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets)
             imageLoaded(image, cached); // deletes image
         }
     }
+}
+
+int TilesetManager::countLoadingTilesets(const QList<Tileset*> &tilesets) const
+{
+    int count = 0;
+    for (Tileset *ts : tilesets) {
+        if (ts->isLoaded() || ts->isMissing())
+            continue;
+        count++;
+    }
+    return count;
 }
 
 void TilesetManager::changeTilesetSource(Tileset *tileset, const QString &source,
