@@ -71,7 +71,7 @@ public:
 class MoveInGameMapPoint : public QUndoCommand
 {
 public:
-    MoveInGameMapPoint(WorldDocument *doc, WorldCell* cell, int featureIndex, int pointIndex, const InGameMapPoint &newPos);
+    MoveInGameMapPoint(WorldDocument *doc, WorldCell* cell, int featureIndex, int coordIndex, int pointIndex, const InGameMapPoint &newPos);
 
     void undo() { swap(); }
     void redo() { swap(); }
@@ -82,6 +82,7 @@ private:
     WorldDocument *mDocument;
     WorldCell* mCell;
     int mFeatureIndex;
+    int mCoordIndex;
     int mPointIndex;
     InGameMapPoint mPoint;
 };

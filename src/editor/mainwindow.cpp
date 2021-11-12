@@ -596,6 +596,9 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc->worldDocument(),
                     SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
                     SLOT(updateActions()));
+            connect(cellDoc->worldDocument(), &WorldDocument::inGameMapGeometryChanged, this, &MainWindow::updateActions);
+            connect(cellDoc->worldDocument(), &WorldDocument::selectedInGameMapFeaturesChanged, this, &MainWindow::updateActions);
+            connect(cellDoc->worldDocument(), &WorldDocument::selectedInGameMapPointsChanged, this, &MainWindow::updateActions);
             connect(cellDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
                     SLOT(generateLotSettingsChanged()));
 #ifdef ROAD_UI
@@ -610,6 +613,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(worldDoc, SIGNAL(selectedCellsChanged()), SLOT(updateActions()));
             connect(worldDoc, SIGNAL(selectedLotsChanged()), SLOT(updateActions()));
             connect(worldDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
+            connect(worldDoc, &WorldDocument::selectedInGameMapFeaturesChanged, this, &MainWindow::updateActions);
             connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
             connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
@@ -1912,7 +1916,15 @@ bool MainWindow::canSplitInGameMapPolygon()
         qSwap(index1, index2);
     }
 
-    const InGameMapCoordinates& srcCoords = feature->mGeometry.mCoordinates.first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    if (featureItem == nullptr) {
+        return false;
+    }
+    int coordIndex = featureItem->selectedCoordIndex();
+    if (coordIndex != 0) {
+        return false;
+    }
+    const InGameMapCoordinates& srcCoords = feature->mGeometry.mCoordinates[coordIndex];
     int numCoords2 = index2 - index1 + 1;
     int numCoords1 = srcCoords.size() - numCoords2 + 2;
 
@@ -1930,6 +1942,7 @@ void MainWindow::splitInGameMapPolygon()
     auto* worldDoc = currentWorldDocument();
     auto* cellDoc = mCurrentDocument->asCellDocument();
     InGameMapFeature* feature = cellDoc->selectedInGameMapFeatures().first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
     auto& selection = cellDoc->selectedInGameMapPoints();
     int index1 = selection.first();
     int index2 = selection.last();
@@ -1937,7 +1950,8 @@ void MainWindow::splitInGameMapPolygon()
         qSwap(index1, index2);
     }
 
-    const InGameMapCoordinates& srcCoords = feature->mGeometry.mCoordinates.first();
+    int coordIndex = featureItem->selectedCoordIndex();
+    const InGameMapCoordinates& srcCoords = feature->mGeometry.mCoordinates[coordIndex];
     int numCoords2 = index2 - index1 + 1;
     int numCoords1 = srcCoords.size() - numCoords2 + 2;
 
@@ -1956,9 +1970,8 @@ void MainWindow::splitInGameMapPolygon()
     geom.mCoordinates << coords2;
     feature2->mProperties = feature->properties();
 
-
     worldDoc->undoStack()->beginMacro(tr("Split Polygon"));
-    worldDoc->setInGameMapCoordinates(cellDoc->cell(), feature->index(), 0, coords1);
+    worldDoc->setInGameMapCoordinates(cellDoc->cell(), feature->index(), coordIndex, coords1);
     worldDoc->addInGameMapFeature(cellDoc->cell(), cellDoc->cell()->inGameMap().features().size(), feature2);
     worldDoc->undoStack()->endMacro();
 }
@@ -1986,7 +1999,15 @@ bool MainWindow::canRemoveInGameMapPoint()
     if (selection.isEmpty()) {
         return false;
     }
-    const InGameMapCoordinates& coords = feature->mGeometry.mCoordinates.first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    if (featureItem == nullptr) {
+        return false;
+    }
+    int coordIndex = featureItem->selectedCoordIndex();
+    if (coordIndex < 0 || coordIndex >= feature->mGeometry.mCoordinates.size()) {
+        return;
+    }
+    const InGameMapCoordinates& coords = feature->mGeometry.mCoordinates[coordIndex];
     if (isPolygon) {
         return coords.size() - selection.size() >= 3;
     }
@@ -2003,7 +2024,9 @@ void MainWindow::removeInGameMapPoint()
     }
     auto* cellDoc = mCurrentDocument->asCellDocument();
     InGameMapFeature* feature = cellDoc->selectedInGameMapFeatures().first();
-    InGameMapCoordinates coords = feature->mGeometry.mCoordinates.first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    int coordIndex = featureItem->selectedCoordIndex();
+    InGameMapCoordinates coords = feature->mGeometry.mCoordinates[coordIndex];
     QList<int> selection = cellDoc->selectedInGameMapPoints();
     qSort(selection);
     for (int i = selection.size() - 1; i >= 0; i--) {
@@ -2013,7 +2036,7 @@ void MainWindow::removeInGameMapPoint()
         }
     }
     cellDoc->setSelectedInGameMapPoints(QList<int>());
-    cellDoc->worldDocument()->setInGameMapCoordinates(cellDoc->cell(), feature->index(), 0, coords);
+    cellDoc->worldDocument()->setInGameMapCoordinates(cellDoc->cell(), feature->index(), coordIndex, coords);
 }
 
 void MainWindow::readInGameMapFeaturesXML()

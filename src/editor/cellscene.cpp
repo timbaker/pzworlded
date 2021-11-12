@@ -3013,7 +3013,7 @@ void CellScene::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
 
 }
 
-void CellScene::inGameMapPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
+void CellScene::inGameMapPointMoved(WorldCell *cell, int featureIndex, int coordIndex, int pointIndex)
 {
     if (cell != this->cell())
         return;
@@ -4124,7 +4124,7 @@ void AdjacentMap::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
     }
 }
 
-void AdjacentMap::inGameMapPointMoved(WorldCell *cell, int featureIndex, int pointIndex)
+void AdjacentMap::inGameMapPointMoved(WorldCell *cell, int featureIndex, int coordIndex, int pointIndex)
 {
     Q_UNUSED(pointIndex)
 

@@ -153,12 +153,12 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
             SIGNAL(cellObjectReordered(WorldCellObject*)));
 
-    connect(&mUndoRedo, SIGNAL(inGameMapFeatureAdded(WorldCell*,int)),
-            SIGNAL(inGameMapFeatureAdded(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(inGameMapFeatureAboutToBeRemoved(WorldCell*,int)),
-            SIGNAL(inGameMapFeatureAboutToBeRemoved(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(inGameMapPointMoved(WorldCell*,int,int)),
-            SIGNAL(inGameMapPointMoved(WorldCell*,int,int)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapFeatureAdded,
+            this, &WorldDocument::inGameMapFeatureAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapFeatureAboutToBeRemoved,
+            this, &WorldDocument::inGameMapFeatureAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapPointMoved,
+            this, &WorldDocument::inGameMapPointMoved);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapPropertiesChanged,
             this, &WorldDocument::inGameMapPropertiesChanged);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapGeometryChanged,
@@ -505,10 +505,10 @@ void WorldDocument::removeInGameMapFeature(WorldCell *cell, int index)
     undoStack()->push(new RemoveInGameMapFeature(this, cell, index));
 }
 
-void WorldDocument::moveInGameMapPoint(WorldCell *cell, int featureIndex, int pointIndex, const InGameMapPoint &point)
+void WorldDocument::moveInGameMapPoint(WorldCell *cell, int featureIndex, int coordIndex, int pointIndex, const InGameMapPoint &point)
 {
     Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
-    undoStack()->push(new MoveInGameMapPoint(this, cell, featureIndex, pointIndex, point));
+    undoStack()->push(new MoveInGameMapPoint(this, cell, featureIndex, coordIndex, pointIndex, point));
 }
 
 void WorldDocument::addInGameMapProperty(WorldCell *cell, int featureIndex, int propertyIndex, const InGameMapProperty &property)
@@ -1427,13 +1427,13 @@ InGameMapFeature *WorldDocumentUndoRedo::removeInGameMapFeature(WorldCell *cell,
     return cell->inGameMap().features().takeAt(index);
 }
 
-InGameMapPoint WorldDocumentUndoRedo::moveInGameMapPoint(WorldCell *cell, int featureIndex, int pointIndex, const InGameMapPoint &point)
+InGameMapPoint WorldDocumentUndoRedo::moveInGameMapPoint(WorldCell *cell, int featureIndex, int coordIndex, int pointIndex, const InGameMapPoint &point)
 {
     InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
-    InGameMapCoordinates& coords = feature->mGeometry.mCoordinates[0];
+    InGameMapCoordinates& coords = feature->mGeometry.mCoordinates[coordIndex];
     InGameMapPoint old = coords[pointIndex];
     coords[pointIndex] = point;
-    emit inGameMapPointMoved(cell, featureIndex, pointIndex);
+    emit inGameMapPointMoved(cell, featureIndex, coordIndex, pointIndex);
     return old;
 }
 

@@ -116,7 +116,7 @@ public:
 
     void addInGameMapFeature(WorldCell* cell, int index, InGameMapFeature* feature);
     InGameMapFeature* removeInGameMapFeature(WorldCell* cell, int index);
-    InGameMapPoint moveInGameMapPoint(WorldCell* cell, int featureIndex, int pointIndex, const InGameMapPoint& point);
+    InGameMapPoint moveInGameMapPoint(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex, const InGameMapPoint& point);
     void addInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
     InGameMapProperty removeInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex);
     InGameMapProperty setInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
@@ -213,7 +213,7 @@ signals:
 
     void inGameMapFeatureAdded(WorldCell* cell, int index);
     void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
-    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 
@@ -306,7 +306,7 @@ public:
 
     void addInGameMapFeature(WorldCell* cell, int index, InGameMapFeature* feature);
     void removeInGameMapFeature(WorldCell* cell, int index);
-    void moveInGameMapPoint(WorldCell* cell, int featureIndex, int pointIndex, const InGameMapPoint& point);
+    void moveInGameMapPoint(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex, const InGameMapPoint& point);
     void addInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
     void removeInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex);
     void setInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
@@ -499,7 +499,7 @@ signals:
     void selectedInGameMapPointsChanged();
     void inGameMapFeatureAdded(WorldCell* cell, int index);
     void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
-    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 

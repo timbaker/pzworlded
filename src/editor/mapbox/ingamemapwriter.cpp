@@ -81,7 +81,7 @@ public:
 
     void writeCell(QXmlStreamWriter &w, WorldCell *cell)
     {
-        if (cell->isEmpty())
+        if (cell->inGameMap().features().isEmpty())
             return;
 
         const QPoint worldOrigin = cell->world()->getGenerateLotsSettings().worldOrigin;

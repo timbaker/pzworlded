@@ -47,11 +47,12 @@ void AddRemoveInGameMapFeature::removeFeature()
 
 /////
 
-MoveInGameMapPoint::MoveInGameMapPoint(WorldDocument *doc, WorldCell* cell, int featureIndex, int pointIndex, const InGameMapPoint& point)
+MoveInGameMapPoint::MoveInGameMapPoint(WorldDocument *doc, WorldCell* cell, int featureIndex, int coordIndex, int pointIndex, const InGameMapPoint& point)
     : QUndoCommand(QCoreApplication::translate("Undo Commands", "Move InGameMap Point"))
     , mDocument(doc)
     , mCell(cell)
     , mFeatureIndex(featureIndex)
+    , mCoordIndex(coordIndex)
     , mPointIndex(pointIndex)
     , mPoint(point)
 {
@@ -59,7 +60,7 @@ MoveInGameMapPoint::MoveInGameMapPoint(WorldDocument *doc, WorldCell* cell, int 
 
 void MoveInGameMapPoint::swap()
 {
-    mPoint = mDocument->undoRedo().moveInGameMapPoint(mCell, mFeatureIndex, mPointIndex, mPoint);
+    mPoint = mDocument->undoRedo().moveInGameMapPoint(mCell, mFeatureIndex, mCoordIndex, mPointIndex, mPoint);
 }
 
 /////

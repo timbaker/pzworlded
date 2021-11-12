@@ -34,6 +34,7 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
 #include <QPainter>
+#include <QtMath>
 
 InGameMapFeatureItem::InGameMapFeatureItem(InGameMapFeature* feature, CellScene *scene, QGraphicsItem *parent)
     : QGraphicsItem(parent)
@@ -141,11 +142,7 @@ void InGameMapFeatureItem::paint(QPainter *painter, const QStyleOptionGraphicsIt
     }
 
     if (mAddPointIndex != -1) {
-        auto scene = static_cast<CellScene*>(this->scene());
-        auto view = static_cast<CellView*>(scene->views().first());
-        qreal zoom = view->zoomable()->scale();
-        zoom = qMin(zoom, 1.0);
-
+        qreal zoom = firstViewZoom();
         painter->drawRect(mAddPointPos.x() - 5/zoom, mAddPointPos.y() -5/zoom, (int)(10 / zoom), (int)(10 / zoom));
     }
 }
@@ -179,10 +176,14 @@ static float distanceOfPointToLineSegment(QVector2D p1, QVector2D p2, QVector2D 
     return QVector2D::dotProduct(e, e);
 }
 
-#include <QtMath>
-
 void InGameMapFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 {
+    int coordIndex;
+    int closestPointIndex;
+    float closestDist;
+    hitTest(event->scenePos(), coordIndex, closestPointIndex, closestDist);
+    mHoverCoordIndex = coordIndex;
+
     if (!isEditable()) {
         if (mAddPointIndex != -1) {
             mAddPointIndex = -1;
@@ -191,10 +192,7 @@ void InGameMapFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
         return;
     }
 
-    auto scene = static_cast<CellScene*>(this->scene());
-    auto view = static_cast<CellView*>(scene->views().first());
-    qreal zoom = view->zoomable()->scale();
-    zoom = qMin(zoom, 1.0);
+    qreal zoom = firstViewZoom();
 
     QPolygonF poly = mRenderer->tileToPixelCoords(mPolygon, 0);
 
@@ -210,23 +208,8 @@ void InGameMapFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
         }
     }
 
-    // Find the line segment the mouse pointer is over
-    int closestIndex = -1;
-    float closestDist = 10000;
-    for (int i = 0; i < poly.size(); i++) {
-        QVector2D p1(poly[i]);
-        QVector2D p2(poly[(i+1) % poly.size()]);
-//        QVector2D dir = (p2 - p1).normalized();
-//        float d = QVector2D(event->scenePos()).distanceToLine(p1, dir);
-        float d = distanceOfPointToLineSegment(p1, p2, QVector2D(event->scenePos()));
-        d = qSqrt(qAbs(d));
-        if (d < 10 / (float)zoom && d < closestDist) {
-            closestIndex = i;
-            closestDist = d;
-        }
-    }
-    if (closestIndex != -1) {
-        mAddPointIndex = closestIndex;
+    if (closestPointIndex != -1) {
+        mAddPointIndex = closestPointIndex;
         mAddPointPos = event->scenePos();
 //        qDebug() << "mAddPointIndex " << mAddPointIndex << " dist " << closestDist;
         update();
@@ -241,6 +224,7 @@ void InGameMapFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event)
     if (--mHoverRefCount == 0) {
+        mHoverCoordIndex = -1;
         mAddPointIndex = -1;
         update();
     }
@@ -355,9 +339,9 @@ void InGameMapFeatureItem::setSelected(bool selected)
     update();
 }
 
-void InGameMapFeatureItem::movePoint(int pointIndex, const InGameMapPoint &point)
+void InGameMapFeatureItem::movePoint(int coordIndex, int pointIndex, const InGameMapPoint &point)
 {
-    auto& coords = mFeature->mGeometry.mCoordinates[0];
+    auto& coords = mFeature->mGeometry.mCoordinates[coordIndex];
     coords[pointIndex] = point;
     synchWithFeature();
 }
@@ -391,14 +375,71 @@ bool InGameMapFeatureItem::isPolyline() const
     return mFeature->mGeometry.isLineString();
 }
 
+QPolygonF InGameMapFeatureItem::makeScenePolygon(const InGameMapCoordinates &coords)
+{
+    QPolygonF result;
+    for (auto& point : coords) {
+        result += mRenderer->tileToPixelCoords(point.x, point.y, 0);
+    }
+    return result;
+}
+
+void InGameMapFeatureItem::hitTest(const QPointF &scenePos, int &coordIndex, int &pointIndex, float &dist)
+{
+    coordIndex = -1;
+    pointIndex = -1;
+    dist = 10000;
+    for (int i = 0; i < mFeature->mGeometry.mCoordinates.size(); i++) {
+        QPolygonF scenePoly = makeScenePolygon(mFeature->mGeometry.mCoordinates[i]);
+        int pointIndex2;
+        float dist2;
+        hitTest(scenePos, scenePoly, pointIndex2, dist2);
+        if ((pointIndex2 != -1) && (dist2 < dist)) {
+            coordIndex = i;
+            pointIndex = pointIndex2;
+            dist = dist2;
+        }
+    }
+}
+
+void InGameMapFeatureItem::hitTest(const QPointF &scenePos, const QPolygonF &scenePoly, int &pointIndex, float &dist)
+{
+    qreal zoom = firstViewZoom();
+
+    // Find the line segment the mouse pointer is over
+    pointIndex = -1;
+    dist = 10000;
+    for (int i = 0; i < scenePoly.size(); i++) {
+        QVector2D p1(scenePoly[i]);
+        QVector2D p2(scenePoly[(i+1) % scenePoly.size()]);
+//        QVector2D dir = (p2 - p1).normalized();
+//        float d = QVector2D(event->scenePos()).distanceToLine(p1, dir);
+        float d = distanceOfPointToLineSegment(p1, p2, QVector2D(scenePos));
+        d = qSqrt(qAbs(d));
+        if (d < 10 / (float)zoom && d < dist) {
+            pointIndex = i;
+            dist = d;
+        }
+    }
+}
+
+qreal InGameMapFeatureItem::firstViewZoom() const
+{
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    return qMin(zoom, 1.0);
+}
+
 /////
 
 class FeatureHandle : public QGraphicsItem
 {
 public:
-    FeatureHandle(InGameMapFeatureItem *featureItem, int pointIndex)
+    FeatureHandle(InGameMapFeatureItem *featureItem, int coordIndex, int pointIndex)
         : QGraphicsItem(featureItem)
         , mFeatureItem(featureItem)
+        , mCoordIndex(coordIndex)
         , mPointIndex(pointIndex)
     {
         setFlags(QGraphicsItem::ItemIsMovable |
@@ -427,9 +468,10 @@ public:
 
     InGameMapPoint geometryPoint() const {
         auto& coords = mFeatureItem->feature()->mGeometry.mCoordinates;
-        if (coords.isEmpty() || mPointIndex < 0 || mPointIndex >= coords[0].size())
+        if (coords.isEmpty() || mCoordIndex < 0 || mCoordIndex >= coords.size() ||
+                mPointIndex < 0 || mPointIndex >= coords[mCoordIndex].size())
             return { -1, -1 };
-        return coords[0].at(mPointIndex);
+        return coords[mCoordIndex].at(mPointIndex);
     }
 
     bool isSelected() const {
@@ -445,6 +487,7 @@ protected:
 
 protected:
     InGameMapFeatureItem *mFeatureItem;
+    int mCoordIndex;
     int mPointIndex;
     InGameMapPoint mOldPos;
     bool mMoveAllPoints = false;
@@ -507,16 +550,24 @@ void FeatureHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         WorldDocument *document = mFeatureItem->mWorldDoc;
         int featureIndex = mFeatureItem->feature()->index();
         InGameMapPoint newPos = geometryPoint();
-        mFeatureItem->feature()->mGeometry.mCoordinates[0][mPointIndex] = mOldPos;
+        mFeatureItem->feature()->mGeometry.mCoordinates[mCoordIndex][mPointIndex] = mOldPos;
         if (mMoveAllPoints) {
-            InGameMapCoordinates coords = mFeatureItem->feature()->mGeometry.mCoordinates[0];
+            InGameMapCoordinates coords = mFeatureItem->feature()->mGeometry.mCoordinates[mCoordIndex];
             coords.translate(int(newPos.x - mOldPos.x), int(newPos.y - mOldPos.y));
-            QUndoCommand *cmd = new SetInGameMapCoordinates(document, mFeatureItem->feature()->cell(), featureIndex, 0, coords);
+            QUndoCommand *cmd = new SetInGameMapCoordinates(document, mFeatureItem->feature()->cell(), featureIndex, mCoordIndex, coords);
             document->undoStack()->push(cmd);
         } else {
-            QUndoCommand *cmd = new MoveInGameMapPoint(document, mFeatureItem->feature()->cell(), featureIndex, mPointIndex, newPos);
+            QUndoCommand *cmd = new MoveInGameMapPoint(document, mFeatureItem->feature()->cell(), featureIndex, mCoordIndex, mPointIndex, newPos);
             document->undoStack()->push(cmd);
         }
+    }
+
+    if (event->button() == Qt::RightButton) {
+        if (mOldPos == geometryPoint()) {
+            return;
+        }
+        setPos(mFeatureItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y));
+//        mFeatureItem->movePoint(mPointIndex, mOldPos);
     }
 
     // Stop the context-menu messing us up.
@@ -552,7 +603,7 @@ QVariant FeatureHandle::itemChange(GraphicsItemChange change, const QVariant &va
             const QPointF newPos = value.toPointF();
             QPointF tileCoords = renderer->pixelToTileCoordsNearest(newPos, 0);
             InGameMapPoint point = { tileCoords.x(), tileCoords.y()};
-            mFeatureItem->movePoint(mPointIndex, point);
+            mFeatureItem->movePoint(mCoordIndex, mPointIndex, point);
         }
     }
 
@@ -874,20 +925,24 @@ void EditInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 break;
             }
         }
-        if ((clickedItem != nullptr) && (clickedItem == mSelectedFeatureItem)) {
+        if ((clickedItem != nullptr) && (clickedItem == mSelectedFeatureItem) && (clickedItem->mSelectedCoordIndex == clickedItem->mHoverCoordIndex)) {
             if (mSelectedFeatureItem->mAddPointIndex != -1) {
                 QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedFeatureItem->mAddPointPos);
                 InGameMapPoint point(tilePos.x(), tilePos.y());
-                InGameMapCoordinates coords = mSelectedFeature->mGeometry.mCoordinates[0];
+                int coordIndex = mSelectedFeatureItem->mHoverCoordIndex;
+                InGameMapCoordinates coords = mSelectedFeature->mGeometry.mCoordinates[coordIndex];
                 coords.insert(mSelectedFeatureItem->mAddPointIndex + 1, point);
-                mScene->worldDocument()->setInGameMapCoordinates(mScene->cell(), mSelectedFeature->index(), 0, coords);
+                mScene->worldDocument()->setInGameMapCoordinates(mScene->cell(), mSelectedFeature->index(), coordIndex, coords);
             }
             return;
         }
-        if (clickedItem == nullptr)
+        if (clickedItem == nullptr) {
             mScene->setSelectedInGameMapFeatureItems(QSet<InGameMapFeatureItem*>());
-        else
+        } else {
+            qDebug() << clickedItem->mHoverCoordIndex;
+            clickedItem->mSelectedCoordIndex = clickedItem->mHoverCoordIndex;
             mScene->setSelectedInGameMapFeatureItems(QSet<InGameMapFeatureItem*>() << clickedItem);
+        }
         mScene->document()->setSelectedInGameMapPoints(QList<int>());
     }
     if (event->button() == Qt::RightButton) {
@@ -949,7 +1004,7 @@ void EditInGameMapFeatureTool::setSelectedItem(InGameMapFeatureItem *featureItem
     if (mSelectedFeatureItem) {
         // The item may have been deleted if inside featureAboutToBeRemoved()
         if (mScene->itemForInGameMapFeature(mSelectedFeature)) {
-            for (auto* handle : mHandles) {
+            for (auto* handle : qAsConst(mHandles)) {
                 mScene->removeItem(handle);
                 delete handle;
             }
@@ -964,34 +1019,41 @@ void EditInGameMapFeatureTool::setSelectedItem(InGameMapFeatureItem *featureItem
     if (featureItem) {
         featureItem->mSyncing = true;
 
-        auto createHandle = [&](int pointIndex) {
-            FeatureHandle* handle = new FeatureHandle(featureItem, pointIndex);
+        auto createHandle = [&](int coordIndex, int pointIndex) {
+            FeatureHandle* handle = new FeatureHandle(featureItem, coordIndex, pointIndex);
             InGameMapPoint point = handle->geometryPoint();
             handle->setPos(mScene->renderer()->tileToPixelCoords(point.x, point.y));
 //            mScene->addItem(handle);
             mHandles += handle;
         };
+        const auto& coordList = featureItem->feature()->mGeometry.mCoordinates;
         switch (featureItem->geometryType()) {
         case InGameMapFeatureItem::Type::INVALID:
             break;
         case InGameMapFeatureItem::Type::Point:
-            for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
-                for (int i = 0; i < coords.size(); i++)
-                    createHandle(i);
+            for (const auto& coords : coordList) {
+                for (int i = 0; i < coords.size(); i++) {
+                    createHandle(0, i);
+                }
                 break; // should be only one set of coordinates
             }
             break;
-        case InGameMapFeatureItem::Type::Polygon:
-            for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
-                for (int i = 0; i < coords.size(); i++)
-                    createHandle(i);
-                break; // TODO: handle holes
+        case InGameMapFeatureItem::Type::Polygon: {
+            int coordIndex = featureItem->mSelectedCoordIndex;
+            if (coordIndex < 0 || coordIndex >= coordList.size()) {
+                coordIndex = 0;
+            }
+            const auto& coords = coordList[coordIndex];
+            for (int i = 0; i < coords.size(); i++) {
+                createHandle(coordIndex, i);
             }
             break;
+        }
         case InGameMapFeatureItem::Type::Polyline:
-            for (auto& coords : featureItem->feature()->mGeometry.mCoordinates) {
-                for (int i = 0; i < coords.size(); i++)
-                    createHandle(i);
+            for (const auto& coords : coordList) {
+                for (int i = 0; i < coords.size(); i++) {
+                    createHandle(0, i);
+                }
                 break; // should be only one set of coordinates
             }
             break;

@@ -404,7 +404,7 @@ private slots:
 
     void inGameMapFeatureAdded(WorldCell* cell, int index);
     void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
-    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 
@@ -722,7 +722,7 @@ public slots:
 
     void inGameMapFeatureAdded(WorldCell* cell, int index);
     void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
-    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int pointIndex);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
     void selectedInGameMapFeaturesChanged();
     void selectedInGameMapPointsChanged();

@@ -23,6 +23,7 @@
 class CellScene;
 class WorldDocument;
 
+class InGameMapCoordinates;
 class InGameMapFeature;
 class InGameMapPoint;
 
@@ -42,16 +43,16 @@ public:
 
     InGameMapFeatureItem(InGameMapFeature* feature, CellScene *scene, QGraphicsItem *parent = nullptr);
 
-    QRectF boundingRect() const;
+    QRectF boundingRect() const override;
 
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override;
 
-    void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
-    void hoverMoveEvent(QGraphicsSceneHoverEvent *event);
-    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
 
-    QPainterPath shape() const;
-    bool contains(const QPointF &point) const;
+    QPainterPath shape() const override;
+    bool contains(const QPointF &point) const override;
 
     void setEditable(bool editable);
     bool isEditable() const { return mIsEditable; }
@@ -63,7 +64,7 @@ public:
     void setSelected(bool selected);
     bool isSelected() const { return mIsSelected; }
 
-    void movePoint(int pointIndex, const InGameMapPoint& point);
+    void movePoint(int coordIndex, int pointIndex, const InGameMapPoint& point);
 
     void synchWithFeature();
 
@@ -76,6 +77,16 @@ public:
 
     void setAdjacent(bool adjacent) { mAdjacent = adjacent; }
     bool isAdjacent() { return mAdjacent; }
+
+    int selectedCoordIndex() const
+    { return mSelectedCoordIndex; }
+
+    QPolygonF makeScenePolygon(const InGameMapCoordinates& coords);
+
+    void hitTest(const QPointF &scenePos, int &coordIndex, int &pointIndex, float &dist);
+    void hitTest(const QPointF &scenePos, const QPolygonF &scenePoly, int &pointIndex, float &dist);
+
+    qreal firstViewZoom() const;
 
 protected:
     friend class FeatureHandle;
@@ -95,6 +106,8 @@ protected:
     int mAddPointIndex = -1;
     QPointF mAddPointPos;
     bool mAdjacent; // Displayed in an AdjacentMap
+    int mHoverCoordIndex = -1; // 0=outer,  1,2,3,...=hole
+    int mSelectedCoordIndex = -1; // 0=outer,  1,2,3,...=hole
 };
 
 class FeatureHandle;
