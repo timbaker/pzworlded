@@ -301,6 +301,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionRemoveInGameMapFeatures, &QAction::triggered, this, &MainWindow::removeInGameMapFeatures);
     connect(ui->actionRemoveInGameMapPoints, &QAction::triggered, this, &MainWindow::removeInGameMapPoint);
     connect(ui->actionSplitInGameMapPolygon, &QAction::triggered, this, &MainWindow::splitInGameMapPolygon);
+    connect(ui->actionAddInGameMapHole, &QAction::triggered, this, &MainWindow::addInGameMapHole);
+    connect(ui->actionRemoveInGameMapHole, &QAction::triggered, this, &MainWindow::removeInGameMapHole);
     connect(ui->actionReadInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::readInGameMapFeaturesXML);
     connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML);
     connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
@@ -1976,6 +1978,37 @@ void MainWindow::splitInGameMapPolygon()
     worldDoc->undoStack()->endMacro();
 }
 
+void MainWindow::addInGameMapHole()
+{
+    if (canAddInGameMapHole() == false) {
+        return;
+    }
+    auto* worldDoc = currentWorldDocument();
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    auto selectedFeatures = cellDoc->selectedInGameMapFeatures();
+    InGameMapFeature* feature1 = selectedFeatures.first();
+    InGameMapFeature* feature2 = selectedFeatures.last();
+
+    worldDoc->undoStack()->beginMacro(tr("Add InGameMap Hole"));
+    InGameMapCoordinates hole = feature2->mGeometry.mCoordinates.first();
+    worldDoc->removeInGameMapFeature(cellDoc->cell(), feature2->index());
+    worldDoc->addInGameMapHole(cellDoc->cell(), feature1->index(), feature1->mGeometry.mCoordinates.size(), hole);
+    worldDoc->undoStack()->endMacro();
+}
+
+void MainWindow::removeInGameMapHole()
+{
+    if (canRemoveInGameMapHole() == false) {
+        return;
+    }
+    auto* worldDoc = currentWorldDocument();
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    InGameMapFeature* feature = cellDoc->selectedInGameMapFeatures().first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    int coordIndex = featureItem->selectedCoordIndex();
+    worldDoc->removeInGameMapHole(cellDoc->cell(), feature->index(), coordIndex);
+}
+
 bool MainWindow::canRemoveInGameMapPoint()
 {
     if (mCurrentDocument == nullptr) {
@@ -2005,7 +2038,7 @@ bool MainWindow::canRemoveInGameMapPoint()
     }
     int coordIndex = featureItem->selectedCoordIndex();
     if (coordIndex < 0 || coordIndex >= feature->mGeometry.mCoordinates.size()) {
-        return;
+        return false;
     }
     const InGameMapCoordinates& coords = feature->mGeometry.mCoordinates[coordIndex];
     if (isPolygon) {
@@ -2015,6 +2048,57 @@ bool MainWindow::canRemoveInGameMapPoint()
         return coords.size() - selection.size() >= 2;
     }
     return true;
+}
+
+bool MainWindow::canAddInGameMapHole()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& features = cellDoc->selectedInGameMapFeatures();
+    if (features.size() != 2) {
+        return false;
+    }
+    InGameMapFeature* feature1 = features.first();
+    InGameMapFeature* feature2 = features.last();
+    if ((feature1->mGeometry.isPolygon() == false) || (feature2->mGeometry.isPolygon() == false)) {
+        return false;
+    }
+    // TODO: forbid holes in holes ad infinitum
+    return true;
+}
+
+bool MainWindow::canRemoveInGameMapHole()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& features = cellDoc->selectedInGameMapFeatures();
+    if (features.size() != 1) {
+        return false;
+    }
+    InGameMapFeature* feature = features.first();
+    bool isPolygon = feature->mGeometry.isPolygon();
+    if (isPolygon == false) {
+        return false;
+    }
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    if (featureItem == nullptr) {
+        return false;
+    }
+    int coordIndex = featureItem->selectedCoordIndex();
+    if (coordIndex < 0 || coordIndex >= feature->mGeometry.mCoordinates.size()) {
+        return false;
+    }
+    return coordIndex > 0;
 }
 
 void MainWindow::removeInGameMapPoint()
@@ -2379,6 +2463,8 @@ void MainWindow::updateActions()
                                                (cellDoc != nullptr && cellDoc->selectedInGameMapFeatures().isEmpty() == false));
     ui->actionRemoveInGameMapPoints->setEnabled(canRemoveInGameMapPoint());
     ui->actionSplitInGameMapPolygon->setEnabled(canSplitInGameMapPolygon());
+    ui->actionAddInGameMapHole->setEnabled(canAddInGameMapHole());
+    ui->actionRemoveInGameMapHole->setEnabled(canRemoveInGameMapHole());
     ui->actionReadInGameMapFeaturesXML->setEnabled(hasDoc);
     ui->actionWriteInGameMapFeaturesXML->setEnabled(hasDoc);
 

@@ -122,6 +122,8 @@ public:
     InGameMapProperty setInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
     InGameMapProperties setInGameMapProperties(WorldCell* cell, int featureIndex, const InGameMapProperties& properties);
     InGameMapCoordinates setInGameMapCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const InGameMapCoordinates& coords);
+    void addInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole);
+    InGameMapCoordinates removeInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex);
 
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
@@ -216,6 +218,8 @@ signals:
     void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
+    void inGameMapHoleAdded(WorldCell *cell, int featureIndex, int holeIndex);
+    void inGameMapHoleRemoved(WorldCell *cell, int featureIndex, int holeIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);
@@ -312,6 +316,8 @@ public:
     void setInGameMapProperty(WorldCell* cell, int featureIndex, int propertyIndex, const InGameMapProperty& property);
     void setInGameMapProperties(WorldCell* cell, int featureIndex, const InGameMapProperties& properties);
     void setInGameMapCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const InGameMapCoordinates& coords);
+    void addInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex, const InGameMapCoordinates& hole);
+    void removeInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex);
 
     void insertRoad(int index, Road *road);
     void removeRoad(int index);
@@ -502,6 +508,8 @@ signals:
     void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
+    void inGameMapHoleAdded(WorldCell* cell, int featureIndex, int holeIndex);
+    void inGameMapHoleRemoved(WorldCell* cell, int featureIndex, int holeIndex);
 
     void roadAdded(int index);
     void roadAboutToBeRemoved(int index);

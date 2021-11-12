@@ -81,6 +81,9 @@ public:
     int selectedCoordIndex() const
     { return mSelectedCoordIndex; }
 
+    void setSelectedCoordIndex(int index)
+    { mSelectedCoordIndex = index; }
+
     QPolygonF makeScenePolygon(const InGameMapCoordinates& coords);
 
     void hitTest(const QPointF &scenePos, int &coordIndex, int &pointIndex, float &dist);

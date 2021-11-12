@@ -136,3 +136,25 @@ void SetInGameMapCoordinates::swap()
 {
     mCoords = mDocument->undoRedo().setInGameMapCoordinates(mCell, mFeatureIndex, mCoordsIndex, mCoords);
 }
+
+/////
+
+AddRemoveInGameMapHole::AddRemoveInGameMapHole(WorldDocument *doc, WorldCell *cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole)
+    : mDocument(doc)
+    , mCell(cell)
+    , mFeatureIndex(featureIndex)
+    , mHoleIndex(holeIndex)
+    , mHole(hole)
+{
+
+}
+
+void AddRemoveInGameMapHole::addHole()
+{
+    mDocument->undoRedo().addInGameMapHole(mCell, mFeatureIndex, mHoleIndex, mHole);
+}
+
+void AddRemoveInGameMapHole::removeHole()
+{
+    mHole = mDocument->undoRedo().removeInGameMapHole(mCell, mFeatureIndex, mHoleIndex);
+}

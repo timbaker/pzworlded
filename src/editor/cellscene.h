@@ -724,6 +724,8 @@ public slots:
     void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
     void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
     void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
+    void inGameMapHoleAdded(WorldCell* cell, int featureIndex, int holeIndex);
+    void inGameMapHoleRemoved(WorldCell* cell, int featureIndex, int holeIndex);
     void selectedInGameMapFeaturesChanged();
     void selectedInGameMapPointsChanged();
 

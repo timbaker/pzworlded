@@ -163,6 +163,10 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             this, &WorldDocument::inGameMapPropertiesChanged);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapGeometryChanged,
             this, &WorldDocument::inGameMapGeometryChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapHoleAdded,
+            this, &WorldDocument::inGameMapHoleAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::inGameMapHoleRemoved,
+            this, &WorldDocument::inGameMapHoleRemoved);
 
     connect(&mUndoRedo, SIGNAL(roadAdded(int)),
             SIGNAL(roadAdded(int)));
@@ -539,6 +543,18 @@ void WorldDocument::setInGameMapCoordinates(WorldCell *cell, int featureIndex, i
 {
     Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
     undoStack()->push(new SetInGameMapCoordinates(this, cell, featureIndex, coordsIndex, coords));
+}
+
+void WorldDocument::addInGameMapHole(WorldCell *cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new AddInGameMapHole(this, cell, featureIndex, holeIndex, hole));
+}
+
+void WorldDocument::removeInGameMapHole(WorldCell *cell, int featureIndex, int holeIndex)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new RemoveInGameMapHole(this, cell, featureIndex, holeIndex));
 }
 
 void WorldDocument::insertRoad(int index, Road *road)
@@ -1475,6 +1491,23 @@ InGameMapCoordinates WorldDocumentUndoRedo::setInGameMapCoordinates(WorldCell *c
     InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
     InGameMapCoordinates old = feature->mGeometry.mCoordinates[coordsIndex];
     feature->mGeometry.mCoordinates[coordsIndex] = coords;
+    emit inGameMapGeometryChanged(cell, featureIndex);
+    return old;
+}
+
+void WorldDocumentUndoRedo::addInGameMapHole(WorldCell *cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole)
+{
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    feature->mGeometry.mCoordinates.insert(holeIndex, hole);
+    emit inGameMapHoleAdded(cell, featureIndex, holeIndex);
+    emit inGameMapGeometryChanged(cell, featureIndex);
+}
+
+InGameMapCoordinates WorldDocumentUndoRedo::removeInGameMapHole(WorldCell *cell, int featureIndex, int holeIndex)
+{
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    InGameMapCoordinates old = feature->mGeometry.mCoordinates.takeAt(holeIndex);
+    emit inGameMapHoleRemoved(cell, featureIndex, holeIndex);
     emit inGameMapGeometryChanged(cell, featureIndex);
     return old;
 }

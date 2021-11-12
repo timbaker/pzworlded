@@ -217,7 +217,6 @@ void InGameMapFeatureItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
         mAddPointIndex = -1;
         update();
     }
-
 }
 
 void InGameMapFeatureItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)

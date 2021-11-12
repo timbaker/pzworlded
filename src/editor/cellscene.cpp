@@ -3036,6 +3036,32 @@ void CellScene::inGameMapGeometryChanged(WorldCell *cell, int featureIndex)
     }
 }
 
+void CellScene::inGameMapHoleAdded(WorldCell *cell, int featureIndex, int holeIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    InGameMapFeature *feature = cell->inGameMap().mFeatures.at(featureIndex);
+    if (auto* item = itemForInGameMapFeature(feature)) {
+        if (holeIndex <= item->selectedCoordIndex()) {
+            item->setSelectedCoordIndex(item->selectedCoordIndex() + 1);
+        }
+    }
+}
+
+void CellScene::inGameMapHoleRemoved(WorldCell *cell, int featureIndex, int holeIndex)
+{
+    if (cell != this->cell())
+        return;
+
+    InGameMapFeature *feature = cell->inGameMap().mFeatures.at(featureIndex);
+    if (auto* item = itemForInGameMapFeature(feature)) {
+        if (holeIndex <= item->selectedCoordIndex()) {
+            item->setSelectedCoordIndex(item->selectedCoordIndex() - 1);
+        }
+    }
+}
+
 void CellScene::selectedInGameMapFeaturesChanged()
 {
     auto& selected = document()->selectedInGameMapFeatures();

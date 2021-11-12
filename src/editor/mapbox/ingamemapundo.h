@@ -183,4 +183,46 @@ private:
     InGameMapCoordinates mCoords;
 };
 
+class AddRemoveInGameMapHole : public QUndoCommand
+{
+public:
+    AddRemoveInGameMapHole(WorldDocument *doc, WorldCell *cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole);
+
+protected:
+    void addHole();
+    void removeHole();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mFeatureIndex;
+    int mHoleIndex;
+    InGameMapCoordinates mHole;
+};
+
+class AddInGameMapHole : public AddRemoveInGameMapHole
+{
+public:
+    AddInGameMapHole(WorldDocument *doc, WorldCell *cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole)
+        : AddRemoveInGameMapHole(doc, cell, featureIndex, holeIndex, hole)
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Add InGameMap Hole"));
+    }
+
+    void undo() { removeHole(); }
+    void redo() { addHole(); }
+};
+
+class RemoveInGameMapHole : public AddRemoveInGameMapHole
+{
+public:
+    RemoveInGameMapHole(WorldDocument *doc, WorldCell *cell, int featureIndex, int holeIndex)
+        : AddRemoveInGameMapHole(doc, cell, featureIndex, holeIndex, {})
+    {
+        setText(QCoreApplication::translate("Undo Commands", "Remove InGameMap Hole"));
+    }
+
+    void undo() { addHole(); }
+    void redo() { removeHole(); }
+};
+
 #endif // INGAMEMAPUNDO_H

@@ -366,6 +366,8 @@
     <addaction name="actionRemoveInGameMapFeatures"/>
     <addaction name="actionRemoveInGameMapPoints"/>
     <addaction name="actionSplitInGameMapPolygon"/>
+    <addaction name="actionAddInGameMapHole"/>
+    <addaction name="actionRemoveInGameMapHole"/>
     <addaction name="separator"/>
     <addaction name="actionGenerateInGameMapBuildingFeatures"/>
     <addaction name="actionGenerateInGameMapTreeFeatures"/>
@@ -923,6 +925,16 @@
   <action name="actionCreateImagePyramid">
    <property name="text">
     <string>Create Image Pyramid...</string>
+   </property>
+  </action>
+  <action name="actionAddInGameMapHole">
+   <property name="text">
+    <string>Add Polygon Hole</string>
+   </property>
+  </action>
+  <action name="actionRemoveInGameMapHole">
+   <property name="text">
+    <string>Remove Polygon Hole</string>
    </property>
   </action>
  </widget>

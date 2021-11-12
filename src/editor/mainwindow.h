@@ -142,6 +142,8 @@ public slots:
     void generateInGameMapWaterFeatures();
     void removeInGameMapFeatures();
     void splitInGameMapPolygon();
+    void addInGameMapHole();
+    void removeInGameMapHole();
     void removeInGameMapPoint();
     void readInGameMapFeaturesXML();
     void writeInGameMapFeaturesXML();
@@ -181,6 +183,8 @@ private:
 
     bool canSplitInGameMapPolygon();
     bool canRemoveInGameMapPoint();
+    bool canAddInGameMapHole();
+    bool canRemoveInGameMapHole();
 
     struct ViewHint
     {
