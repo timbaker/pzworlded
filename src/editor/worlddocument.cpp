@@ -28,7 +28,7 @@
 #include "worldview.h"
 #include "worldwriter.h"
 
-#include "mapbox/ingamemapundo.h"
+#include "InGameMap/ingamemapundo.h"
 
 #include <QDebug>
 #include <QFileDialog>

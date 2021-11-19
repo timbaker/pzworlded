@@ -19,7 +19,7 @@
 #define WORLDCELL_H
 
 #include "worldproperties.h"
-#include "mapbox/ingamemapcell.h"
+#include "InGameMap/ingamemapcell.h"
 
 #include <QColor>
 #include <QPoint>

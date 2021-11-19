@@ -35,7 +35,7 @@
 #include "worlddocument.h"
 #include "zoomable.h"
 
-#include "mapbox/ingamemapscene.h"
+#include "InGameMap/ingamemapscene.h"
 
 #include "isometricrenderer.h"
 #include "map.h"

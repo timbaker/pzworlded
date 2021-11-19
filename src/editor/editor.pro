@@ -58,18 +58,18 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
-    mapbox/clipper.cpp \
-    mapbox/ingamemapcell.cpp \
-    mapbox/ingamemapdock.cpp \
-    mapbox/ingamemapfeaturegenerator.cpp \
-    mapbox/ingamemapimagepyramidwindow.cpp \
-    mapbox/ingamemappropertiesform.cpp \
-    mapbox/ingamemappropertydialog.cpp \
-    mapbox/ingamemapreader.cpp \
-    mapbox/ingamemapscene.cpp \
-    mapbox/ingamemapundo.cpp \
-    mapbox/ingamemapwriter.cpp \
-    mapbox/ingamemapwriterbinary.cpp \
+    InGameMap/clipper.cpp \
+    InGameMap/ingamemapcell.cpp \
+    InGameMap/ingamemapdock.cpp \
+    InGameMap/ingamemapfeaturegenerator.cpp \
+    InGameMap/ingamemapimagepyramidwindow.cpp \
+    InGameMap/ingamemappropertiesform.cpp \
+    InGameMap/ingamemappropertydialog.cpp \
+    InGameMap/ingamemapreader.cpp \
+    InGameMap/ingamemapscene.cpp \
+    InGameMap/ingamemapundo.cpp \
+    InGameMap/ingamemapwriter.cpp \
+    InGameMap/ingamemapwriterbinary.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -165,18 +165,18 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
-    mapbox/clipper.hpp \
-    mapbox/ingamemapcell.h \
-    mapbox/ingamemapdock.h \
-    mapbox/ingamemapfeaturegenerator.h \
-    mapbox/ingamemapimagepyramidwindow.h \
-    mapbox/ingamemappropertiesform.h \
-    mapbox/ingamemappropertydialog.h \
-    mapbox/ingamemapreader.h \
-    mapbox/ingamemapscene.h \
-    mapbox/ingamemapundo.h \
-    mapbox/ingamemapwriter.h \
-    mapbox/ingamemapwriterbinary.h \
+    InGameMap/clipper.hpp \
+    InGameMap/ingamemapcell.h \
+    InGameMap/ingamemapdock.h \
+    InGameMap/ingamemapfeaturegenerator.h \
+    InGameMap/ingamemapimagepyramidwindow.h \
+    InGameMap/ingamemappropertiesform.h \
+    InGameMap/ingamemappropertydialog.h \
+    InGameMap/ingamemapreader.h \
+    InGameMap/ingamemapscene.h \
+    InGameMap/ingamemapundo.h \
+    InGameMap/ingamemapwriter.h \
+    InGameMap/ingamemapwriterbinary.h \
     tilesetstxtfile.h \
     worldview.h \
     worldscene.h \
@@ -271,9 +271,9 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     generatelotsfailuredialog.ui \
-    mapbox/ingamemapimagepyramidwindow.ui \
-    mapbox/ingamemappropertiesform.ui \
-    mapbox/ingamemappropertydialog.ui \
+    InGameMap/ingamemapimagepyramidwindow.ui \
+    InGameMap/ingamemappropertiesform.ui \
+    InGameMap/ingamemappropertydialog.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \

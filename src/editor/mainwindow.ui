@@ -359,7 +359,7 @@
     <addaction name="actionBuildingsToPNG"/>
     <addaction name="actionLootInspector"/>
    </widget>
-   <widget class="QMenu" name="menuMapbox">
+   <widget class="QMenu" name="menuInGameMap">
     <property name="title">
      <string>InGameMap</string>
     </property>
@@ -382,7 +382,7 @@
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
-   <addaction name="menuMapbox"/>
+   <addaction name="menuInGameMap"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>

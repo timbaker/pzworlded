@@ -21,7 +21,7 @@
 #include "document.h"
 #include "worldcell.h"
 
-#include "mapbox/ingamemapcell.h"
+#include "InGameMap/ingamemapcell.h"
 
 #include <QColor>
 #include <QObject>
