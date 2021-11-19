@@ -32,7 +32,6 @@ class LotsDock;
 class LotPackWindow;
 class MapsDock;
 class InGameMapDock;
-class MapboxWindow;
 class ObjectsDock;
 class PropertiesDock;
 class RoadsDock;
@@ -136,7 +135,6 @@ public slots:
     void clearCells();
     void clearMapOnly();
 
-    void showInGameMapPreviewWindow();
     void generateInGameMapBuildingFeatures();
     void generateInGameMapTreeFeatures();
     void generateInGameMapWaterFeatures();
@@ -221,7 +219,6 @@ private:
     Zoomable *mZoomable;
     QSettings mSettings;
     LotPackWindow *mLotPackWindow;
-    MapboxWindow* mMapboxWindow = nullptr;
 
     static MainWindow *mInstance;
 };

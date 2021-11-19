@@ -77,7 +77,6 @@
 #include "mapbox/ingamemapimagepyramidwindow.h"
 #include "mapbox/ingamemapreader.h"
 #include "mapbox/ingamemapscene.h"
-#include "mapbox/mapboxwindow.h"
 #include "mapbox/ingamemapwriter.h"
 #include "mapbox/ingamemapwriterbinary.h"
 
@@ -139,11 +138,11 @@ MainWindow::MainWindow(QWidget *parent)
     mZoomComboBox = ui->zoomComboBox;
 
     QString coordString = QLatin1String("Cell x,y=300,300");
-    int width = ui->coordinatesLabel->fontMetrics().width(coordString);
+    int width = ui->coordinatesLabel->fontMetrics().horizontalAdvance(coordString);
     ui->coordinatesLabel->setMinimumWidth(width + 8);
 
     coordString = QLatin1String("World x,y=9999,9999");
-    width = ui->coordinatesLabel->fontMetrics().width(coordString);
+    width = ui->coordinatesLabel->fontMetrics().horizontalAdvance(coordString);
     ui->worldCoordinatesLabel->setMinimumWidth(width + 8);
 
     ui->actionSave->setShortcuts(QKeySequence::Save);
@@ -293,8 +292,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
 
-    connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showInGameMapPreviewWindow);
-    ui->actionMapboxPreview->setVisible(false);
     connect(ui->actionGenerateInGameMapBuildingFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapBuildingFeatures);
     connect(ui->actionGenerateInGameMapTreeFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapTreeFeatures);
     connect(ui->actionGenerateInGameMapWaterFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapWaterFeatures);
@@ -2225,19 +2222,6 @@ void MainWindow::clearMapOnly()
     undoStack->endMacro();
 }
 
-void MainWindow::showInGameMapPreviewWindow()
-{
-    if (mMapboxWindow == nullptr)
-        mMapboxWindow = new MapboxWindow(this);
-    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
-    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
-        worldDoc = cellDoc->worldDocument();
-    mMapboxWindow->setDocument(worldDoc);
-    mMapboxWindow->showNormal();
-    mMapboxWindow->activateWindow();
-    mMapboxWindow->raise();
-}
-
 void MainWindow::writeInGameMapFeaturesXML()
 {
     WorldDocument *worldDoc = currentWorldDocument();
@@ -2466,7 +2450,6 @@ void MainWindow::updateActions()
     ui->actionClearCell->setEnabled(false);
     ui->actionClearMapOnly->setEnabled(false);
 
-    ui->actionMapboxPreview->setEnabled(hasDoc);
     bool selectedCells = (cellDoc != nullptr) || (worldDoc != nullptr && !worldDoc->selectedCells().isEmpty());
     ui->actionGenerateInGameMapBuildingFeatures->setEnabled(selectedCells);
     ui->actionGenerateInGameMapTreeFeatures->setEnabled(selectedCells);

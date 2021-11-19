@@ -372,7 +372,6 @@
     <addaction name="actionGenerateInGameMapBuildingFeatures"/>
     <addaction name="actionGenerateInGameMapTreeFeatures"/>
     <addaction name="actionGenerateInGameMapWaterFeatures"/>
-    <addaction name="actionMapboxPreview"/>
     <addaction name="separator"/>
     <addaction name="actionReadInGameMapFeaturesXML"/>
     <addaction name="actionWriteInGameMapFeaturesXML"/>
@@ -875,11 +874,6 @@
   <action name="actionGenerateInGameMapWaterFeatures">
    <property name="text">
     <string>Generate Water Features</string>
-   </property>
-  </action>
-  <action name="actionMapboxPreview">
-   <property name="text">
-    <string>Preview</string>
    </property>
   </action>
   <action name="actionReadInGameMapFeaturesXML">

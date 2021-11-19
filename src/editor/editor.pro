@@ -70,8 +70,6 @@ SOURCES += main.cpp\
     mapbox/ingamemapundo.cpp \
     mapbox/ingamemapwriter.cpp \
     mapbox/ingamemapwriterbinary.cpp \
-    mapbox/mapboxglwidget.cpp \
-    mapbox/mapboxwindow.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -179,9 +177,6 @@ HEADERS  += mainwindow.h \
     mapbox/ingamemapundo.h \
     mapbox/ingamemapwriter.h \
     mapbox/ingamemapwriterbinary.h \
-    mapbox/mapboxcoordinate.h \
-    mapbox/mapboxglwidget.h \
-    mapbox/mapboxwindow.h \
     tilesetstxtfile.h \
     worldview.h \
     worldscene.h \
@@ -279,7 +274,6 @@ FORMS    += mainwindow.ui \
     mapbox/ingamemapimagepyramidwindow.ui \
     mapbox/ingamemappropertiesform.ui \
     mapbox/ingamemappropertydialog.ui \
-    mapbox/mapboxwindow.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \
