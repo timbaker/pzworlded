@@ -33,6 +33,8 @@ class WorldCellObject;
 class WorldDocument;
 class WorldObjectGroup;
 
+class InGameMapFeature;
+
 namespace Tiled {
 class Layer;
 class TileLayer;
@@ -72,6 +74,12 @@ public:
     const QList<int>& selectedObjectPoints() const
     { return mSelectedObjectPoints; }
 
+    void setSelectedInGameMapFeatures(const QList<InGameMapFeature*>& selected);
+    const QList<InGameMapFeature*>& selectedInGameMapFeatures() const { return mSelectedInGameMapFeatures; }
+
+    void setSelectedInGameMapPoints(const QList<int>& selected);
+    const QList<int>& selectedInGameMapPoints() const { return mSelectedInGameMapPoints; }
+
     void setLayerVisibility(Tiled::Layer *layer, bool visible);
     void setLayerGroupVisibility(Tiled::ZTileLayerGroup *layerGroup, bool visible);
 
@@ -106,6 +114,8 @@ signals:
     void selectedLotsChanged();
     void selectedObjectsChanged();
     void selectedObjectPointsChanged();
+    void selectedInGameMapFeaturesChanged();
+    void selectedInGameMapPointsChanged();
     void cellContentsAboutToChange();
     void cellContentsChanged();
     void cellMapFileAboutToChange();
@@ -127,6 +137,8 @@ private slots:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
 
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
+
     void objectGroupAboutToBeRemoved(int index);
 
 private:
@@ -136,6 +148,8 @@ private:
     QList<WorldCellLot*> mSelectedLots;
     QList<WorldCellObject*> mSelectedObjects;
     QList<int> mSelectedObjectPoints;
+    QList<InGameMapFeature*> mSelectedInGameMapFeatures;
+    QList<int> mSelectedInGameMapPoints;
     int mCurrentLayerIndex;
     int mCurrentLevel;
     WorldObjectGroup *mCurrentObjectGroup;

@@ -60,6 +60,9 @@ class WorldCellObject;
 class WorldCellObjectPoint;
 class WorldObjectGroup;
 */
+class InGameMapFeature;
+class InGameMapFeatureItem;
+
 namespace Tiled {
 class MapRenderer;
 class Layer;
@@ -446,6 +449,7 @@ public:
     { return mCell; }
 
     ObjectItem *itemForObject(WorldCellObject *obj);
+    InGameMapFeatureItem *itemForFeature(InGameMapFeature *feature);
 
     void removeItems();
 
@@ -469,6 +473,12 @@ private slots:
     void objectXXXXChanged(WorldCellObject *obj);
     void cellObjectGroupChanged(WorldCellObject *obj);
     void cellObjectReordered(WorldCellObject *obj);
+
+    void inGameMapFeatureAdded(WorldCell* cell, int index);
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
+    void inGameMapPropertiesChanged(WorldCell* cell, int featureIndex);
+    void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
 
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
@@ -501,6 +511,8 @@ private:
     QMap<WorldCellLot*,MapComposite*> mLotToMC;
     QGraphicsItem *mObjectItemParent;
     QList<ObjectItem*> mObjectItems;
+    QGraphicsItem *mInGameMapFeatureParent;
+    QList<InGameMapFeatureItem*> mInGameMapFeatureItems;
 };
 
 class QOpenGLContext;
@@ -654,6 +666,7 @@ public:
     QList<SubMapItem*> subMapItemsUsingMapInfo(MapInfo *mapInfo);
 
     ObjectItem *itemForObject(WorldCellObject *obj);
+    InGameMapFeatureItem* itemForInGameMapFeature(InGameMapFeature* feature);
 
     void setSelectedSubMapItems(const QSet<SubMapItem*> &selected);
     const QSet<SubMapItem*> &selectedSubMapItems() const
@@ -663,10 +676,15 @@ public:
     const QSet<ObjectItem*> &selectedObjectItems() const
     { return mSelectedObjectItems; }
 
+    void setSelectedInGameMapFeatureItems(const QSet<InGameMapFeatureItem*> &selected);
+    const QSet<InGameMapFeatureItem*> &selectedInGameMapFeatureItems() const
+    { return mSelectedFeatureItems; }
+
     void setGraphicsSceneZOrder();
 
     void setSubMapVisible(WorldCellLot *lot, bool visible);
     void setObjectVisible(WorldCellObject *obj, bool visible);
+    void setInGameMapFeatureVisible(InGameMapFeature *feature, bool visible);
 
     void setLevelOpacity(int level, qreal opacity);
     qreal levelOpacity(int level);
@@ -777,6 +795,15 @@ public slots:
 
     void propertiesChanged(PropertyHolder* ph);
 
+    void inGameMapFeatureAdded(WorldCell* cell, int index);
+    void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);
+    void inGameMapPointMoved(WorldCell* cell, int featureIndex, int coordIndex, int pointIndex);
+    void inGameMapGeometryChanged(WorldCell* cell, int featureIndex);
+    void inGameMapHoleAdded(WorldCell* cell, int featureIndex, int holeIndex);
+    void inGameMapHoleRemoved(WorldCell* cell, int featureIndex, int holeIndex);
+    void selectedInGameMapFeaturesChanged();
+    void selectedInGameMapPointsChanged();
+
     void roadAdded(int index);
     void roadRemoved(Road *road);
     void roadCoordsChanged(int index);
@@ -839,6 +866,8 @@ private:
     QSet<ObjectItem*> mSelectedObjectItems;
     QList<CellRoadItem*> mRoadItems;
     QSet<CellRoadItem*> mSelectedRoadItems;
+    QList<InGameMapFeatureItem*> mFeatureItems;
+    QSet<InGameMapFeatureItem*> mSelectedFeatureItems;
     QGraphicsRectItem *mDarkRectangle;
     CellGridItem *mGridItem;
     bool mHighlightCurrentLevel;

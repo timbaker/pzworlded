@@ -123,6 +123,7 @@ Preferences::Preferences()
                                        tilesDirectory).toString();
 
     mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
+    mWorldMapXMLFile = mSettings->value(QLatin1String("WorldMapXMLFile")).toString();
 
     // Use the same directory as TileZed.
     QString KEY_CONFIG_PATH = QLatin1String("ConfigDirectory");
@@ -289,6 +290,19 @@ void Preferences::setOpenFileDirectory(const QString &path)
         return;
     mOpenFileDirectory = path;
     mSettings->setValue(QLatin1String("OpenFileDirectory"), mOpenFileDirectory);
+}
+
+QString Preferences::worldMapXMLFile() const
+{
+    return mWorldMapXMLFile;
+}
+
+void Preferences::setWorldMapXMLFile(const QString &path)
+{
+    if (mWorldMapXMLFile == path)
+        return;
+    mWorldMapXMLFile = path;
+    mSettings->setValue(QLatin1String("WorldMapXMLFile"), mWorldMapXMLFile);
 }
 
 void Preferences::setShowAdjacentMaps(bool show)

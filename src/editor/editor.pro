@@ -2,6 +2,8 @@ include(../../PZWorldEd.pri)
 include(../libtiled/libtiled.pri)
 include(../qtlockedfile/qtlockedfile.pri)
 include(../lua/lua.pri)
+include(../quazip-1.1/quazip/quazip.pri)
+include(../zlib/zlib.pri)
 
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
@@ -56,6 +58,20 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
         mainwindow.cpp \
+    mapbox/clipper.cpp \
+    mapbox/ingamemapcell.cpp \
+    mapbox/ingamemapdock.cpp \
+    mapbox/ingamemapfeaturegenerator.cpp \
+    mapbox/ingamemapimagepyramidwindow.cpp \
+    mapbox/ingamemappropertiesform.cpp \
+    mapbox/ingamemappropertydialog.cpp \
+    mapbox/ingamemapreader.cpp \
+    mapbox/ingamemapscene.cpp \
+    mapbox/ingamemapundo.cpp \
+    mapbox/ingamemapwriter.cpp \
+    mapbox/ingamemapwriterbinary.cpp \
+    mapbox/mapboxglwidget.cpp \
+    mapbox/mapboxwindow.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -151,6 +167,21 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     generatelotsfailuredialog.h \
+    mapbox/clipper.hpp \
+    mapbox/ingamemapcell.h \
+    mapbox/ingamemapdock.h \
+    mapbox/ingamemapfeaturegenerator.h \
+    mapbox/ingamemapimagepyramidwindow.h \
+    mapbox/ingamemappropertiesform.h \
+    mapbox/ingamemappropertydialog.h \
+    mapbox/ingamemapreader.h \
+    mapbox/ingamemapscene.h \
+    mapbox/ingamemapundo.h \
+    mapbox/ingamemapwriter.h \
+    mapbox/ingamemapwriterbinary.h \
+    mapbox/mapboxcoordinate.h \
+    mapbox/mapboxglwidget.h \
+    mapbox/mapboxwindow.h \
     tilesetstxtfile.h \
     worldview.h \
     worldscene.h \
@@ -245,6 +276,10 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     generatelotsfailuredialog.ui \
+    mapbox/ingamemapimagepyramidwindow.ui \
+    mapbox/ingamemappropertiesform.ui \
+    mapbox/ingamemappropertydialog.ui \
+    mapbox/mapboxwindow.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \

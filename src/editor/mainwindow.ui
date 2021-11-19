@@ -359,11 +359,31 @@
     <addaction name="actionBuildingsToPNG"/>
     <addaction name="actionLootInspector"/>
    </widget>
+   <widget class="QMenu" name="menuMapbox">
+    <property name="title">
+     <string>InGameMap</string>
+    </property>
+    <addaction name="actionRemoveInGameMapFeatures"/>
+    <addaction name="actionRemoveInGameMapPoints"/>
+    <addaction name="actionSplitInGameMapPolygon"/>
+    <addaction name="actionAddInGameMapHole"/>
+    <addaction name="actionRemoveInGameMapHole"/>
+    <addaction name="separator"/>
+    <addaction name="actionGenerateInGameMapBuildingFeatures"/>
+    <addaction name="actionGenerateInGameMapTreeFeatures"/>
+    <addaction name="actionGenerateInGameMapWaterFeatures"/>
+    <addaction name="actionMapboxPreview"/>
+    <addaction name="separator"/>
+    <addaction name="actionReadInGameMapFeaturesXML"/>
+    <addaction name="actionWriteInGameMapFeaturesXML"/>
+    <addaction name="actionCreateImagePyramid"/>
+   </widget>
    <addaction name="fileMenu"/>
    <addaction name="editMenu"/>
    <addaction name="menuView"/>
    <addaction name="menuWorld"/>
    <addaction name="menuCell"/>
+   <addaction name="menuMapbox"/>
    <addaction name="menuTools"/>
    <addaction name="helpMenu"/>
   </widget>
@@ -833,6 +853,88 @@
    </property>
    <property name="text">
     <string>Show Other Worlds</string>
+   </property>
+  </action>
+  <action name="actionWriteInGameMapFeaturesXML">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-save-as.png</normaloff>:/images/16x16/document-save-as.png</iconset>
+   </property>
+   <property name="text">
+    <string>Write Features XML...</string>
+   </property>
+   <property name="toolTip">
+    <string>Don't forget to do this!</string>
+   </property>
+  </action>
+  <action name="actionGenerateInGameMapBuildingFeatures">
+   <property name="text">
+    <string>Generate Building Features</string>
+   </property>
+  </action>
+  <action name="actionGenerateInGameMapWaterFeatures">
+   <property name="text">
+    <string>Generate Water Features</string>
+   </property>
+  </action>
+  <action name="actionMapboxPreview">
+   <property name="text">
+    <string>Preview</string>
+   </property>
+  </action>
+  <action name="actionReadInGameMapFeaturesXML">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-open.png</normaloff>:/images/16x16/document-open.png</iconset>
+   </property>
+   <property name="text">
+    <string>Read Features XML...</string>
+   </property>
+  </action>
+  <action name="actionSplitInGameMapPolygon">
+   <property name="text">
+    <string>Split Polygon</string>
+   </property>
+  </action>
+  <action name="actionRemoveInGameMapPoints">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove Selected Points</string>
+   </property>
+  </action>
+  <action name="actionGenerateInGameMapTreeFeatures">
+   <property name="text">
+    <string>Generate Tree Features</string>
+   </property>
+  </action>
+  <action name="actionRemoveInGameMapFeatures">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/edit-delete.png</normaloff>:/images/16x16/edit-delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove Selected Features</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionCreateImagePyramid">
+   <property name="text">
+    <string>Create Image Pyramid...</string>
+   </property>
+  </action>
+  <action name="actionAddInGameMapHole">
+   <property name="text">
+    <string>Add Polygon Hole</string>
+   </property>
+  </action>
+  <action name="actionRemoveInGameMapHole">
+   <property name="text">
+    <string>Remove Polygon Hole</string>
    </property>
   </action>
  </widget>

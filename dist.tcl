@@ -12,7 +12,7 @@ if {$argc > 0} {
     switch -- [lindex $argv 0] {
         32bit {
             puts "dist.tcl: 32-bit"
-            set BIN C:/Programming/PZWorldEd/dist32
+            set BIN C:/Programming/PZWorldEd-worldmap/dist32
             set QT_DIR C:/Programming/QtSDK2015/5.15.2/msvc2019
             set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd32}
         }
@@ -107,10 +107,10 @@ proc removeFD {dir name} {
     return
 }
 if 1 {
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} vcredist*
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} .pzeditor
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} lots
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} *.bak
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} EnableDeveloperFeatures.txt
-removeFD {C:\Users\Tim\Desktop\ProjectZomboid\Tools} Qt*4.dll
+removeFD {C:\Programming\PZWorldEd-worldmap} vcredist*
+removeFD {C:\Programming\PZWorldEd-worldmap} .pzeditor
+removeFD {C:\Programming\PZWorldEd-worldmap} lots
+removeFD {C:\Programming\PZWorldEd-worldmap} *.bak
+removeFD {C:\Programming\PZWorldEd-worldmap} EnableDeveloperFeatures.txt
+removeFD {C:\Programming\PZWorldEd-worldmap} Qt*4.dll
 }

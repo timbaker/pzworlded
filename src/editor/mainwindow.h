@@ -31,6 +31,8 @@ class LayersDock;
 class LotsDock;
 class LotPackWindow;
 class MapsDock;
+class InGameMapDock;
+class MapboxWindow;
 class ObjectsDock;
 class PropertiesDock;
 class RoadsDock;
@@ -134,6 +136,19 @@ public slots:
     void clearCells();
     void clearMapOnly();
 
+    void showInGameMapPreviewWindow();
+    void generateInGameMapBuildingFeatures();
+    void generateInGameMapTreeFeatures();
+    void generateInGameMapWaterFeatures();
+    void removeInGameMapFeatures();
+    void splitInGameMapPolygon();
+    void addInGameMapHole();
+    void removeInGameMapHole();
+    void removeInGameMapPoint();
+    void readInGameMapFeaturesXML();
+    void writeInGameMapFeaturesXML();
+    void creaeInGameMapImagePyramid();
+
     void setStatusBarCoords(int x, int y);
 
     void aboutToShowCurrentLevelMenu();
@@ -166,6 +181,11 @@ private:
 
     WorldDocument *currentWorldDocument();
 
+    bool canSplitInGameMapPolygon();
+    bool canRemoveInGameMapPoint();
+    bool canAddInGameMapHole();
+    bool canRemoveInGameMapHole();
+
     struct ViewHint
     {
         qreal scale;
@@ -190,6 +210,7 @@ private:
     ObjectsDock *mObjectsDock;
     PropertiesDock *mPropertiesDock;
     SearchDock* mSearchDock;
+    InGameMapDock* mInGameMapDock;
 #ifdef ROAD_UI
     RoadsDock *mRoadsDock;
 #endif
@@ -200,6 +221,7 @@ private:
     Zoomable *mZoomable;
     QSettings mSettings;
     LotPackWindow *mLotPackWindow;
+    MapboxWindow* mMapboxWindow = nullptr;
 
     static MainWindow *mInstance;
 };

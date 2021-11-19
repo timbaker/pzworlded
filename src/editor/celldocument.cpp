@@ -86,6 +86,8 @@ void CellDocument::setScene(CellScene *scene)
     connect(mWorldDocument, SIGNAL(objectGroupAboutToBeRemoved(int)),
             SLOT(objectGroupAboutToBeRemoved(int)));
 
+    connect(mWorldDocument, &WorldDocument::inGameMapFeatureAboutToBeRemoved, this, &CellDocument::inGameMapFeatureAboutToBeRemoved);
+
     connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
             SLOT(mapAboutToChange(MapInfo*)));
     connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
@@ -120,6 +122,34 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
             setCurrentLevel(obj->level());
         setCurrentObjectGroup(obj->group());
     }
+}
+
+void CellDocument::setSelectedInGameMapFeatures(const QList<InGameMapFeature *> &selected)
+{
+    mSelectedInGameMapFeatures.clear();
+
+    for (InGameMapFeature* feature : selected) {
+        if (!mSelectedInGameMapFeatures.contains(feature))
+            mSelectedInGameMapFeatures.append(feature);
+        else
+            qWarning("duplicate features passed to setSelectedInGameMapFeatures");
+    }
+
+    emit selectedInGameMapFeaturesChanged();
+}
+
+void CellDocument::setSelectedInGameMapPoints(const QList<int> &selected)
+{
+    mSelectedInGameMapPoints.clear();
+
+    for (int point : selected) {
+        if (!mSelectedInGameMapPoints.contains(point))
+            mSelectedInGameMapPoints.append(point);
+        else
+            qWarning("duplicate points passed to setSelectedInGameMapPoints");
+    }
+
+    emit selectedInGameMapPointsChanged();
 }
 
 void CellDocument::setSelectedObjectPoints(const QList<int> &selected)
@@ -326,6 +356,15 @@ void CellDocument::cellLotMoved(WorldCellLot *lot)
         int index = mCell->lots().indexOf(lot);
         mMiniMapItem->lotMoved(index);
     }
+}
+
+void CellDocument::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
+{
+    if (cell != mCell)
+        return;
+    QList<InGameMapFeature*> selection = mSelectedInGameMapFeatures;
+    selection.removeAll(cell->inGameMap().features().at(index));
+    setSelectedInGameMapFeatures(selection);
 }
 
 void CellDocument::objectGroupAboutToBeRemoved(int index)

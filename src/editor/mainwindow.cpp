@@ -72,6 +72,15 @@
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
 
+#include "mapbox/ingamemapfeaturegenerator.h"
+#include "mapbox/ingamemapdock.h"
+#include "mapbox/ingamemapimagepyramidwindow.h"
+#include "mapbox/ingamemapreader.h"
+#include "mapbox/ingamemapscene.h"
+#include "mapbox/mapboxwindow.h"
+#include "mapbox/ingamemapwriter.h"
+#include "mapbox/ingamemapwriterbinary.h"
+
 #include "layer.h"
 #include "mapobject.h"
 #include "maprenderer.h"
@@ -83,6 +92,7 @@
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QDebug>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -109,6 +119,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mObjectsDock(new ObjectsDock(this))
     , mPropertiesDock(new PropertiesDock(this))
     , mSearchDock(new SearchDock(this))
+    , mInGameMapDock(new InGameMapDock(this))
 #ifdef ROAD_UI
     , mRoadsDock(new RoadsDock(this))
 #endif
@@ -201,6 +212,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->menuView->addAction(mLayersDock->toggleViewAction());
     ui->menuView->addAction(mLotsDock->toggleViewAction());
+    ui->menuView->addAction(mInGameMapDock->toggleViewAction());
     ui->menuView->addAction(mMapsDock->toggleViewAction());
     ui->menuView->addAction(mObjectsDock->toggleViewAction());
     ui->menuView->addAction(mPropertiesDock->toggleViewAction());
@@ -209,6 +221,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->menuView->addAction(mRoadsDock->toggleViewAction());
 #endif
 
+    addDockWidget(Qt::LeftDockWidgetArea, mInGameMapDock);
     addDockWidget(Qt::LeftDockWidgetArea, mLotsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mObjectsDock);
     addDockWidget(Qt::LeftDockWidgetArea, mSearchDock);
@@ -221,6 +234,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabifyDockWidget(mPropertiesDock, mLayersDock);
     tabifyDockWidget(mLayersDock, mMapsDock);
     tabifyDockWidget(mObjectsDock, mLotsDock);
+    tabifyDockWidget(mLotsDock, mInGameMapDock);
 
     addDockWidget(Qt::RightDockWidgetArea, mUndoDock);
 
@@ -278,6 +292,20 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionExtractObjects, SIGNAL(triggered()), SLOT(extractObjects()));
     connect(ui->actionClearCell, SIGNAL(triggered()), SLOT(clearCells()));
     connect(ui->actionClearMapOnly, SIGNAL(triggered()), SLOT(clearMapOnly()));
+
+    connect(ui->actionMapboxPreview, &QAction::triggered, this, &MainWindow::showInGameMapPreviewWindow);
+    ui->actionMapboxPreview->setVisible(false);
+    connect(ui->actionGenerateInGameMapBuildingFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapBuildingFeatures);
+    connect(ui->actionGenerateInGameMapTreeFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapTreeFeatures);
+    connect(ui->actionGenerateInGameMapWaterFeatures, &QAction::triggered, this, &MainWindow::generateInGameMapWaterFeatures);
+    connect(ui->actionRemoveInGameMapFeatures, &QAction::triggered, this, &MainWindow::removeInGameMapFeatures);
+    connect(ui->actionRemoveInGameMapPoints, &QAction::triggered, this, &MainWindow::removeInGameMapPoint);
+    connect(ui->actionSplitInGameMapPolygon, &QAction::triggered, this, &MainWindow::splitInGameMapPolygon);
+    connect(ui->actionAddInGameMapHole, &QAction::triggered, this, &MainWindow::addInGameMapHole);
+    connect(ui->actionRemoveInGameMapHole, &QAction::triggered, this, &MainWindow::removeInGameMapHole);
+    connect(ui->actionReadInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::readInGameMapFeaturesXML);
+    connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML);
+    connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
 
     connect(ui->actionSnapToGrid, SIGNAL(toggled(bool)), prefs, SLOT(setSnapToGrid(bool)));
     connect(ui->actionShowCoordinates, SIGNAL(toggled(bool)), prefs, SLOT(setShowCoordinates(bool)));
@@ -337,6 +365,17 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(CellCreateRoadTool::instance());
     toolManager->registerTool(CellEditRoadTool::instance());
 #endif
+    new CreateInGameMapPointTool;
+    new CreateInGameMapPolygonTool;
+    new CreateInGameMapPolylineTool;
+    new CreateInGameMapRectangleTool;
+    new EditInGameMapFeatureTool;
+    toolManager->addSeparator();
+    toolManager->registerTool(CreateInGameMapPointTool::instancePtr());
+    toolManager->registerTool(CreateInGameMapPolygonTool::instancePtr());
+    toolManager->registerTool(CreateInGameMapPolylineTool::instancePtr());
+    toolManager->registerTool(CreateInGameMapRectangleTool::instancePtr());
+    toolManager->registerTool(EditInGameMapFeatureTool::instancePtr());
     addToolBar(toolManager->toolBar());
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
@@ -571,18 +610,24 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc->worldDocument(),
                     SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
                     SLOT(updateActions()));
+            connect(cellDoc->worldDocument(), &WorldDocument::inGameMapGeometryChanged, this, &MainWindow::updateActions);
+            connect(cellDoc->worldDocument(), &WorldDocument::selectedInGameMapFeaturesChanged, this, &MainWindow::updateActions);
+            connect(cellDoc->worldDocument(), &WorldDocument::selectedInGameMapPointsChanged, this, &MainWindow::updateActions);
             connect(cellDoc->worldDocument(), SIGNAL(generateLotSettingsChanged()),
                     SLOT(generateLotSettingsChanged()));
 #ifdef ROAD_UI
             connect(cellDoc->worldDocument(), SIGNAL(selectedRoadsChanged()),
                     SLOT(updateActions()));
 #endif
+            connect(cellDoc, &CellDocument::selectedInGameMapFeaturesChanged, this, &MainWindow::updateActions);
+            connect(cellDoc, &CellDocument::selectedInGameMapPointsChanged, this, &MainWindow::updateActions);
         }
 
         if (WorldDocument *worldDoc = doc->asWorldDocument()) {
             connect(worldDoc, SIGNAL(selectedCellsChanged()), SLOT(updateActions()));
             connect(worldDoc, SIGNAL(selectedLotsChanged()), SLOT(updateActions()));
             connect(worldDoc, SIGNAL(selectedObjectsChanged()), SLOT(updateActions()));
+            connect(worldDoc, &WorldDocument::selectedInGameMapFeaturesChanged, this, &MainWindow::updateActions);
             connect(worldDoc->view(), SIGNAL(statusBarCoordinatesChanged(int,int)),
                     SLOT(setStatusBarCoords(int,int)));
             connect(worldDoc, SIGNAL(generateLotSettingsChanged()),
@@ -596,6 +641,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
         }
 
         mLotsDock->setDocument(doc);
+        mInGameMapDock->setDocument(doc);
         mObjectsDock->setDocument(doc);
         mSearchDock->setDocument(doc);
 #ifdef ROAD_UI
@@ -612,6 +658,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
     } else {
         mLayersDock->setCellDocument(0);
         mLotsDock->clearDocument();
+        mInGameMapDock->clearDocument();
         mObjectsDock->clearDocument();
         mSearchDock->clearDocument();
 #ifdef ROAD_UI
@@ -1791,6 +1838,347 @@ void MainWindow::extractObjects()
     worldDoc->undoStack()->endMacro();
 }
 
+void MainWindow::generateInGameMapBuildingFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        InGameMapFeatureGenerator generator;
+        generator.generateWorld(cellDoc->worldDocument(), InGameMapFeatureGenerator::GenerateSelected, InGameMapFeatureGenerator::FeatureBuilding);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        InGameMapFeatureGenerator generator;
+        generator.generateWorld(worldDoc, InGameMapFeatureGenerator::GenerateSelected, InGameMapFeatureGenerator::FeatureBuilding);
+    }
+}
+
+void MainWindow::generateInGameMapTreeFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        InGameMapFeatureGenerator generator;
+        generator.generateWorld(cellDoc->worldDocument(), InGameMapFeatureGenerator::GenerateSelected, InGameMapFeatureGenerator::FeatureTree);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        InGameMapFeatureGenerator generator;
+        generator.generateWorld(worldDoc, InGameMapFeatureGenerator::GenerateSelected, InGameMapFeatureGenerator::FeatureTree);
+    }
+}
+
+void MainWindow::generateInGameMapWaterFeatures()
+{
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->worldDocument()->setSelectedCells(QList<WorldCell*>() << cellDoc->cell());
+        InGameMapFeatureGenerator generator;
+        generator.generateWorld(cellDoc->worldDocument(), InGameMapFeatureGenerator::GenerateSelected, InGameMapFeatureGenerator::FeatureWater);
+    }
+
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        InGameMapFeatureGenerator generator;
+        generator.generateWorld(worldDoc, InGameMapFeatureGenerator::GenerateSelected, InGameMapFeatureGenerator::FeatureWater);
+    }
+}
+
+void MainWindow::removeInGameMapFeatures()
+{
+    if (mCurrentDocument == nullptr) {
+        return;
+    }
+    if (auto* cellDoc = mCurrentDocument->asCellDocument()) {
+        cellDoc->undoStack()->beginMacro(tr("Remove InGameMap Features"));
+        auto selected = cellDoc->selectedInGameMapFeatures();
+        for (auto* feature : selected) {
+            cellDoc->worldDocument()->removeInGameMapFeature(cellDoc->cell(), feature->index());
+        }
+        cellDoc->undoStack()->endMacro();
+    }
+    if (auto* worldDoc = mCurrentDocument->asWorldDocument()) {
+        worldDoc->undoStack()->beginMacro(tr("Remove InGameMap Features"));
+        auto selected = worldDoc->selectedInGameMapFeatures();
+        for (auto* feature : selected) {
+            worldDoc->removeInGameMapFeature(feature->cell(), feature->index());
+        }
+        worldDoc->undoStack()->endMacro();
+    }
+}
+
+bool MainWindow::canSplitInGameMapPolygon()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& features = cellDoc->selectedInGameMapFeatures();
+    if (features.size() != 1) {
+        return false;
+    }
+    InGameMapFeature* feature = features.first();
+    if (feature->mGeometry.isPolygon() == false) {
+        return false;
+    }
+    auto& selection = cellDoc->selectedInGameMapPoints();
+    if (selection.size() != 2) {
+        return false;
+    }
+    int index1 = selection.first();
+    int index2 = selection.last();
+    if (index1 > index2) {
+        qSwap(index1, index2);
+    }
+
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    if (featureItem == nullptr) {
+        return false;
+    }
+    int coordIndex = featureItem->selectedCoordIndex();
+    if (coordIndex != 0) {
+        return false;
+    }
+    const InGameMapCoordinates& srcCoords = feature->mGeometry.mCoordinates[coordIndex];
+    int numCoords2 = index2 - index1 + 1;
+    int numCoords1 = srcCoords.size() - numCoords2 + 2;
+
+    if (numCoords1 < 3 || numCoords2 < 3) {
+        return false;
+    }
+    return true;
+}
+
+void MainWindow::splitInGameMapPolygon()
+{
+    if (canSplitInGameMapPolygon() == false) {
+        return;
+    }
+    auto* worldDoc = currentWorldDocument();
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    InGameMapFeature* feature = cellDoc->selectedInGameMapFeatures().first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    auto& selection = cellDoc->selectedInGameMapPoints();
+    int index1 = selection.first();
+    int index2 = selection.last();
+    if (index1 > index2) {
+        qSwap(index1, index2);
+    }
+
+    int coordIndex = featureItem->selectedCoordIndex();
+    const InGameMapCoordinates& srcCoords = feature->mGeometry.mCoordinates[coordIndex];
+    int numCoords2 = index2 - index1 + 1;
+    int numCoords1 = srcCoords.size() - numCoords2 + 2;
+
+    InGameMapCoordinates coords1;
+    for (int i = 0; i < numCoords1; i++) {
+        int index = (index2 + i) % srcCoords.size();
+        coords1 << srcCoords[index];
+    }
+
+    InGameMapCoordinates coords2;
+    std::copy(srcCoords.begin() + index1, srcCoords.begin() + index2 + 1, std::back_inserter(coords2));
+
+    InGameMapFeature* feature2 = new InGameMapFeature(&cellDoc->cell()->inGameMap());
+    InGameMapGeometry& geom = feature2->mGeometry;
+    geom.mType = QLatin1Literal("Polygon");
+    geom.mCoordinates << coords2;
+    feature2->mProperties = feature->properties();
+
+    worldDoc->undoStack()->beginMacro(tr("Split Polygon"));
+    worldDoc->setInGameMapCoordinates(cellDoc->cell(), feature->index(), coordIndex, coords1);
+    worldDoc->addInGameMapFeature(cellDoc->cell(), cellDoc->cell()->inGameMap().features().size(), feature2);
+    worldDoc->undoStack()->endMacro();
+}
+
+void MainWindow::addInGameMapHole()
+{
+    if (canAddInGameMapHole() == false) {
+        return;
+    }
+    auto* worldDoc = currentWorldDocument();
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    auto selectedFeatures = cellDoc->selectedInGameMapFeatures();
+    InGameMapFeature* feature1 = selectedFeatures.first();
+    InGameMapFeature* feature2 = selectedFeatures.last();
+
+    worldDoc->undoStack()->beginMacro(tr("Add InGameMap Hole"));
+    InGameMapCoordinates hole = feature2->mGeometry.mCoordinates.first();
+    worldDoc->removeInGameMapFeature(cellDoc->cell(), feature2->index());
+    worldDoc->addInGameMapHole(cellDoc->cell(), feature1->index(), feature1->mGeometry.mCoordinates.size(), hole);
+    worldDoc->undoStack()->endMacro();
+}
+
+void MainWindow::removeInGameMapHole()
+{
+    if (canRemoveInGameMapHole() == false) {
+        return;
+    }
+    auto* worldDoc = currentWorldDocument();
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    InGameMapFeature* feature = cellDoc->selectedInGameMapFeatures().first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    int coordIndex = featureItem->selectedCoordIndex();
+    worldDoc->removeInGameMapHole(cellDoc->cell(), feature->index(), coordIndex);
+}
+
+bool MainWindow::canRemoveInGameMapPoint()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& features = cellDoc->selectedInGameMapFeatures();
+    if (features.size() != 1) {
+        return false;
+    }
+    InGameMapFeature* feature = features.first();
+    bool isPolygon = feature->mGeometry.isPolygon();
+    bool isLineString = feature->mGeometry.isLineString();
+    if (isPolygon == false && isLineString == false) {
+        return false;
+    }
+    auto& selection = cellDoc->selectedInGameMapPoints();
+    if (selection.isEmpty()) {
+        return false;
+    }
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    if (featureItem == nullptr) {
+        return false;
+    }
+    int coordIndex = featureItem->selectedCoordIndex();
+    if (coordIndex < 0 || coordIndex >= feature->mGeometry.mCoordinates.size()) {
+        return false;
+    }
+    const InGameMapCoordinates& coords = feature->mGeometry.mCoordinates[coordIndex];
+    if (isPolygon) {
+        return coords.size() - selection.size() >= 3;
+    }
+    if (isLineString) {
+        return coords.size() - selection.size() >= 2;
+    }
+    return true;
+}
+
+bool MainWindow::canAddInGameMapHole()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& features = cellDoc->selectedInGameMapFeatures();
+    if (features.size() != 2) {
+        return false;
+    }
+    InGameMapFeature* feature1 = features.first();
+    InGameMapFeature* feature2 = features.last();
+    if ((feature1->mGeometry.isPolygon() == false) || (feature2->mGeometry.isPolygon() == false)) {
+        return false;
+    }
+    // TODO: forbid holes in holes ad infinitum
+    return true;
+}
+
+bool MainWindow::canRemoveInGameMapHole()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& features = cellDoc->selectedInGameMapFeatures();
+    if (features.size() != 1) {
+        return false;
+    }
+    InGameMapFeature* feature = features.first();
+    bool isPolygon = feature->mGeometry.isPolygon();
+    if (isPolygon == false) {
+        return false;
+    }
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    if (featureItem == nullptr) {
+        return false;
+    }
+    int coordIndex = featureItem->selectedCoordIndex();
+    if (coordIndex < 0 || coordIndex >= feature->mGeometry.mCoordinates.size()) {
+        return false;
+    }
+    return coordIndex > 0;
+}
+
+void MainWindow::removeInGameMapPoint()
+{
+    if (canRemoveInGameMapPoint() == false) {
+        return;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    InGameMapFeature* feature = cellDoc->selectedInGameMapFeatures().first();
+    InGameMapFeatureItem *featureItem = cellDoc->scene()->itemForInGameMapFeature(feature);
+    int coordIndex = featureItem->selectedCoordIndex();
+    InGameMapCoordinates coords = feature->mGeometry.mCoordinates[coordIndex];
+    QList<int> selection = cellDoc->selectedInGameMapPoints();
+    qSort(selection);
+    for (int i = selection.size() - 1; i >= 0; i--) {
+        int index = selection[i];
+        if (index >= 0 && index < coords.size()) {
+            coords.removeAt(index);
+        }
+    }
+    cellDoc->setSelectedInGameMapPoints(QList<int>());
+    cellDoc->worldDocument()->setInGameMapCoordinates(cellDoc->cell(), feature->index(), coordIndex, coords);
+}
+
+void MainWindow::readInGameMapFeaturesXML()
+{
+    WorldDocument* worldDoc = currentWorldDocument();
+    World* world = worldDoc->world();
+
+    QString filter = tr("All Files (*)");
+    filter += QLatin1String(";;");
+
+    QString selectedFilter = tr("XML files (*.xml)");
+    filter += selectedFilter;
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Read Features XML"),
+                                                    Preferences::instance()->worldMapXMLFile(),
+                                                    filter, &selectedFilter);
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absoluteFilePath());
+
+    PROGRESS progress(QStringLiteral("Reading InGameMap XML"), this);
+
+    worldDoc->undoStack()->beginMacro(tr("Read InGameMap XML"));
+    for (auto* cell : world->cells()) {
+        for (int i = cell->inGameMap().features().size() - 1; i >= 0; i--) {
+            worldDoc->removeInGameMapFeature(cell, i);
+        }
+    }
+
+    InGameMapReader mbreader;
+    mbreader.readWorld(fileName, world);
+
+    for (auto* cell : world->cells()) {
+        InGameMapFeatures features = cell->inGameMap().features();
+        cell->inGameMap().mFeatures.clear();
+        for (int i = 0, n = features.size(); i < n; i++) {
+            worldDoc->addInGameMapFeature(cell, i, features.at(i));
+        }
+        features.clear();
+    }
+
+    worldDoc->undoStack()->endMacro();
+}
+
 void MainWindow::clearCells()
 {
     Q_ASSERT(mCurrentDocument);
@@ -1835,6 +2223,63 @@ void MainWindow::clearMapOnly()
     foreach (WorldCell *cell, cells)
         worldDoc->setCellMapName(cell, QString());
     undoStack->endMacro();
+}
+
+void MainWindow::showInGameMapPreviewWindow()
+{
+    if (mMapboxWindow == nullptr)
+        mMapboxWindow = new MapboxWindow(this);
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+    mMapboxWindow->setDocument(worldDoc);
+    mMapboxWindow->showNormal();
+    mMapboxWindow->activateWindow();
+    mMapboxWindow->raise();
+}
+
+void MainWindow::writeInGameMapFeaturesXML()
+{
+    WorldDocument *worldDoc = currentWorldDocument();
+
+    QString suggestedFileName = Preferences::instance()->worldMapXMLFile();
+    if (suggestedFileName.isEmpty() || !QFileInfo::exists(suggestedFileName)) {
+        if (worldDoc->fileName().isEmpty()) {
+            suggestedFileName = QDir::currentPath();
+            suggestedFileName += QLatin1String("/worldmap.xml");
+        } else {
+            const QFileInfo fileInfo(worldDoc->fileName());
+            suggestedFileName = fileInfo.path();
+            suggestedFileName += QLatin1String("/worldmap.xml");
+        }
+    }
+
+    const QString fileName = QFileDialog::getSaveFileName(this, QString(), suggestedFileName, tr("XML files (*.xml)"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absoluteFilePath());
+
+    PROGRESS progress(QStringLiteral("Writing InGameMap XML"), this);
+
+    InGameMapWriter writer;
+    if (!writer.writeWorld(worldDoc->world(), fileName)) {
+        qWarning("Failed to write InGameMap XML.");
+        return;
+    }
+
+    InGameMapWriterBinary writerBinary;
+    if (!writerBinary.writeWorld(worldDoc->world(), fileName + QStringLiteral(".bin"))) {
+        qWarning("Failed to write InGameMap Binary.");
+        return;
+    }
+}
+
+void MainWindow::creaeInGameMapImagePyramid()
+{
+    InGameMapImagePyramidWindow *window = new InGameMapImagePyramidWindow(this);
+    window->show();
 }
 
 bool MainWindow::confirmSave()
@@ -2020,6 +2465,20 @@ void MainWindow::updateActions()
     ui->actionExtractObjects->setEnabled(cellDoc != 0);
     ui->actionClearCell->setEnabled(false);
     ui->actionClearMapOnly->setEnabled(false);
+
+    ui->actionMapboxPreview->setEnabled(hasDoc);
+    bool selectedCells = (cellDoc != nullptr) || (worldDoc != nullptr && !worldDoc->selectedCells().isEmpty());
+    ui->actionGenerateInGameMapBuildingFeatures->setEnabled(selectedCells);
+    ui->actionGenerateInGameMapTreeFeatures->setEnabled(selectedCells);
+    ui->actionGenerateInGameMapWaterFeatures->setEnabled(selectedCells);
+    ui->actionRemoveInGameMapFeatures->setEnabled(((worldDoc != nullptr) && (worldDoc->selectedInGameMapFeatureCount() > 0)) ||
+                                               (cellDoc != nullptr && cellDoc->selectedInGameMapFeatures().isEmpty() == false));
+    ui->actionRemoveInGameMapPoints->setEnabled(canRemoveInGameMapPoint());
+    ui->actionSplitInGameMapPolygon->setEnabled(canSplitInGameMapPolygon());
+    ui->actionAddInGameMapHole->setEnabled(canAddInGameMapHole());
+    ui->actionRemoveInGameMapHole->setEnabled(canRemoveInGameMapHole());
+    ui->actionReadInGameMapFeaturesXML->setEnabled(hasDoc);
+    ui->actionWriteInGameMapFeaturesXML->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);
