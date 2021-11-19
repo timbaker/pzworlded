@@ -115,7 +115,7 @@ public:
 
     void writeCell(QDataStream &w, WorldCell *cell)
     {
-        if (cell->isEmpty()) {
+        if (cell->inGameMap().features().isEmpty()) {
             w << qint32(-1);
             return;
         }
