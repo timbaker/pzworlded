@@ -55,6 +55,25 @@ const QString &FloorTileGrid::at(int index) const
     return mEmptyCell;
 }
 
+// Return true if the area of this object matches that of the other object placed at x,y.
+bool FloorTileGrid::matches(int x, int y, const FloorTileGrid &other) const
+{
+    if (x + other.width() > width()) {
+        return false;
+    }
+    if (y + other.height() > height()) {
+        return false;
+    }
+    for (int y1 = 0; y1 < other.height(); y1++) {
+        for (int x1 = 0; x1 < other.width(); x1++) {
+            if (at(x + x1, y + y1) != other.at(x1, y1)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void FloorTileGrid::replace(int index, const QString &tile)
 {
     if (mUseVector) {

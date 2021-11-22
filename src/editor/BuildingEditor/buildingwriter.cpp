@@ -35,7 +35,8 @@ using namespace BuildingEditor;
 
 #define VERSION1 1
 #define VERSION2 2
-#define VERSION_LATEST VERSION2
+#define VERSION3 3
+#define VERSION_LATEST VERSION3
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
@@ -94,6 +95,9 @@ public:
 
         for (int i = 0; i < Building::TileCount; i++)
             w.writeAttribute(building->enumToString(i), entryIndex(building->tile(i)));
+
+        // Put these near the beginning of the file so MapManager::MapInfoReader can read properties without reading much text.
+        writeProperties(w, building->properties());
 
         writeBuildingTileEntries(w);
 
@@ -381,6 +385,30 @@ public:
         if (writeTile)
             w.writeAttribute(QLatin1String("Tile"), entryIndex(object->tile()));
         w.writeEndElement(); // </object>
+    }
+
+    void writeProperties(QXmlStreamWriter &w, const Tiled::Properties &properties)
+    {
+        if (properties.isEmpty())
+            return;
+
+        w.writeStartElement(QLatin1String("properties"));
+
+        Tiled::Properties::const_iterator it = properties.constBegin();
+        Tiled::Properties::const_iterator it_end = properties.constEnd();
+        for (; it != it_end; ++it) {
+            w.writeStartElement(QLatin1String("property"));
+            w.writeAttribute(QLatin1String("name"), it.key());
+            const QString &value = it.value();
+            if (value.contains(QLatin1Char('\n'))) {
+                w.writeCharacters(value);
+            } else {
+                w.writeAttribute(QLatin1String("value"), it.value());
+            }
+            w.writeEndElement();
+        }
+
+        w.writeEndElement();
     }
 
     void writeBoolean(QXmlStreamWriter &w, const QString &name, bool value)

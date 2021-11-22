@@ -20,6 +20,7 @@
 #include "building.h"
 #include "buildingfloor.h"
 #include "buildingobjects.h"
+#include "buildingroomdef.h"
 #include "buildingtemplates.h"
 #include "buildingtiles.h"
 #include "buildingtmx.h"
@@ -338,8 +339,6 @@ void BuildingMap::loadNeededTilesets(Building *building)
         }
     }
 }
-
-#include "buildingroomdef.h"
 
 // Copied from BuildingFloor::roomRegion()
 static QList<QRect> cleanupRegion(QRegion region)

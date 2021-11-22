@@ -18,6 +18,8 @@
 #ifndef BUILDING_H
 #define BUILDING_H
 
+#include "properties.h"
+
 #include <QList>
 #include <QRect>
 #include <QString>
@@ -181,6 +183,17 @@ public:
 
     QStringList tilesetNames() const;
 
+    void setProperties(const Tiled::Properties &properties)
+    {
+        mProperties = properties;
+    }
+
+    Tiled::Properties &properties()
+    { return mProperties; }
+
+    const Tiled::Properties &properties() const
+    { return mProperties; }
+
 private:
     int mWidth, mHeight;
     QList<BuildingFloor*> mFloors;
@@ -188,6 +201,7 @@ private:
     QVector<BuildingTileEntry*> mTiles;
     QList<BuildingTileEntry*> mUsedTiles;
     QList<FurnitureTiles*> mUsedFurniture;
+    Tiled::Properties mProperties;
 };
 
 } // namespace BuildingEditor

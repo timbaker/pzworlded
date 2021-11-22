@@ -44,7 +44,11 @@ using namespace BuildingEditor;
 // added FurnitureTiles::mCorners
 #define VERSION2 2
 
-#define VERSION_LATEST VERSION2
+// version="3"
+// Added <properties> for the in-game map
+#define VERSION3 3
+
+#define VERSION_LATEST VERSION3
 
 namespace BuildingEditor {
 
@@ -328,6 +332,9 @@ private:
 
     BuildingObject *readObject(BuildingFloor *floor);
 
+    Tiled::Properties readProperties();
+    void readProperty(Tiled::Properties *properties);
+
     bool booleanFromString(const QString &s, bool &result);
     bool readPoint(const QString &name, QPoint &result);
 
@@ -457,6 +464,8 @@ Building *BuildingReaderPrivate::readBuilding()
         } else if (xml.name() == QLatin1String("floor")) {
             if (BuildingFloor *floor = readFloor())
                 mBuilding->insertFloor(mBuilding->floorCount(), floor);
+        } else if (xml.name() == QLatin1String("properties")) {
+            mBuilding->setProperties(readProperties());
         } else
             readUnknownElement();
     }
@@ -947,6 +956,47 @@ BuildingObject *BuildingReaderPrivate::readObject(BuildingFloor *floor)
     xml.skipCurrentElement();
 
     return object;
+}
+
+Tiled::Properties BuildingReaderPrivate::readProperties()
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("properties"));
+
+    Tiled::Properties properties;
+
+    while (xml.readNextStartElement()) {
+        if (xml.name() == QLatin1String("property")) {
+            readProperty(&properties);
+        } else {
+            readUnknownElement();
+        }
+    }
+
+    return properties;
+}
+
+void BuildingReaderPrivate::readProperty(Tiled::Properties *properties)
+{
+    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("property"));
+
+    const QXmlStreamAttributes atts = xml.attributes();
+    QString propertyName = atts.value(QLatin1String("name")).toString();
+    QString propertyValue = atts.value(QLatin1String("value")).toString();
+
+    while (xml.readNext() != QXmlStreamReader::Invalid) {
+        if (xml.isEndElement()) {
+            break;
+        }
+        if (xml.isCharacters() && !xml.isWhitespace()) {
+            if (propertyValue.isEmpty()) {
+                propertyValue = xml.text().toString();
+            }
+        } else if (xml.isStartElement()) {
+            readUnknownElement();
+        }
+    }
+
+    properties->insert(propertyName, propertyValue);
 }
 
 bool BuildingReaderPrivate::booleanFromString(const QString &s, bool &result)

@@ -29,8 +29,13 @@ BuildingRoomDefecator::BuildingRoomDefecator(BuildingFloor *floor, Room *room) :
 {
     for (int y = 0; y < floor->height(); y++) {
         for (int x = 0; x < floor->width(); x++) {
-            if (floor->GetRoomAt(x, y) == room)
-                mRoomRegion += QRect(x, y, 1, 1);
+            int wid = 0;
+            while (floor->GetRoomAt(x + wid, y) == room)
+                wid++;
+            if (wid > 0) {
+                mRoomRegion += QRect(x, y, wid, 1);
+                x += wid;
+            }
         }
     }
 
@@ -76,7 +81,8 @@ bool BuildingRoomDefecator::didTile(int x, int y)
 
 bool BuildingRoomDefecator::isInRoom(int x, int y)
 {
-    return mRoomRegion.contains(QPoint(x, y));
+    return mFloor->GetRoomAt(x, y) == mRoom;
+//    return mRoomRegion.contains(QPoint(x, y));
 }
 
 bool BuildingRoomDefecator::shouldVisit(int x1, int y1, int x2, int y2)
@@ -105,13 +111,15 @@ void BuildingRoomDefecator::addTile(int x, int y)
 
 bool BuildingRoomDefecator::isValidPos(int x, int y)
 {
-    return mRoomRegion.contains(QPoint(x, y));
+    return mFloor->GetRoomAt(x, y) == mRoom;
+//    return mRoomRegion.contains(QPoint(x, y));
 }
 
 bool BuildingRoomDefecator::isWestWall(int x, int y)
 {
     if (!isValidPos(x, y)) return false;
-    if (mRoomRegion.contains(QPoint(x, y)) && !mRoomRegion.contains(QPoint(x-1,y)))
+    if (isInRoom(x, y) && !isInRoom(x-1,y))
+//    if (mRoomRegion.contains(QPoint(x, y)) && !mRoomRegion.contains(QPoint(x-1,y)))
         return true;
     foreach (QRect wallRect, mWestWalls) {
         if (wallRect.contains(x, y))
@@ -123,7 +131,8 @@ bool BuildingRoomDefecator::isWestWall(int x, int y)
 bool BuildingRoomDefecator::isNorthWall(int x, int y)
 {
     if (!isValidPos(x, y)) return false;
-    if (mRoomRegion.contains(QPoint(x, y)) && !mRoomRegion.contains(QPoint(x,y-1)))
+    if (isInRoom(x, y) && !isInRoom(x, y-1))
+//    if (mRoomRegion.contains(QPoint(x, y)) && !mRoomRegion.contains(QPoint(x,y-1)))
         return true;
     foreach (QRect wallRect, mNorthWalls) {
         if (wallRect.contains(x, y))

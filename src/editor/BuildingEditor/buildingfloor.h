@@ -63,6 +63,8 @@ public:
         return at(x + y * mWidth);
     }
 
+    bool matches(int x, int y, const FloorTileGrid &other) const;
+
     void replace(int index, const QString &tile);
     void replace(int x, int y, const QString &tile);
     bool replace(const QString &tile);
