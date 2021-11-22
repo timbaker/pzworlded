@@ -192,6 +192,21 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     while (mapInfo->isLoading())
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
+#if 1
+    // This method won't work for buildings in the TMX, it only works for separate building files.
+    for (WorldCellLot *lot : cell->lots()) {
+        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        if (info != nullptr && info->map() != nullptr) {
+            for (ObjectGroup *og : info->map()->objectGroups()) {
+                if (processObjectGroup(cell, info, og, lot->level(), lot->pos()) == false) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+#else
     MapComposite staticMapComposite(mapInfo);
     MapComposite *mapComposite = &staticMapComposite;
     while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
@@ -208,6 +223,7 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     }
 
     return processObjectGroups(cell, mapComposite);
+#endif
 }
 
 bool InGameMapFeatureGenerator::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
@@ -428,9 +444,12 @@ public:
 
 } // namespace
 
-bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
-                                         int levelOffset, const QPoint &offset)
+bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
 {
+    if (objectGroup->name().contains(QLatin1String("RoomDefs")) == false) {
+        return true;
+    }
+
     int level;
     if (!MapComposite::levelForLayer(objectGroup, &level))
         return true;
@@ -455,10 +474,6 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
         int w = qCeil(mapObject->x() + mapObject->width()) - x;
         int h = qCeil(mapObject->y() + mapObject->height()) - y;
 
-        QString name = mapObject->name();
-        if (name.isEmpty())
-            name = QLatin1String("unnamed");
-
         if (objectGroup->map()->orientation() == Map::Isometric) {
             x += 3 * level;
             y += 3 * level;
@@ -468,20 +483,18 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
         x += offset.x();
         y += offset.y();
 
-        if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
-            if (x < 0 || y < 0 || x + w > 300 || y + h > 300) {
-                x = qBound(0, x, 300);
-                y = qBound(0, y, 300);
-                mError = tr("A RoomDef in cell %1,%2 overlaps cell boundaries.\nNear x,y=%3,%4")
-                        .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
-                return false;
-            }
-            if (bounds.isEmpty())
-                bounds = { x, y, w, h };
-            else
-                bounds |= { x, y, w, h };
-            rects += { x, y, w, h };
+        if (x < 0 || y < 0 || x + w > 300 || y + h > 300) {
+            x = qBound(0, x, 300);
+            y = qBound(0, y, 300);
+            mError = tr("A RoomDef in cell %1,%2 overlaps cell boundaries.\nNear x,y=%3,%4")
+                    .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
+            return false;
         }
+        if (bounds.isEmpty())
+            bounds = { x, y, w, h };
+        else
+            bounds |= { x, y, w, h };
+        rects += { x, y, w, h };
     }
 
     if (bounds.isEmpty())
@@ -516,6 +529,116 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
     });
 
     return true;
+}
+
+bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *mapInfo, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
+{
+    if (objectGroup->name().contains(QLatin1String("RoomDefs")) == false) {
+        return true;
+    }
+
+    int level;
+    if (!MapComposite::levelForLayer(objectGroup, &level))
+        return true;
+    level += levelOffset;
+
+    if (level != 0)
+        return true;
+
+    QRect bounds;
+    QVector<QRect> rects;
+
+    foreach (const MapObject *mapObject, objectGroup->objects()) {
+#if 0
+        if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
+            continue;
+#endif
+        if (mapObject->width() * mapObject->height() <= 0)
+            continue;
+
+        int x = qFloor(mapObject->x());
+        int y = qFloor(mapObject->y());
+        int w = qCeil(mapObject->x() + mapObject->width()) - x;
+        int h = qCeil(mapObject->y() + mapObject->height()) - y;
+
+        if (objectGroup->map()->orientation() == Map::Isometric) {
+            x += 3 * level;
+            y += 3 * level;
+        }
+
+        // Apply the MapComposite offset in the top-level map.
+        x += offset.x();
+        y += offset.y();
+
+        if (x < 0 || y < 0 || x + w > 300 || y + h > 300) {
+            x = qBound(0, x, 300);
+            y = qBound(0, y, 300);
+            mError = tr("A RoomDef in cell %1,%2 overlaps cell boundaries.\nNear x,y=%3,%4")
+                    .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
+            return false;
+        }
+        if (bounds.isEmpty())
+            bounds = { x, y, w, h };
+        else
+            bounds |= { x, y, w, h };
+        rects += { x, y, w, h };
+    }
+
+    if (bounds.isEmpty())
+        return true;
+
+    OutlineGrid grid;
+    grid.setSize(bounds.width(), bounds.height());
+    for (auto& rect : rects) {
+        for (int y = 0; y < rect.height(); y++)
+            for (int x = 0; x < rect.width(); x++)
+                grid.setInner(rect.x() - bounds.x() + x, rect.y() - bounds.y() + y);
+    }
+
+    grid.trace(true, [&](QPolygon& nodes) {
+        nodes.translate(bounds.left(), bounds.top());
+
+        if (isInvalidBuildingPolygon(nodes)) {
+            return;
+        }
+
+        InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
+
+        InGameMapProperty property;
+        property.mKey = QStringLiteral("building");
+        QString LEGEND = QStringLiteral("Legend");
+        if (mapInfo->map()->properties().contains(LEGEND)) {
+            property.mValue = mapInfo->map()->property(LEGEND);
+        } else {
+            property.mValue = QStringLiteral("yes");
+        }
+        feature->properties() += property;
+        for (auto it = mapInfo->map()->properties().cbegin(); it != mapInfo->map()->properties().cend(); it++) {
+            if (it.key() == LEGEND) {
+                continue;
+            }
+            property.mKey = it.key();
+            property.mValue = it.value();
+            feature->properties() += property;
+        }
+
+        feature->mGeometry.mType = QStringLiteral("Polygon");
+        InGameMapCoordinates coords;
+        for (auto& point : nodes) {
+            coords += InGameMapPoint(point.x(), point.y());
+        }
+        feature->mGeometry.mCoordinates += coords;
+
+        mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
+    });
+
+    return true;
+}
+
+bool InGameMapFeatureGenerator::isInvalidBuildingPolygon(const QPolygon &poly)
+{
+    QRect bounds = poly.boundingRect();
+    return (bounds.width() == 2) && (bounds.height() == 2);
 }
 
 #include <stack>

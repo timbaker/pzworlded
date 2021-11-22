@@ -739,6 +739,13 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     Map *map = bmap.mergedMap();
     bmap.addRoomDefObjects(map);
 
+#if 0
+    map->setProperty(QStringLiteral("Legend"), QStringLiteral("CommunityServices"));
+    map->setProperty(QStringLiteral("File"), QFileInfo(mapInfo->path()).fileName());
+#else
+    map->setProperties(building->properties());
+#endif
+
     delete building;
 
     QSet<Tileset*> usedTilesets = map->usedTilesets();

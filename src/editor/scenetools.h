@@ -655,7 +655,7 @@ public:
 
     void languageChanged()
     {
-        setName(tr("Edit Mapbox Features"));
+        setName(tr("Edit Object Points"));
         //setShortcut(QKeySequence(tr("S")));
     }
 
