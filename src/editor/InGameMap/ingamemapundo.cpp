@@ -158,3 +158,19 @@ void AddRemoveInGameMapHole::removeHole()
 {
     mHole = mDocument->undoRedo().removeInGameMapHole(mCell, mFeatureIndex, mHoleIndex);
 }
+
+/////
+
+ConvertToInGameMapPolygon::ConvertToInGameMapPolygon(WorldDocument *doc, WorldCell *cell, int featureIndex)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Convert To InGameMap Polygon"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mFeatureIndex(featureIndex)
+{
+
+}
+
+void ConvertToInGameMapPolygon::swap()
+{
+    mDocument->undoRedo().convertToInGameMapPolygon(mCell, mFeatureIndex);
+}

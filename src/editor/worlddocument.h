@@ -128,6 +128,7 @@ public:
     InGameMapCoordinates setInGameMapCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const InGameMapCoordinates& coords);
     void addInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex, const InGameMapCoordinates &hole);
     InGameMapCoordinates removeInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex);
+    void convertToInGameMapPolygon(WorldCell *cell, int featureIndex);
 
     void insertRoad(int index, Road *road);
     Road *removeRoad(int index);
@@ -326,6 +327,7 @@ public:
     void setInGameMapCoordinates(WorldCell* cell, int featureIndex, int coordsIndex, const InGameMapCoordinates& coords);
     void addInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex, const InGameMapCoordinates& hole);
     void removeInGameMapHole(WorldCell* cell, int featureIndex, int holeIndex);
+    void convertToInGameMapPolygon(WorldCell* cell, int featureIndex);
 
     void insertRoad(int index, Road *road);
     void removeRoad(int index);

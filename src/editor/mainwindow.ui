@@ -368,6 +368,7 @@
     <addaction name="actionSplitInGameMapPolygon"/>
     <addaction name="actionAddInGameMapHole"/>
     <addaction name="actionRemoveInGameMapHole"/>
+    <addaction name="actionConvertToPolygon"/>
     <addaction name="separator"/>
     <addaction name="actionGenerateInGameMapBuildingFeatures"/>
     <addaction name="actionGenerateInGameMapTreeFeatures"/>
@@ -929,6 +930,11 @@
   <action name="actionRemoveInGameMapHole">
    <property name="text">
     <string>Remove Polygon Hole</string>
+   </property>
+  </action>
+  <action name="actionConvertToPolygon">
+   <property name="text">
+    <string>Convert To Polygon</string>
    </property>
   </action>
  </widget>

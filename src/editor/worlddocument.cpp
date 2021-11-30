@@ -573,6 +573,12 @@ void WorldDocument::removeInGameMapHole(WorldCell *cell, int featureIndex, int h
     undoStack()->push(new RemoveInGameMapHole(this, cell, featureIndex, holeIndex));
 }
 
+void WorldDocument::convertToInGameMapPolygon(WorldCell *cell, int featureIndex)
+{
+    Q_ASSERT(featureIndex >= 0 && featureIndex < cell->inGameMap().mFeatures.size());
+    undoStack()->push(new ConvertToInGameMapPolygon(this, cell, featureIndex));
+}
+
 void WorldDocument::insertRoad(int index, Road *road)
 {
     Q_ASSERT(!world()->roads().contains(road));
@@ -1550,6 +1556,13 @@ InGameMapCoordinates WorldDocumentUndoRedo::removeInGameMapHole(WorldCell *cell,
     emit inGameMapHoleRemoved(cell, featureIndex, holeIndex);
     emit inGameMapGeometryChanged(cell, featureIndex);
     return old;
+}
+
+void WorldDocumentUndoRedo::convertToInGameMapPolygon(WorldCell *cell, int featureIndex)
+{
+    InGameMapFeature* feature = cell->inGameMap().mFeatures[featureIndex];
+    feature->mGeometry.mType = QStringLiteral("Polygon");
+    emit inGameMapGeometryChanged(cell, featureIndex);
 }
 
 void WorldDocumentUndoRedo::insertRoad(int index, Road *road)

@@ -140,6 +140,7 @@ public slots:
     void generateInGameMapWaterFeatures();
     void removeInGameMapFeatures();
     void splitInGameMapPolygon();
+    void convertInGameMapPolylineToPolygon();
     void addInGameMapHole();
     void removeInGameMapHole();
     void removeInGameMapPoint();
@@ -183,6 +184,7 @@ private:
     bool canRemoveInGameMapPoint();
     bool canAddInGameMapHole();
     bool canRemoveInGameMapHole();
+    bool canConvertToInGameMapPolygon();
 
     struct ViewHint
     {

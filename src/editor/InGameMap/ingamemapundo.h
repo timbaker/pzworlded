@@ -225,4 +225,20 @@ public:
     void redo() { removeHole(); }
 };
 
+class ConvertToInGameMapPolygon : public QUndoCommand
+{
+public:
+    ConvertToInGameMapPolygon(WorldDocument *doc, WorldCell *cell, int featureIndex);
+
+    void undo() override { swap(); }
+    void redo() override { swap(); }
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mFeatureIndex;
+};
+
 #endif // INGAMEMAPUNDO_H
