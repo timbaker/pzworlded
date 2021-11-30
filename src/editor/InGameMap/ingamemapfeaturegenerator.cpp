@@ -187,12 +187,11 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
         }
     }
 
-    // The cell map must be loaded before creating the MapComposite, which will
-    // possibly load embedded lots.
-    while (mapInfo->isLoading())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-
 #if 1
+    while (mapLoader.isLoading()) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+
     // This method won't work for buildings in the TMX, it only works for separate building files.
     for (WorldCellLot *lot : cell->lots()) {
         MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
@@ -207,6 +206,11 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
 
     return true;
 #else
+    // The cell map must be loaded before creating the MapComposite, which will
+    // possibly load embedded lots.
+    while (mapInfo->isLoading())
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
     MapComposite staticMapComposite(mapInfo);
     MapComposite *mapComposite = &staticMapComposite;
     while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())

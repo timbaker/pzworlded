@@ -647,6 +647,7 @@ rule
 }
 rule
 {
+    label = Fir Trees + Dark grass
     bitmap = 1
     color = 64 0 0
     tiles = [
@@ -660,6 +661,43 @@ rule
         darkshortgrass
     ]
     layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Fir Trees + Medium grass
+    bitmap = 1
+    color = 64 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+        medmedgrass
+        medshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Fir Trees + Light grass
+    bitmap = 1
+    color = 64 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+        lightmedgrass
+        lightshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
 }
 rule
 {
@@ -836,6 +874,7 @@ rule
 }
 rule
 {
+    label = Bushes, Grass, Few Trees (dark)
     bitmap = 1
     color = 255 0 255
     tiles = [
@@ -856,4 +895,55 @@ rule
         darkshortgrass
     ]
     layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Bushes, Grass, Few Trees (medium)
+    bitmap = 1
+    color = 255 0 255
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Bushes, Grass, Few Trees (light)
+    bitmap = 1
+    color = 255 0 255
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
 }
