@@ -301,6 +301,9 @@ public:
                 pointStr.truncate(pointStr.length() - 1);
             }
             w.writeAttribute(QLatin1String("points"), pointStr);
+            if (obj->isPolyline() && (obj->polylineWidth() > 0)) {
+                w.writeAttribute(QLatin1String("lineWidth"), QString::number(obj->polylineWidth()));
+            }
         }
         if (!obj->isVisible())
             w.writeAttribute(QLatin1String("visible"), QLatin1String("0"));

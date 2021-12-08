@@ -246,12 +246,14 @@ public:
             }
             w->writeKeyAndValue("level", obj->level());
             w->writeKeyAndValue("geometry", geometry);
+            if (obj->isPolyline() && (obj->polylineWidth() > 0)) {
+                w->writeKeyAndValue("lineWidth", obj->polylineWidth());
+            }
             QBuffer buf;
             buf.open(QIODevice::ReadWrite);
             LuaTableWriter w2(&buf);
             w2.setSuppressNewlines(true);
             w2.writeStartTable();
-            QString pointStr;
             for (const auto &point : obj->points()) {
                 w2.writeValue((obj->cell()->x() + origin.x()) * 300 + point.x);
                 w2.writeValue((obj->cell()->x() + origin.x()) * 300 + point.y);
@@ -380,6 +382,9 @@ public:
                         }
                         w.writeKeyAndValue("z", obj->level());
                         w.writeKeyAndValue("geometry", geometry);
+                        if (obj->isPolyline() && (obj->polylineWidth() > 0)) {
+                            w.writeKeyAndValue("lineWidth", obj->polylineWidth());
+                        }
                         QBuffer buf;
                         buf.open(QIODevice::ReadWrite);
                         LuaTableWriter w2(&buf);

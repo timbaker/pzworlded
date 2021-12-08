@@ -300,6 +300,21 @@ public:
         return mGeometryType;
     }
 
+    bool isPoint() const
+    {
+        return geometryType() == ObjectGeometryType::Point;
+    }
+
+    bool isPolygon() const
+    {
+        return geometryType() == ObjectGeometryType::Polygon;
+    }
+
+    bool isPolyline() const
+    {
+        return geometryType() == ObjectGeometryType::Polyline;
+    }
+
     void setPoints(const WorldCellObjectPoints &points)
     {
         mPoints = points;
@@ -315,6 +330,15 @@ public:
         mPoints[index] = point;
     }
 
+    void setPolylineWidth(int width)
+    {
+        mPolylineWidth = width;
+    }
+
+    int polylineWidth() const
+    {
+        return mPolylineWidth;
+    }
 
 private:
     QString mName;
@@ -325,6 +349,7 @@ private:
     qreal mWidth, mHeight;
     ObjectGeometryType mGeometryType;
     WorldCellObjectPoints mPoints;
+    int mPolylineWidth;
     WorldCell *mCell;
     bool mVisible;
 };

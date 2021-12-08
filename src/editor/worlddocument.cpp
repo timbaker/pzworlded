@@ -512,6 +512,12 @@ void WorldDocument::setCellObjectPoints(WorldCell *cell, int objectIndex, const 
     undoStack()->push(new SetCellObjectPoints(this, cell, objectIndex, points));
 }
 
+void WorldDocument::setCellObjectPolylineWidth(WorldCell *cell, int objectIndex, int width)
+{
+    Q_ASSERT(objectIndex >= 0 && objectIndex < cell->objects().size());
+    undoStack()->push(new SetCellObjectPolylineWidth(this, cell, objectIndex, width));
+}
+
 void WorldDocument::addInGameMapFeature(WorldCell *cell, int index, InGameMapFeature *feature)
 {
     Q_ASSERT(!cell->inGameMap().mFeatures.contains(feature));
@@ -1470,6 +1476,15 @@ WorldCellObjectPoints WorldDocumentUndoRedo::setCellObjectPoints(WorldCell *cell
     WorldCellObject* object = cell->objects().at(objectIndex);
     WorldCellObjectPoints old = object->points();
     object->setPoints(points);
+    emit cellObjectPointsChanged(cell, objectIndex);
+    return old;
+}
+
+int WorldDocumentUndoRedo::setCellObjectPolylineWidth(WorldCell *cell, int objectIndex, int width)
+{
+    WorldCellObject* object = cell->objects().at(objectIndex);
+    int old = object->polylineWidth();
+    object->setPolylineWidth(width);
     emit cellObjectPointsChanged(cell, objectIndex);
     return old;
 }

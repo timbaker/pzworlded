@@ -113,7 +113,7 @@ void CellDocument::setSelectedObjects(const QList<WorldCellObject *> &selected)
         if (!mSelectedObjects.contains(obj))
             mSelectedObjects.append(obj);
         else
-            qWarning("duplicate lots passed to setSelectedObjects");
+            qWarning("duplicate objects passed to setSelectedObjects");
     }
     emit selectedObjectsChanged();
     if (mSelectedObjects.size() == 1) {

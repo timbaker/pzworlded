@@ -2693,6 +2693,8 @@ static QRegion cleanupRegion(QRegion region)
 }
 #endif
 
+#include "InGameMap/clipper.hpp"
+
 void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     if (mObject->points().isEmpty() == false) {
@@ -2753,6 +2755,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
             }
             break;
         case ObjectGeometryType::Polyline:
+        {
             painter->drawPolyline(screenPolygon);
 
             pen.setColor(color);
@@ -2760,7 +2763,71 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
             painter->setBrush(brush);
             screenPolygon.translate(0, -1);
             painter->drawPolyline(screenPolygon);
+#if 1
+            int width = mObject->polylineWidth();
+            if (width <= 0)
+                break;
+            QPolygonF screenPolygon2;
+#endif
+#if 0
+            for (int i = 0; i < mPolygon.size() - 1; i++) {
+                QPointF& p1 = mPolygon[i];
+                QPointF& p2 = mPolygon[i + 1];
+                QVector2D v(p2 - p1);
+                v.normalize();
+                qreal xp = v.x() * qCos(qDegreesToRadians(90.0)) - v.y() * qSin(qDegreesToRadians(90.0));
+                qreal yp = v.x() * qSin(qDegreesToRadians(90.0)) + v.y() * qCos(qDegreesToRadians(90.0));
+                screenPolygon2.clear();
+                screenPolygon2 += mRenderer->tileToPixelCoords(p1.x() + mDragOffset.x() + xp * width/2, p1.y() + mDragOffset.y() + yp * width / 2);
+                screenPolygon2 += mRenderer->tileToPixelCoords(p2.x() + mDragOffset.x() + xp * width/2, p2.y() + mDragOffset.y() + yp * width / 2);
+                screenPolygon2 += mRenderer->tileToPixelCoords(p2.x() + mDragOffset.x() - xp * width/2, p2.y() + mDragOffset.y() - yp * width / 2);
+                screenPolygon2 += mRenderer->tileToPixelCoords(p1.x() + mDragOffset.x() - xp * width/2, p1.y() + mDragOffset.y() - yp * width / 2);
+                screenPolygon2 += screenPolygon2[0];
+                painter->drawPolyline(screenPolygon2);
+            }
+#endif
+#if 1
+            if (mPolylineOutline.isEmpty())
+                break;
+            for (const QPointF& op : mPolylineOutline) {
+                screenPolygon2 += mRenderer->tileToPixelCoords(op + mDragOffset);
+            }
+            screenPolygon2 += screenPolygon2[0];
+            painter->drawPolyline(screenPolygon2);
+#endif
+#if 0
+            ClipperLib::ClipperOffset offset;
+            ClipperLib::Path path;
+            for (int i = 0; i < mPolygon.size(); i++) {
+                QPointF& p1 = mPolygon[i];
+                path << ClipperLib::IntPoint((p1.x() + mDragOffset.x()) * 100, (p1.y() + mDragOffset.y()) * 100);
+                if (/*i < mPolygon.size() - 1 && */(width % 2) != 0) {
+//                    QPointF& p1 = mPolygon[i];
+//                    QPointF& p2 = mPolygon[i + 1];
+
+//                    // Calculate a perpedicular vector to the line segment.
+//                    QVector2D v(p2 - p1);
+//                    v.normalize();
+//                    qreal xp = v.x() * qCos(qDegreesToRadians(90.0)) - v.y() * qSin(qDegreesToRadians(90.0));
+//                    qreal yp = v.x() * qSin(qDegreesToRadians(90.0)) + v.y() * qCos(qDegreesToRadians(90.0));
+                    ClipperLib::IntPoint cp = path[path.size()-1];
+                    path[path.size()-1] = ClipperLib::IntPoint(cp.X + 50, cp.Y + 50);
+                }
+            }
+            offset.AddPath(path, ClipperLib::JoinType::jtMiter, ClipperLib::EndType::etOpenButt);
+            ClipperLib::Paths paths;
+            offset.Execute(paths, width * 100 / 2.0);
+            for (const auto &path : paths) {
+                screenPolygon2.clear();
+                for (const auto& cp : path) {
+                    screenPolygon2 += mRenderer->tileToPixelCoords(cp.X / 100.0, cp.Y / 100.0);
+                }
+                screenPolygon2 += screenPolygon2[0];
+                painter->drawPolyline(screenPolygon2);
+            }
+#endif
             break;
+        }
         }
 #if 0
         if (mAddPointIndex != -1) {
@@ -3153,6 +3220,7 @@ void ObjectItem::synchWithObject()
     mLabel->synch();
 
     mPolygon.clear();
+    mPolylineOutline.clear();
     mAddPointIndex = -1;
 
     switch (mObject->geometryType()) {
@@ -3177,6 +3245,17 @@ void ObjectItem::synchWithObject()
     case ObjectGeometryType::Polyline:
         for (const auto& point : mObject->points()) {
             mPolygon += QPoint(point.x, point.y);
+        }
+        if (mObject->polylineWidth() > 0) {
+            mPolylineOutline = createPolylineOutline();
+            if (mPolylineOutline.empty())
+                break;
+            QRectF bounds = mRenderer->tileToPixelCoords(mPolylineOutline.translated(mDragOffset)).boundingRect().adjusted(-20, -20, 20, 20);
+            if (bounds != mBoundingRect) {
+                prepareGeometryChange();
+                mBoundingRect = bounds;
+            }
+            return;
         }
         break;
     }
@@ -3218,17 +3297,17 @@ bool ObjectItem::hoverToolCurrent() const
 
 bool ObjectItem::isPoint() const
 {
-    return mObject->geometryType() == ObjectGeometryType::Point;
+    return mObject->isPoint();
 }
 
 bool ObjectItem::isPolygon() const
 {
-    return mObject->geometryType() == ObjectGeometryType::Polygon;
+    return mObject->isPolygon();
 }
 
 bool ObjectItem::isPolyline() const
 {
-    return mObject->geometryType() == ObjectGeometryType::Polyline;
+    return mObject->isPolyline();
 }
 
 int ObjectItem::pointAt(qreal sceneX, qreal sceneY)
@@ -3256,6 +3335,41 @@ void ObjectItem::movePoint(int pointIndex, const WorldCellObjectPoint &point)
     if (boundingRect == mBoundingRect) {
         update();
     }
+}
+
+QPolygonF ObjectItem::createPolylineOutline()
+{
+    ClipperLib::ClipperOffset offset;
+    ClipperLib::Path path;
+    int SCALE = 100;
+    for (int i = 0; i < mObject->points().size(); i++) {
+        WorldCellObjectPoint p1 = mObject->points()[i];
+        path << ClipperLib::IntPoint(p1.x * SCALE, p1.y * SCALE);
+        if (/*i < mPolygon.size() - 1 && */(mObject->polylineWidth() % 2) != 0) {
+//                    QPointF& p1 = mPolygon[i];
+//                    QPointF& p2 = mPolygon[i + 1];
+
+//                    // Calculate a perpedicular vector to the line segment.
+//                    QVector2D v(p2 - p1);
+//                    v.normalize();
+//                    qreal xp = v.x() * qCos(qDegreesToRadians(90.0)) - v.y() * qSin(qDegreesToRadians(90.0));
+//                    qreal yp = v.x() * qSin(qDegreesToRadians(90.0)) + v.y() * qCos(qDegreesToRadians(90.0));
+            ClipperLib::IntPoint cp = path[path.size()-1];
+            path[path.size()-1] = ClipperLib::IntPoint(cp.X + SCALE / 2, cp.Y + SCALE / 2);
+        }
+    }
+    offset.AddPath(path, ClipperLib::JoinType::jtMiter, ClipperLib::EndType::etOpenButt);
+    ClipperLib::Paths paths;
+    offset.Execute(paths, mObject->polylineWidth() * SCALE / 2.0);
+    QPolygonF result;
+    if (paths.empty()) {
+        return result;
+    }
+    ClipperLib::Path cPath = paths.at(0);
+    for (const auto &cPoint : cPath) {
+        result << QPointF(cPoint.X / (qreal) SCALE, cPoint.Y / (qreal) SCALE);
+    }
+    return result;
 }
 
 /////
@@ -3396,8 +3510,10 @@ QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant
 
             const QPointF objectPos = { 0, 0 };
             tileCoords -= objectPos;
+#if 0
             tileCoords.setX(qMax(tileCoords.x(), qreal(0)));
             tileCoords.setY(qMax(tileCoords.y(), qreal(0)));
+#endif
             if (snapToGrid)
                 tileCoords = tileCoords.toPoint();
             tileCoords += objectPos;
@@ -5596,6 +5712,15 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
             SLOT(cellObjectGroupChanged(WorldCellObject*)));
     connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
             SLOT(cellObjectReordered(WorldCellObject*)));
+    connect(worldDocument(), &WorldDocument::cellObjectPointMoved, this, &AdjacentMap::cellObjectPointMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectPointsChanged, this, &AdjacentMap::cellObjectPointsChanged);
+
+    // These are to update ObjectLabelItem
+    connect(worldDocument(), &WorldDocument::propertyAdded, this, &AdjacentMap::propertiesChanged);
+    connect(worldDocument(), &WorldDocument::propertyRemoved, this, &AdjacentMap::propertiesChanged);
+    connect(worldDocument(), &WorldDocument::propertyValueChanged, this, &AdjacentMap::propertiesChanged);
+    connect(worldDocument(), QOverload<PropertyHolder*,int>::of(&WorldDocument::templateAdded), this, &AdjacentMap::propertiesChanged);
+    connect(worldDocument(), &WorldDocument::templateRemoved, this, &AdjacentMap::propertiesChanged);
 
     connect(worldDocument(), &WorldDocument::inGameMapFeatureAdded, this, &AdjacentMap::inGameMapFeatureAdded);
     connect(worldDocument(), &WorldDocument::inGameMapFeatureAboutToBeRemoved, this, &AdjacentMap::inGameMapFeatureAboutToBeRemoved);
@@ -5826,6 +5951,36 @@ void AdjacentMap::cellObjectReordered(WorldCellObject *obj)
     if (obj->cell() != cell())
         return;
     setZOrder();
+}
+
+void AdjacentMap::cellObjectPointMoved(WorldCell *cell, int objectIndex, int pointIndex)
+{
+    cellObjectPointsChanged(cell, objectIndex);
+}
+
+void AdjacentMap::cellObjectPointsChanged(WorldCell *cell, int index)
+{
+    if (cell != this->cell())
+        return;
+
+    WorldCellObject *obj = cell->objects().at(index);
+    if (ObjectItem *item = itemForObject(obj)) {
+        item->synchWithObject();
+    }
+}
+
+void AdjacentMap::propertiesChanged(PropertyHolder *ph)
+{
+    WorldCellObject* obj = dynamic_cast<WorldCellObject*>(ph);
+    if (obj == nullptr)
+        return;
+
+    if (obj->cell() != cell())
+        return;
+
+    if (ObjectItem *item = itemForObject(obj)) {
+        item->synchWithObject();
+    }
 }
 
 void AdjacentMap::inGameMapFeatureAdded(WorldCell *cell, int index)

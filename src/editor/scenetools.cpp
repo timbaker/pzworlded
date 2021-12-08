@@ -2170,6 +2170,8 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         const QList<QGraphicsItem*> items = mScene->items(event->scenePos());
         for (QGraphicsItem *item : items) {
             if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item)) {
+                if (objectItem->isAdjacent())
+                    continue;
                 clickedItem = objectItem;
                 break;
             }
@@ -2199,6 +2201,7 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void EditPolygonObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    Q_UNUSED(event)
     if (mSelectedObjectItem && mSelectedObjectItem->mAddPointIndex != -1) {
         if (mRectItem == nullptr) {
             mRectItem = new QGraphicsRectItem();

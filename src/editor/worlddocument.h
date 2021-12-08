@@ -117,6 +117,7 @@ public:
     int reorderCellObject(WorldCellObject *obj, int index);
     WorldCellObjectPoint moveCellObjectPoint(WorldCell* cell, int objectIndex, int pointIndex, const WorldCellObjectPoint& point);
     WorldCellObjectPoints setCellObjectPoints(WorldCell* cell, int objectIndex, const WorldCellObjectPoints& points);
+    int setCellObjectPolylineWidth(WorldCell *cell, int objectIndex, int width);
 
     void addInGameMapFeature(WorldCell* cell, int index, InGameMapFeature* feature);
     InGameMapFeature* removeInGameMapFeature(WorldCell* cell, int index);
@@ -316,6 +317,7 @@ public:
     void reorderCellObject(WorldCellObject *obj, WorldCellObject *insertBefore);
     void moveCellObjectPoint(WorldCell* cell, int objectIndex, int pointIndex, const WorldCellObjectPoint& point);
     void setCellObjectPoints(WorldCell* cell, int objectIndex, const WorldCellObjectPoints& points);
+    void setCellObjectPolylineWidth(WorldCell* cell, int objectIndex, int width);
 
     void addInGameMapFeature(WorldCell* cell, int index, InGameMapFeature* feature);
     void removeInGameMapFeature(WorldCell* cell, int index);

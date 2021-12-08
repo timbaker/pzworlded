@@ -19,6 +19,7 @@
 #define OBJECTSDOCK_H
 
 #include <QDockWidget>
+#include <QSpinBox>
 #include <QStyledItemDelegate>
 #include <QTreeView>
 
@@ -49,14 +50,19 @@ public:
     void setDocument(Document *doc);
     void clearDocument();
 
+    WorldDocument *worldDocument();
+
 private slots:
     void selectionChanged();
     void itemClicked(const QModelIndex &index);
     void itemDoubleClicked(const QModelIndex &index);
     void trashItem(const QModelIndex &index);
+    void selectedObjectsChanged();
+    void polylineWidthChanged(int value);
 
 private:
     ObjectsView *mView;
+    QSpinBox *mPolylineWidth;
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
 };

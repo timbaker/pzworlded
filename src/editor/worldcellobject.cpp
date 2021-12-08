@@ -31,6 +31,7 @@ WorldCellObject::WorldCellObject(WorldCell *cell, const QString &name, ObjectTyp
     , mWidth(width)
     , mHeight(height)
     , mGeometryType(ObjectGeometryType::INVALID)
+    , mPolylineWidth(0)
     , mCell(cell)
     , mVisible(true)
 {
@@ -44,6 +45,7 @@ WorldCellObject::WorldCellObject(WorldCell *cell, WorldCellObject *other)
     , mWidth(other->width())
     , mHeight(other->height())
     , mGeometryType(other->geometryType())
+    , mPolylineWidth(0)
     , mCell(cell)
     , mVisible(other->isVisible())
 {

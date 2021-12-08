@@ -59,7 +59,8 @@ enum UndoCommands {
     UndoCmd_ChangeRoadCoords,
     UndoCmd_ChangeRoadWidth,
     UndoCmd_ChangeRoadTile,
-    UndoCmd_ChangeRoadLines
+    UndoCmd_ChangeRoadLines,
+    UndoCmd_SetPolylineWidth
 };
 
 class SetCellMainMap : public QUndoCommand
@@ -403,6 +404,28 @@ private:
     WorldCell *mCell;
     int mObjectIndex;
     WorldCellObjectPoints mPoints;
+};
+
+/////
+
+class SetCellObjectPolylineWidth : public QUndoCommand
+{
+public:
+    SetCellObjectPolylineWidth(WorldDocument *doc, WorldCell *cell, int objectIndex, int width);
+
+    void undo() override { swap(); }
+    void redo() override { swap(); }
+
+    int id() const override { return UndoCmd_SetPolylineWidth; }
+    bool mergeWith(const QUndoCommand *other) override;
+
+private:
+    void swap();
+
+    WorldDocument *mDocument;
+    WorldCell *mCell;
+    int mObjectIndex;
+    int mWidth;
 };
 
 /////

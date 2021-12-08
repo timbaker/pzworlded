@@ -293,6 +293,33 @@ void SetCellObjectPoints::swap()
 
 /////
 
+SetCellObjectPolylineWidth::SetCellObjectPolylineWidth(WorldDocument *doc, WorldCell* cell, int objectIndex, int width)
+    : QUndoCommand(QCoreApplication::translate("Undo Commands", "Set Polyline Width"))
+    , mDocument(doc)
+    , mCell(cell)
+    , mObjectIndex(objectIndex)
+    , mWidth(width)
+{
+}
+
+bool SetCellObjectPolylineWidth::mergeWith(const QUndoCommand *other)
+{
+    if (id() != other->id()) {
+        return false;
+    }
+    const SetCellObjectPolylineWidth *_other = static_cast<const SetCellObjectPolylineWidth*>(other);
+    if (_other->mCell != mCell || _other->mObjectIndex != mObjectIndex)
+        return false;
+    return true;
+}
+
+void SetCellObjectPolylineWidth::swap()
+{
+    mWidth = mDocument->undoRedo().setCellObjectPolylineWidth(mCell, mObjectIndex, mWidth);
+}
+
+/////
+
 AddRemoveRoad::AddRemoveRoad(WorldDocument *doc, int index, Road *road)
     : mDocument(doc)
     , mRoad(road)

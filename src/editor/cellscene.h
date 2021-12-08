@@ -153,6 +153,8 @@ public:
 
     void movePoint(int pointIndex, const WorldCellObjectPoint& point);
 
+    QPolygonF createPolylineOutline();
+
 protected:
     friend class ObjectPointHandle;
     friend class EditPolygonObjectTool;
@@ -162,6 +164,7 @@ protected:
     QRectF mBoundingRect;
     WorldCellObject *mObject;
     QPolygonF mPolygon;
+    QPolygonF mPolylineOutline;
     bool mSyncing;
     bool mIsEditable;
     bool mIsSelected;
@@ -473,6 +476,10 @@ private slots:
     void objectXXXXChanged(WorldCellObject *obj);
     void cellObjectGroupChanged(WorldCellObject *obj);
     void cellObjectReordered(WorldCellObject *obj);
+    void cellObjectPointMoved(WorldCell *cell, int objectIndex, int pointIndex);
+    void cellObjectPointsChanged(WorldCell *cell, int index);
+
+    void propertiesChanged(PropertyHolder* ph);
 
     void inGameMapFeatureAdded(WorldCell* cell, int index);
     void inGameMapFeatureAboutToBeRemoved(WorldCell* cell, int index);

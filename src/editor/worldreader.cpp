@@ -450,7 +450,7 @@ private:
                 const QChar sep(QLatin1Char(','));
                 while ((end = pointStr.indexOf(sep, start, Qt::CaseSensitive)) != -1) {
                     bool conversionOk;
-                    int x = pointStr.mid(start, end - start).toInt(&conversionOk);
+                    int x = pointStr.midRef(start, end - start).toInt(&conversionOk);
                     if (!conversionOk) {
                         xml.raiseError(tr("Unable to parse object point"));
                         return;
@@ -460,7 +460,7 @@ private:
                     while (end < pointStr.length() && pointStr.at(end).isDigit()) {
                         end++;
                     }
-                    int y = pointStr.mid(start, end - start).toInt(&conversionOk);
+                    int y = pointStr.midRef(start, end - start).toInt(&conversionOk);
                     if (!conversionOk) {
                         xml.raiseError(tr("Unable to parse object point"));
                         return;
@@ -473,7 +473,7 @@ private:
             int minY = std::numeric_limits<int>::max();
             int maxX = std::numeric_limits<int>::min();
             int maxY = std::numeric_limits<int>::min();
-            for (const auto& point : points) {
+            for (const auto& point : qAsConst(points)) {
                 minX = std::min(minX, point.x);
                 minY = std::min(minY, point.y);
                 maxX = std::max(maxX, point.x);
@@ -483,8 +483,14 @@ private:
             obj = new WorldCellObject(cell, name, objType, objGroup, minX, minY, level, maxX - minX + 1, maxY - minY + 1);
             obj->setGeometryType(geometryType);
             obj->setPoints(points);
+            if (obj->isPolyline() && atts.hasAttribute(QLatin1String("lineWidth"))) {
+                bool ok;
+                int lineWidth = atts.value(QLatin1String("lineWidth")).toInt(&ok);
+                if (ok && (lineWidth > 0)) {
+                    obj->setPolylineWidth(lineWidth);
+                }
+            }
         } else {
-
             const qreal x =
                     atts.value(QLatin1String("x")).toString().toDouble();
             const qreal y =

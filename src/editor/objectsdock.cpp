@@ -36,10 +36,12 @@
 #include <QEvent>
 #include <QFileInfo>
 #include <QHeaderView>
+#include <QLabel>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QSet>
+#include <QSlider>
 #include <QUndoStack>
 #include <QVBoxLayout>
 
@@ -53,11 +55,24 @@ ObjectsDock::ObjectsDock(QWidget *parent)
 {
     setObjectName(QLatin1String("ObjectsDock"));
 
+    QLabel *widthLabel = new QLabel(this);
+    widthLabel->setText(QStringLiteral("Polyline Width:"));
+
+    mPolylineWidth = new QSpinBox(this);
+    mPolylineWidth->setMaximum(50);
+
+    QWidget *widgetH = new QWidget(this);
+    QHBoxLayout *layoutH = new QHBoxLayout(widgetH);
+    layoutH->setMargin(2);
+    layoutH->addWidget(widthLabel);
+    layoutH->addWidget(mPolylineWidth, 1);
+
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
     layout->setMargin(2);
 
     layout->addWidget(mView);
+    layout->addWidget(widgetH);
 
     setWidget(widget);
     retranslateUi();
@@ -69,6 +84,8 @@ ObjectsDock::ObjectsDock(QWidget *parent)
     connect(mView, SIGNAL(doubleClicked(QModelIndex)),
             SLOT(itemDoubleClicked(QModelIndex)));
     connect(mView, SIGNAL(trashItem(QModelIndex)), SLOT(trashItem(QModelIndex)));
+
+    connect(mPolylineWidth, QOverload<int>::of(&QSpinBox::valueChanged), this, &ObjectsDock::polylineWidthChanged);
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
@@ -95,15 +112,43 @@ void ObjectsDock::retranslateUi()
 
 void ObjectsDock::setDocument(Document *doc)
 {
+    if (mWorldDoc) {
+        mWorldDoc->disconnect(this);
+    }
+    if (mCellDoc) {
+        mCellDoc->disconnect(this);
+    }
+
     mWorldDoc = doc->asWorldDocument();
     mCellDoc = doc->asCellDocument();
     mView->setDocument(doc);
+
+    if (mWorldDoc) {
+        connect(mWorldDoc, &WorldDocument::selectedObjectsChanged, this, &ObjectsDock::selectedObjectsChanged);
+    }
+    if (mCellDoc) {
+        connect(mCellDoc, &CellDocument::selectedObjectsChanged, this, &ObjectsDock::selectedObjectsChanged);
+    }
+
+    selectedObjectsChanged();
 }
 
 void ObjectsDock::clearDocument()
 {
+    if (mWorldDoc) {
+        mWorldDoc->disconnect(this);
+    }
+    if (mCellDoc) {
+        mCellDoc->disconnect(this);
+    }
     mWorldDoc = 0, mCellDoc = 0;
     mView->setDocument(0);
+    selectedObjectsChanged();
+}
+
+WorldDocument *ObjectsDock::worldDocument()
+{
+    return mWorldDoc ? mWorldDoc : (mCellDoc ? mCellDoc->worldDocument() : nullptr);
 }
 
 void ObjectsDock::selectionChanged()
@@ -116,8 +161,9 @@ void ObjectsDock::selectionChanged()
         QList<WorldCellObject*> selectedObjects;
         foreach (QModelIndex index, selection) {
             if (index.column() > 0) continue;
-            if (WorldCellObject *obj = mView->model()->toObject(index))
+            if (WorldCellObject *obj = mView->model()->toObject(index)) {
                 selectedObjects += obj;
+            }
         }
         mWorldDoc->setSelectedObjects(selectedObjects);
         return;
@@ -192,6 +238,51 @@ void ObjectsDock::trashItem(const QModelIndex &index)
         if (mCellDoc)
             mCellDoc->worldDocument()->removeCellObject(obj->cell(), obj->cell()->objects().indexOf(obj));
     }
+}
+
+void ObjectsDock::selectedObjectsChanged()
+{
+    if (mView->synchingSelection()) {
+        return;
+    }
+
+    mPolylineWidth->setValue(0);
+    mPolylineWidth->setEnabled(false);
+
+    if (mWorldDoc == nullptr && mCellDoc == nullptr) {
+        return;
+    }
+
+    QList<WorldCellObject*> selection = mWorldDoc ? mWorldDoc->selectedObjects() : mCellDoc->selectedObjects();
+    if (selection.size() != 1) {
+        return;
+    }
+    WorldCellObject *obj = selection.first();
+    if (obj->geometryType() != ObjectGeometryType::Polyline) {
+        return;
+    }
+
+    mPolylineWidth->setValue(obj->polylineWidth());
+    mPolylineWidth->setEnabled(true);
+}
+
+void ObjectsDock::polylineWidthChanged(int value)
+{
+    if (mWorldDoc == nullptr && mCellDoc == nullptr) {
+        return;
+    }
+    QList<WorldCellObject*> selection = mWorldDoc ? mWorldDoc->selectedObjects() : mCellDoc->selectedObjects();
+    if (selection.size() != 1) {
+        return;
+    }
+    WorldCellObject *obj = selection.first();
+    if (obj->isPolyline() == false) {
+        return;
+    }
+    if (value == obj->polylineWidth()) {
+        return;
+    }
+    worldDocument()->setCellObjectPolylineWidth(obj->cell(), obj->index(), value);
 }
 
 /////
