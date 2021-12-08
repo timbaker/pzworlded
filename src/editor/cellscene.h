@@ -205,6 +205,16 @@ public:
         }
     }
 
+    ObjectItem *objectItem() const
+    {
+        return mObjectItem;
+    }
+
+    int pointIndex() const
+    {
+        return mPointIndex;
+    }
+
     WorldCellObjectPoint geometryPoint() const {
         auto& coords = mObjectItem->object()->points();
         if (mPointIndex < 0 || mPointIndex >= coords.size())
@@ -220,12 +230,16 @@ protected:
 
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
+    void updateSizeLabel();
+
 protected:
     ObjectItem *mObjectItem;
     int mPointIndex;
     WorldCellObjectPoint mOldPos;
     bool mMoveAllPoints = false;
     int mHoverRefCount = 0;
+    QGraphicsRectItem *mSizeItemBG;
+    QGraphicsSimpleTextItem *mSizeItem;
 };
 
 /////
@@ -457,6 +471,8 @@ public:
     void removeItems();
 
     void synchObjectItemVisibility();
+
+    void setTool(AbstractTool *tool);
 
 private slots:
     void cellMapFileChanged(WorldCell *cell);

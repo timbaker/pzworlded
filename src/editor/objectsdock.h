@@ -63,6 +63,7 @@ private slots:
 private:
     ObjectsView *mView;
     QSpinBox *mPolylineWidth;
+    bool mSynchPolylineWidth = false;
     CellDocument *mCellDoc;
     WorldDocument *mWorldDoc;
 };

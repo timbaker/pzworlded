@@ -457,7 +457,7 @@ private:
                     }
                     start = end + 1;
                     end = start;
-                    while (end < pointStr.length() && pointStr.at(end).isDigit()) {
+                    while (end < pointStr.length() && (pointStr.at(end).isDigit() || pointStr.at(end) == QLatin1Char('-'))) {
                         end++;
                     }
                     int y = pointStr.midRef(start, end - start).toInt(&conversionOk);

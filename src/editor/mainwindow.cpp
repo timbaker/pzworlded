@@ -790,7 +790,7 @@ bool MainWindow::openFile(const QString &fileName)
 
 void MainWindow::openLastFiles()
 {
-    PROGRESS progress(tr("Restoring session"));
+    PROGRESS progress(tr("Restoring session"), this);
 
     // MapImageManager's threads will load in the thumbnail images in the
     // background.  But defer updating the display with those images until
@@ -847,8 +847,9 @@ void MainWindow::openLastFiles()
 
     int lastActiveDocument =
             mSettings.value(QLatin1String("lastActive"), -1).toInt();
-    if (lastActiveDocument >= 0 && lastActiveDocument < docman()->documentCount())
+    if (lastActiveDocument >= 0 && lastActiveDocument < docman()->documentCount()) {
         ui->documentTabWidget->setCurrentIndex(lastActiveDocument);
+    }
 
     mSettings.endGroup();
 }
@@ -2203,6 +2204,11 @@ void MainWindow::readInGameMapFeaturesXML()
     }
 
     worldDoc->undoStack()->endMacro();
+
+    bool bFeatureToolActive = dynamic_cast<BaseInGameMapFeatureTool*>(ToolManager::instance()->selectedTool()) != nullptr;
+    if (bFeatureToolActive == false && EditInGameMapFeatureTool::instance().isEnabled()) {
+        ToolManager::instance()->selectTool(EditInGameMapFeatureTool::instancePtr());
+    }
 }
 
 void MainWindow::clearCells()

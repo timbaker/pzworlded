@@ -3378,6 +3378,8 @@ ObjectPointHandle::ObjectPointHandle(ObjectItem *objectItem, int pointIndex)
     : QGraphicsItem(objectItem)
     , mObjectItem(objectItem)
     , mPointIndex(pointIndex)
+    , mSizeItemBG(nullptr)
+    , mSizeItem(nullptr)
 {
     setFlags(QGraphicsItem::ItemIsMovable |
              QGraphicsItem::ItemSendsGeometryChanges |
@@ -3427,6 +3429,9 @@ void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
             }
         }
         scene->document()->setSelectedObjectPoints(selection);
+        if (isSelected() && (selection.size() == 1) && EditPolygonObjectTool::instance().isCurrent()) {
+            updateSizeLabel();
+        }
     }
 
     if (event->button() == Qt::RightButton) {
@@ -3445,6 +3450,12 @@ void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
 void ObjectPointHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseReleaseEvent(event);
+
+    if (mSizeItem != nullptr) {
+        delete mSizeItemBG;
+        mSizeItemBG = nullptr;
+        mSizeItem = nullptr;
+    }
 
     if (event->button() == Qt::LeftButton && (mOldPos != geometryPoint())) {
         WorldDocument *document = mObjectItem->mScene->worldDocument();
@@ -3525,10 +3536,39 @@ QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant
             QPointF tileCoords = renderer->pixelToTileCoords(newPos, 0);
             WorldCellObjectPoint point(tileCoords.x(), tileCoords.y());
             mObjectItem->movePoint(mPointIndex, point);
+            if (isSelected() && EditPolygonObjectTool::instance().isCurrent()) {
+                updateSizeLabel();
+            }
         }
     }
 
     return QGraphicsItem::itemChange(change, value);
+}
+
+void ObjectPointHandle::updateSizeLabel()
+{
+    int length;
+    WorldCellObject *object = mObjectItem->object();
+    if (pointIndex() == 0) {
+        auto p1 = object->points().at(1);
+        auto p2 = object->points().at(0);
+        length = QVector2D(p2.x - p1.x, p2.y - p1.y).length();
+    } else if (pointIndex() == object->points().size() - 1) {
+        auto p1 = object->points().at(object->points().size() - 2);
+        auto p2 = object->points().at(object->points().size() - 1);
+        length = QVector2D(p2.x - p1.x, p2.y - p1.y).length();
+    } else {
+        return;
+    }
+    if (mSizeItem == nullptr) {
+        mSizeItemBG = new QGraphicsRectItem(this);
+        mSizeItemBG->setBrush(Qt::lightGray);
+        mSizeItemBG->setPos(20.0, 0.0);
+        mSizeItem = new QGraphicsSimpleTextItem(mSizeItemBG);
+        mSizeItem->setPos(4.0, 4.0);
+    }
+    mSizeItem->setText(QStringLiteral("length %1").arg(length));
+    mSizeItemBG->setRect(QRectF(QPointF(), mSizeItem->boundingRect().size() + QSizeF(8.0, 8.0)));
 }
 
 /////
@@ -4053,6 +4093,9 @@ void CellScene::setTool(AbstractTool *tool)
     bool bFeatureToolActive = dynamic_cast<BaseInGameMapFeatureTool*>(mActiveTool) != nullptr;
     for (InGameMapFeatureItem* item : qAsConst(mFeatureItems)) {
         item->setVisible(bFeatureToolActive);
+    }
+    for (AdjacentMap *adjacentMap : qAsConst(mAdjacentMaps)) {
+        adjacentMap->setTool(mActiveTool);
     }
     if (mActiveTool != EditInGameMapFeatureTool::instancePtr()) {
         for (InGameMapFeatureItem* item : qAsConst(mFeatureItems)) {
@@ -6150,6 +6193,14 @@ void AdjacentMap::synchObjectItemVisibility()
 {
     foreach (ObjectItem *item, mObjectItems) {
         item->setVisible(shouldObjectItemBeVisible(item));
+    }
+}
+
+void AdjacentMap::setTool(AbstractTool *tool)
+{
+    bool bFeatureToolActive = dynamic_cast<BaseInGameMapFeatureTool*>(tool) != nullptr;
+    for (InGameMapFeatureItem *item : mInGameMapFeatureItems) {
+        item->setVisible(bFeatureToolActive);
     }
 }
 

@@ -242,12 +242,14 @@ void ObjectsDock::trashItem(const QModelIndex &index)
 
 void ObjectsDock::selectedObjectsChanged()
 {
-    if (mView->synchingSelection()) {
-        return;
-    }
+//    if (mView->synchingSelection()) {
+//        return;
+//    }
 
+    mSynchPolylineWidth = true;
     mPolylineWidth->setValue(0);
     mPolylineWidth->setEnabled(false);
+    mSynchPolylineWidth = false;
 
     if (mWorldDoc == nullptr && mCellDoc == nullptr) {
         return;
@@ -262,12 +264,17 @@ void ObjectsDock::selectedObjectsChanged()
         return;
     }
 
+    mSynchPolylineWidth = true;
     mPolylineWidth->setValue(obj->polylineWidth());
     mPolylineWidth->setEnabled(true);
+    mSynchPolylineWidth = false;
 }
 
 void ObjectsDock::polylineWidthChanged(int value)
 {
+    if (mSynchPolylineWidth) {
+        return;
+    }
     if (mWorldDoc == nullptr && mCellDoc == nullptr) {
         return;
     }
