@@ -32,6 +32,8 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include "InGameMap/clipper.hpp"
+
 #include "navigation/chunkdatafile.h"
 #include "navigation/isogridsquare.h"
 
@@ -799,13 +801,33 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     }
 
     // Allow jumbo trees in Forest and DeepForest zones
-    foreach (WorldCellObject *obj, cell->objects()) {
-        if (obj->level() == 0 && obj->type() != 0 && obj->type()->name().contains(QLatin1Literal("Forest"))) {
-            int ox = obj->x(), oy = obj->y(), ow = obj->width(), oh = obj->height();
-            for (int y = oy; y < oy + oh; y++) {
-                for (int x = ox; x < ox + ow; x++) {
-                    if (x >= 0 && x < 300 && y >= 0 && y < 300)
-                        grid[x][y] = JUMBO_ZONE;
+    auto FOREST = cell->world()->objectType(QStringLiteral("Forest"));
+    auto DEEP_FOREST = cell->world()->objectType(QStringLiteral("DeepForest"));
+    ClipperLib::Path zonePath;
+    for (WorldCellObject *obj : cell->objects()) {
+        if ((obj->level() != 0) || !((obj->type() == FOREST) || (obj->type() == DEEP_FOREST))) {
+            continue;
+        }
+        if (obj->isPoint() || obj->isPolyline()) {
+            continue;
+        }
+        zonePath.clear();
+        if (obj->isPolygon()) {
+            for (const auto &pt : obj->points()) {
+                zonePath << ClipperLib::IntPoint(pt.x * 100, pt.y * 100);
+            }
+        }
+        int ox = obj->x(), oy = obj->y(), ow = obj->width(), oh = obj->height();
+        for (int y = oy; y < oy + oh; y++) {
+            for (int x = ox; x < ox + ow; x++) {
+                if ((zonePath.empty() == false)) {
+                    ClipperLib::IntPoint pt(x * 100 + 50, y * 100 + 50); // center of the square
+                    if (ClipperLib::PointInPolygon(pt, zonePath) == 0) {
+                        continue;
+                    }
+                }
+                if (x >= 0 && x < 300 && y >= 0 && y < 300) {
+                    grid[x][y] = JUMBO_ZONE;
                 }
             }
         }
