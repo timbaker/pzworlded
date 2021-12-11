@@ -28,6 +28,8 @@
 
 #include <QFileDialog>
 
+#include <cmath>
+
 InGameMapImagePyramidWindow::InGameMapImagePyramidWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::InGameMapImagePyramidWindow)
@@ -105,8 +107,8 @@ void InGameMapImagePyramidWindow::createZip()
         float width = float(image.width()) / (1 << level);
         float height = float(image.height()) / (1 << level);
         QImage scaledImage = image.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        int columns = ceil(width / tileSize);
-        int rows = ceil(height / tileSize);
+        int columns = std::ceil(width / tileSize);
+        int rows = std::ceil(height / tileSize);
         log(QStringLiteral("Creating images for level %1. width x height = %2 x %3").arg(level).arg(columns).arg(rows));
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
