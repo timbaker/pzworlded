@@ -3156,7 +3156,9 @@ QPainterPath ObjectItem::shape() const
             return path;
         }
         path.addPolygon(polygon);
-
+        if (isPolygon()) {
+            return path;
+        }
         QPainterPathStroker stroker;
         stroker.setWidth(20 / zoom);
         return stroker.createStroke(path);
@@ -3292,7 +3294,7 @@ bool ObjectItem::isMouseOverHighlighted() const
 bool ObjectItem::hoverToolCurrent() const
 {
     return SelectMoveObjectTool::instance()->isCurrent() ||
-            EditPolygonObjectTool::instance().isCurrent();
+            (EditPolygonObjectTool::instance().isCurrent() && (isRectangle() == false));
 }
 
 bool ObjectItem::isPoint() const
@@ -3308,6 +3310,11 @@ bool ObjectItem::isPolygon() const
 bool ObjectItem::isPolyline() const
 {
     return mObject->isPolyline();
+}
+
+bool ObjectItem::isRectangle() const
+{
+    return mObject->isRectangle();
 }
 
 int ObjectItem::pointAt(qreal sceneX, qreal sceneY)
@@ -3413,6 +3420,7 @@ void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         mOldPos = geometryPoint();
         mMoveAllPoints = (event->modifiers() & Qt::ShiftModifier) != 0;
+        mCancelMove = false;
 
         CellScene *scene = mObjectItem->mScene;
         QList<int> selection = scene->document()->selectedObjectPoints();
@@ -3439,6 +3447,7 @@ void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
             if (mOldPos != geometryPoint()) {
                 mObjectItem->movePoint(mPointIndex, mOldPos);
                 setPos(mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y));
+                mCancelMove = true;
             }
         }
     }
@@ -3455,6 +3464,10 @@ void ObjectPointHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         delete mSizeItemBG;
         mSizeItemBG = nullptr;
         mSizeItem = nullptr;
+    }
+
+    if (event->button() == Qt::LeftButton) {
+        mCancelMove = false;
     }
 
     if (event->button() == Qt::LeftButton && (mOldPos != geometryPoint())) {
@@ -3510,6 +3523,9 @@ QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant
         auto* renderer = mObjectItem->mRenderer;
 
         if (change == ItemPositionChange) {
+            if (mCancelMove) {
+                return mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y);
+            }
             bool snapToGrid = true;
 
             // Calculate the absolute pixel position
@@ -4336,6 +4352,9 @@ void CellScene::setGraphicsSceneZOrder()
     foreach (ObjectItem *item, mObjectItems) {
         WorldCellObject *obj = item->object();
         int groupIndex = groups.indexOf(obj->group());
+        if (item->isSelected()) {
+            groupIndex = groups.size();
+        }
         item->setZValue(z2
                         + groups.size() * mObjectItems.size() * obj->level()
                         + groupIndex * mObjectItems.size()
@@ -4989,6 +5008,8 @@ void CellScene::selectedObjectsChanged()
     }
 
     mSelectedObjectItems = items;
+
+    doLater(ZOrder); // Selected objects are on top
 }
 
 void CellScene::selectedObjectPointsChanged()

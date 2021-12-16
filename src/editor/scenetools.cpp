@@ -21,6 +21,7 @@
 #include "bmptotmx.h"
 #include "celldocument.h"
 #include "cellscene.h"
+#include "cellview.h"
 #include "clipboard.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
@@ -266,6 +267,33 @@ void SelectMoveObjectTool::deleteInstance()
     delete mInstance;
 }
 
+void SelectMoveObjectTool::deactivate()
+{
+    if (mResizeHandle) {
+        delete mResizeHandle;
+        mResizeHandle = nullptr;
+    }
+    BaseCellSceneTool::deactivate();
+}
+
+void SelectMoveObjectTool::setScene(BaseGraphicsScene *scene)
+{
+    if (mScene) {
+        mScene->worldDocument()->disconnect(this);
+    }
+
+    BaseCellSceneTool::setScene(scene);
+
+    if (mScene) {
+        connect(mScene->worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved,
+                this, &SelectMoveObjectTool::cellObjectAboutToBeRemoved);
+        connect(mScene->worldDocument(), &WorldDocument::cellObjectMoved,
+                this, &SelectMoveObjectTool::cellObjectMoved);
+        connect(mScene->worldDocument(), &WorldDocument::cellObjectResized,
+                this, &SelectMoveObjectTool::cellObjectResized);
+    }
+}
+
 SelectMoveObjectTool::SelectMoveObjectTool()
     : BaseCellSceneTool(QLatin1String("Select and Move Objects"),
                         QIcon(QLatin1String(":/images/22x22/tool-select-objects.png")),
@@ -273,6 +301,7 @@ SelectMoveObjectTool::SelectMoveObjectTool()
     , mMode(NoMode)
     , mMousePressed(false)
     , mClickedItem(nullptr)
+    , mResizeHandle(nullptr)
 {
 }
 
@@ -302,10 +331,6 @@ void SelectMoveObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         event->accept();
         break;
     case Qt::RightButton:
-        if (mMode == NoMode) {
-            showContextMenu(event->scenePos(), event->screenPos());
-            event->accept();
-        }
         // Right-clicks exits moving, same as the Escape key.
         if (mMode == Moving) {
             foreach (ObjectItem *item, mMovingItems)
@@ -340,7 +365,33 @@ void SelectMoveObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         updateMovingItems(event->scenePos(), event->modifiers());
         break;
     case NoMode:
+    {
+        ObjectItem *hoverItem = topmostItemAt(event->scenePos(), true);
+        if ((hoverItem != nullptr) && (hoverItem->object()->isRectangle() == false)) {
+            hoverItem = nullptr;
+        }
+        CellObjectEdgeResizeHandle::Edge edge = CellObjectEdgeResizeHandle::pickEdge(hoverItem, event->scenePos());
+        if (edge != CellObjectEdgeResizeHandle::Edge::NONE) {
+            if (mResizeHandle) {
+                if (mResizeHandle->object() != hoverItem->object()) {
+                    mResizeHandle->setObject(hoverItem->object());
+                }
+                if (mResizeHandle->edge() != edge) {
+                    mResizeHandle->setEdge(edge);
+                }
+            } else {
+                mResizeHandle = new CellObjectEdgeResizeHandle(mScene, hoverItem->object(), edge);
+                mResizeHandle->setZValue(CellScene::ZVALUE_GRID + 1);
+                mScene->addItem(mResizeHandle);
+            }
+        } else {
+            if (mResizeHandle) {
+                delete mResizeHandle;
+                mResizeHandle = nullptr;
+            }
+        }
         break;
+    }
     case CancelMoving:
         break;
     }
@@ -351,6 +402,14 @@ void SelectMoveObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void SelectMoveObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+    if (event->button() == Qt::RightButton) {
+        if (mMode == NoMode) {
+            showContextMenu(event->scenePos(), event->screenPos());
+            event->accept();
+        }
+        return;
+    }
+
     if (event->button() != Qt::LeftButton)
         return;
 
@@ -388,6 +447,34 @@ void SelectMoveObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
     mMousePressed = false;
     mClickedItem = nullptr;
+}
+
+void SelectMoveObjectTool::cellObjectAboutToBeRemoved(WorldCell *cell, int objectIndex)
+{
+    if (mResizeHandle == nullptr)
+        return;
+    if (cell->objects().at(objectIndex) == mResizeHandle->object()) {
+        delete mResizeHandle;
+        mResizeHandle = nullptr;
+    }
+}
+
+void SelectMoveObjectTool::cellObjectMoved(WorldCellObject *object)
+{
+    if (mResizeHandle == nullptr)
+        return;
+    if (mResizeHandle->object() != object)
+        return;
+    mResizeHandle->synchWithObject();
+}
+
+void SelectMoveObjectTool::cellObjectResized(WorldCellObject *object)
+{
+    if (mResizeHandle == nullptr)
+        return;
+    if (mResizeHandle->object() != object)
+        return;
+    mResizeHandle->synchWithObject();
 }
 
 void SelectMoveObjectTool::startSelecting()
@@ -498,7 +585,7 @@ void SelectMoveObjectTool::showContextMenu(const QPointF &scenePos, const QPoint
     }
 }
 
-ObjectItem *SelectMoveObjectTool::topmostItemAt(const QPointF &scenePos)
+ObjectItem *SelectMoveObjectTool::topmostItemAt(const QPointF &scenePos, bool editable)
 {
     // ObjectLabelItem uses ItemIgnoresTransformations to keep its size the
     // same regardless of the view's scale.
@@ -507,11 +594,15 @@ ObjectItem *SelectMoveObjectTool::topmostItemAt(const QPointF &scenePos)
                                                 Qt::IntersectsItemShape,
                                                 Qt::DescendingOrder, xform)) {
         if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item)) {
+            if (editable && objectItem->isEditable() == false)
+                continue;
             if (!objectItem->isAdjacent())
                 return objectItem;
         }
 
         if (ObjectLabelItem *labelItem = dynamic_cast<ObjectLabelItem*>(item)) {
+            if (editable)
+                continue;
             if (!labelItem->objectItem()->isAdjacent())
                 return labelItem->objectItem();
         }
@@ -2171,6 +2262,8 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         for (QGraphicsItem *item : items) {
             if (ObjectItem *objectItem = dynamic_cast<ObjectItem*>(item)) {
                 if (objectItem->isAdjacent())
+                    continue;
+                if (objectItem->isRectangle())
                     continue;
                 clickedItem = objectItem;
                 break;
@@ -4003,3 +4096,256 @@ WorldBMPItem *WorldBMPTool::topmostItemAt(const QPointF &scenePos)
 }
 
 /////
+
+CellObjectEdgeResizeHandle::CellObjectEdgeResizeHandle(CellScene *scene, WorldCellObject *object, Edge edge)
+    : QGraphicsItem(nullptr)
+    , mScene(scene)
+    , mObject(object)
+    , mEdge(edge)
+    , mOffsetItemBG(nullptr)
+    , mOffsetItem(nullptr)
+{
+    setFlags(QGraphicsItem::ItemIsMovable |
+             QGraphicsItem::ItemSendsGeometryChanges |
+//             QGraphicsItem::ItemIgnoresTransformations |
+             QGraphicsItem::ItemIgnoresParentOpacity);
+
+    setCursor(Qt::SizeFDiagCursor);
+}
+
+void CellObjectEdgeResizeHandle::setObject(WorldCellObject *object)
+{
+    prepareGeometryChange();
+    mObject = object;
+}
+
+void CellObjectEdgeResizeHandle::setEdge(Edge edge)
+{
+    prepareGeometryChange();
+    mEdge = edge;
+}
+
+void CellObjectEdgeResizeHandle::synchWithObject()
+{
+    prepareGeometryChange();
+    setPos(0.0, 0.0);
+}
+
+CellObjectEdgeResizeHandle::Edge CellObjectEdgeResizeHandle::pickEdge(ObjectItem *objectItem, const QPointF &scenePos)
+{
+    if (objectItem == nullptr) {
+        return Edge::NONE;
+    }
+    Tiled::MapRenderer *renderer = objectItem->cellScene()->renderer();
+    QPointF worldPos = renderer->pixelToTileCoords(scenePos);
+    WorldCellObject *object = objectItem->object();
+    qreal T = edgeThickness(objectItem->cellScene());
+    qreal x = object->x(), y = object->y(), w = object->width(), h = object->height();
+    if (worldPos.y() >= y - T && worldPos.y() <= y + T) {
+        return Edge::North;
+    }
+    if (worldPos.y() >= y + h - T && worldPos.y() <= y + h + T) {
+        return Edge::South;
+    }
+    if (worldPos.x() >= x - T && worldPos.x() <= x + T) {
+        return Edge::West;
+    }
+    if (worldPos.x() >= x + w - T && worldPos.x() <= x + w + T) {
+        return Edge::East;
+    }
+    return Edge::NONE;
+}
+
+QRectF CellObjectEdgeResizeHandle::boundingRect() const
+{
+    Tiled::MapRenderer *renderer = mScene->renderer();
+    return renderer->tileToPixelCoords(edgeRect(), mObject->level()).boundingRect().adjusted(-20, -20, 20, 20);
+}
+
+void CellObjectEdgeResizeHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    QPen pen(Qt::blue);
+    pen.setWidth(3);
+    pen.setCosmetic(true);
+    painter->setPen(pen);
+    Tiled::MapRenderer *renderer = mScene->renderer();
+    QPolygonF scenePolygon = renderer->tileToPixelCoords(edgeRect(), mObject->level());
+    painter->drawPolygon(scenePolygon);
+}
+
+void CellObjectEdgeResizeHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    // Remember the old size since we may resize the object
+    if (event->button() == Qt::LeftButton) {
+        Tiled::MapRenderer *renderer = mScene->renderer();
+        mCancelResize = false;
+        mClickObjectPos = renderer->pixelToTileCoords(event->scenePos(), mObject->level()) - mObject->pos();
+        mOldSize = mObject->size();
+        if (auto *objectItem = mScene->itemForObject(mObject)) {
+            objectItem->labelItem()->setShowSize(true);
+            objectItem->labelItem()->synch();
+        }
+    }
+
+    QGraphicsItem::mousePressEvent(event);
+}
+
+void CellObjectEdgeResizeHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsItem::mouseReleaseEvent(event);
+
+    if (event->button() == Qt::LeftButton) {
+        WorldCellObject *obj = mObject;
+        auto *objectItem = mScene->itemForObject(mObject);
+        if (objectItem == nullptr)
+            return;
+        QPointF posDelta = objectItem->dragOffset();
+        QSizeF resizeDelta = objectItem->resizeDelta();
+        objectItem->setDragOffset(QPoint());
+        objectItem->setResizeDelta(QSizeF(0, 0));
+        updateOffsetLabel();
+        if (mCancelResize == false) {
+            if (!resizeDelta.isNull() || !posDelta.isNull()) {
+                WorldDocument *document = mScene->document()->worldDocument();
+                QUndoStack *undoStack = mScene->document()->undoStack();
+                undoStack->beginMacro(QStringLiteral("Resize Object"));
+                if (posDelta.isNull() == false)
+                    document->moveCellObject(obj, obj->pos() + posDelta);
+                if (resizeDelta.isNull() == false)
+                    document->resizeCellObject(obj, mOldSize + resizeDelta);
+                undoStack->endMacro();
+            }
+        }
+        mCancelResize = false;
+        objectItem->labelItem()->setShowSize(false);
+        objectItem->labelItem()->synch();
+    }
+
+    if (event->button() == Qt::RightButton) {
+        setPos(QPointF());
+        mCancelResize = true;
+    }
+
+    // Stop the context-menu messing us up.
+    event->accept();
+}
+
+QVariant CellObjectEdgeResizeHandle::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    Tiled::MapRenderer *renderer = mScene->renderer();
+    if (change == ItemPositionChange) {
+        if (mCancelResize) {
+            return QPointF();
+        }
+        int level = mObject->level();
+        QPointF clickScenePos = renderer->tileToPixelCoords(mClickObjectPos, level);
+        QPointF tileCoords = renderer->pixelToTileCoords(clickScenePos + value.toPointF(), level);
+        QPointF delta = (tileCoords - mClickObjectPos).toPoint()/* - objectWorldPos*/;
+        switch (mEdge) {
+        case Edge::North:
+            delta.setX(0);
+            delta.setY(qMin(delta.y(), mObject->height() - MIN_OBJECT_SIZE));
+            break;
+        case Edge::South:
+            delta.setX(0);
+            delta.setY(qMax(delta.y(), -(mObject->height() - MIN_OBJECT_SIZE)));
+            break;
+        case Edge::West:
+            delta.setX(qMin(delta.x(), mObject->width() - MIN_OBJECT_SIZE));
+            delta.setY(0);
+            break;
+        case Edge::East:
+            delta.setX(qMax(delta.x(), -(mObject->width() - MIN_OBJECT_SIZE)));
+            delta.setY(0);
+            break;
+        default:
+            delta = QPointF(0, 0);
+            break;
+        }
+        return renderer->tileToPixelCoords(mClickObjectPos + delta, level) - clickScenePos;
+    } else if (change == ItemPositionHasChanged) {
+        if (mCancelResize)
+            return QGraphicsItem::itemChange(change, value);;
+        auto *objectItem = mScene->itemForObject(mObject);
+        if (objectItem == nullptr)
+            return QGraphicsItem::itemChange(change, value);
+        int level = mObject->level();
+        QPointF clickScenePos = renderer->tileToPixelCoords(mClickObjectPos, level);
+        const QPointF newPos = value.toPointF() + clickScenePos;
+        QPointF tileCoords = renderer->pixelToTileCoords(newPos, level);
+        QPointF delta = (tileCoords - mClickObjectPos).toPoint();
+        switch (mEdge) {
+        case Edge::North:
+            objectItem->setDragOffset(delta);
+            objectItem->setResizeDelta(QSizeF(-delta.x(), -delta.y()));
+            break;
+        case Edge::South:
+            objectItem->setResizeDelta(QSizeF(delta.x(), delta.y()));
+            break;
+        case Edge::West:
+            objectItem->setDragOffset(delta);
+            objectItem->setResizeDelta(QSizeF(-delta.x(), -delta.y()));
+            break;
+        case Edge::East:
+            objectItem->setResizeDelta(QSizeF(delta.x(), delta.y()));
+            break;
+        default:
+            break;
+        }
+        updateOffsetLabel();
+    }
+    return QGraphicsItem::itemChange(change, value);
+}
+
+qreal CellObjectEdgeResizeHandle::edgeThickness(CellScene *scene)
+{
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    qreal T = 0.2 / qMin(zoom, 1.0);
+    return T;
+}
+
+QRectF CellObjectEdgeResizeHandle::edgeRect() const
+{
+    qreal T = edgeThickness(mScene);
+    int x = mObject->x(), y = mObject->y(), w = mObject->width(), h = mObject->height();
+    switch (mEdge) {
+    case Edge::NONE:
+        return QRectF(x, y, T, T);
+    case Edge::North:
+        return QRectF(x, y, w, T);
+    case Edge::East:
+        return QRectF(x + w - T, y, T, h);
+    case Edge::South:
+        return QRectF(x, y + h - T, w, T);
+    case Edge::West:
+        return QRectF(x, y, T, h);
+    }
+}
+
+void CellObjectEdgeResizeHandle::updateOffsetLabel()
+{
+    QSizeF offset;
+    if (auto *objectItem = mScene->itemForObject(mObject)) {
+        offset = objectItem->resizeDelta();
+    }
+    if (offset.isNull()) {
+        if (mOffsetItem) {
+            delete mOffsetItemBG;
+            mOffsetItem = nullptr;
+            mOffsetItemBG = nullptr;
+        }
+        return;
+    }
+    if (mOffsetItem == nullptr) {
+        mOffsetItemBG = new QGraphicsRectItem(this);
+        mOffsetItemBG->setBrush(Qt::lightGray);
+        mOffsetItemBG->setPos(0.0, 0.0);
+        mOffsetItem = new QGraphicsSimpleTextItem(mOffsetItemBG);
+        mOffsetItem->setPos(4.0, 4.0);
+        mOffsetItemBG->setFlags(QGraphicsItem::ItemIgnoresTransformations);
+    }
+    mOffsetItem->setText(QStringLiteral("offset %1").arg((mEdge == Edge::North || mEdge == Edge::South) ? offset.height() : offset.width()));
+    mOffsetItemBG->setRect(QRectF(QPointF(), mOffsetItem->boundingRect().size() + QSizeF(8.0, 8.0)));
+    mOffsetItemBG->setPos(mScene->renderer()->tileToPixelCoords(mObject->pos() + mClickObjectPos, mObject->level()));
+}

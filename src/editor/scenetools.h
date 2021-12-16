@@ -213,6 +213,67 @@ private:
 
 /////
 
+// Allows dragging the edge of a WorldCellObject to resize it.
+class CellObjectEdgeResizeHandle : public QGraphicsItem
+{
+public:
+    enum class Edge
+    {
+        NONE,
+        North,
+        East,
+        South,
+        West
+    };
+
+    CellObjectEdgeResizeHandle(CellScene *scene, WorldCellObject *object, Edge edge);
+
+    WorldCellObject *object() const
+    {
+        return mObject;
+    }
+
+    Edge edge() const
+    {
+        return mEdge;
+    }
+
+    void setObject(WorldCellObject *object);
+    void setEdge(Edge edge);
+
+    void synchWithObject();
+
+    static Edge pickEdge(ObjectItem *objectItem, const QPointF &scenePos);
+
+    QRectF boundingRect() const override;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = nullptr) override;
+
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+
+    static qreal edgeThickness(CellScene *scene);
+    QRectF edgeRect() const;
+    void updateOffsetLabel();
+
+private:
+    CellScene *mScene;
+    WorldCellObject *mObject;
+    Edge mEdge;
+    QPointF mClickObjectPos;
+    QSizeF mOldSize;
+    bool mCancelResize;
+    QGraphicsRectItem *mOffsetItemBG;
+    QGraphicsSimpleTextItem *mOffsetItem;
+};
+
+/////
+
 /**
   * This CellScene tool selects and moves WorldCellObjects.
   */
@@ -224,19 +285,28 @@ public:
     static SelectMoveObjectTool *instance();
     static void deleteInstance();
 
-    virtual void keyPressEvent(QKeyEvent *event);
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
-    virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+    void deactivate() override;
 
-    bool affectsLots() const { return false; }
-    bool affectsObjects() const { return true; }
+    void setScene(BaseGraphicsScene *scene) override;
 
-    void languageChanged()
+    void keyPressEvent(QKeyEvent *event) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+
+    bool affectsLots() const override { return false; }
+    bool affectsObjects() const override { return true; }
+
+    void languageChanged() override
     {
         setName(tr("Select and Move Objects"));
         //setShortcut(QKeySequence(tr("S")));
     }
+
+private slots:
+    void cellObjectAboutToBeRemoved(WorldCell* cell, int objectIndex);
+    void cellObjectMoved(WorldCellObject *object);
+    void cellObjectResized(WorldCellObject *object);
 
 private:
     void startSelecting();
@@ -259,13 +329,14 @@ private:
         CancelMoving
     };
 
-    ObjectItem *topmostItemAt(const QPointF &scenePos);
+    ObjectItem *topmostItemAt(const QPointF &scenePos, bool editable = false);
 
     Mode mMode;
     bool mMousePressed;
     QPointF mStartScenePos;
     ObjectItem *mClickedItem;
     QSet<ObjectItem*> mMovingItems;
+    CellObjectEdgeResizeHandle *mResizeHandle;
     static SelectMoveObjectTool *mInstance;
 };
 

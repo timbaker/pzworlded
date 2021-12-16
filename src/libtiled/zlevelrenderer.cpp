@@ -625,6 +625,7 @@ void ZLevelRenderer::drawFancyRectangle(QPainter *painter,
     pen.setJoinStyle(Qt::RoundJoin);
     pen.setCapStyle(Qt::RoundCap);
     pen.setWidth(2);
+    pen.setCosmetic(true);
     painter->setPen(pen);
     painter->setRenderHint(QPainter::Antialiasing);
     QPolygonF polygon = tileRectToPolygon(tileBounds, level);

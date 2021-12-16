@@ -113,6 +113,8 @@ public:
 
     QPainterPath shape() const override;
 
+    CellScene *cellScene() const { return mScene; }
+
     void setEditable(bool editable);
     bool isEditable() const { return mIsEditable; }
 
@@ -148,6 +150,7 @@ public:
     bool isPoint() const;
     bool isPolygon() const;
     bool isPolyline() const;
+    bool isRectangle() const;
 
     int pointAt(qreal sceneX, qreal sceneY);
 
@@ -237,6 +240,7 @@ protected:
     int mPointIndex;
     WorldCellObjectPoint mOldPos;
     bool mMoveAllPoints = false;
+    bool mCancelMove = false;
     int mHoverRefCount = 0;
     QGraphicsRectItem *mSizeItemBG;
     QGraphicsSimpleTextItem *mSizeItem;

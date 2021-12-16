@@ -315,6 +315,11 @@ public:
         return geometryType() == ObjectGeometryType::Polyline;
     }
 
+    bool isRectangle() const
+    {
+        return geometryType() == ObjectGeometryType::INVALID;
+    }
+
     void setPoints(const WorldCellObjectPoints &points)
     {
         mPoints = points;
