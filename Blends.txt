@@ -642,7 +642,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_72
     dir = n
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -651,7 +651,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_73
     dir = w
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -660,7 +660,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_74
     dir = e
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -669,7 +669,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_75
     dir = s
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -678,7 +678,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_65
     dir = nw
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -687,7 +687,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_66
     dir = se
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -696,7 +696,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_67
     dir = sw
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 blend
@@ -705,7 +705,7 @@ blend
     mainTile = dirt
     blendTile = blends_natural_01_68
     dir = ne
-    exclude = water lightgrass medgrass darkgrass sand
+    exclude = water lightgrass medgrass darkgrass sand dirtgrass
 }
 
 
