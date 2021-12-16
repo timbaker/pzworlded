@@ -346,6 +346,18 @@ alias
 
 alias
 {
+    name = dirtgrass
+    tiles = [
+        blends_natural_01_80
+        blends_natural_01_85
+        blends_natural_01_86        
+        blends_natural_01_87        
+        
+    ]
+}
+
+alias
+{
     name = sand
     tiles = [
         blends_natural_01_0
@@ -512,40 +524,52 @@ label = Light Asphalt
 
 rule
 {
-label = Dark Asphalt (main roads)
+    label = Dark Asphalt (main roads)
     bitmap = 0
     color = 100 100 100
     tiles = street2
     layer = 0_Floor
 }
+
 rule
 {
-label = Medium Asphalt 
+    label = Medium Asphalt 
     bitmap = 0
     color = 120 120 120
     tiles = street
     layer = 0_Floor
 }
+
 rule
 {
-label = Gravel Dirt
+    label = Gravel Dirt
     bitmap = 0
     color = 140 70 15
     tiles = floors_exterior_natural_01_12
     layer = 0_Floor
 }
+
 rule
 {
-
-label = Dirt
+    label = Dirt
     bitmap = 0
     color = 120 70 20
     tiles = dirt
     layer = 0_Floor
 }
+
 rule
 {
-label = Dark Pothole
+    label = Dirt Grass
+    bitmap = 0
+    color = 80 55 20
+    tiles = dirtgrass
+    layer = 0_Floor
+}
+
+rule
+{
+    label = Dark Pothole
     bitmap = 0
     color = 110 100 100
     tiles = blends_street_01_0
@@ -554,7 +578,7 @@ label = Dark Pothole
 }
 rule
 {
-label = Light Pothole
+    label = Light Pothole
     bitmap = 0
     color = 130 120 120
     tiles = pothole
@@ -564,8 +588,7 @@ label = Light Pothole
 
 rule
 {
-
-label = Water
+    label = Water
     bitmap = 0
     color = 0 138 255
     tiles = water
@@ -590,6 +613,51 @@ label = Trees
         vegetation_trees_01_11
     ]
     layer = 0_Vegetation
+}
+rule
+{
+label = Dense Trees + Dark grass
+    bitmap = 1
+    color = 200 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+	darklonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Dense Trees + Medium grass
+    bitmap = 1
+    color = 200 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+        medlonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Dense Trees + Light grass
+    bitmap = 1
+    color = 200 0 0
+    tiles = [
+        vegetation_trees_01_8
+        vegetation_trees_01_9
+        vegetation_trees_01_10
+        vegetation_trees_01_11
+        lightlonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
 }
 rule
 {

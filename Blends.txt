@@ -712,6 +712,81 @@ blend
 
 
 
+blend
+{
+    layer = 0_FloorOverlay4
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_88
+    dir = n
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay3
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_89
+    dir = w
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_90
+    dir = e
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay2
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_91
+    dir = s
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_81
+    dir = nw
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay2
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_82
+    dir = se
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay3
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_83
+    dir = sw
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+blend
+{
+    layer = 0_FloorOverlay4
+    mainTile = dirtgrass
+    blendTile = blends_natural_01_84
+    dir = ne
+    exclude = water lightgrass medgrass darkgrass sand
+}
+
+
+
+
 
 
 blend
