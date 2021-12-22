@@ -84,7 +84,7 @@ public:
     QRgb pixel(int x, int y) const { return mImage.pixel(x, y); }
     void setPixel(int x, int y, QRgb rgb) { mImage.setPixel(x, y, rgb); }
 
-    int rand(int x, int y) { return mRands[x][y]; }
+    int rand(int x, int y) { return mRands.at(x).at(y); /*mRands[x][y]*/; }
 
     void resize(const QSize &size, const QPoint &offset);
     void merge(const QPoint &pos, const MapBmp *other);

@@ -510,7 +510,7 @@ LayerGroupVBO::~LayerGroupVBO()
     if (mCreated == false) {
         qDeleteAll(mTiles);
         mTiles.fill(nullptr);
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < mMapCompositeVBO->mLayerVBOs.size(); i++) {
             if (mMapCompositeVBO->mLayerVBOs[i] == this) {
                 mMapCompositeVBO->mLayerVBOs[i] = nullptr;
                 break;
@@ -522,7 +522,7 @@ LayerGroupVBO::~LayerGroupVBO()
         if (mContext->makeCurrent(mContext->surface())) {
             qDeleteAll(mTiles);
             mTiles.fill(nullptr);
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < mMapCompositeVBO->mLayerVBOs.size(); i++) {
                 if (mMapCompositeVBO->mLayerVBOs[i] == this) {
                     mMapCompositeVBO->mLayerVBOs[i] = nullptr;
                     break;
@@ -812,9 +812,19 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                 if (tiles.isEmpty())
                     continue;
                 if (currentTiles != vboTiles) {
+                    if (currentTiles != nullptr) {
+                        QPointF screenOrigin = renderer->tileToPixelCoords(currentTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), mLayerGroup->level());
+                        glMatrixMode(GL_MODELVIEW);
+                        glTranslatef(-screenOrigin.x(), -screenOrigin.y(), 0.0f);
+                    }
                     currentTiles = vboTiles;
                     if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
                     if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
+                    if (true) {
+                        QPointF screenOrigin = renderer->tileToPixelCoords(vboTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), mLayerGroup->level());
+                        glMatrixMode(GL_MODELVIEW);
+                        glTranslatef(screenOrigin.x(), screenOrigin.y(), 0.0f);
+                    }
                     glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
                     glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), (void*)(2 * sizeof(GL_FLOAT)));
                 }
@@ -1025,7 +1035,7 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
         auto& tiles = vboTiles->mTiles;
         auto& tileCount = vboTiles->mTileCount;
         auto& tileFirst = vboTiles->mTileFirst;
-        QPointF screenOrigin = renderer->tileToPixelCoords(vboTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), level);
+        QPointF screenOrigin; // = renderer->tileToPixelCoords(vboTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), level);
         for (int vy = 0; vy < VBO_SQUARES; vy++) {
             for (int vx = 0; vx < VBO_SQUARES; vx++) {
                 QPoint square(vboTiles->mBounds.x() + vx, vboTiles->mBounds.y() + vy);
@@ -4612,14 +4622,8 @@ void CellScene::loadMap()
     setSceneRect(0, 0, 1, 1);
 
     initAdjacentMaps();
-    QPolygonF polygon;
-    QRectF rect(0 - 0.5, 0 - 0.5,
-                mMapInfo->width() + 1.0, mMapInfo->height() + 1.0);
-    polygon << QPointF(mRenderer->tileToPixelCoords(rect.topLeft()));
-    polygon << QPointF(mRenderer->tileToPixelCoords(rect.topRight()));
-    polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomRight()));
-    polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomLeft()));
-    mMapBordersItem->setPolygon(polygon);
+
+    updateBordersItem();
 
     mPendingFlags |= AllGroups | Bounds | Synch | ZOrder | Paint;
     mPendingDefer = false;
@@ -4636,6 +4640,17 @@ void CellScene::loadMap()
                                       world()->roads());
 
     mMapBuildingsInvalid = true;
+}
+
+void CellScene::updateBordersItem()
+{
+    QPolygonF polygon;
+    QRectF rect(0 - 0.5, 0 - 0.5, mMapInfo->width() + 1.0, mMapInfo->height() + 1.0);
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.topLeft()));
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.topRight()));
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomRight()));
+    polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomLeft()));
+    mMapBordersItem->setPolygon(polygon);
 }
 
 void CellScene::cellAdded(WorldCell *_cell)
@@ -5229,6 +5244,7 @@ void CellScene::handlePendingUpdates()
         if (sceneRect != this->sceneRect()) {
             setSceneRect(sceneRect);
             mDarkRectangle->setRect(sceneRect);
+            updateBordersItem();
             mGridItem->updateBoundingRect();
 
             // If new levels were added, the bounds of a LevelIsometric map will change,

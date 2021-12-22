@@ -661,7 +661,7 @@ public:
     CellScene *mScene = nullptr;
     MapComposite *mMapComposite = nullptr;
     QRect mBounds;
-    std::array<LayerGroupVBO*,8> mLayerVBOs;
+    std::array<LayerGroupVBO*,16> mLayerVBOs;
     QList<Tiled::Tileset*> mUsedTilesets;
     QMap<QString,int> mLayerNameToIndex;
 };
@@ -758,6 +758,7 @@ public:
 
 protected:
     void loadMap();
+    void updateBordersItem();
     void updateCurrentLevelHighlight();
     bool shouldObjectItemBeVisible(ObjectItem *item);
     void synchAdjacentMapObjectItemVisibility();

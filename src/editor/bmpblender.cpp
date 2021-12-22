@@ -526,11 +526,13 @@ void BmpBlender::imagesToTileGrids(int x1, int y1, int x2, int y2)
 
     for (int y = y1; y <= y2; y++) {
         for (int x = x1; x <= x2; x++) {
-            foreach (QString layerName, mTileGrids.keys())
-                mTileGrids[layerName]->replace(x, y, emptyCell);
+            for (Tiled::SparseTileGrid *tileGrid : qAsConst(mTileGrids)) {
+                tileGrid->replace(x, y, emptyCell);
+            }
             mFakeTileGrid->replace(x, y, emptyCell);
-            foreach (QString layerName, mBlendGrids.keys())
-                mBlendGrids[layerName].remove(x + y * mMap->width());
+            for (BlendGrid &blendGrid : mBlendGrids) {
+                blendGrid.remove(x + y * mMap->width());
+            }
 
             QRgb col = mMap->rbmpMain().pixel(x, y);
             QRgb col2 = mMap->rbmpVeg().pixel(x, y);
@@ -539,12 +541,14 @@ void BmpBlender::imagesToTileGrids(int x1, int y1, int x2, int y2)
                 foreach (RuleWrapper *ruleW, mRuleByColor[col]) {
                     if (ruleW->mRule->bitmapIndex != 0)
                         continue;
-                    if (!mTileGrids.contains(ruleW->mRule->targetLayer))
+                    auto it = mTileGrids.find(ruleW->mRule->targetLayer);
+                    if (it == mTileGrids.end()) /*if (!mTileGrids.contains(ruleW->mRule->targetLayer))*/
                         continue;
+                    Tiled::SparseTileGrid *tileGrid = it.value();
                     if (!ruleW->mTiles.size())
                         continue;
                     Tile *tile = ruleW->mTiles[mMap->bmp(0).rand(x, y) % ruleW->mTiles.size()];
-                    mTileGrids[ruleW->mRule->targetLayer]->replace(x, y, Cell(tile));
+                    tileGrid->replace(x, y, Cell(tile));
                 }
             }
 
@@ -569,12 +573,14 @@ void BmpBlender::imagesToTileGrids(int x1, int y1, int x2, int y2)
                         continue;
                     if (ruleW->mRule->condition != col && ruleW->mRule->condition != black)
                         continue;
-                    if (!mTileGrids.contains(ruleW->mRule->targetLayer))
+                    auto it = mTileGrids.find(ruleW->mRule->targetLayer);
+                    if (it == mTileGrids.end() /*!mTileGrids.contains(ruleW->mRule->targetLayer)*/)
                         continue;
+                    Tiled::SparseTileGrid *tileGrid = it.value();
                     if (!ruleW->mTiles.size())
                         continue;
                     Tile *tile = ruleW->mTiles[mMap->bmp(1).rand(x, y) % ruleW->mTiles.size()];
-                    mTileGrids[ruleW->mRule->targetLayer]->replace(x, y, Cell(tile));
+                    tileGrid->replace(x, y, Cell(tile)); /*mTileGrids[ruleW->mRule->targetLayer]->replace(x, y, Cell(tile))*/
                 }
             }
         }
