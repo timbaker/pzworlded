@@ -1005,11 +1005,13 @@ public:
 
 void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& exposed, QList<VBOTiles*> &exposedTiles)
 {
+    const int level = mLayerGroup->level();
+
     qreal tileSize = VBO_SQUARES;
-    QPointF TL = renderer->pixelToTileCoords(exposed.topLeft()) / tileSize;
-    QPointF TR = renderer->pixelToTileCoords(exposed.topRight()) / tileSize;
-    QPointF BR = renderer->pixelToTileCoords(exposed.bottomRight()) / tileSize;
-    QPointF BL = renderer->pixelToTileCoords(exposed.bottomLeft()) / tileSize;
+    QPointF TL = renderer->pixelToTileCoords(exposed.topLeft(), level) / tileSize;
+    QPointF TR = renderer->pixelToTileCoords(exposed.topRight(), level) / tileSize;
+    QPointF BR = renderer->pixelToTileCoords(exposed.bottomRight(), level) / tileSize;
+    QPointF BL = renderer->pixelToTileCoords(exposed.bottomLeft(), level) / tileSize;
     Rasterize rasterize;
     rasterize.scanTriangle({TL.x(), TL.y()}, {TR.x(), TR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
     rasterize.scanTriangle({TR.x(), TR.y()}, {BR.x(), BR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
@@ -1020,8 +1022,6 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
     const int tileHeight = DISPLAY_TILE_HEIGHT;
 
     QVector<TilePlusLayer> cells(40); // or QVarLengthArray
-
-    const int level = mLayerGroup->level();
 
     for (const QPoint& point : qAsConst(rasterize.mPoints)) {
         VBOTiles *vboTiles = getTilesFor(point * VBO_SQUARES, true);
