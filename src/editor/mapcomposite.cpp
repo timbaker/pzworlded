@@ -550,7 +550,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                     cells.last().mSubMap = owner();
                 }
                 if (mMaxFloorLayer >= index)
-                    mOwner->mKeepFloorLayerCount = cells.size();
+                    root->mKeepFloorLayerCount = cells.size();
             }
         }
     }
@@ -561,7 +561,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
     const QPoint rootPos = pos + mOwner->originRecursive();
     bool inRoot = (rootBounds.size() != QSize(300, 300)) || rootBounds.contains(rootPos);
     for (const SubMapLayers& subMapLayer : mPreparedSubMapLayers) {
-        if (!inRoot && !subMapLayer.mSubMap->isAdjacentMap())
+        if (!inRoot && !subMapLayer.mSubMap->rootOrAdjacent()->isAdjacentMap())
             continue;
         if (!subMapLayer.mBounds.contains(pos))
             continue;
