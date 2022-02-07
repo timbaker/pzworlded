@@ -206,13 +206,13 @@ void IsoWorldGridItem::paint(QPainter *painter,
 
 
     for (int y = startY; y <= endY; ++y) {
-        const QPointF start = mScene->renderer()->tileToPixelCoords(startX * 300, y * 300, 0);
-        const QPointF end = mScene->renderer()->tileToPixelCoords(endX * 300, y * 300, 0);
+        const QPointF start = mScene->renderer()->tileToPixelCoords(startX * IsoChunkMap::CellSize, y * IsoChunkMap::CellSize, 0);
+        const QPointF end = mScene->renderer()->tileToPixelCoords(endX * IsoChunkMap::CellSize, y * IsoChunkMap::CellSize, 0);
         painter->drawLine(start, end);
     }
     for (int x = startX; x <= endX; ++x) {
-        const QPointF start = mScene->renderer()->tileToPixelCoords(x * 300, startY * 300, 0);
-        const QPointF end = mScene->renderer()->tileToPixelCoords(x * 300, endY * 300, 0);
+        const QPointF start = mScene->renderer()->tileToPixelCoords(x * IsoChunkMap::CellSize, startY * IsoChunkMap::CellSize, 0);
+        const QPointF end = mScene->renderer()->tileToPixelCoords(x * IsoChunkMap::CellSize, endY * IsoChunkMap::CellSize, 0);
         painter->drawLine(start, end);
     }
 #else
@@ -780,8 +780,8 @@ void LotPackWindow::updateZoom()
 void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
 {
     if (mWorld->tileBounds().contains(tilePos)) {
-        int x = qFloor(tilePos.x() / 300.0);
-        int y = qFloor(tilePos.y() / 300.0);
+        int x = qFloor(tilePos.x() / qreal(IsoChunkMap::CellSize));
+        int y = qFloor(tilePos.y() / qreal(IsoChunkMap::CellSize));
         ui->coords->setText(tr("Cell %1,%2 World %3,%4").arg(x).arg(y).arg(tilePos.x()).arg(tilePos.y()));
     } else
         ui->coords->setText(QString());
