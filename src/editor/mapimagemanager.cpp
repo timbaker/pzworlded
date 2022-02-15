@@ -202,13 +202,39 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     // Set up file modification tracking on each TMX that makes
     // up this image.
     QList<MapInfo*> sources;
-    foreach (QString source, data.sources)
-        if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source))
+    for (const QString& source : data.sources) {
+        if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source)) {
             sources += sourceInfo;
+        } else {
+            qDebug() << "MapImage source" << source << "not found";
+        }
+    }
     mapImage->setSources(sources);
 
     mMapImages.insert(mapFilePath, mapImage);
     return mapImage;
+}
+
+void MapImageManager::recreateMapImage(const QString &mapName, const QString &relativeTo)
+{
+    QString mapFilePath = MapManager::instance()->pathForMap(mapName, relativeTo);
+    if (mapFilePath.isEmpty())
+        return;
+    MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
+
+    for (auto *mapImage : qAsConst(mMapImages)) {
+        if (mapImage->sources().contains(mapInfo)) {
+            mapFileChanged(mapInfo);
+            return;
+        }
+    }
+
+    MapImage *mapImage = getMapImage(mapName, relativeTo);
+    if (mapImage != nullptr) {
+        mapImage->mSources.clear();
+        mapImage->mSources += mapInfo;
+        mapFileChanged(mapInfo);
+    }
 }
 
 MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapFilePath, bool force)

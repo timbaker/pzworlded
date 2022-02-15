@@ -24,6 +24,7 @@
 #include "cellview.h"
 #include "clipboard.h"
 #include "mapcomposite.h"
+#include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "mainwindow.h"
 #include "preferences.h"
@@ -2854,13 +2855,19 @@ void WorldCellTool::showContextMenu(const QPointF &scenePos, const QPoint &scree
     QMenu menu;
     QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
     QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
-    if (item->cell()->mapFilePath().isEmpty())
+    QAction *thumbnailAction = menu.addAction(tr("Recreate Thumbnail"));
+    if (item->cell()->mapFilePath().isEmpty()) {
         openAction->setEnabled(false);
+        thumbnailAction->setEnabled(false);
+    }
 
     QAction *action = menu.exec(screenPos);
     if (action == openAction) {
         QUrl url = QUrl::fromLocalFile(item->cell()->mapFilePath());
         QDesktopServices::openUrl(url);
+    }
+    if (action == thumbnailAction) {
+        MapImageManager::instance()->recreateMapImage(item->mapFilePath());
     }
 }
 

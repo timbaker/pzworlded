@@ -216,6 +216,8 @@ public:
 
     MapImage *getMapImage(const QString &mapName, const QString &relativeTo = QString());
 
+    void recreateMapImage(const QString &mapName, const QString &relativeTo = QString());
+
     QString errorString() const
     { return mError; }
 
