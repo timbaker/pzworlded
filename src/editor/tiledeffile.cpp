@@ -215,7 +215,7 @@ TileDefTileset *TileDefFile::removeTileset(int index)
     return mTilesets.takeAt(index);
 }
 
-TileDefTileset *TileDefFile::tileset(const QString &name)
+TileDefTileset *TileDefFile::tileset(const QString &name) const
 {
     if (mTilesetByName.contains(name))
         return mTilesetByName[name];

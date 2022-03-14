@@ -130,7 +130,7 @@ public:
     void insertTileset(int index, TileDefTileset *ts);
     TileDefTileset *removeTileset(int index);
 
-    TileDefTileset *tileset(const QString &name);
+    TileDefTileset *tileset(const QString &name) const;
 
     const QList<TileDefTileset*> &tilesets() const
     { return mTilesets; }

@@ -118,6 +118,12 @@ public:
 
     bool isLoading() const { return mLoading; }
 
+    void setProperties(const Tiled::Properties &properties)
+    {
+        mProperties = properties;
+    }
+    Tiled::Properties &properties() { return mProperties; }
+
 private:
     Tiled::Map::Orientation mOrientation;
     int mWidth;
@@ -133,6 +139,7 @@ private:
     int mReferenceEpoch;
 #endif
     bool mLoading;
+    Tiled::Properties mProperties;
 
     friend class MapManager;
 };
