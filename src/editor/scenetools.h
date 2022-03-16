@@ -44,6 +44,7 @@ class LightSwitchOverlay;
 class MapComposite;
 class ObjectItem;
 class Road;
+class RoomToneItem;
 class SpawnPointItem;
 class SubMapItem;
 class TrafficLines;
@@ -402,6 +403,43 @@ private:
     QGraphicsPolygonItem *mMapHighlightItem;
     MapComposite *mHighlightedMap;
     static SubMapTool *mInstance;
+};
+
+/////
+
+class RoomToneCursorItem;
+
+class RoomToneTool : public BaseCellSceneTool, public Singleton<RoomToneTool>
+{
+    Q_OBJECT
+public:
+    RoomToneTool();
+
+    void activate() override;
+    void deactivate() override;
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+//    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+
+     bool affectsLots() const override { return false; }
+     bool affectsObjects() const override { return true; }
+
+    void languageChanged()override
+    {
+        setName(tr("Create Room Tone"));
+        //setShortcut(QKeySequence(tr("S")));
+    }
+
+private:
+    void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
+    RoomToneItem *topmostItemAt(const QPointF &scenePos);
+    void createWorldTemplateIfNeeded();
+
+private:
+    bool mContextMenuVisible;
+    QTime mContextMenuShown;
+    RoomToneCursorItem *mCursorItem;
 };
 
 /////

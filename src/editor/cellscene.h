@@ -139,6 +139,7 @@ public:
 
     bool isMouseOverHighlighted() const;
 
+    virtual bool isRoomTone() const { return false; }
     virtual bool isSpawnPoint() const { return false; }
     virtual bool hoverToolCurrent() const;
 
@@ -248,6 +249,22 @@ protected:
 
 /////
 
+class RoomToneItem : public ObjectItem
+{
+public:
+    RoomToneItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent = nullptr);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
+    bool isRoomTone() const { return true; }
+    bool hoverToolCurrent() const;
+
+private:
+    QImage mImage;
+};
+
+/////
+
 class SpawnPointItem : public ObjectItem
 {
 public:
@@ -258,6 +275,8 @@ public:
     bool isSpawnPoint() const { return true; }
     bool hoverToolCurrent() const;
 };
+
+/////
 
 /**
  * Item that represents a WorldCellLot.
@@ -755,6 +774,8 @@ public:
 
     bool isDestroying() const
     { return mDestroying; }
+
+    ObjectItem *newObjectItem(WorldCellObject *obj, QGraphicsItem *parent);
 
 protected:
     void loadMap();

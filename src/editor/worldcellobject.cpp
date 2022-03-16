@@ -63,6 +63,11 @@ int WorldCellObject::index()
     return mCell->indexOf(this);
 }
 
+bool WorldCellObject::isRoomTone() const
+{
+    return mType->name() == QLatin1String("RoomTone");
+}
+
 bool WorldCellObject::isSpawnPoint() const
 {
     return mType->name() == QLatin1String("SpawnPoint");

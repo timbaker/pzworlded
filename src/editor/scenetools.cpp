@@ -992,6 +992,261 @@ LightSwitchOverlay *SubMapTool::topmostSwitchAt(const QPointF &scenePos)
 
 /////
 
+class RoomToneCursorItem : public QGraphicsItem
+{
+public:
+    RoomToneCursorItem(CellScene *scene, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    void updateBounds();
+
+    CellScene *mScene;
+    MapRenderer *mRenderer;
+    QRectF mBoundingRect;
+    QPointF mPos;
+    int mLevel;
+    QImage mImage;
+};
+
+RoomToneCursorItem::RoomToneCursorItem(CellScene *scene, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    mScene(scene),
+    mRenderer(scene->renderer()),
+    mImage(QImage(QStringLiteral(":/images/SpeakerIcon.png")))
+{
+}
+
+QRectF RoomToneCursorItem::boundingRect() const
+{
+    return mBoundingRect;
+}
+
+void RoomToneCursorItem::paint(QPainter *painter,
+                               const QStyleOptionGraphicsItem *,
+                               QWidget *)
+{
+    QColor color = mScene->document()->currentObjectGroup()->color();
+    color = color.lighter();
+    mRenderer->drawFancyRectangle(painter, QRectF(mPos, QSizeF(1, 1)), color, mLevel);
+
+    const QFontMetrics fm = painter->fontMetrics();
+    int lineHeight = fm.lineSpacing();
+
+    QPointF scenePos = mRenderer->tileToPixelCoords(mPos + QPointF(0.5, 0.5), mLevel);
+
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    zoom = qMin(zoom, 1.0);
+    QRectF sceneRect(scenePos - QPointF((mImage.width() / 2) / zoom, (lineHeight + mImage.height()) / zoom), mImage.size() / zoom);
+    painter->drawImage(sceneRect, mImage);
+
+}
+
+void RoomToneCursorItem::updateBounds()
+{
+    QPointF pos = mPos;
+    QRectF bounds;
+    bounds |= mRenderer->boundingRect(QRect(pos.x() - 3, pos.y() - 3, 1, 1), mLevel);
+    bounds |= mRenderer->boundingRect(QRect(pos.x(), pos.y(), 1, 1), mLevel);
+    bounds.adjust(-2, -3, 2, 2);
+    if (bounds != mBoundingRect) {
+        prepareGeometryChange();
+        mBoundingRect = bounds;
+    }
+}
+
+/////
+
+SINGLETON_IMPL(RoomToneTool)
+
+RoomToneTool::RoomToneTool()
+    : BaseCellSceneTool(QLatin1String("Place Room Tone"),
+                        QIcon(QLatin1String(":/images/22x22/tool-spawn-point.png")),
+                        QKeySequence()),
+      mContextMenuVisible(false)
+{
+    new SpawnToolDialog(MainWindow::instance());
+}
+
+void RoomToneTool::activate()
+{
+    BaseCellSceneTool::activate();
+
+    mCursorItem = new RoomToneCursorItem(mScene);
+    mCursorItem->setZValue(mScene->ZVALUE_GRID + 1);
+    mScene->addItem(mCursorItem);
+}
+
+void RoomToneTool::deactivate()
+{
+    delete mCursorItem;
+
+    BaseCellSceneTool::activate();
+}
+
+void RoomToneTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::RightButton) {
+        showContextMenu(event->scenePos(), event->screenPos());
+        event->accept();
+        return;
+    }
+
+    if (event->button() != Qt::LeftButton)
+        return;
+
+    if (RoomToneItem *item = topmostItemAt(event->scenePos())) {
+        QSet<WorldCellObject*> selection = mScene->document()->selectedObjects().toSet();
+        if (event->modifiers() & Qt::ShiftModifier) {
+            selection += item->object();
+        } else if (event->modifiers() & Qt::ControlModifier) {
+            if (selection.contains(item->object())) {
+                selection -= item->object();
+            } else {
+                selection += item->object();
+            }
+        } else {
+            selection.clear();
+            selection += item->object();
+        }
+        mScene->document()->setSelectedObjects(selection.toList());
+        event->accept();
+        return;
+    }
+
+    // Try to ignore left-click that closes the context menu
+    if (mContextMenuVisible || (mContextMenuShown.isValid() &&
+            mContextMenuShown.msecsTo(QTime::currentTime()) < 500)) {
+        return;
+    }
+
+    event->accept();
+
+    mScene->document()->undoStack()->beginMacro(tr("Add RoomTone"));
+
+    createWorldTemplateIfNeeded();
+    ObjectType *type = mScene->world()->objectType(QLatin1String("RoomTone"));
+    PropertyTemplate *pt = mScene->world()->propertyTemplate(QLatin1String("RoomTone"));
+
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(),
+                                                              mScene->document()->currentLevel());
+
+    WorldObjectGroup *og = mScene->world()->objectGroups().find(QLatin1String("RoomTone"));
+    WorldCellObject *obj = new WorldCellObject(mScene->cell(),
+                                               QString(), type, og,
+                                               tilePos.x(), tilePos.y(),
+                                               mScene->document()->currentLevel(),
+                                               1, 1);
+    obj->addTemplate(obj->templates().size(), pt);
+    PropertyDef *pd = mScene->world()->propertyDefinition(QStringLiteral("RoomTone"));
+    obj->addProperty(obj->properties().size(), new Property(pd, pd->mEnum->values().first()));
+    mScene->worldDocument()->addCellObject(mScene->cell(),
+                                           mScene->cell()->objects().size(),
+                                           obj);
+
+    mScene->document()->setSelectedObjects(WorldCellObjectList() << obj);
+
+    mScene->document()->undoStack()->endMacro();
+}
+
+void RoomToneTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    mCursorItem->setVisible(topmostItemAt(event->scenePos()) == 0);
+
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(),
+                                                              mScene->document()->currentLevel());
+    mCursorItem->mPos = tilePos;
+    mCursorItem->mLevel = mScene->document()->currentLevel();
+    mCursorItem->updateBounds();
+}
+
+void RoomToneTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPos)
+{
+    RoomToneItem *item = topmostItemAt(scenePos);
+    if (!item) {
+        return;
+    }
+
+    mContextMenuVisible = true;
+
+//    mScene->document()->setSelectedObjects(WorldCellObjectList() << item->object());
+
+    QMenu menu;
+    QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
+    QAction *removeAction = menu.addAction(removeIcon, tr("Remove Room Tone"));
+
+    QAction *action = menu.exec(screenPos);
+    if (action == removeAction) {
+        mScene->worldDocument()->removeCellObject(mScene->cell(), item->object()->index());
+    }
+
+    mContextMenuVisible = false;
+    mContextMenuShown = QTime::currentTime();
+}
+
+RoomToneItem *RoomToneTool::topmostItemAt(const QPointF &scenePos)
+{
+    for (QGraphicsItem *item : mScene->items(scenePos)) {
+        if (RoomToneItem *roomToneItem = dynamic_cast<RoomToneItem*>(item)) {
+            if (!roomToneItem->isAdjacent()) {
+                return roomToneItem;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void RoomToneTool::createWorldTemplateIfNeeded()
+{
+    World *world = mScene->world();
+
+    // Create the RoomTone object type if needed
+    ObjectType *type = world->objectType(QLatin1String("RoomTone"));
+    if (!type) {
+        type = new ObjectType(QLatin1String("RoomTone"));
+        mScene->worldDocument()->addObjectType(type);
+    }
+
+    // Create the RoomTone object group if needed
+    WorldObjectGroup *og = world->objectGroups().find(QLatin1String("RoomTone"));
+    if (og == nullptr) {
+        og = new WorldObjectGroup(type, QLatin1String("RoomTone"), Qt::blue);
+        world->insertObjectGroup(world->objectGroups().size(), og);
+    }
+
+    // Create the RoomTone property enum if needed
+    PropertyEnum *pe = world->propertyEnums().find(QLatin1String("RoomTone"));
+    if (!pe) {
+        QStringList professions;
+        professions << QLatin1String("Generic");
+        mScene->worldDocument()->addPropertyEnum(QLatin1String("RoomTone"), professions, true);
+        pe = world->propertyEnums().find(QLatin1String("RoomTone"));
+    }
+
+    // Create the RoomTone property definition if needed
+    PropertyDef *pd = world->propertyDefinition(QLatin1String("RoomTone"));
+    if (!pd) {
+        pd = new PropertyDef(QLatin1String("RoomTone"), QLatin1String("Generic"),
+                             tr("Used to set the game's RoomType FMOD parameter."),
+                             pe);
+        mScene->worldDocument()->addPropertyDefinition(pd);
+    }
+
+    // Create the RoomTone template if needed
+    PropertyTemplate *pt = world->propertyTemplate(QLatin1String("RoomTone"));
+    if (!pt) {
+        pt = new PropertyTemplate;
+        pt->mName = QLatin1String("RoomTone");
+        pt->mDescription = tr("This template holds the default set of properties for all RoomTone objects.");
+        pt->addProperty(0, new Property(pd, pd->mDefaultValue));
+        mScene->worldDocument()->addTemplate(pt);
+    }
+}
+
+/////
+
 class SpawnPointCursorItem : public QGraphicsItem
 {
 public:

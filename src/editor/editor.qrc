@@ -77,5 +77,6 @@
         <file>images/22x22/tool-spawn-point.png</file>
         <file>images/idea.png</file>
         <file>images/24x24/insert-rectangle.png</file>
+        <file>images/SpeakerIcon.png</file>
     </qresource>
 </RCC>

@@ -288,6 +288,7 @@ public:
 
     int index();
 
+    bool isRoomTone() const;
     bool isSpawnPoint() const;
 
     void setGeometryType(ObjectGeometryType geometryType)

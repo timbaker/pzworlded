@@ -356,3 +356,50 @@ objectgroup
     defaulttype = Mannequin
 }
 
+
+
+enum
+{
+    name = RoomTone
+    values = [
+        Generic
+        Barn
+        Mall
+        Warehouse
+        Prison
+        Church
+        Office
+        Factory
+    ]
+    multi = false
+}
+
+property
+{
+    name = RoomTone
+    default = Generic
+    enum = RoomTone
+}
+
+template
+{
+    name = RoomTone
+    property
+    {
+        name = RoomTone
+        value = Generic
+    }
+}
+
+objecttype
+{
+    name = RoomTone
+}
+
+objectgroup
+{
+    name = RoomTone
+    color = #0000ff
+    defaulttype = RoomTone
+}
+

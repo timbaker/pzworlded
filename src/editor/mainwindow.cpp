@@ -358,6 +358,8 @@ MainWindow::MainWindow(QWidget *parent)
     toolManager->registerTool(EditPolygonObjectTool::instancePtr());
     new SpawnPointTool;
     toolManager->registerTool(SpawnPointTool::instancePtr());
+    new RoomToneTool;
+    toolManager->registerTool(RoomToneTool::instancePtr());
 #ifdef ROAD_UI
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());

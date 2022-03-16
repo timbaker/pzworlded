@@ -3599,6 +3599,50 @@ void ObjectPointHandle::updateSizeLabel()
 
 /////
 
+RoomToneItem::RoomToneItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent) :
+    ObjectItem(object, scene, parent),
+    mImage(QImage(QStringLiteral(":/images/SpeakerIcon.png")))
+{
+//    setFlag(ItemIgnoresTransformations);
+}
+
+QRectF RoomToneItem::boundingRect() const
+{
+    QRectF bounds = ObjectItem::boundingRect();
+    QPointF pos = mObject->pos() + mDragOffset;
+    bounds |= mRenderer->boundingRect(QRect(pos.x(), pos.y(), 1, 1), mObject->level());
+    return bounds;
+}
+
+void RoomToneItem::paint(QPainter *painter,
+                           const QStyleOptionGraphicsItem *option,
+                           QWidget *widget)
+{
+    ObjectItem::paint(painter, option, widget);
+
+    const QFontMetrics fm = painter->fontMetrics();
+    int lineHeight = fm.lineSpacing();
+
+    QPointF pos = mObject->pos() + mDragOffset;
+    int level = mObject->level();
+    QPointF scenePos = mRenderer->tileToPixelCoords(pos + QPointF(0.5, 0.5), level);
+
+    auto scene = static_cast<CellScene*>(this->scene());
+    auto view = static_cast<CellView*>(scene->views().first());
+    qreal zoom = view->zoomable()->scale();
+    zoom = qMin(zoom, 1.0);
+    QRectF sceneRect(scenePos - QPointF((mImage.width() / 2) / zoom, (lineHeight + mImage.height()) / zoom), mImage.size() / zoom);
+    painter->drawImage(sceneRect, mImage);
+}
+
+bool RoomToneItem::hoverToolCurrent() const
+{
+    return RoomToneTool::instancePtr()->isCurrent() ||
+            SelectMoveObjectTool::instance()->isCurrent();
+}
+
+/////
+
 SpawnPointItem::SpawnPointItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent) :
     ObjectItem(object, scene, parent)
 {
@@ -4593,8 +4637,7 @@ void CellScene::loadMap()
         cellLotAdded(cell(), i);
 
     foreach (WorldCellObject *obj, cell()->objects()) {
-        ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, this)
-                                               : new ObjectItem(obj, this);
+        ObjectItem *item = newObjectItem(obj, nullptr);
         addItem(item);
         item->synchWithObject(); // for ObjectLabelItem
         mObjectItems += item;
@@ -4769,8 +4812,7 @@ void CellScene::cellObjectAdded(WorldCell *cell, int index)
         return;
 
     WorldCellObject *obj = cell->objects().at(index);
-    ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, this)
-                                           : new ObjectItem(obj, this);
+    ObjectItem *item = newObjectItem(obj, nullptr);
     addItem(item);
     item->synchWithObject(); // update label coords
     mObjectItems.insert(index, item);
@@ -5461,6 +5503,17 @@ void CellScene::sortSubMaps()
     mMapComposite->sortSubMaps(orderedMaps);
 }
 
+ObjectItem *CellScene::newObjectItem(WorldCellObject *obj, QGraphicsItem *parent)
+{
+    if (obj == nullptr)
+        return nullptr;
+    if (obj->isRoomTone())
+        return new RoomToneItem(obj, this, parent);
+    if (obj->isSpawnPoint())
+        return new SpawnPointItem(obj, this, parent);
+    return new ObjectItem(obj, this, parent);
+}
+
 void CellScene::tilesetChanged(Tileset *tileset)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
@@ -5947,8 +6000,7 @@ void AdjacentMap::cellObjectAdded(WorldCell *cell, int index)
         return;
 
     WorldCellObject *obj = cell->objects().at(index);
-    ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, scene(), mObjectItemParent)
-                                           : new ObjectItem(obj, scene(), mObjectItemParent);
+    ObjectItem *item = scene()->newObjectItem(obj, mObjectItemParent);
     item->setAdjacent(true);
 //    mScene->addItem(item);
     item->synchWithObject(); // update label coords
@@ -6141,8 +6193,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
         qDeleteAll(mObjectItems);
         mObjectItems.clear();
         foreach (WorldCellObject *obj, cell()->objects()) {
-            ObjectItem *item = obj->isSpawnPoint() ? new SpawnPointItem(obj, scene(), mObjectItemParent)
-                                                   : new ObjectItem(obj, scene(), mObjectItemParent);
+            ObjectItem *item = scene()->newObjectItem(obj, mObjectItemParent);
             item->setAdjacent(true);
 //            scene()->addItem(item);
             item->synchWithObject(); // for ObjectLabelItem
