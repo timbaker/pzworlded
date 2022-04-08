@@ -110,6 +110,7 @@ public:
             SectionFloor,
             SectionFloorGrime,
             SectionFloorGrime2,
+            SectionFloorFurniture,
             SectionWall,
             SectionWallTrim,
             SectionWall2,

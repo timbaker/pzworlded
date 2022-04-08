@@ -129,6 +129,7 @@ public:
         LayerFrames,
         LayerDoors,
         LayerRoof,
+        LayerFloorFurniture,
         LayerCount
     };
 

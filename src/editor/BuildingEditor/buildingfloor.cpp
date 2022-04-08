@@ -800,6 +800,11 @@ void BuildingFloor::LayoutToSquares()
                                          Square::SectionRoof,
                                          Square::SectionRoof2);
                         break;
+                    case FurnitureTiles::LayerFloorFurniture:
+                        ReplaceFurniture(x + j, y + i, squares, ftile->tile(j, i),
+                                         Square::SectionFloorFurniture,
+                                         Square::SectionFloorFurniture);
+                        break;
                     default:
                         Q_ASSERT(false);
                         break;

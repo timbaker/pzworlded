@@ -173,6 +173,7 @@ static const char *gLayerNames[] = {
     "Floor",
     "FloorGrime",
     "FloorGrime2",
+    "FloorFurniture",
     "Walls",
     "WallTrim",
     "Walls2",
