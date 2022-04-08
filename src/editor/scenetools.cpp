@@ -1063,7 +1063,7 @@ SINGLETON_IMPL(RoomToneTool)
 
 RoomToneTool::RoomToneTool()
     : BaseCellSceneTool(QLatin1String("Place Room Tone"),
-                        QIcon(QLatin1String(":/images/22x22/tool-spawn-point.png")),
+                        QIcon(QLatin1String(":/images/SpeakerIcon.png")),
                         QKeySequence()),
       mContextMenuVisible(false)
 {
