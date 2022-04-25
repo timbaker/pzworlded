@@ -309,6 +309,12 @@ property
     default = true
 }
 
+property
+{
+    name = Outfit
+    default =
+}
+
 enum
 {
     name = Pose
@@ -325,6 +331,12 @@ property
     name = Pose
     default = pose01
     enum = Pose
+}
+
+property
+{
+    name = Script
+    default =
 }
 
 enum
@@ -381,6 +393,12 @@ property
     enum = RoomTone
 }
 
+property
+{
+    name = EntireBuilding
+    default = false
+}
+
 template
 {
     name = RoomTone
@@ -388,6 +406,11 @@ template
     {
         name = RoomTone
         value = Generic
+    }
+    property
+    {
+        name = EntireBuilding
+        value = false
     }
 }
 

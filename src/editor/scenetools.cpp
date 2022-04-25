@@ -1140,8 +1140,10 @@ void RoomToneTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
                                                mScene->document()->currentLevel(),
                                                1, 1);
     obj->addTemplate(obj->templates().size(), pt);
-    PropertyDef *pd = mScene->world()->propertyDefinition(QStringLiteral("RoomTone"));
-    obj->addProperty(obj->properties().size(), new Property(pd, pd->mEnum->values().first()));
+    for (Property *property : pt->properties()) {
+        PropertyDef *pd = mScene->world()->propertyDefinition(property->mDefinition->mName);
+        obj->addProperty(obj->properties().size(), new Property(pd, pd->mDefaultValue));
+    }
     mScene->worldDocument()->addCellObject(mScene->cell(),
                                            mScene->cell()->objects().size(),
                                            obj);
@@ -1219,9 +1221,9 @@ void RoomToneTool::createWorldTemplateIfNeeded()
     // Create the RoomTone property enum if needed
     PropertyEnum *pe = world->propertyEnums().find(QLatin1String("RoomTone"));
     if (!pe) {
-        QStringList professions;
-        professions << QLatin1String("Generic");
-        mScene->worldDocument()->addPropertyEnum(QLatin1String("RoomTone"), professions, true);
+        QStringList rooms;
+        rooms << QLatin1String("Generic");
+        mScene->worldDocument()->addPropertyEnum(QLatin1String("RoomTone"), rooms, true);
         pe = world->propertyEnums().find(QLatin1String("RoomTone"));
     }
 
@@ -1234,14 +1236,29 @@ void RoomToneTool::createWorldTemplateIfNeeded()
         mScene->worldDocument()->addPropertyDefinition(pd);
     }
 
+    // Create the EntireBuilding property definition if needed
+    PropertyDef *pd2 = world->propertyDefinition(QLatin1String("EntireBuilding"));
+    if (!pd2) {
+        pd2 = new PropertyDef(QLatin1String("EntireBuilding"), QLatin1String("false"),
+                             tr("If true, a RoomTone is active in the entire building."),
+                             nullptr);
+        mScene->worldDocument()->addPropertyDefinition(pd2);
+    }
+
     // Create the RoomTone template if needed
     PropertyTemplate *pt = world->propertyTemplate(QLatin1String("RoomTone"));
     if (!pt) {
         pt = new PropertyTemplate;
         pt->mName = QLatin1String("RoomTone");
         pt->mDescription = tr("This template holds the default set of properties for all RoomTone objects.");
-        pt->addProperty(0, new Property(pd, pd->mDefaultValue));
         mScene->worldDocument()->addTemplate(pt);
+    }
+
+    if (pt->canAddProperty(pd)) {
+        pt->addProperty(pt->properties().size(), new Property(pd, pd->mDefaultValue));
+    }
+    if (pt->canAddProperty(pd2)) {
+        pt->addProperty(pt->properties().size(), new Property(pd2, pd2->mDefaultValue));
     }
 }
 
