@@ -31,7 +31,9 @@
 #include "objectgroup.h"
 
 #include <qmath.h>
+#include <QDir>
 #include <QFileInfo>
+#include <QMap>
 #include <QMessageBox>
 #include <QPainter>
 
@@ -59,11 +61,42 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
 
     PROGRESS progress(QLatin1String("Setting up images"));
 
+    QMap<QImage*,QImage::Format> originalFormat;
+    QMap<QImage*,QVector<QRgb>> originalColorTable;
+
     foreach (WorldBMP *bmp, world->bmps()) {
         BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(), bmp->pos());
         if (!images) {
             goto errorExit;
         }
+#if 1
+        originalFormat[&images->mBmp] = images->mBmp.format();
+        originalFormat[&images->mBmpVeg] = images->mBmpVeg.format();
+        if (images->mBmp.colorCount() > 0) {
+            originalColorTable[&images->mBmp] = images->mBmp.colorTable();
+        }
+        if (images->mBmpVeg.colorCount() > 0) {
+            originalColorTable[&images->mBmpVeg] = images->mBmpVeg.colorTable();
+        }
+
+        // This is the fastest format for QImage::pixel() and QImage::setPixel().
+        if (images->mBmp.format() != QImage::Format_ARGB32) {
+            images->mBmp = images->mBmp.convertToFormat(QImage::Format_ARGB32);
+            if (images->mBmp.isNull()) {
+                mError = tr("The image%1 file couldn't be loaded.\n%2\n\nThere might not be enough memory.  Try closing any open Cells or restart the application.")
+                        .arg(QLatin1String("")).arg(QDir::toNativeSeparators(bmp->filePath()));
+                goto errorExit;
+            }
+        }
+        if (images->mBmpVeg.format() != QImage::Format_ARGB32) {
+            images->mBmpVeg = images->mBmpVeg.convertToFormat(QImage::Format_ARGB32);
+            if (images->mBmpVeg.isNull()) {
+                mError = tr("The image%1 file couldn't be loaded.\n%2\n\nThere might not be enough memory.  Try closing any open Cells or restart the application.")
+                        .arg(QLatin1String("_veg")).arg(QDir::toNativeSeparators(bmp->filePath()));
+                goto errorExit;
+            }
+        }
+#endif
         mImages += images;
     }
 
@@ -160,12 +193,36 @@ bool TMXToBMP::generateWorld(WorldDocument *worldDoc, TMXToBMP::GenerateMode mod
         QFileInfo info(images->mPath);
         if (mDoMain) {
             progress.update(QLatin1String("Saving ") + info.fileName());
-            images->mBmp.save(images->mPath);
+            if (originalFormat[&images->mBmp] == images->mBmp.format()) {
+                images->mBmp.save(images->mPath);
+            } else {
+                Qt::ImageConversionFlags conversionFlags = Qt::ThresholdDither | Qt::AvoidDither;
+                if (originalColorTable.contains(&images->mBmp)) {
+                    QImage image = images->mBmp.convertToFormat(originalFormat[&images->mBmp], originalColorTable[&images->mBmp], conversionFlags);
+                    image.save(images->mPath);
+                } else {
+                    QImage image = images->mBmp.convertToFormat(originalFormat[&images->mBmp], conversionFlags);
+                    image.save(images->mPath);
+                }
+            }
 //            Sleep::sleep(2);
         }
         if (mDoVeg) {
             progress.update(QLatin1String("Saving ") + info.baseName() + QLatin1String("_veg.") + info.suffix());
-            images->mBmpVeg.save(info.absolutePath() + QLatin1String("/") + info.baseName() + QLatin1String("_veg.") + info.suffix());
+            QString path = info.absolutePath() + QLatin1String("/") + info.baseName() + QLatin1String("_veg.") + info.suffix();
+            if (originalFormat[&images->mBmpVeg] == images->mBmpVeg.format()) {
+                images->mBmpVeg.save(path);
+            } else {
+                if (originalColorTable.contains(&images->mBmpVeg)) {
+                    Qt::ImageConversionFlags conversionFlags = Qt::ThresholdDither | Qt::AvoidDither;
+                    QImage image = images->mBmpVeg.convertToFormat(originalFormat[&images->mBmpVeg], originalColorTable[&images->mBmpVeg], conversionFlags);
+                    image.save(path);
+                } else {
+                    Qt::ImageConversionFlags conversionFlags = Qt::ThresholdDither | Qt::AvoidDither;
+                    QImage image = images->mBmpVeg.convertToFormat(originalFormat[&images->mBmpVeg], conversionFlags);
+                    image.save(path);
+                }
+            }
 //            Sleep::sleep(2);
         }
     }
@@ -259,7 +316,12 @@ bool TMXToBMP::generateCell(WorldCell *cell)
         return false;
     }
 
-    MapManager::instance()->addReferenceToMap(mapInfo);
+    DelayedMapLoader mapLoader;
+    mapLoader.addMap(mapInfo);
+
+    while (mapLoader.isLoading()) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
 
     QRgb black = qRgba(0, 0, 0, 255);
     QRgb transparent = qRgba(0, 0, 0, 0);
@@ -287,8 +349,6 @@ bool TMXToBMP::generateCell(WorldCell *cell)
     if (mDoBldg) {
         ok = doBuildings(cell, mapInfo);
     }
-
-    MapManager::instance()->removeReferenceToMap(mapInfo);
 
     return ok;
 }
