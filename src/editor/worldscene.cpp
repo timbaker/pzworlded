@@ -642,7 +642,11 @@ void WorldScene::bmpAdded(int index)
     Q_ASSERT(!itemForBMP(bmp));
     WorldBMPItem *item = new WorldBMPItem(this, bmp);
     addItem(item);
-    mBMPItems += item;
+    mBMPItems.insert(index, item);
+    qreal zValue = 0.0;
+    for (WorldBMPItem *item2 : mBMPItems) {
+        item2->setZValue(zValue += 0.01);
+    }
 }
 
 void WorldScene::bmpAboutToBeRemoved(int index)
@@ -654,6 +658,10 @@ void WorldScene::bmpAboutToBeRemoved(int index)
     mSelectedBMPItems.remove(item); // paranoia
     removeItem(item);
     delete item;
+    qreal zValue = 0.0;
+    for (WorldBMPItem *item2 : mBMPItems) {
+        item2->setZValue(zValue += 0.01);
+    }
 }
 
 void WorldScene::bmpCoordsChanged(int index)
