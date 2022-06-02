@@ -301,6 +301,7 @@
     <addaction name="actionShowObjectNames"/>
     <addaction name="actionShowOtherWorlds"/>
     <addaction name="actionShowBMP"/>
+    <addaction name="actionShowZonesInWorldView"/>
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
     <addaction name="actionHighlightRoomUnderPointer"/>
@@ -935,6 +936,14 @@
   <action name="actionConvertToPolygon">
    <property name="text">
     <string>Convert To Polygon</string>
+   </property>
+  </action>
+  <action name="actionShowZonesInWorldView">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Zones In World View</string>
    </property>
   </action>
  </widget>

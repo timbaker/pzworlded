@@ -87,6 +87,7 @@ Preferences::Preferences()
     mShowObjectNames = mSettings->value(QLatin1String("ShowObjectNames"), true).toBool();
     mShowBMPs = mSettings->value(QLatin1String("ShowBMPs"), true).toBool();
     mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
+    mShowZonesInWorldView = mSettings->value(QLatin1String("ShowZonesInWorldView"), true).toBool();
     mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
@@ -347,6 +348,17 @@ void Preferences::setShowBMPs(bool show)
     mSettings->setValue(QLatin1String("Interface/ShowBMPs"), mShowBMPs);
 
     emit showBMPsChanged(mShowBMPs);
+}
+
+void Preferences::setShowZonesInWorldView(bool show)
+{
+    if (mShowZonesInWorldView == show)
+        return;
+
+    mShowZonesInWorldView = show;
+    mSettings->setValue(QLatin1String("Interface/ShowZonesInWorldView"), mShowZonesInWorldView);
+
+    emit showZonesInWorldViewChanged(mShowZonesInWorldView);
 }
 
 void Preferences::setShowMiniMap(bool show)

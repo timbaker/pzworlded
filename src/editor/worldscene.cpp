@@ -95,6 +95,11 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(mWorldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
             SLOT(cellContentsChanged(WorldCell*)));
 
+    connect(mWorldDoc, &WorldDocument::cellObjectAdded, this, &WorldScene::cellObjectAdded);
+    connect(mWorldDoc, &WorldDocument::cellObjectAboutToBeRemoved, this, &WorldScene::cellObjectAboutToBeRemoved);
+    connect(mWorldDoc, &WorldDocument::cellObjectPointMoved, this, &WorldScene::cellObjectPointMoved);
+    connect(mWorldDoc, &WorldDocument::cellObjectPointsChanged, this, &WorldScene::cellObjectPointsChanged);
+
     connect(mWorldDoc, SIGNAL(generateLotSettingsChanged()),
             SLOT(generateLotsSettingsChanged()));
 
@@ -182,6 +187,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
     connect(prefs, SIGNAL(showBMPsChanged(bool)),
             SLOT(setShowBMPs(bool)));
+    connect(prefs, &Preferences::showZonesInWorldViewChanged, this, &WorldScene::setShowZonesInWorldView);
     connect(prefs, SIGNAL(showOtherWorldsChanged(bool)), SLOT(setShowOtherWorlds(bool)));
     connect(prefs, SIGNAL(worldThumbnailsChanged(bool)),
             SLOT(worldThumbnailsChanged(bool)));
@@ -190,7 +196,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
 
     foreach (WorldBMP *bmp, world()->bmps()) {
         WorldBMPItem *item = new WorldBMPItem(this, bmp);
-        item->setVisible(prefs->showBMPs());
+        item->setVisible(prefs->showBMPs() && !prefs->showZonesInWorldView());
         addItem(item);
         mBMPItems += item;
     }
@@ -520,6 +526,27 @@ void WorldScene::cellContentsChanged(WorldCell *cell)
     itemForCell(cell)->cellContentsChanged();
 }
 
+void WorldScene::cellObjectAdded(WorldCell *cell, int objectIndex)
+{
+    itemForCell(cell)->objectPointsChanged(objectIndex);
+}
+
+void WorldScene::cellObjectAboutToBeRemoved(WorldCell *cell, int objectIndex)
+{
+    itemForCell(cell)->objectPointsChanged(objectIndex);
+}
+
+void WorldScene::cellObjectPointMoved(WorldCell *cell, int objectIndex, int pointIndex)
+{
+    Q_UNUSED(pointIndex)
+    itemForCell(cell)->objectPointsChanged(objectIndex);
+}
+
+void WorldScene::cellObjectPointsChanged(WorldCell *cell, int objectIndex)
+{
+    itemForCell(cell)->objectPointsChanged(objectIndex);
+}
+
 void WorldScene::setShowGrid(bool show)
 {
     mGridItem->setVisible(show);
@@ -532,26 +559,41 @@ void WorldScene::setShowCoordinates(bool show)
 
 void WorldScene::setShowBMPs(bool show)
 {
-    foreach (WorldBMPItem *bmpItem, mBMPItems)
+    if (Preferences::instance()->showZonesInWorldView()) {
+        show = false;
+    }
+    for (WorldBMPItem *bmpItem : mBMPItems) {
         bmpItem->setVisible(show);
-    foreach (OtherWorld *otherWorld, mOtherWorlds) {
-        foreach (WorldBMPItem *item, otherWorld->mBMPItems)
+    }
+    for (OtherWorld *otherWorld : mOtherWorlds) {
+        for (WorldBMPItem *item : otherWorld->mBMPItems) {
             item->setVisible(show && Preferences::instance()->showOtherWorlds());
+        }
     }
 }
 
 void WorldScene::setShowOtherWorlds(bool show)
 {
     QRectF bounds = mGridItem->boundingRect();
-    foreach (OtherWorld *otherWorld, mOtherWorlds) {
-        foreach (WorldBMPItem *item, otherWorld->mBMPItems)
+    for (OtherWorld *otherWorld : mOtherWorlds) {
+        for (WorldBMPItem *item : otherWorld->mBMPItems) {
             item->setVisible(show && Preferences::instance()->showBMPs());
-        foreach (OtherWorldCellItem *item, otherWorld->mCellItems)
+        }
+        for (OtherWorldCellItem *item : otherWorld->mCellItems) {
             item->setVisible(show && !mBMPToolActive);
-        if (show)
+        }
+        if (show) {
             bounds = bounds.united(boundingRect(otherWorld->adjustedBounds(world())));
+        }
     }
     setSceneRect(bounds);
+}
+
+void WorldScene::setShowZonesInWorldView(bool show)
+{
+    setShowBMPs(Preferences::instance()->showBMPs());
+    // update() to redisplay WorldCells also.
+    update();
 }
 
 void WorldScene::selectedRoadsChanged()
@@ -1166,9 +1208,75 @@ WorldCellItem::WorldCellItem(WorldCell *cell, WorldScene *scene, QGraphicsItem *
     initialize();
 }
 
+#include "worldview.h"
+#include "InGameMap/clipper.hpp"
+
+static QPolygonF createPolylineOutline(WorldScene *scene, WorldCellObject *object)
+{
+    ClipperLib::ClipperOffset offset;
+    ClipperLib::Path path;
+    int SCALE = 100;
+    for (int i = 0; i < object->points().size(); i++) {
+        WorldCellObjectPoint p1 = object->points()[i];
+        path << ClipperLib::IntPoint(p1.x * SCALE, p1.y * SCALE);
+        if ((object->polylineWidth() % 2) != 0) {
+            ClipperLib::IntPoint cp = path[path.size()-1];
+            path[path.size()-1] = ClipperLib::IntPoint(cp.X + SCALE / 2, cp.Y + SCALE / 2);
+        }
+    }
+    offset.AddPath(path, ClipperLib::JoinType::jtMiter, ClipperLib::EndType::etOpenButt);
+    ClipperLib::Paths paths;
+    offset.Execute(paths, object->polylineWidth() * SCALE / 2.0);
+    QPolygonF result;
+    if (paths.empty()) {
+        return result;
+    }
+    int cellX = object->cell()->x();
+    int cellY = object->cell()->y();
+    ClipperLib::Path cPath = paths.at(0);
+    for (const auto &cPoint : cPath) {
+        result << scene->cellToPixelCoords(cellX + cPoint.X / (qreal) SCALE / 300.0, cellY + cPoint.Y / (qreal) SCALE / 300.0);
+    }
+    return result;
+}
+
 void WorldCellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
-    BaseCellItem::paint(painter, option, widget);
+    if (Preferences::instance()->showZonesInWorldView()) {
+        QPen pen(Qt::black);
+        pen.setCosmetic(((WorldView*) mScene->views().at(0))->zoomable()->scale() >= 1.0);
+        painter->setPen(pen);
+
+        for (WorldCellObject *object : cell()->objects()) {
+            if (object->group() != nullptr) {
+                QColor color = object->group()->color();
+                color.setAlpha(50);
+                painter->setBrush(QBrush(color));
+                if (object->isRectangle()) {
+                    QPointF p1(cell()->x() + object->x() / 300.0, cell()->y() + object->y() / 300.0);
+                    QPointF p2(cell()->x() + (object->x() + object->width()) / 300.0, cell()->y() + (object->y() + object->height()) / 300.0);
+                    QPolygonF poly = mScene->cellRectToPolygon(QRectF(p1, p2));
+                    painter->drawPolygon(poly);
+                }
+                if (object->isPolygon()) {
+                    QPolygonF poly;
+                    for (WorldCellObjectPoint pt : object->points()) {
+                        poly << mScene->cellToPixelCoords(cell()->x() + pt.x / 300.0, cell()->y() + pt.y / 300.0);
+                    }
+                    painter->drawPolygon(poly);
+                }
+                if (object->isPolyline() && (object->polylineWidth() > 0)) {
+                    if (mPolylineOutlines.contains(object) == false) {
+                        mPolylineOutlines[object] = createPolylineOutline(mScene, object);
+                    }
+                    QPolygonF poly = mPolylineOutlines[object];
+                    painter->drawPolygon(poly);
+                }
+            }
+        }
+    } else {
+        BaseCellItem::paint(painter, option, widget);
+    }
 
     if (mHoverRefCount > 0)
     {
@@ -1214,6 +1322,15 @@ void WorldCellItem::cellContentsChanged()
     for (int i = 0; i < mCell->lots().size(); i++)
         updateLotImage(i);
     updateBoundingRect();
+}
+
+void WorldCellItem::objectPointsChanged(int index)
+{
+    WorldCellObject *object = cell()->objects().value(index);
+    mPolylineOutlines.remove(object);
+    if (Preferences::instance()->showZonesInWorldView()) {
+        update();
+    }
 }
 
 void WorldCellItem::mapFileCreated(const QString &path)

@@ -196,6 +196,7 @@ public:
     void lotRemoved(int index);
     void lotMoved(WorldCellLot *lot);
     void cellContentsChanged();
+    void objectPointsChanged(int index);
     void mapFileCreated(const QString &path);
 
     enum struct ThumbnailStatus
@@ -214,6 +215,7 @@ public:
 protected:
     WorldCell *mCell;
     int mHoverRefCount = 0;
+    QMap<WorldCellObject*,QPolygonF> mPolylineOutlines;
 };
 
 /**
@@ -473,10 +475,15 @@ public slots:
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
     void cellContentsChanged(WorldCell *cell);
+    void cellObjectAdded(WorldCell* cell, int objectIndex);
+    void cellObjectAboutToBeRemoved(WorldCell* cell, int objectIndex);
+    void cellObjectPointMoved(WorldCell* cell, int objectIndex, int pointIndex);
+    void cellObjectPointsChanged(WorldCell* cell, int objectIndex);
     void setShowGrid(bool show);
     void setShowCoordinates(bool show);
     void setShowBMPs(bool show);
     void setShowOtherWorlds(bool show);
+    void setShowZonesInWorldView(bool show);
 
     void selectedRoadsChanged();
     void roadAdded(int index);

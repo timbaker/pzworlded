@@ -75,6 +75,7 @@ public:
     bool showObjects() const { return mShowObjects; }
     bool showObjectNames() const { return mShowObjectNames; }
     bool showBMPs() const { return mShowBMPs; }
+    bool showZonesInWorldView() const { return mShowZonesInWorldView; }
 
     QString openFileDirectory() const;
     void setOpenFileDirectory(const QString &path);
@@ -98,6 +99,7 @@ signals:
     void showObjectsChanged(bool show);
     void showObjectNamesChanged(bool show);
     void showBMPsChanged(bool show);
+    void showZonesInWorldViewChanged(bool show);
 
 #define MINIMAP_WIDTH_MIN 128
 #define MINIMAP_WIDTH_MAX 512
@@ -122,6 +124,7 @@ public slots:
     void setShowObjects(bool show);
     void setShowObjectNames(bool show);
     void setShowBMPs(bool show);
+    void setShowZonesInWorldView(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void setHighlightRoomUnderPointer(bool highlight);
     void setShowOtherWorlds(bool show);
@@ -143,6 +146,7 @@ private:
     bool mShowObjectNames;
     bool mShowBMPs;
     bool mShowMiniMap;
+    bool mShowZonesInWorldView;
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;
     QString mConfigDirectory;
