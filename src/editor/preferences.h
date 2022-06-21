@@ -75,6 +75,8 @@ public:
     bool showObjects() const { return mShowObjects; }
     bool showObjectNames() const { return mShowObjectNames; }
     bool showBMPs() const { return mShowBMPs; }
+    bool showZombieSpawnImage() const { return mShowZombieSpawnImage; }
+    qreal zombieSpawnImageOpacity() const { return mZombieSpawnImageOpacity; }
     bool showZonesInWorldView() const { return mShowZonesInWorldView; }
 
     QString openFileDirectory() const;
@@ -99,6 +101,8 @@ signals:
     void showObjectsChanged(bool show);
     void showObjectNamesChanged(bool show);
     void showBMPsChanged(bool show);
+    void showZombieSpawnImageChanged(bool show);
+    void zombieSpawnImageOpacityChanged(qreal opacity);
     void showZonesInWorldViewChanged(bool show);
 
 #define MINIMAP_WIDTH_MIN 128
@@ -124,6 +128,8 @@ public slots:
     void setShowObjects(bool show);
     void setShowObjectNames(bool show);
     void setShowBMPs(bool show);
+    void setShowZombieSpawnImage(bool show);
+    void setZombieSpawnImageOpacity(qreal opacity);
     void setShowZonesInWorldView(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void setHighlightRoomUnderPointer(bool highlight);
@@ -146,6 +152,8 @@ private:
     bool mShowObjectNames;
     bool mShowBMPs;
     bool mShowMiniMap;
+    bool mShowZombieSpawnImage;
+    qreal mZombieSpawnImageOpacity;
     bool mShowZonesInWorldView;
     int mMiniMapWidth;
     bool mHighlightCurrentLevel;

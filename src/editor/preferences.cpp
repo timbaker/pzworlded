@@ -87,7 +87,9 @@ Preferences::Preferences()
     mShowObjectNames = mSettings->value(QLatin1String("ShowObjectNames"), true).toBool();
     mShowBMPs = mSettings->value(QLatin1String("ShowBMPs"), true).toBool();
     mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
-    mShowZonesInWorldView = mSettings->value(QLatin1String("ShowZonesInWorldView"), true).toBool();
+    mShowZombieSpawnImage = mSettings->value(QLatin1String("ShowZombieSpawnImage"), false).toBool();
+    mZombieSpawnImageOpacity = mSettings->value(QLatin1String("ZombieSpawnImageOpacity"), 0.8).toReal();
+    mShowZonesInWorldView = mSettings->value(QLatin1String("ShowZonesInWorldView"), false).toBool();
     mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
     mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
                                               false).toBool();
@@ -348,6 +350,31 @@ void Preferences::setShowBMPs(bool show)
     mSettings->setValue(QLatin1String("Interface/ShowBMPs"), mShowBMPs);
 
     emit showBMPsChanged(mShowBMPs);
+}
+
+void Preferences::setShowZombieSpawnImage(bool show)
+{
+    if (mShowZombieSpawnImage == show)
+        return;
+
+    mShowZombieSpawnImage = show;
+    mSettings->setValue(QLatin1String("Interface/ShowZombieSpawnImage"), mShowZombieSpawnImage);
+
+    emit showZombieSpawnImageChanged(mShowZombieSpawnImage);
+}
+
+void Preferences::setZombieSpawnImageOpacity(qreal opacity)
+{
+    opacity = qMin(opacity, 1.0);
+    opacity = qMax(opacity, 0.0);
+
+    if (mZombieSpawnImageOpacity == opacity)
+        return;
+
+    mZombieSpawnImageOpacity = opacity;
+    mSettings->setValue(QLatin1String("Interface/ZombieSpawnImageOpacity"), mZombieSpawnImageOpacity);
+
+    emit zombieSpawnImageOpacityChanged(mZombieSpawnImageOpacity);
 }
 
 void Preferences::setShowZonesInWorldView(bool show)

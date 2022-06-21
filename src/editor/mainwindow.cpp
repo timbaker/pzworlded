@@ -161,6 +161,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowObjectNames->setChecked(prefs->showObjectNames());
     ui->actionShowBMP->setChecked(prefs->showBMPs());
     ui->actionShowOtherWorlds->setChecked(prefs->showOtherWorlds());
+    ui->actionShowZombieSpawnImage->setChecked(prefs->showZombieSpawnImage());
     ui->actionShowZonesInWorldView->setChecked(prefs->showZonesInWorldView());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
     ui->actionHighlightRoomUnderPointer->setChecked(prefs->highlightRoomUnderPointer());
@@ -314,6 +315,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowObjectNames, SIGNAL(toggled(bool)), prefs, SLOT(setShowObjectNames(bool)));
     connect(ui->actionShowOtherWorlds, SIGNAL(toggled(bool)), prefs, SLOT(setShowOtherWorlds(bool)));
     connect(ui->actionShowBMP, SIGNAL(toggled(bool)), prefs, SLOT(setShowBMPs(bool)));
+    connect(ui->actionShowZombieSpawnImage, &QAction::toggled, prefs, &Preferences::setShowZombieSpawnImage);
     connect(ui->actionShowZonesInWorldView, &QAction::toggled, prefs, &Preferences::setShowZonesInWorldView);
     connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightCurrentLevel(bool)));
     connect(ui->actionHighlightRoomUnderPointer, SIGNAL(toggled(bool)), prefs, SLOT(setHighlightRoomUnderPointer(bool)));

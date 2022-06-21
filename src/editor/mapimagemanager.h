@@ -218,6 +218,10 @@ public:
 
     void recreateMapImage(const QString &mapName, const QString &relativeTo = QString());
 
+#ifdef WORLDED
+    MapImage *getZombieSpawnImage(const QString &imageName, const QString &relativeTo = QString());
+#endif
+
     QString errorString() const
     { return mError; }
 
@@ -253,6 +257,7 @@ protected:
 
 #ifdef WORLDED
     ImageData generateBMPImage(const QString &bmpFilePath);
+    ImageData generateZombieSpawnImage(const QString &imageFilePath);
 #endif
 
     ImageData readImageData(const QFileInfo &imageDataFileInfo);

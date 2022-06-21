@@ -237,6 +237,28 @@ void MapImageManager::recreateMapImage(const QString &mapName, const QString &re
     }
 }
 
+MapImage *MapImageManager::getZombieSpawnImage(const QString &imageName, const QString &relativeTo)
+{
+    QString keyName = QFileInfo(imageName).canonicalFilePath();
+    if (mMapImages.contains(keyName))
+        return mMapImages[keyName];
+    ImageData data = generateZombieSpawnImage(imageName);
+    if (!data.valid) {
+        return nullptr;
+    }
+    // Abusing the MapInfo struct
+    MapInfo *mapInfo = new MapInfo(Map::Isometric,
+                                   data.levelZeroBounds.width(),
+                                   data.levelZeroBounds.height(), 1, 1);
+    MapImage *mapImage = new MapImage(data.image, data.scale,
+                                      data.levelZeroBounds, data.mapSize, data.tileSize,
+                                      mapInfo);
+    mapImage->mLoaded = true;
+    mMapImages[keyName] = mapImage;
+    mapImage->chopIntoPieces();
+    return mapImage;
+}
+
 MapImageManager::ImageData MapImageManager::generateMapImage(const QString &mapFilePath, bool force)
 {
 #if 0
@@ -426,6 +448,61 @@ MapImageManager::ImageData MapImageManager::generateBMPImage(const QString &bmpF
     data.image = bmpRecolored.transformed(xform);
     data.scale = 1.0f;
     data.levelZeroBounds = QRectF(0, 0, imageSize.width() / 300, imageSize.height() / 300);
+    data.valid = true;
+
+    data.image.save(imageInfo.absoluteFilePath());
+    writeImageData(imageDataInfo, data);
+
+    return data;
+}
+
+MapImageManager::ImageData MapImageManager::generateZombieSpawnImage(const QString &imageFilePath)
+{
+    QImage image(imageFilePath);
+    if (image.isNull()) {
+        mError = tr("Zombie spawn image couldn't be loaded.");
+        return ImageData();
+    }
+    image = image.scaledToWidth(image.width() * 10); // Each pixel == one 10x10 chunk
+
+    QSize imageSize = image.size();
+    if (imageSize.isEmpty()) {
+        mError = tr("Zombie spawn image is empty.");
+        return ImageData();
+    }
+
+    // Transform the image to the isometric view
+    QTransform xform;
+    xform.scale(1.0 / 2, 0.5 / 2);
+    xform.shear(-1, 1);
+    QRect skewedImageBounds = xform.mapRect(QRect(QPoint(0, 0), imageSize));
+
+    QFileInfo fileInfo(imageFilePath);
+    QFileInfo imageInfo = imageFileInfo(imageFilePath);
+    QFileInfo imageDataInfo = imageDataFileInfo(imageInfo);
+    if (imageInfo.exists() && imageDataInfo.exists() &&
+            (fileInfo.lastModified() < imageInfo.lastModified())) {
+        QImage image(imageInfo.absoluteFilePath());
+        if (image.isNull()) {
+            QMessageBox::warning(MainWindow::instance(), tr("Error Loading Image"),
+                                 tr("An error occurred trying to read the zombie spawn image thumbnail.\n")
+                                 + imageInfo.absoluteFilePath());
+        }
+        if (image.size() == skewedImageBounds.size()) {
+            ImageData data = readImageData(imageDataInfo);
+            if (data.valid) {
+                data.image = image;
+                return data;
+            }
+        }
+    }
+
+    PROGRESS progress(tr("Generating thumbnail for %1").arg(fileInfo.completeBaseName()));
+
+    ImageData data;
+    data.image = image.transformed(xform);
+    data.scale = 1.0f;
+    data.levelZeroBounds = QRectF(0, 0, imageSize.width() / 300.0, imageSize.height() / 300.0);
     data.valid = true;
 
     data.image.save(imageInfo.absoluteFilePath());

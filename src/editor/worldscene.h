@@ -362,6 +362,31 @@ private:
     QPoint mDragOffset;
 };
 
+class ZombieSpawnImageItem : public QGraphicsItem
+{
+public:
+    ZombieSpawnImageItem(WorldScene *scene);
+
+    QRectF boundingRect() const override;
+
+    QPainterPath shape() const override;
+
+    void paint(QPainter *painter,
+               const QStyleOptionGraphicsItem *option,
+               QWidget *widget = 0) override;
+
+    QRect imageBounds() const;
+
+    void synchWithImage();
+
+    QPolygonF polygon() const;
+
+private:
+    WorldScene *mScene;
+    MapImage *mMapImage;
+    QRectF mMapImageBounds;
+};
+
 /**
  * This item displays a cell from an external World (a different PZW file).
  */
@@ -483,6 +508,8 @@ public slots:
     void setShowCoordinates(bool show);
     void setShowBMPs(bool show);
     void setShowOtherWorlds(bool show);
+    void setShowZombieSpawnImage(bool show);
+    void zombieSpawnImageOpacityChanged(qreal opacity);
     void setShowZonesInWorldView(bool show);
 
     void selectedRoadsChanged();
@@ -533,6 +560,7 @@ private:
     QList<WorldBMPItem*> mBMPItems;
     QSet<WorldBMPItem*> mSelectedBMPItems;
     WorldBMPItem *mDragBMPItem;
+    ZombieSpawnImageItem *mZombieSpawnImageItem;
     bool mBMPToolActive;
     bool mDoubleClick;
 

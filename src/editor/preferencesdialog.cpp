@@ -49,6 +49,7 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->openGL->setChecked(prefs->useOpenGL());
     ui->thumbnails->setChecked(prefs->worldThumbnails());
     ui->showAdjacent->setChecked(prefs->showAdjacentMaps());
+    ui->zombieSpawnImageOpacity->setValue(int(prefs->zombieSpawnImageOpacity() * 100));
 }
 
 void PreferencesDialog::browseTilesDirectory()
@@ -76,4 +77,5 @@ void PreferencesDialog::accept()
     prefs->setWorldThumbnails(ui->thumbnails->isChecked());
     prefs->setGridColor(mGridColor);
     prefs->setShowAdjacentMaps(ui->showAdjacent->isChecked());
+    prefs->setZombieSpawnImageOpacity(ui->zombieSpawnImageOpacity->value() / 100.0);
 }

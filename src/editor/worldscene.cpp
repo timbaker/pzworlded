@@ -63,6 +63,7 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     , mActiveTool(0)
     , mDragMapImageItem(0)
     , mDragBMPItem(0)
+    , mZombieSpawnImageItem(nullptr)
     , mBMPToolActive(false)
 
 {
@@ -187,6 +188,8 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
     connect(prefs, SIGNAL(showCoordinatesChanged(bool)), SLOT(setShowCoordinates(bool)));
     connect(prefs, SIGNAL(showBMPsChanged(bool)),
             SLOT(setShowBMPs(bool)));
+    connect(prefs, &Preferences::showZombieSpawnImageChanged, this, &WorldScene::setShowZombieSpawnImage);
+    connect(prefs, &Preferences::zombieSpawnImageOpacityChanged, this, &WorldScene::zombieSpawnImageOpacityChanged);
     connect(prefs, &Preferences::showZonesInWorldViewChanged, this, &WorldScene::setShowZonesInWorldView);
     connect(prefs, SIGNAL(showOtherWorldsChanged(bool)), SLOT(setShowOtherWorlds(bool)));
     connect(prefs, SIGNAL(worldThumbnailsChanged(bool)),
@@ -200,6 +203,12 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
         addItem(item);
         mBMPItems += item;
     }
+
+    mZombieSpawnImageItem = new ZombieSpawnImageItem(this);
+    mZombieSpawnImageItem->setZValue(ZVALUE_CELLITEM + 1);
+    mZombieSpawnImageItem->setVisible(prefs->showZombieSpawnImage());
+    mZombieSpawnImageItem->setOpacity(prefs->zombieSpawnImageOpacity());
+    addItem(mZombieSpawnImageItem);
 
     connect(MapManager::instance(), SIGNAL(mapFileCreated(QString)),
             SLOT(mapFileCreated(QString)));
@@ -587,6 +596,17 @@ void WorldScene::setShowOtherWorlds(bool show)
         }
     }
     setSceneRect(bounds);
+}
+
+void WorldScene::setShowZombieSpawnImage(bool show)
+{
+    mZombieSpawnImageItem->setVisible(show);
+}
+
+void WorldScene::zombieSpawnImageOpacityChanged(qreal opacity)
+{
+    mZombieSpawnImageItem->setOpacity(opacity);
+    mZombieSpawnImageItem->update();
 }
 
 void WorldScene::setShowZonesInWorldView(bool show)
@@ -1951,6 +1971,78 @@ void WorldBMPItem::setDragOffset(const QPoint &offset)
 QPolygonF WorldBMPItem::polygon() const
 {
     return mScene->cellRectToPolygon(bmpBounds());
+}
+
+/////
+
+
+ZombieSpawnImageItem::ZombieSpawnImageItem(WorldScene *scene)
+    : QGraphicsItem()
+    , mScene(scene)
+{
+    const GenerateLotsSettings &settings = scene->world()->getGenerateLotsSettings();
+    mMapImage = MapImageManager::instance()->getZombieSpawnImage(settings.zombieSpawnMap);
+    if (mMapImage == nullptr) {
+        qDebug() << MapImageManager::instance()->errorString();
+    }
+    synchWithImage();
+}
+
+QRectF ZombieSpawnImageItem::boundingRect() const
+{
+    return mMapImageBounds;
+}
+
+QPainterPath ZombieSpawnImageItem::shape() const
+{
+    QPainterPath path;
+    path.addPolygon(this->polygon());
+    return path;
+}
+
+void ZombieSpawnImageItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
+
+    if (mMapImage != nullptr) {
+        int columns = mMapImage->subImageColumns();
+        int rows = mMapImage->subImageRows();
+        qreal scale = mMapImageBounds.width() / qreal(mMapImage->imageWidth());
+        for (int x = 0; x < columns; x++) {
+            for (int y = 0; y < rows; y++) {
+                const QImage &img = mMapImage->subImages()[x + y * columns];
+                int imgw = img.width(), imgh = img.height();
+                QRectF target = QRectF(mMapImageBounds.x() + x * 512 * scale,
+                                       mMapImageBounds.y() + y * 512 * scale,
+                                       imgw * scale, imgh * scale);
+                QRectF source = QRect(QPoint(), img.size());
+                painter->drawImage(target, img, source, Qt::AvoidDither);
+            }
+        }
+    }
+}
+
+QRect ZombieSpawnImageItem::imageBounds() const
+{
+    if (mMapImage == nullptr) {
+        return QRect();
+    }
+    return mMapImage->levelZeroBounds().toRect();
+}
+
+void ZombieSpawnImageItem::synchWithImage()
+{
+    QRectF bounds = mScene->boundingRect(imageBounds());
+    if (bounds != mMapImageBounds) {
+        prepareGeometryChange();
+        mMapImageBounds = bounds;
+    }
+}
+
+QPolygonF ZombieSpawnImageItem::polygon() const
+{
+    return mScene->cellRectToPolygon(imageBounds());
 }
 
 /////
