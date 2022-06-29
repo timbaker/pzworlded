@@ -65,19 +65,19 @@ InGameMapDock::InGameMapDock(QWidget *parent)
     setWidget(widget);
     retranslateUi();
 
-    connect(mView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
-    connect(mView, SIGNAL(clicked(QModelIndex)),
-            SLOT(itemClicked(QModelIndex)));
-    connect(mView, SIGNAL(doubleClicked(QModelIndex)),
-            SLOT(itemDoubleClicked(QModelIndex)));
-    connect(mView, SIGNAL(trashItem(QModelIndex)),
-            SLOT(trashItem(QModelIndex)));
+    connect(mView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &InGameMapDock::selectionChanged);
+    connect(mView, &QAbstractItemView::clicked,
+            this, &InGameMapDock::itemClicked);
+    connect(mView, &QAbstractItemView::doubleClicked,
+            this, &InGameMapDock::itemDoubleClicked);
+    connect(mView, &InGameMapView::trashItem,
+            this, &InGameMapDock::trashItem);
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mView, &QWidget::setVisible);
 }
 
 void InGameMapDock::changeEvent(QEvent *e)
@@ -276,7 +276,7 @@ InGameMapView::InGameMapView(QWidget *parent)
 
     setModel(mModel);
 
-    connect(mModel, SIGNAL(synched()), SLOT(modelSynched()));
+    connect(mModel, &InGameMapModel::synched, this, &InGameMapView::modelSynched);
 }
 
 void InGameMapView::mousePressEvent(QMouseEvent *event)

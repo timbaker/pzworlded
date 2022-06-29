@@ -31,12 +31,12 @@ ObjectTypesDialog::ObjectTypesDialog(WorldDocument *worldDoc, QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->typesView, SIGNAL(itemSelectionChanged()), SLOT(typeSelected()));
-    connect(ui->addButton, SIGNAL(clicked()), SLOT(add()));
-    connect(ui->updateButton, SIGNAL(clicked()), SLOT(update()));
-    connect(ui->removeButton, SIGNAL(clicked()), SLOT(remove()));
+    connect(ui->typesView, &QListWidget::itemSelectionChanged, this, &ObjectTypesDialog::typeSelected);
+    connect(ui->addButton, &QAbstractButton::clicked, this, &ObjectTypesDialog::add);
+    connect(ui->updateButton, &QAbstractButton::clicked, this, &ObjectTypesDialog::update);
+    connect(ui->removeButton, &QAbstractButton::clicked, this, &ObjectTypesDialog::remove);
 
-    connect(ui->nameEdit, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
+    connect(ui->nameEdit, &QLineEdit::textChanged, this, &ObjectTypesDialog::synchButtons);
 
     setList();
 

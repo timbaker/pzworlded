@@ -32,18 +32,18 @@ ObjectGroupsDialog::ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->view, SIGNAL(itemSelectionChanged()), SLOT(selectionChanged()));
-    connect(ui->addButton, SIGNAL(clicked()), SLOT(add()));
-    connect(ui->updateButton, SIGNAL(clicked()), SLOT(update()));
-    connect(ui->removeButton, SIGNAL(clicked()), SLOT(remove()));
+    connect(ui->view, &QListWidget::itemSelectionChanged, this, &ObjectGroupsDialog::selectionChanged);
+    connect(ui->addButton, &QAbstractButton::clicked, this, &ObjectGroupsDialog::add);
+    connect(ui->updateButton, &QAbstractButton::clicked, this, &ObjectGroupsDialog::update);
+    connect(ui->removeButton, &QAbstractButton::clicked, this, &ObjectGroupsDialog::remove);
 
-    connect(ui->nameEdit, SIGNAL(textChanged(QString)), SLOT(synchButtons()));
+    connect(ui->nameEdit, &QLineEdit::textChanged, this, &ObjectGroupsDialog::synchButtons);
 
-    connect(ui->moveDown, SIGNAL(clicked()), SLOT(moveGroupDown()));
-    connect(ui->moveUp, SIGNAL(clicked()), SLOT(moveGroupUp()));
+    connect(ui->moveDown, &QAbstractButton::clicked, this, &ObjectGroupsDialog::moveGroupDown);
+    connect(ui->moveUp, &QAbstractButton::clicked, this, &ObjectGroupsDialog::moveGroupUp);
 
-    connect(ui->colorButton, SIGNAL(colorChanged(QColor)),
-            SLOT(colorChanged(QColor)));
+    connect(ui->colorButton, &Tiled::Internal::ColorButton::colorChanged,
+            this, &ObjectGroupsDialog::colorChanged);
 
     ui->objectTypeCombo->clear();
     QStringList items;
@@ -54,8 +54,8 @@ ObjectGroupsDialog::ObjectGroupsDialog(WorldDocument *worldDoc, QWidget *parent)
         items.insert(0, name);
     }
     ui->objectTypeCombo->insertItems(0, items);
-    connect(ui->objectTypeCombo, SIGNAL(activated(int)),
-            SLOT(typeChanged(int)));
+    connect(ui->objectTypeCombo, qOverload<int>(&QComboBox::activated),
+            this, &ObjectGroupsDialog::typeChanged);
 
     setList();
 

@@ -24,24 +24,24 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     // Export directory
     mExportDir = settings.exportDir;
     ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
-    connect(ui->exportBrowse, SIGNAL(clicked()), SLOT(exportBrowse()));
+    connect(ui->exportBrowse, &QAbstractButton::clicked, this, &GenerateLotsDialog::exportBrowse);
 
     // Zombie Spawn Map
     mZombieSpawnMap = settings.zombieSpawnMap;
     ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
-    connect(ui->spawnBrowse, SIGNAL(clicked()), SLOT(spawnBrowse()));
+    connect(ui->spawnBrowse, &QAbstractButton::clicked, this, &GenerateLotsDialog::spawnBrowse);
 
     // TileDef folder
     mTileDefFolder = settings.tileDefFolder;
     ui->tiledefEdit->setText(QDir::toNativeSeparators(mTileDefFolder));
-    connect(ui->tiledefBrowse, SIGNAL(clicked()), SLOT(tileDefBrowse()));
+    connect(ui->tiledefBrowse, &QAbstractButton::clicked, this, &GenerateLotsDialog::tileDefBrowse);
 
     // World origin
     ui->xOrigin->setValue(settings.worldOrigin.x());
     ui->yOrigin->setValue(settings.worldOrigin.y());
 
-    connect(ui->buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()),
-            SLOT(apply()));
+    connect(ui->buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked,
+            this, &GenerateLotsDialog::apply);
 }
 
 GenerateLotsDialog::~GenerateLotsDialog()

@@ -35,6 +35,7 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QUndoStack>
+#include <WorldCell.h>
 
 WorldDocument::WorldDocument(World *world, const QString &fileName)
     : Document(WorldDocType)
@@ -46,112 +47,112 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
 
     // Forward all the signals from mUndoRedo to this object's signals
 
-    connect(&mUndoRedo, SIGNAL(propertyAdded(PropertyHolder*,int)),
-            SIGNAL(propertyAdded(PropertyHolder*,int)));
-    connect(&mUndoRedo, SIGNAL(propertyAboutToBeRemoved(PropertyHolder*,int)),
-            SIGNAL(propertyAboutToBeRemoved(PropertyHolder*,int)));
-    connect(&mUndoRedo, SIGNAL(propertyRemoved(PropertyHolder*,int)),
-            SIGNAL(propertyRemoved(PropertyHolder*,int)));
-    connect(&mUndoRedo, SIGNAL(propertyValueChanged(PropertyHolder*,int)),
-            SIGNAL(propertyValueChanged(PropertyHolder*,int)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyAdded,
+            this, &WorldDocument::propertyAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyAboutToBeRemoved,
+            this, &WorldDocument::propertyAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyRemoved,
+            this, &WorldDocument::propertyRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyValueChanged,
+            this, &WorldDocument::propertyValueChanged);
 
-    connect(&mUndoRedo, SIGNAL(propertyDefinitionAdded(PropertyDef*,int)),
-            SIGNAL(propertyDefinitionAdded(PropertyDef*,int)));
-    connect(&mUndoRedo, SIGNAL(propertyDefinitionAboutToBeRemoved(int)),
-            SIGNAL(propertyDefinitionAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(propertyDefinitionChanged(PropertyDef*)),
-            SIGNAL(propertyDefinitionChanged(PropertyDef*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyDefinitionAdded,
+            this, &WorldDocument::propertyDefinitionAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyDefinitionAboutToBeRemoved,
+            this, &WorldDocument::propertyDefinitionAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyDefinitionChanged,
+            this, &WorldDocument::propertyDefinitionChanged);
 
-    connect(&mUndoRedo, SIGNAL(objectTypeAdded(int)),
-            SIGNAL(objectTypeAdded(int)));
-    connect(&mUndoRedo, SIGNAL(objectTypeAboutToBeRemoved(int)),
-            SIGNAL(objectTypeAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(objectTypeNameChanged(ObjectType*)),
-            SIGNAL(objectTypeNameChanged(ObjectType*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectTypeAdded,
+            this, &WorldDocument::objectTypeAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectTypeAboutToBeRemoved,
+            this, &WorldDocument::objectTypeAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectTypeNameChanged,
+            this, &WorldDocument::objectTypeNameChanged);
 
-    connect(&mUndoRedo, SIGNAL(objectGroupAdded(int)),
-            SIGNAL(objectGroupAdded(int)));
-    connect(&mUndoRedo, SIGNAL(objectGroupAboutToBeRemoved(int)),
-            SIGNAL(objectGroupAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(objectGroupNameChanged(WorldObjectGroup*)),
-            SIGNAL(objectGroupNameChanged(WorldObjectGroup*)));
-    connect(&mUndoRedo, SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
-            SIGNAL(objectGroupColorChanged(WorldObjectGroup*)));
-    connect(&mUndoRedo, SIGNAL(objectGroupAboutToBeReordered(int)),
-            SIGNAL(objectGroupAboutToBeReordered(int)));
-    connect(&mUndoRedo, SIGNAL(objectGroupReordered(int)),
-            SIGNAL(objectGroupReordered(int)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectGroupAdded,
+            this, &WorldDocument::objectGroupAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectGroupAboutToBeRemoved,
+            this, &WorldDocument::objectGroupAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectGroupNameChanged,
+            this, &WorldDocument::objectGroupNameChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectGroupColorChanged,
+            this, &WorldDocument::objectGroupColorChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectGroupAboutToBeReordered,
+            this, &WorldDocument::objectGroupAboutToBeReordered);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectGroupReordered,
+            this, &WorldDocument::objectGroupReordered);
 
-    connect(&mUndoRedo, SIGNAL(templateAdded(int)),
-            SIGNAL(templateAdded(int)));
-    connect(&mUndoRedo, SIGNAL(templateAboutToBeRemoved(int)),
-            SIGNAL(templateAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(templateChanged(PropertyTemplate*)),
-            SIGNAL(templateChanged(PropertyTemplate*)));
+    connect(&mUndoRedo, qOverload<int>(&WorldDocumentUndoRedo::templateAdded),
+            this, qOverload<int>(&WorldDocument::templateAdded));
+    connect(&mUndoRedo, qOverload<int>(&WorldDocumentUndoRedo::templateAboutToBeRemoved),
+            this, qOverload<int>(&WorldDocument::templateAboutToBeRemoved));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::templateChanged,
+            this, &WorldDocument::templateChanged);
 
-    connect(&mUndoRedo, SIGNAL(templateAdded(PropertyHolder*,int)),
-            SIGNAL(templateAdded(PropertyHolder*,int)));
-    connect(&mUndoRedo, SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)),
-            SIGNAL(templateAboutToBeRemoved(PropertyHolder*,int)));
-    connect(&mUndoRedo, SIGNAL(templateRemoved(PropertyHolder*,int)),
-            SIGNAL(templateRemoved(PropertyHolder*,int)));
+    connect(&mUndoRedo, qOverload<PropertyHolder*,int>(&WorldDocumentUndoRedo::templateAdded),
+            this, qOverload<PropertyHolder*,int>(&WorldDocument::templateAdded));
+    connect(&mUndoRedo, qOverload<PropertyHolder*,int>(&WorldDocumentUndoRedo::templateAboutToBeRemoved),
+            this, qOverload<PropertyHolder*,int>(&WorldDocument::templateAboutToBeRemoved));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::templateRemoved,
+            this, &WorldDocument::templateRemoved);
 
-    connect(&mUndoRedo, SIGNAL(worldAboutToResize(QSize)),
-            SIGNAL(worldAboutToResize(QSize)));
-    connect(&mUndoRedo, SIGNAL(worldResized(QSize)),
-            SIGNAL(worldResized(QSize)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::worldAboutToResize,
+            this, &WorldDocument::worldAboutToResize);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::worldResized,
+            this, &WorldDocument::worldResized);
 
-    connect(&mUndoRedo, SIGNAL(generateLotSettingsChanged()),
-            SIGNAL(generateLotSettingsChanged()));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::generateLotSettingsChanged,
+            this, &WorldDocument::generateLotSettingsChanged);
 
-    connect(&mUndoRedo, SIGNAL(cellAdded(WorldCell*)),
-            SIGNAL(cellAdded(WorldCell*)));
-    connect(&mUndoRedo, SIGNAL(cellAboutToBeRemoved(WorldCell*)),
-            SIGNAL(cellAboutToBeRemoved(WorldCell*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellAdded,
+            this, &WorldDocument::cellAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellAboutToBeRemoved,
+            this, &WorldDocument::cellAboutToBeRemoved);
 
-    connect(&mUndoRedo, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
-            SIGNAL(cellMapFileAboutToChange(WorldCell*)));
-    connect(&mUndoRedo, SIGNAL(cellMapFileChanged(WorldCell*)),
-            SIGNAL(cellMapFileChanged(WorldCell*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellMapFileAboutToChange,
+            this, &WorldDocument::cellMapFileAboutToChange);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellMapFileChanged,
+            this, &WorldDocument::cellMapFileChanged);
 
-    connect(&mUndoRedo, SIGNAL(cellContentsAboutToChange(WorldCell*)),
-            SIGNAL(cellContentsAboutToChange(WorldCell*)));
-    connect(&mUndoRedo, SIGNAL(cellContentsChanged(WorldCell*)),
-            SIGNAL(cellContentsChanged(WorldCell*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellContentsAboutToChange,
+            this, &WorldDocument::cellContentsAboutToChange);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellContentsChanged,
+            this, &WorldDocument::cellContentsChanged);
 
-    connect(&mUndoRedo, SIGNAL(cellLotAdded(WorldCell*,int)),
-            SIGNAL(cellLotAdded(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
-            SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(cellLotMoved(WorldCellLot*)),
-            SIGNAL(cellLotMoved(WorldCellLot*)));
-    connect(&mUndoRedo, SIGNAL(lotLevelChanged(WorldCellLot*)),
-            SIGNAL(lotLevelChanged(WorldCellLot*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotAdded,
+            this, &WorldDocument::cellLotAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotAboutToBeRemoved,
+            this, &WorldDocument::cellLotAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotMoved,
+            this, &WorldDocument::cellLotMoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::lotLevelChanged,
+            this, &WorldDocument::lotLevelChanged);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotReordered,
             this, &WorldDocument::cellLotReordered);
 
-    connect(&mUndoRedo, SIGNAL(cellObjectAdded(WorldCell*,int)),
-            SIGNAL(cellObjectAdded(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)),
-            SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)));
-    connect(&mUndoRedo, SIGNAL(cellObjectMoved(WorldCellObject*)),
-            SIGNAL(cellObjectMoved(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(cellObjectResized(WorldCellObject*)),
-            SIGNAL(cellObjectResized(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(cellObjectNameChanged(WorldCellObject*)),
-            SIGNAL(cellObjectNameChanged(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(cellObjectGroupAboutToChange(WorldCellObject*)),
-            SIGNAL(cellObjectGroupAboutToChange(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-            SIGNAL(cellObjectGroupChanged(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(cellObjectTypeChanged(WorldCellObject*)),
-            SIGNAL(cellObjectTypeChanged(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(objectLevelAboutToChange(WorldCellObject*)),
-            SIGNAL(objectLevelAboutToChange(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(objectLevelChanged(WorldCellObject*)),
-            SIGNAL(objectLevelChanged(WorldCellObject*)));
-    connect(&mUndoRedo, SIGNAL(cellObjectReordered(WorldCellObject*)),
-            SIGNAL(cellObjectReordered(WorldCellObject*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectAdded,
+            this, &WorldDocument::cellObjectAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectAboutToBeRemoved,
+            this, &WorldDocument::cellObjectAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectMoved,
+            this, &WorldDocument::cellObjectMoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectResized,
+            this, &WorldDocument::cellObjectResized);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectNameChanged,
+            this, &WorldDocument::cellObjectNameChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectGroupAboutToChange,
+            this, &WorldDocument::cellObjectGroupAboutToChange);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectGroupChanged,
+            this, &WorldDocument::cellObjectGroupChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectTypeChanged,
+            this, &WorldDocument::cellObjectTypeChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectLevelAboutToChange,
+            this, &WorldDocument::objectLevelAboutToChange);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::objectLevelChanged,
+            this, &WorldDocument::objectLevelChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectReordered,
+            this, &WorldDocument::cellObjectReordered);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectPointMoved,
             this, &WorldDocument::cellObjectPointMoved);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::cellObjectPointsChanged,
@@ -187,24 +188,24 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
     connect(&mUndoRedo, SIGNAL(roadLinesChanged(int)),
             SIGNAL(roadLinesChanged(int)));
 
-    connect(&mUndoRedo, SIGNAL(selectedCellsChanged()),
-            SIGNAL(selectedCellsChanged()));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::selectedCellsChanged,
+            this, &WorldDocument::selectedCellsChanged);
 
-    connect(&mUndoRedo, SIGNAL(bmpAdded(int)),
-            SIGNAL(bmpAdded(int)));
-    connect(&mUndoRedo, SIGNAL(bmpAboutToBeRemoved(int)),
-            SIGNAL(bmpAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(bmpCoordsChanged(int)),
-            SIGNAL(bmpCoordsChanged(int)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::bmpAdded,
+            this, &WorldDocument::bmpAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::bmpAboutToBeRemoved,
+            this, &WorldDocument::bmpAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::bmpCoordsChanged,
+            this, &WorldDocument::bmpCoordsChanged);
 
-    connect(&mUndoRedo, SIGNAL(propertyEnumAdded(int)),
-            SIGNAL(propertyEnumAdded(int)));
-    connect(&mUndoRedo, SIGNAL(propertyEnumAboutToBeRemoved(int)),
-            SIGNAL(propertyEnumAboutToBeRemoved(int)));
-    connect(&mUndoRedo, SIGNAL(propertyEnumChanged(PropertyEnum*)),
-            SIGNAL(propertyEnumChanged(PropertyEnum*)));
-    connect(&mUndoRedo, SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
-            SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)));
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyEnumAdded,
+            this, &WorldDocument::propertyEnumAdded);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyEnumAboutToBeRemoved,
+            this, &WorldDocument::propertyEnumAboutToBeRemoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyEnumChanged,
+            this, &WorldDocument::propertyEnumChanged);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::propertyEnumChoicesChanged,
+            this, &WorldDocument::propertyEnumChoicesChanged);
 }
 
 WorldDocument::~WorldDocument()

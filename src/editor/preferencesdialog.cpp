@@ -35,16 +35,16 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
 
     mTilesDirectory = prefs->tilesDirectory();
     ui->tilesDirectory->setText(QDir::toNativeSeparators(mTilesDirectory));
-    connect(ui->browseTilesDirectory, SIGNAL(clicked()),
-            SLOT(browseTilesDirectory()));
+    connect(ui->browseTilesDirectory, &QAbstractButton::clicked,
+            this, &PreferencesDialog::browseTilesDirectory);
 
     QString configPath = prefs->configPath();
     ui->configDirectory->setText(QDir::toNativeSeparators(configPath));
 
     mGridColor = prefs->gridColor();
     ui->gridColor->setColor(mGridColor);
-    connect(ui->gridColor, SIGNAL(colorChanged(QColor)),
-            SLOT(gridColorChanged(QColor)));
+    connect(ui->gridColor, &Tiled::Internal::ColorButton::colorChanged,
+            this, &PreferencesDialog::gridColorChanged);
 
     ui->openGL->setChecked(prefs->useOpenGL());
     ui->thumbnails->setChecked(prefs->worldThumbnails());

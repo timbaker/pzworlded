@@ -40,7 +40,7 @@ FromToDialog::FromToDialog(WorldDocument *doc, QWidget *parent) :
 
     ui->fileName->setReadOnly(true);
 
-    connect(ui->browse, SIGNAL(clicked()), SLOT(browse()));
+    connect(ui->browse, &QAbstractButton::clicked, this, &FromToDialog::browse);
 
     QSettings settings;
     QString fileName = settings.value(KEY_FILENAME).toString();

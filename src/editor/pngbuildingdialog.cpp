@@ -49,7 +49,7 @@ PNGBuildingDialog::PNGBuildingDialog(World *world, QWidget *parent) :
     mColor = Qt::red;
     ui->color->setColor(mColor);
 
-    connect(ui->pngBrowse, SIGNAL(clicked()), SLOT(browse()));
+    connect(ui->pngBrowse, &QAbstractButton::clicked, this, &PNGBuildingDialog::browse);
 
     QSettings settings;
     ui->pngEdit->setText(settings.value(QLatin1String("PNGBuildingDialog/FileName")).toString());

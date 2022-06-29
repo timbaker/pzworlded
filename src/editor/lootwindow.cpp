@@ -61,17 +61,17 @@ LootWindow::LootWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->actionClose, SIGNAL(triggered()), SLOT(close()));
-    connect(ui->gameDirBrowse, SIGNAL(clicked()), SLOT(chooseGameDirectory()));
-    connect(ui->treeWidget->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
+    connect(ui->actionClose, &QAction::triggered, this, &QWidget::close);
+    connect(ui->gameDirBrowse, &QAbstractButton::clicked, this, &LootWindow::chooseGameDirectory);
+    connect(ui->treeWidget->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &LootWindow::selectionChanged);
 
     QSettings settings;
     QString d = settings.value(QLatin1String("LootWindow/GameDirectory")).toString();
     ui->gameDirectory->setText(QDir::toNativeSeparators(d));
 
-    connect(DocumentManager::instance(), SIGNAL(currentDocumentChanged(Document*)),
-            SLOT(setDocument(Document*)));
+    connect(DocumentManager::instance(), &DocumentManager::currentDocumentChanged,
+            this, &LootWindow::setDocument);
 
     if (QFileInfo(d).exists()) {
         readTileProperties(QDir(d).filePath(QLatin1String("media/newtiledefinitions.tiles")));
@@ -79,7 +79,7 @@ LootWindow::LootWindow(QWidget *parent) :
     }
 
     mTimer.setSingleShot(true);
-    connect(&mTimer, SIGNAL(timeout()), SLOT(updateNow()));
+    connect(&mTimer, &QTimer::timeout, this, &LootWindow::updateNow);
 }
 
 LootWindow::~LootWindow()
@@ -96,8 +96,8 @@ void LootWindow::setDocument(Document *doc)
     mDocument = doc ? doc->asCellDocument() : 0;
 
     if (mDocument) {
-        connect(mDocument->scene(), SIGNAL(mapContentsChanged()),
-                SLOT(mapContentsChanged()));
+        connect(mDocument->scene(), &CellScene::mapContentsChanged,
+                this, &LootWindow::mapContentsChanged);
     }
 
     if (mDocument && mShowing)

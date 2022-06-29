@@ -55,11 +55,11 @@ BaseGraphicsView::BaseGraphicsView(AllowOpenGL openGL, QWidget *parent)
     // Adjustment for antialiasing is done by the items that need it
     setOptimizationFlags(QGraphicsView::DontAdjustForAntialiasing);
 
-    connect(mZoomable, SIGNAL(scaleChanged(qreal)), SLOT(adjustScale(qreal)));
+    connect(mZoomable, &Zoomable::scaleChanged, this, &BaseGraphicsView::adjustScale);
 
 //    mScrollTimer.setSingleShot(true);
     mScrollTimer.setInterval(30);
-    connect(&mScrollTimer, SIGNAL(timeout()), SLOT(autoScrollTimeout()));
+    connect(&mScrollTimer, &QTimer::timeout, this, &BaseGraphicsView::autoScrollTimeout);
 
     mMiniMap = new MiniMap(this);
 
@@ -67,7 +67,7 @@ BaseGraphicsView::BaseGraphicsView(AllowOpenGL openGL, QWidget *parent)
     if (openGL == PreferenceGL) {
         Preferences *prefs = Preferences::instance();
         setUseOpenGL(prefs->useOpenGL());
-        connect(prefs, SIGNAL(useOpenGLChanged(bool)), SLOT(setUseOpenGL(bool)));
+        connect(prefs, &Preferences::useOpenGLChanged, this, &BaseGraphicsView::setUseOpenGL);
     } else if (openGL == AlwaysGL) {
         setUseOpenGL(true);
     }
@@ -396,8 +396,8 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     Preferences *prefs = Preferences::instance();
     setVisible(prefs->showMiniMap());
     mWidth = prefs->miniMapWidth();
-    connect(prefs, SIGNAL(showMiniMapChanged(bool)), SLOT(setVisible(bool)));
-    connect(prefs, SIGNAL(miniMapWidthChanged(int)), SLOT(widthChanged(int)));
+    connect(prefs, &Preferences::showMiniMapChanged, this, &QWidget::setVisible);
+    connect(prefs, &Preferences::miniMapWidthChanged, this, &MiniMap::widthChanged);
 
     QGraphicsScene *scene = new QGraphicsScene(this);
     scene->setBackgroundBrush(Qt::gray);
@@ -425,7 +425,7 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     button->setIconSize(QSize(16, 16));
     button->setIcon(QIcon(QLatin1String(":/images/16x16/zoom-out.png")));
     button->setToolTip(tr("Make the MiniMap smaller"));
-    connect(button, SIGNAL(clicked()), SLOT(smaller()));
+    connect(button, &QAbstractButton::clicked, this, &MiniMap::smaller);
     layout->addWidget(button);
 
     button = mBiggerButton;
@@ -434,7 +434,7 @@ MiniMap::MiniMap(BaseGraphicsView *parent)
     button->setIconSize(QSize(16, 16));
     button->setIcon(QIcon(QLatin1String(":/images/16x16/zoom-in.png")));
     button->setToolTip(tr("Make the MiniMap larger"));
-    connect(button, SIGNAL(clicked()), SLOT(bigger()));
+    connect(button, &QAbstractButton::clicked, this, &MiniMap::bigger);
     layout->addWidget(button);
 
 #if 0
@@ -458,7 +458,7 @@ void MiniMap::setScene(BaseGraphicsScene *scene)
 {
     mScene = scene;
     widthChanged(mWidth);
-    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
+    connect(mScene, &QGraphicsScene::sceneRectChanged, this, &MiniMap::sceneRectChanged);
 }
 
 void MiniMap::viewRectChanged()

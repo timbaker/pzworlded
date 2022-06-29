@@ -91,6 +91,8 @@ private slots:
     void selectedCellsChanged();
     void selectedObjectsChanged();
     void modelSynched();
+
+public slots:
     void closeComboBoxEditor();
 
 private:

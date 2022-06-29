@@ -58,19 +58,19 @@ LotsDock::LotsDock(QWidget *parent)
     setWidget(widget);
     retranslateUi();
 
-    connect(mView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
-    connect(mView, SIGNAL(clicked(QModelIndex)),
-            SLOT(itemClicked(QModelIndex)));
-    connect(mView, SIGNAL(doubleClicked(QModelIndex)),
-            SLOT(itemDoubleClicked(QModelIndex)));
-    connect(mView, SIGNAL(trashItem(QModelIndex)),
-            SLOT(trashItem(QModelIndex)));
+    connect(mView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &LotsDock::selectionChanged);
+    connect(mView, &QAbstractItemView::clicked,
+            this, &LotsDock::itemClicked);
+    connect(mView, &QAbstractItemView::doubleClicked,
+            this, &LotsDock::itemDoubleClicked);
+    connect(mView, &LotsView::trashItem,
+            this, &LotsDock::trashItem);
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mView, &QWidget::setVisible);
 }
 
 void LotsDock::changeEvent(QEvent *e)
@@ -243,7 +243,7 @@ LotsView::LotsView(QWidget *parent)
 
     setModel(mModel);
 
-    connect(mModel, SIGNAL(synched()), SLOT(modelSynched()));
+    connect(mModel, &LotsModel::synched, this, &LotsView::modelSynched);
 }
 
 void LotsView::mousePressEvent(QMouseEvent *event)
@@ -281,12 +281,12 @@ void LotsView::setDocument(Document *doc)
     mModel->setDocument(doc);
 
     if (mWorldDoc) {
-        connect(mWorldDoc, SIGNAL(selectedCellsChanged()),
-                SLOT(selectedCellsChanged()));
+        connect(mWorldDoc, &WorldDocument::selectedCellsChanged,
+                this, &LotsView::selectedCellsChanged);
     }
     if (mCellDoc) {
-        connect(mCellDoc, SIGNAL(selectedLotsChanged()),
-                SLOT(selectedLotsChanged()));
+        connect(mCellDoc, &CellDocument::selectedLotsChanged,
+                this, &LotsView::selectedLotsChanged);
     }
 }
 
@@ -712,28 +712,28 @@ void LotsModel::setDocument(Document *doc)
         worldDoc = mCellDoc->worldDocument();
         cell = mCellDoc->cell();
 
-        connect(mCellDoc, SIGNAL(layerGroupAdded(int)),
-                SLOT(layerGroupAdded(int)));
+        connect(mCellDoc, &CellDocument::layerGroupAdded,
+                this, &LotsModel::layerGroupAdded);
     }
 
     if (worldDoc) {
-        connect(worldDoc, SIGNAL(cellContentsAboutToChange(WorldCell*)),
-                SLOT(cellContentsAboutToChange(WorldCell*)));
-        connect(worldDoc, SIGNAL(cellContentsChanged(WorldCell*)),
-                SLOT(cellContentsChanged(WorldCell*)));
-        connect(worldDoc, SIGNAL(cellMapFileAboutToChange(WorldCell*)),
-                SLOT(cellContentsAboutToChange(WorldCell*)));
-        connect(worldDoc, SIGNAL(cellMapFileChanged(WorldCell*)),
-                SLOT(cellContentsChanged(WorldCell*)));
+        connect(worldDoc, &WorldDocument::cellContentsAboutToChange,
+                this, &LotsModel::cellContentsAboutToChange);
+        connect(worldDoc, &WorldDocument::cellContentsChanged,
+                this, &LotsModel::cellContentsChanged);
+        connect(worldDoc, &WorldDocument::cellMapFileAboutToChange,
+                this, &LotsModel::cellContentsAboutToChange);
+        connect(worldDoc, &WorldDocument::cellMapFileChanged,
+                this, &LotsModel::cellContentsChanged);
 
-        connect(worldDoc, SIGNAL(cellLotAdded(WorldCell*,int)),
-                SLOT(cellLotAdded(WorldCell*,int)));
-        connect(worldDoc, SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
-                SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-        connect(worldDoc, &WorldDocument::cellLotReordered,
+        connect(worldDoc, &WorldDocument::cellLotAdded,
+                this, &LotsModel::cellLotAdded);
+        connect(worldDoc, &WorldDocument::cellLotAboutToBeRemoved,
+                this, &LotsModel::cellLotAboutToBeRemoved);
+        QMetaObject::Connection localWorldDoc = connect(worldDoc, &WorldDocument::cellLotReordered,
                 this, &LotsModel::cellLotReordered);
-        connect(worldDoc, SIGNAL(lotLevelChanged(WorldCellLot*)),
-                SLOT(lotLevelChanged(WorldCellLot*)));
+        connect(worldDoc, &WorldDocument::lotLevelChanged,
+                this, &LotsModel::lotLevelChanged);
     }
 
     setCell(cell);

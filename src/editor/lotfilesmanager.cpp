@@ -1118,10 +1118,10 @@ void LotFilesManager::resolveProperties(PropertyHolder *ph, PropertyList &result
 
 DelayedMapLoader::DelayedMapLoader()
 {
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instance(), &MapManager::mapLoaded,
+            this, &DelayedMapLoader::mapLoaded);
+    connect(MapManager::instance(), &MapManager::mapFailedToLoad,
+            this, &DelayedMapLoader::mapFailedToLoad);
 }
 
 void DelayedMapLoader::addMap(MapInfo *info)

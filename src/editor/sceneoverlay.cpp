@@ -125,7 +125,7 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
 
     if (!LightbulbsMgr::hasInstance())
         new LightbulbsMgr();
-    connect(LightbulbsMgr::instancePtr(), SIGNAL(changed()), SLOT(update()));
+    connect(LightbulbsMgr::instancePtr(), &LightbulbsMgr::changed, this, &LightSwitchOverlays::update);
 }
 
 #include <QElapsedTimer>

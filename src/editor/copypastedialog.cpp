@@ -617,12 +617,12 @@ void CopyPasteDialog::setup()
 
     ///// WORLD /////
 
-    connect(ui->worldCat, SIGNAL(currentRowChanged(int)),
-            SLOT(worldSelectionChanged(int)));
-    connect(ui->worldTree, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-            SLOT(worldItemChanged(QTreeWidgetItem*,int)));
-    connect(ui->worldCheckAll, SIGNAL(clicked()), SLOT(worldCheckAll()));
-    connect(ui->worldCheckNone, SIGNAL(clicked()), SLOT(worldCheckNone()));
+    connect(ui->worldCat, &QListWidget::currentRowChanged,
+            this, &CopyPasteDialog::worldSelectionChanged);
+    connect(ui->worldTree, &QTreeWidget::itemChanged,
+            this, &CopyPasteDialog::worldItemChanged);
+    connect(ui->worldCheckAll, &QAbstractButton::clicked, this, &CopyPasteDialog::worldCheckAll);
+    connect(ui->worldCheckNone, &QAbstractButton::clicked, this, &CopyPasteDialog::worldCheckNone);
 
     mWorldRootItem[PropertyEnums] = new Item;
     mWorldRootItem[PropertyDefs] = new Item();
@@ -656,12 +656,12 @@ void CopyPasteDialog::setup()
 
     ///// CELLS /////
 
-    connect(ui->cellCat, SIGNAL(currentRowChanged(int)),
-            SLOT(cellCategoryChanged(int)));
-    connect(ui->cellTree, SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-            SLOT(cellItemChanged(QTreeWidgetItem*,int)));
-    connect(ui->cellCheckAll, SIGNAL(clicked()), SLOT(cellCheckAll()));
-    connect(ui->cellCheckNone, SIGNAL(clicked()), SLOT(cellCheckNone()));
+    connect(ui->cellCat, &QListWidget::currentRowChanged,
+            this, &CopyPasteDialog::cellCategoryChanged);
+    connect(ui->cellTree, &QTreeWidget::itemChanged,
+            this, &CopyPasteDialog::cellItemChanged);
+    connect(ui->cellCheckAll, &QAbstractButton::clicked, this, &CopyPasteDialog::cellCheckAll);
+    connect(ui->cellCheckNone, &QAbstractButton::clicked, this, &CopyPasteDialog::cellCheckNone);
 
     mCells.clear();
     if (mCellDoc) {

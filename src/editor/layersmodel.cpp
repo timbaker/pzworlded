@@ -257,21 +257,21 @@ void LayersModel::setCellDocument(CellDocument *doc)
         mMapComposite = mCellDocument->scene()->mapComposite();
         mMap = mMapComposite->map();
 
-        connect(mCellDocument, SIGNAL(layerVisibilityChanged(Tiled::Layer*)),
-                SLOT(layerVisibilityChanged(Tiled::Layer*)));
-        connect(mCellDocument, SIGNAL(layerGroupAdded(int)),
-                SLOT(layerGroupAdded(int)));
-        connect(mCellDocument, SIGNAL(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)),
-                SLOT(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)));
+        connect(mCellDocument, &CellDocument::layerVisibilityChanged,
+                this, &LayersModel::layerVisibilityChanged);
+        connect(mCellDocument, &CellDocument::layerGroupAdded,
+                this, &LayersModel::layerGroupAdded);
+        connect(mCellDocument, &CellDocument::layerGroupVisibilityChanged,
+                this, &LayersModel::layerGroupVisibilityChanged);
 
-        connect(mCellDocument, SIGNAL(cellMapFileAboutToChange()),
-                SLOT(cellMapFileAboutToChange()));
-        connect(mCellDocument, SIGNAL(cellMapFileChanged()),
-                SLOT(cellMapFileChanged()));
-        connect(mCellDocument, SIGNAL(cellContentsAboutToChange()),
-                SLOT(cellMapFileAboutToChange()));
-        connect(mCellDocument, SIGNAL(cellContentsChanged()),
-                SLOT(cellMapFileChanged()));
+        connect(mCellDocument, qOverload<>(&CellDocument::cellMapFileAboutToChange),
+                this, &LayersModel::cellMapFileAboutToChange);
+        connect(mCellDocument, qOverload<>(&CellDocument::cellMapFileChanged),
+                this, &LayersModel::cellMapFileChanged);
+        connect(mCellDocument, qOverload<>(&CellDocument::cellContentsAboutToChange),
+                this, &LayersModel::cellMapFileAboutToChange);
+        connect(mCellDocument, qOverload<>(&CellDocument::cellContentsChanged),
+                this, &LayersModel::cellMapFileChanged);
     }
 
     setModelData();

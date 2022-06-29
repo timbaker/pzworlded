@@ -40,11 +40,11 @@ SpawnToolDialog::SpawnToolDialog(QWidget *parent) :
 
     setWindowFlags(windowFlags() | Qt::Tool);
 
-    connect(ui->add, SIGNAL(clicked()), SLOT(addItem()));
-    connect(ui->remove, SIGNAL(clicked()), SLOT(removeItem()));
-    connect(ui->list, SIGNAL(itemChanged(QListWidgetItem*)),
-            SLOT(itemChanged(QListWidgetItem*)));
-    connect(ui->list, SIGNAL(currentRowChanged(int)), SLOT(currentRowChanged(int)));
+    connect(ui->add, &QAbstractButton::clicked, this, &SpawnToolDialog::addItem);
+    connect(ui->remove, &QAbstractButton::clicked, this, &SpawnToolDialog::removeItem);
+    connect(ui->list, &QListWidget::itemChanged,
+            this, &SpawnToolDialog::itemChanged);
+    connect(ui->list, &QListWidget::currentRowChanged, this, &SpawnToolDialog::currentRowChanged);
 }
 
 SpawnToolDialog::~SpawnToolDialog()
@@ -80,29 +80,29 @@ void SpawnToolDialog::setDocument(CellDocument *doc)
     mDocument = doc;
 
     if (mDocument) {
-        connect(mDocument, SIGNAL(selectedObjectsChanged()),
-                SLOT(selectedObjectsChanged()));
+        connect(mDocument, &CellDocument::selectedObjectsChanged,
+                this, &SpawnToolDialog::selectedObjectsChanged);
 
-        connect(worldDocument(), SIGNAL(propertyEnumAdded(int)),
-                SLOT(checkProfessionsEnum()));
-        connect(worldDocument(), SIGNAL(propertyEnumAboutToBeRemoved(int)),
-                SLOT(propertyEnumAboutToBeRemoved(int)));
-        connect(worldDocument(), SIGNAL(propertyEnumChoicesChanged(PropertyEnum*)),
-                SLOT(propertyEnumChoicesChanged(PropertyEnum*)));
-        connect(worldDocument(), SIGNAL(propertyEnumChanged(PropertyEnum*)),
-                SLOT(checkProfessionsEnum()));
+        connect(worldDocument(), &WorldDocument::propertyEnumAdded,
+                this, &SpawnToolDialog::checkProfessionsEnum);
+        connect(worldDocument(), &WorldDocument::propertyEnumAboutToBeRemoved,
+                this, &SpawnToolDialog::propertyEnumAboutToBeRemoved);
+        connect(worldDocument(), &WorldDocument::propertyEnumChoicesChanged,
+                this, &SpawnToolDialog::propertyEnumChoicesChanged);
+        connect(worldDocument(), &WorldDocument::propertyEnumChanged,
+                this, &SpawnToolDialog::checkProfessionsEnum);
 
-        connect(worldDocument(), SIGNAL(propertyAdded(PropertyHolder*,int)),
-                SLOT(propertiesChanged(PropertyHolder*)));
-        connect(worldDocument(), SIGNAL(propertyRemoved(PropertyHolder*,int)),
-                SLOT(propertiesChanged(PropertyHolder*)));
-        connect(worldDocument(), SIGNAL(propertyValueChanged(PropertyHolder*,int)),
-                SLOT(propertiesChanged(PropertyHolder*)));
+        connect(worldDocument(), &WorldDocument::propertyAdded,
+                this, &SpawnToolDialog::propertiesChanged);
+        connect(worldDocument(), &WorldDocument::propertyRemoved,
+                this, &SpawnToolDialog::propertiesChanged);
+        connect(worldDocument(), &WorldDocument::propertyValueChanged,
+                this, &SpawnToolDialog::propertiesChanged);
 
-        connect(worldDocument(), SIGNAL(templateAdded(PropertyHolder*,int)),
-                SLOT(propertiesChanged(PropertyHolder*)));
-        connect(worldDocument(), SIGNAL(templateRemoved(PropertyHolder*,int)),
-                SLOT(propertiesChanged(PropertyHolder*)));
+        connect(worldDocument(), qOverload<PropertyHolder*,int>(&WorldDocument::templateAdded),
+                this, &SpawnToolDialog::propertiesChanged);
+        connect(worldDocument(), qOverload<PropertyHolder*,int>(&WorldDocument::templateRemoved),
+                this, &SpawnToolDialog::propertiesChanged);
 
         setList();
         selectedObjectsChanged();

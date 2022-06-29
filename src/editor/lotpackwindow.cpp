@@ -276,8 +276,8 @@ LotPackScene::LotPackScene(QWidget *parent) :
     mDarkRectangle->setBrush(Qt::black);
     mDarkRectangle->setOpacity(0.6);
 
-    connect(Preferences::instance(), SIGNAL(highlightCurrentLevelChanged(bool)),
-            SLOT(highlightCurrentLevel()));
+    connect(Preferences::instance(), &Preferences::highlightCurrentLevelChanged,
+            this, &LotPackScene::highlightCurrentLevel);
 }
 
 void LotPackScene::setWorld(IsoWorld *world)
@@ -610,26 +610,26 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     ui->actionZoomOut->setShortcuts(keys);
 
     mView->zoomable()->connectToComboBox(ui->scaleCombo);
-    connect(mView->zoomable(), SIGNAL(scaleChanged(qreal)), SLOT(updateZoom()));
+    connect(mView->zoomable(), &Zoomable::scaleChanged, this, &LotPackWindow::updateZoom);
 
-    connect(ui->actionOpen_World, SIGNAL(triggered()), SLOT(open()));
-    connect(ui->actionClose, SIGNAL(triggered()), SLOT(close()));
+    connect(ui->actionOpen_World, &QAction::triggered, this, qOverload<>(&LotPackWindow::open));
+    connect(ui->actionClose, &QAction::triggered, this, &QWidget::close);
 
-    connect(ui->actionZoomIn, SIGNAL(triggered()), SLOT(zoomIn()));
-    connect(ui->actionZoomOut, SIGNAL(triggered()), SLOT(zoomOut()));
-    connect(ui->actionZoomNormal, SIGNAL(triggered()), SLOT(zoomNormal()));
+    connect(ui->actionZoomIn, &QAction::triggered, this, &LotPackWindow::zoomIn);
+    connect(ui->actionZoomOut, &QAction::triggered, this, &LotPackWindow::zoomOut);
+    connect(ui->actionZoomNormal, &QAction::triggered, this, &LotPackWindow::zoomNormal);
 
-    connect(ui->actionShowMiniMap, SIGNAL(toggled(bool)),
-            prefs, SLOT(setShowMiniMap(bool)));
-    connect(ui->actionShowRoomDefs, SIGNAL(toggled(bool)),
-            mView->scene(), SLOT(showRoomDefs(bool)));
+    connect(ui->actionShowMiniMap, &QAction::toggled,
+            prefs, &Preferences::setShowMiniMap);
+    connect(ui->actionShowRoomDefs, &QAction::toggled,
+            mView->scene(), &LotPackScene::showRoomDefs);
 
-    connect(ui->actionHighlightCurrentLevel, SIGNAL(toggled(bool)),
-            prefs, SLOT(setHighlightCurrentLevel(bool)));
-    connect(ui->actionLevelUp, SIGNAL(triggered()), mView->scene(), SLOT(levelAbove()));
-    connect(ui->actionLevelDown, SIGNAL(triggered()), mView->scene(), SLOT(levelBelow()));
+    connect(ui->actionHighlightCurrentLevel, &QAction::toggled,
+            prefs, &Preferences::setHighlightCurrentLevel);
+    connect(ui->actionLevelUp, &QAction::triggered, mView->scene(), &LotPackScene::levelAbove);
+    connect(ui->actionLevelDown, &QAction::triggered, mView->scene(), &LotPackScene::levelBelow);
 
-    connect(mView, SIGNAL(tilePositionChanged(QPoint)), SLOT(tilePositionChanged(QPoint)));
+    connect(mView, &LotPackView::tilePositionChanged, this, &LotPackWindow::tilePositionChanged);
 
     ui->actionRecent->setVisible(false);
     setRecentMenu();
@@ -682,7 +682,7 @@ void LotPackWindow::setRecentMenu()
         QAction *action = new QAction(info.fileName(), ui->menuFile);
         if (info.exists()) {
             action->setData(recent);
-            connect(action, SIGNAL(triggered()), SLOT(openRecent()));
+            connect(action, &QAction::triggered, this, &LotPackWindow::openRecent);
         } else
             action->setEnabled(false);
         ui->menuFile->insertAction(separatorAfterRecent, action);

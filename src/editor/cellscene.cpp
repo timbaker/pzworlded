@@ -129,9 +129,9 @@ CellMiniMapItem::CellMiniMapItem(CellScene *scene, QGraphicsItem *parent)
 
     updateBoundingRect();
 
-    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
-            SLOT(mapImageChanged(MapImage*)));
-    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged(QRectF)));
+    connect(MapImageManager::instance(), &MapImageManager::mapImageChanged,
+            this, &CellMiniMapItem::mapImageChanged);
+    connect(mScene, &QGraphicsScene::sceneRectChanged, this, &CellMiniMapItem::sceneRectChanged);
 }
 
 QRectF CellMiniMapItem::boundingRect() const
@@ -4091,12 +4091,12 @@ CellScene::CellScene(QObject *parent)
 
     // These signals are handled even when the document isn't current
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(showCellGridChanged(bool)), SLOT(setGridVisible(bool)));
-    connect(prefs, SIGNAL(highlightCurrentLevelChanged(bool)), SLOT(setHighlightCurrentLevel(bool)));
+    connect(prefs, &Preferences::showCellGridChanged, this, &CellScene::setGridVisible);
+    connect(prefs, &Preferences::highlightCurrentLevelChanged, this, &CellScene::setHighlightCurrentLevel);
     setGridVisible(prefs->showCellGrid());
-    connect(prefs, SIGNAL(gridColorChanged(QColor)), SLOT(update()));
-    connect(prefs, SIGNAL(showObjectsChanged(bool)), SLOT(showObjectsChanged(bool)));
-    connect(prefs, SIGNAL(showObjectNamesChanged(bool)), SLOT(showObjectNamesChanged(bool)));
+    connect(prefs, &Preferences::gridColorChanged, this, [this]{this->update();});
+    connect(prefs, &Preferences::showObjectsChanged, this, &CellScene::showObjectsChanged);
+    connect(prefs, &Preferences::showObjectNamesChanged, this, &CellScene::showObjectNamesChanged);
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
 
@@ -4189,53 +4189,53 @@ void CellScene::setDocument(CellDocument *doc)
 {
     mDocument = doc;
 
-    connect(worldDocument(), SIGNAL(cellAdded(WorldCell*)),
-            SLOT(cellAdded(WorldCell*)));
-    connect(worldDocument(), SIGNAL(cellAboutToBeRemoved(WorldCell*)),
-            SLOT(cellAboutToBeRemoved(WorldCell*)));
+    connect(worldDocument(), &WorldDocument::cellAdded,
+            this, &CellScene::cellAdded);
+    connect(worldDocument(), &WorldDocument::cellAboutToBeRemoved,
+            this, &CellScene::cellAboutToBeRemoved);
 
-    connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)), SLOT(cellLotAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)), SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)), SLOT(cellLotMoved(WorldCellLot*)));
-    connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)), SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotAdded, this, &CellScene::cellLotAdded);
+    connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved, this, &CellScene::cellLotAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved, this, &CellScene::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::lotLevelChanged, this, &CellScene::lotLevelChanged);
     connect(worldDocument(), &WorldDocument::cellLotReordered, this, &CellScene::cellLotReordered);
-    connect(mDocument, SIGNAL(selectedLotsChanged()), SLOT(selectedLotsChanged()));
+    connect(mDocument, &CellDocument::selectedLotsChanged, this, &CellScene::selectedLotsChanged);
 
-    connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectMoved(WorldCellObject*)), SLOT(cellObjectMoved(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectResized(WorldCellObject*)), SLOT(cellObjectResized(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-            SLOT(cellObjectGroupChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
-            SLOT(cellObjectReordered(WorldCellObject*)));
-    connect(mDocument, SIGNAL(selectedObjectsChanged()), SLOT(selectedObjectsChanged()));
+    connect(worldDocument(), &WorldDocument::cellObjectAdded, this, &CellScene::cellObjectAdded);
+    connect(worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved, this, &CellScene::cellObjectAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellObjectMoved, this, &CellScene::cellObjectMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectResized, this, &CellScene::cellObjectResized);
+    connect(worldDocument(), &WorldDocument::objectLevelChanged, this, &CellScene::objectLevelChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectNameChanged, this, &CellScene::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectTypeChanged, this, &CellScene::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectGroupChanged,
+            this, &CellScene::cellObjectGroupChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectReordered,
+            this, &CellScene::cellObjectReordered);
+    connect(mDocument, &CellDocument::selectedObjectsChanged, this, &CellScene::selectedObjectsChanged);
 
     connect(worldDocument(), &WorldDocument::cellObjectPointMoved, this, &CellScene::cellObjectPointMoved);
     connect(worldDocument(), &WorldDocument::cellObjectPointsChanged, this, &CellScene::cellObjectPointsChanged);
     connect(mDocument, &CellDocument::selectedObjectPointsChanged, this, &CellScene::selectedObjectPointsChanged);
 
-    connect(worldDocument(), SIGNAL(objectGroupReordered(int)),
-            SLOT(objectGroupReordered(int)));
-    connect(worldDocument(), SIGNAL(objectGroupColorChanged(WorldObjectGroup*)),
-            SLOT(objectGroupColorChanged(WorldObjectGroup*)));
+    connect(worldDocument(), &WorldDocument::objectGroupReordered,
+            this, &CellScene::objectGroupReordered);
+    connect(worldDocument(), &WorldDocument::objectGroupColorChanged,
+            this, &CellScene::objectGroupColorChanged);
 
-    connect(mDocument, SIGNAL(cellMapFileChanged()), SLOT(cellMapFileChanged()));
-    connect(mDocument, SIGNAL(cellContentsChanged()), SLOT(cellContentsChanged()));
-    connect(mDocument, SIGNAL(layerVisibilityChanged(Tiled::Layer*)),
-            SLOT(layerVisibilityChanged(Tiled::Layer*)));
-    connect(mDocument, SIGNAL(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)),
-            SLOT(layerGroupVisibilityChanged(Tiled::ZTileLayerGroup*)));
-    connect(mDocument, SIGNAL(lotLevelVisibilityChanged(int)),
-            SLOT(lotLevelVisibilityChanged(int)));
-    connect(mDocument, SIGNAL(objectLevelVisibilityChanged(int)),
-            SLOT(objectLevelVisibilityChanged(int)));
-    connect(mDocument, SIGNAL(objectGroupVisibilityChanged(WorldObjectGroup*,int)),
-            SLOT(objectGroupVisibilityChanged(WorldObjectGroup*,int)));
-    connect(mDocument, SIGNAL(currentLevelChanged(int)), SLOT(currentLevelChanged(int)));
+    connect(mDocument, qOverload<>(&CellDocument::cellMapFileChanged), this, &CellScene::cellMapFileChanged);
+    connect(mDocument,  qOverload<>(&CellDocument::cellContentsChanged), this, &CellScene::cellContentsChanged);
+    connect(mDocument, &CellDocument::layerVisibilityChanged,
+            this, &CellScene::layerVisibilityChanged);
+    connect(mDocument, &CellDocument::layerGroupVisibilityChanged,
+            this, &CellScene::layerGroupVisibilityChanged);
+    connect(mDocument, &CellDocument::lotLevelVisibilityChanged,
+            this, &CellScene::lotLevelVisibilityChanged);
+    connect(mDocument, &CellDocument::objectLevelVisibilityChanged,
+            this, &CellScene::objectLevelVisibilityChanged);
+    connect(mDocument, &CellDocument::objectGroupVisibilityChanged,
+            this, &CellScene::objectGroupVisibilityChanged);
+    connect(mDocument, &CellDocument::currentLevelChanged, this, &CellScene::currentLevelChanged);
 
     // These are to update ObjectLabelItem
     connect(worldDocument(), &WorldDocument::propertyAdded, this, &CellScene::propertiesChanged);
@@ -4251,33 +4251,33 @@ void CellScene::setDocument(CellDocument *doc)
     connect(mDocument, &CellDocument::selectedInGameMapFeaturesChanged, this, &CellScene::selectedInGameMapFeaturesChanged);
     connect(mDocument, &CellDocument::selectedInGameMapPointsChanged, this, &CellScene::selectedInGameMapPointsChanged);
 
-    connect(worldDocument(), SIGNAL(roadAdded(int)),
-           SLOT(roadAdded(int)));
-    connect(worldDocument(), SIGNAL(roadRemoved(Road*)),
-           SLOT(roadRemoved(Road*)));
-    connect(worldDocument(), SIGNAL(roadCoordsChanged(int)),
-           SLOT(roadCoordsChanged(int)));
-    connect(worldDocument(), SIGNAL(roadWidthChanged(int)),
-           SLOT(roadWidthChanged(int)));
-    connect(worldDocument(), SIGNAL(roadTileNameChanged(int)),
-            SLOT(roadsChanged()));
-    connect(worldDocument(), SIGNAL(roadLinesChanged(int)),
-            SLOT(roadsChanged()));
-    connect(worldDocument(), SIGNAL(selectedRoadsChanged()),
-            SLOT(selectedRoadsChanged()));
+    connect(worldDocument(), &WorldDocument::roadAdded,
+           this, &CellScene::roadAdded);
+    connect(worldDocument(), &WorldDocument::roadRemoved,
+           this, &CellScene::roadRemoved);
+    connect(worldDocument(), &WorldDocument::roadCoordsChanged,
+           this, &CellScene::roadCoordsChanged);
+    connect(worldDocument(), &WorldDocument::roadWidthChanged,
+           this, &CellScene::roadWidthChanged);
+    connect(worldDocument(), &WorldDocument::roadTileNameChanged,
+            this, &CellScene::roadsChanged);
+    connect(worldDocument(), &WorldDocument::roadLinesChanged,
+            this, &CellScene::roadsChanged);
+    connect(worldDocument(), &WorldDocument::selectedRoadsChanged,
+            this, &CellScene::selectedRoadsChanged);
 
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instance(), &MapManager::mapLoaded,
+            this, &CellScene::mapLoaded);
+    connect(MapManager::instance(), &MapManager::mapFailedToLoad,
+            this, &CellScene::mapFailedToLoad);
 
     loadMap();
 
-    connect(Tiled::Internal::TilesetManager::instance(), SIGNAL(tilesetChanged(Tileset*)),
-            SLOT(tilesetChanged(Tileset*)));
+    connect(Tiled::Internal::TilesetManager::instance(), &Internal::TilesetManager::tilesetChanged,
+            this, &CellScene::tilesetChanged);
 
-    connect(Preferences::instance(), SIGNAL(highlightRoomUnderPointerChanged(bool)),
-            SLOT(highlightRoomUnderPointerChanged(bool)));
+    connect(Preferences::instance(), &Preferences::highlightRoomUnderPointerChanged,
+            this, &CellScene::highlightRoomUnderPointerChanged);
 }
 
 WorldDocument *CellScene::worldDocument() const
@@ -4626,12 +4626,12 @@ void CellScene::loadMap()
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
 
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
-    connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
-            SLOT(layerGroupAdded(int)));
-    connect(mMapComposite, SIGNAL(layerGroupAdded(int)),
-            mDocument, SIGNAL(layerGroupAdded(int)));
-    connect(mMapComposite, SIGNAL(needsSynch()),
-            SLOT(mapCompositeNeedsSynch()));
+    connect(mMapComposite, &MapComposite::layerGroupAdded,
+            this, &CellScene::layerGroupAdded);
+    connect(mMapComposite, &MapComposite::layerGroupAdded,
+            mDocument, &CellDocument::layerGroupAdded);
+    connect(mMapComposite, &MapComposite::needsSynch,
+            this, &CellScene::mapCompositeNeedsSynch);
 
     for (int i = 0; i < cell()->lots().size(); i++)
         cellLotAdded(cell(), i);
@@ -5818,33 +5818,33 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     mScene->addItem(mObjectItemParent);
     mScene->addItem(mInGameMapFeatureParent);
 
-    connect(worldDocument(), SIGNAL(cellMapFileChanged(WorldCell*)),
-            SLOT(cellMapFileChanged(WorldCell*)));
-    connect(worldDocument(), SIGNAL(cellContentsChanged(WorldCell*)),
-            SLOT(cellContentsChanged(WorldCell*)));
+    connect(worldDocument(), &WorldDocument::cellMapFileChanged,
+            this, &AdjacentMap::cellMapFileChanged);
+    connect(worldDocument(), &WorldDocument::cellContentsChanged,
+            this, &AdjacentMap::cellContentsChanged);
 
-    connect(worldDocument(), SIGNAL(cellLotAdded(WorldCell*,int)),
-            SLOT(cellLotAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotAboutToBeRemoved(WorldCell*,int)),
-            SLOT(cellLotAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellLotMoved(WorldCellLot*)),
-            SLOT(cellLotMoved(WorldCellLot*)));
-    connect(worldDocument(), SIGNAL(lotLevelChanged(WorldCellLot*)),
-            SLOT(lotLevelChanged(WorldCellLot*)));
+    connect(worldDocument(), &WorldDocument::cellLotAdded,
+            this, &AdjacentMap::cellLotAdded);
+    connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved,
+            this, &AdjacentMap::cellLotAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved,
+            this, &AdjacentMap::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::lotLevelChanged,
+            this, &AdjacentMap::lotLevelChanged);
     connect(worldDocument(), &WorldDocument::cellLotReordered,
             this, &AdjacentMap::cellLotReordered);
 
-    connect(worldDocument(), SIGNAL(cellObjectAdded(WorldCell*,int)), SLOT(cellObjectAdded(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectAboutToBeRemoved(WorldCell*,int)), SLOT(cellObjectAboutToBeRemoved(WorldCell*,int)));
-    connect(worldDocument(), SIGNAL(cellObjectMoved(WorldCellObject*)), SLOT(cellObjectMoved(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectResized(WorldCellObject*)), SLOT(cellObjectResized(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(objectLevelChanged(WorldCellObject*)), SLOT(objectLevelChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectNameChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectTypeChanged(WorldCellObject*)), SLOT(objectXXXXChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectGroupChanged(WorldCellObject*)),
-            SLOT(cellObjectGroupChanged(WorldCellObject*)));
-    connect(worldDocument(), SIGNAL(cellObjectReordered(WorldCellObject*)),
-            SLOT(cellObjectReordered(WorldCellObject*)));
+    connect(worldDocument(), &WorldDocument::cellObjectAdded, this, &AdjacentMap::cellObjectAdded);
+    connect(worldDocument(), &WorldDocument::cellObjectAboutToBeRemoved, this, &AdjacentMap::cellObjectAboutToBeRemoved);
+    connect(worldDocument(), &WorldDocument::cellObjectMoved, this, &AdjacentMap::cellObjectMoved);
+    connect(worldDocument(), &WorldDocument::cellObjectResized, this, &AdjacentMap::cellObjectResized);
+    connect(worldDocument(), &WorldDocument::objectLevelChanged, this, &AdjacentMap::objectLevelChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectNameChanged, this, &AdjacentMap::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectTypeChanged, this, &AdjacentMap::objectXXXXChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectGroupChanged,
+            this, &AdjacentMap::cellObjectGroupChanged);
+    connect(worldDocument(), &WorldDocument::cellObjectReordered,
+            this, &AdjacentMap::cellObjectReordered);
     connect(worldDocument(), &WorldDocument::cellObjectPointMoved, this, &AdjacentMap::cellObjectPointMoved);
     connect(worldDocument(), &WorldDocument::cellObjectPointsChanged, this, &AdjacentMap::cellObjectPointsChanged);
 
@@ -5861,12 +5861,12 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
     connect(worldDocument(), &WorldDocument::inGameMapPropertiesChanged, this, &AdjacentMap::inGameMapPropertiesChanged);
     connect(worldDocument(), &WorldDocument::inGameMapGeometryChanged, this, &AdjacentMap::inGameMapGeometryChanged);
 
-    connect(mScene, SIGNAL(sceneRectChanged(QRectF)), SLOT(sceneRectChanged()));
+    connect(mScene, &QGraphicsScene::sceneRectChanged, this, &AdjacentMap::sceneRectChanged);
 
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instance(), &MapManager::mapLoaded,
+            this, &AdjacentMap::mapLoaded);
+    connect(MapManager::instance(), &MapManager::mapFailedToLoad,
+            this, &AdjacentMap::mapFailedToLoad);
 
     loadMap();
 }

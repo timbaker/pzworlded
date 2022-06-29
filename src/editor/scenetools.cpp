@@ -3201,8 +3201,8 @@ void PasteCellsTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : 0;
 
     if (mScene) {
-        connect(Clipboard::instance(), SIGNAL(clipboardChanged()),
-                SLOT(updateEnabledState()));
+        connect(Clipboard::instance(), &Clipboard::clipboardChanged,
+                this, &PasteCellsTool::updateEnabledState);
     }
 }
 
@@ -4154,8 +4154,8 @@ void WorldBMPTool::setScene(BaseGraphicsScene *scene)
     mScene = scene ? scene->asWorldScene() : 0;
 
     if (mScene) {
-        connect(mScene->worldDocument(), SIGNAL(bmpAboutToBeRemoved(int)),
-                SLOT(bmpAboutToBeRemoved(int)));
+        connect(mScene->worldDocument(), &WorldDocument::bmpAboutToBeRemoved,
+                this, &WorldBMPTool::bmpAboutToBeRemoved);
     }
 }
 
