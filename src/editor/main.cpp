@@ -31,6 +31,10 @@ using namespace Tiled;
 using namespace Tiled::Internal;
 #endif
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QImageReader>
+#endif
+
 int main(int argc, char *argv[])
 {
 #if ZOMBOID
@@ -48,6 +52,10 @@ int main(int argc, char *argv[])
 
 #ifdef Q_WS_MAC
     a.setAttribute(Qt::AA_DontShowIconsInMenus);
+#endif
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QImageReader::setAllocationLimit(0);
 #endif
 
     MainWindow w;

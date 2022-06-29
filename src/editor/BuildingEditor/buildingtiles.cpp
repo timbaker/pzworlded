@@ -124,12 +124,12 @@ BuildingTilesMgr::BuildingTilesMgr() :
     mNoneTileEntry = new NoneBuildingTileEntry(mNoneCategory);
 
     // Forward these signals (backwards compatibility).
-    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetAdded(Tiled::Tileset*)),
-            SIGNAL(tilesetAdded(Tiled::Tileset*)));
-    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetAboutToBeRemoved(Tiled::Tileset*)),
-            SIGNAL(tilesetAboutToBeRemoved(Tiled::Tileset*)));
-    connect(TileMetaInfoMgr::instance(), SIGNAL(tilesetRemoved(Tiled::Tileset*)),
-             SIGNAL(tilesetRemoved(Tiled::Tileset*)));
+    connect(TileMetaInfoMgr::instance(), &TileMetaInfoMgr::tilesetAdded,
+            this, &BuildingTilesMgr::tilesetAdded);
+    connect(TileMetaInfoMgr::instance(), &TileMetaInfoMgr::tilesetAboutToBeRemoved,
+            this, &BuildingTilesMgr::tilesetAboutToBeRemoved);
+    connect(TileMetaInfoMgr::instance(), &TileMetaInfoMgr::tilesetRemoved,
+             this, &BuildingTilesMgr::tilesetRemoved);
 }
 
 BuildingTilesMgr::~BuildingTilesMgr()
@@ -289,7 +289,7 @@ static BuildingTileEntry *readTileEntry(BuildingTileCategory *category,
 
     foreach (SimpleFileKeyValue kv, block.values) {
         if (kv.name == QLatin1String("offset")) {
-            QStringList split = kv.value.split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList split = kv.value.split(QLatin1Char(' '), Qt::SkipEmptyParts);
             if (split.size() != 3) {
                 error = BuildingTilesMgr::instance()->tr("Expected 'offset = name x y', got '%1'").arg(kv.value);
                 delete entry;

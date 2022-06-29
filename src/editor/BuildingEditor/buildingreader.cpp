@@ -688,7 +688,7 @@ QList<BuildingTileEntry *> BuildingReaderPrivate::readUsedTiles()
         if (xml.isEndElement())
             break;
         if (xml.isCharacters() && !xml.isWhitespace()) {
-            QStringList used = xml.text().toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList used = xml.text().toString().split(QLatin1Char(' '), Qt::SkipEmptyParts);
             foreach (QString s, used) {
                 if (BuildingTileEntry *entry = getEntry(s))
                     if (!entry->isNone())
@@ -712,7 +712,7 @@ QList<FurnitureTiles *> BuildingReaderPrivate::readUsedFurniture()
         if (xml.isEndElement())
             break;
         if (xml.isCharacters() && !xml.isWhitespace()) {
-            QStringList used = xml.text().toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList used = xml.text().toString().split(QLatin1Char(' '), Qt::SkipEmptyParts);
             foreach (QString s, used) {
                 if (FurnitureTiles *ftiles = getFurniture(s))
                     result += ftiles;
@@ -748,7 +748,7 @@ Room *BuildingReaderPrivate::readRoom()
     Room *room = new Room();
     room->Name = name;
     room->internalName = internalName;
-    QStringList rgb = color.split(QLatin1Char(' '), QString::SkipEmptyParts);
+    QStringList rgb = color.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     room->Color = qRgb(rgb[0].toInt(), rgb[1].toInt(), rgb[2].toInt());
     for (int i = 0; i < Room::TileCount; i++)
         room->setTile(i, getEntry(tiles[i]));
@@ -1021,7 +1021,7 @@ bool BuildingReaderPrivate::readPoint(const QString &name, QPoint &result)
         result = QPoint();
         return true;
     }
-    QStringList split = s.split(QLatin1Char(','), QString::SkipEmptyParts);
+    QStringList split = s.split(QLatin1Char(','), Qt::SkipEmptyParts);
     if (split.size() != 2) {
         xml.raiseError(tr("expected point, got '%1'").arg(s));
         return false;

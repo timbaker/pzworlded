@@ -70,7 +70,7 @@ public:
 
         xml.setDevice(device);
 
-        if (xml.readNextStartElement() && xml.name() == QLatin1Literal("world")) {
+        if (xml.readNextStartElement() && xml.name() == QLatin1String("world")) {
             world = readWorld(world);
         } else {
             xml.raiseError(tr("Missing 'world' element."));
@@ -82,11 +82,11 @@ public:
 private:
     World *readWorld(World* world)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("world"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("world"));
 
         const QXmlStreamAttributes atts = xml.attributes();
-//        const int width = atts.value(QLatin1Literal("width")).toString().toInt();
-//        const int height = atts.value(QLatin1Literal("height")).toString().toInt();
+//        const int width = atts.value(QLatin1String("width")).toString().toInt();
+//        const int height = atts.value(QLatin1String("height")).toString().toInt();
 
         mWorld = world;
 /*
@@ -99,7 +99,7 @@ private:
         }
 */
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1Literal("cell"))
+            if (xml.name() == QLatin1String("cell"))
                 readCell();
             else
                 readUnknownElement();
@@ -115,13 +115,13 @@ private:
 
     void readCell()
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("cell"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("cell"));
 
         const QPoint& worldOrigin = mWorld->getGenerateLotsSettings().worldOrigin;
 
         const QXmlStreamAttributes atts = xml.attributes();
-        const int x = atts.value(QLatin1Literal("x")).toString().toInt() - worldOrigin.x();
-        const int y = atts.value(QLatin1Literal("y")).toString().toInt() - worldOrigin.y();
+        const int x = atts.value(QLatin1String("x")).toString().toInt() - worldOrigin.x();
+        const int y = atts.value(QLatin1String("y")).toString().toInt() - worldOrigin.y();
 
         if (!mWorld->contains(x, y))
             xml.raiseError(tr("Invalid cell coordinates %1,%2").arg(x).arg(y));
@@ -129,7 +129,7 @@ private:
             WorldCell *cell = mWorld->cellAt(x, y);
 
             while (xml.readNextStartElement()) {
-                if (xml.name() == QLatin1Literal("feature"))
+                if (xml.name() == QLatin1String("feature"))
                     readFeature(cell);
                 else
                     readUnknownElement();
@@ -140,14 +140,14 @@ private:
 
     void readFeature(WorldCell* cell)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("feature"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("feature"));
 
         InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1Literal("geometry"))
+            if (xml.name() == QLatin1String("geometry"))
                 readFeatureGeometry(*feature);
-            else if (xml.name() == QLatin1Literal("properties"))
+            else if (xml.name() == QLatin1String("properties"))
                 readFeatureProperties(*feature);
             else
                 readUnknownElement();
@@ -163,14 +163,14 @@ private:
 
     void readFeatureGeometry(InGameMapFeature& feature)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("geometry"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("geometry"));
 
         const QXmlStreamAttributes atts = xml.attributes();
 
-        feature.mGeometry.mType = atts.value(QLatin1Literal("type")).toString();
+        feature.mGeometry.mType = atts.value(QLatin1String("type")).toString();
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1Literal("coordinates"))
+            if (xml.name() == QLatin1String("coordinates"))
                 readGeometryCoordinates(feature.mGeometry);
             else
                 readUnknownElement();
@@ -179,12 +179,12 @@ private:
 
     void readGeometryCoordinates(InGameMapGeometry& geometry)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("coordinates"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("coordinates"));
 
         InGameMapCoordinates coordinates;
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1Literal("point"))
+            if (xml.name() == QLatin1String("point"))
                 readGeometryCoordinatePoint(coordinates);
             else
                 readUnknownElement();
@@ -195,13 +195,13 @@ private:
 
     void readGeometryCoordinatePoint(InGameMapCoordinates& coordinates)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("point"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("point"));
 
         const QXmlStreamAttributes atts = xml.attributes();
 
         InGameMapPoint point;
-        point.x = atts.value(QLatin1Literal("x")).toDouble();
-        point.y = atts.value(QLatin1Literal("y")).toDouble();
+        point.x = atts.value(QLatin1String("x")).toDouble();
+        point.y = atts.value(QLatin1String("y")).toDouble();
 
         coordinates += point;
 
@@ -210,10 +210,10 @@ private:
 
     void readFeatureProperties(InGameMapFeature& feature)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("properties"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("properties"));
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1Literal("property"))
+            if (xml.name() == QLatin1String("property"))
                 readFeatureProperty(feature);
             else
                 readUnknownElement();
@@ -222,12 +222,12 @@ private:
 
     void readFeatureProperty(InGameMapFeature& feature)
     {
-        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1Literal("property"));
+        Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("property"));
 
         const QXmlStreamAttributes atts = xml.attributes();
         InGameMapProperty property;
-        property.mKey = atts.value(QLatin1Literal("name")).toString();
-        property.mValue = atts.value(QLatin1Literal("value")).toString();
+        property.mKey = atts.value(QLatin1String("name")).toString();
+        property.mValue = atts.value(QLatin1String("value")).toString();
 
         feature.mProperties += property;
 
@@ -245,7 +245,7 @@ private:
 //        qDebug() << "resolveReference" << fileName << "relative to" << relativeTo;
         if (fileName.isEmpty())
             return fileName;
-        if (fileName == QLatin1Literal("."))
+        if (fileName == QLatin1String("."))
             return relativeTo;
         if (QDir::isRelativePath(fileName)) {
             QString path = relativeTo + QLatin1Char('/') + fileName;

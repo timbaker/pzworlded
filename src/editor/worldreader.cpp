@@ -142,7 +142,7 @@ private:
         const QString choicesString = atts.value(QLatin1String("choices")).toString();
         const QString multiString = atts.value(QLatin1String("multi")).toString();
 
-        QStringList choices = choicesString.split(QLatin1String(","), QString::SkipEmptyParts);
+        QStringList choices = choicesString.split(QLatin1String(","), Qt::SkipEmptyParts);
         bool multi = multiString == QLatin1String("true");
 
         PropertyEnum *pe = new PropertyEnum(name, choices, multi);
@@ -450,7 +450,11 @@ private:
                 const QChar sep(QLatin1Char(','));
                 while ((end = pointStr.indexOf(sep, start, Qt::CaseSensitive)) != -1) {
                     bool conversionOk;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                    int x = QStringView(pointStr).sliced(start, end - start).toInt(&conversionOk);
+#else
                     int x = pointStr.midRef(start, end - start).toInt(&conversionOk);
+#endif
                     if (!conversionOk) {
                         xml.raiseError(tr("Unable to parse object point"));
                         return;
@@ -460,7 +464,11 @@ private:
                     while (end < pointStr.length() && (pointStr.at(end).isDigit() || pointStr.at(end) == QLatin1Char('-'))) {
                         end++;
                     }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                    int y = QStringView(pointStr).sliced(start, end - start).toInt(&conversionOk);
+#else
                     int y = pointStr.midRef(start, end - start).toInt(&conversionOk);
+#endif
                     if (!conversionOk) {
                         xml.raiseError(tr("Unable to parse object point"));
                         return;
@@ -698,7 +706,7 @@ private:
             result = QPoint();
             return true;
         }
-        QStringList split = s.split(QLatin1Char(','), QString::SkipEmptyParts);
+        QStringList split = s.split(QLatin1Char(','), Qt::SkipEmptyParts);
         if (split.size() != 2) {
             xml.raiseError(tr("expected point, got '%1'").arg(s));
             return false;

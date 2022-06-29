@@ -22,7 +22,7 @@
 
 #include <QComboBox>
 #include <QLineEdit>
-#include <QValidator>
+#include <QRegularExpressionValidator>
 
 #include <cmath>
 
@@ -152,16 +152,21 @@ void Zoomable::connectToComboBox(QComboBox *comboBox)
         foreach (qreal scale, mZoomFactors)
             mComboBox->addItem(scaleToString(scale), scale);
         syncComboBox();
-        connect(mComboBox, SIGNAL(activated(int)),
-                this, SLOT(comboActivated(int)));
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        connect(mComboBox, qOverload<int>(&QComboBox::activated),
+                this, &Zoomable::comboActivated);
+#else
+        connect(mComboBox, &QComboBox::activated,
+                this, &Zoomable::comboActivated);
+#endif
         mComboBox->setEditable(true);
         mComboBox->setInsertPolicy(QComboBox::NoInsert);
-        connect(mComboBox->lineEdit(), SIGNAL(editingFinished()),
-                this, SLOT(comboEdited()));
+        connect(mComboBox->lineEdit(), &QLineEdit::editingFinished,
+                this, &Zoomable::comboEdited);
 
         if (!mComboValidator)
-            mComboValidator = new QRegExpValidator(mComboRegExp, this);
+            mComboValidator = new QRegularExpressionValidator(mComboRegExp, this);
         mComboBox->setValidator(mComboValidator);
     }
 }
@@ -173,12 +178,12 @@ void Zoomable::comboActivated(int index)
 
 void Zoomable::comboEdited()
 {
-    int pos = mComboRegExp.indexIn(mComboBox->currentText());
-    Q_UNUSED(pos)
-    Q_ASSERT(pos != -1);
-
+    QRegularExpressionMatch rem = mComboRegExp.match(mComboBox->currentText());
+    if (rem.hasMatch() == false) {
+        return;
+    }
     qreal scale = qBound(mZoomFactors.first(),
-                         qreal(mComboRegExp.cap(1).toDouble() / 100.f),
+                         qreal(rem.captured(1).toDouble() / 100.f),
                          mZoomFactors.last());
 
     setScale(scale);

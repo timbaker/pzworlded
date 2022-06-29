@@ -22,11 +22,12 @@
 #define ZOOMABLE_H
 
 #include <QObject>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QVector>
 
 class QComboBox;
-class QRegExpValidator;
+class QRegularExpressionValidator;
+
 
 /**
  * This class represents something zoomable. Is has a zoom factor and methods
@@ -90,8 +91,8 @@ private:
     qreal mScale;
     QVector<qreal> mZoomFactors;
     QComboBox *mComboBox;
-    QRegExp mComboRegExp;
-    QRegExpValidator *mComboValidator;
+    QRegularExpression mComboRegExp;
+    QRegularExpressionValidator *mComboValidator;
 };
 
 #endif // ZOOMABLE_H

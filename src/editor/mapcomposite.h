@@ -351,6 +351,11 @@ public:
     bool showBMPTiles() const
     { return mShowBMPTiles; }
 
+    void setShowLotFloorsOnly(bool show)
+    { mShowLotFloorsOnly = show; }
+    bool showLotFloorsOnly() const
+    { return mShowLotFloorsOnly; }
+
     void setShowMapTiles(bool show)
     { mShowMapTiles = show; }
     bool showMapTiles() const
@@ -435,6 +440,7 @@ private:
     bool mSavedVisible;
     bool mHiddenDuringDrag;
     bool mShowBMPTiles;
+    bool mShowLotFloorsOnly = false;
     bool mShowMapTiles;
     bool mSavedShowBMPTiles;
     bool mSavedShowMapTiles;

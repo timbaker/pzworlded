@@ -512,7 +512,7 @@ void LotPackView::recenter()
                                 cm->ChunkGridWidth, cm->ChunkGridWidth);
 
         // Discard old chunks.
-        foreach (QRect r, (current - updated).rects()) {
+        for (const QRect &r : (current - updated)) {
             for (int x = r.left(); x <= r.right(); x++) {
                 for (int y = r.top(); y <= r.bottom(); y++) {
                     if (IsoChunk *c = cm->getChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin())) {
@@ -526,7 +526,7 @@ void LotPackView::recenter()
 
         // Shift preserved chunks.
         QVector<IsoChunk*> preserved;
-        foreach (QRect r, (current & updated).rects()) {
+        for (const QRect &r : (current & updated)) {
             for (int x = r.left(); x <= r.right(); x++) {
                 for (int y = r.top(); y <= r.bottom(); y++) {
                     if (IsoChunk *c = cm->getChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin())) {
@@ -548,7 +548,7 @@ void LotPackView::recenter()
         }
 
         // Load new chunks;
-        foreach (QRect r, (updated - current).rects()) {
+        for (const QRect &r : (updated - current)) {
             for (int x = r.left(); x <= r.right(); x++) {
                 for (int y = r.top(); y <= r.bottom(); y++) {
 //                    if (x < mWorld->MetaGrid->minx || x > mWorld->MetaGrid->maxx) continue;

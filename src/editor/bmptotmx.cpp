@@ -414,8 +414,10 @@ void BMPToTMX::reportUnknownColors()
     if (!mWorldDoc->world()->getBMPToTMXSettings().warnUnknownColors)
         return;
 
-    QSet<QString> imagePaths = mUnknownColors.keys().toSet() +
-            mUnknownVegColors.keys().toSet();
+    QList<QString> unknownColors = mUnknownColors.keys();
+    QList<QString> unknownVegColors = mUnknownVegColors.keys();
+    QSet<QString> imagePaths = QSet<QString>(unknownColors.begin(), unknownColors.end()) +
+            QSet<QString>(unknownVegColors.begin(), unknownVegColors.end());
 
     foreach (QString imagePath, imagePaths) {
         QMap<QRgb,UnknownColor> &map = mUnknownColors[imagePath];

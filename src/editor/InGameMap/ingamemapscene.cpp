@@ -692,7 +692,7 @@ void CreateInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event
                 InGameMapCoordinates coords;
                 for (QPointF& point : mPolygon)
                     coords += InGameMapPoint(point.x(), point.y());
-                feature->mGeometry.mType = QLatin1Literal("Polygon");
+                feature->mGeometry.mType = QLatin1String("Polygon");
                 feature->mGeometry.mCoordinates += coords;
                 mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
             }
@@ -703,7 +703,7 @@ void CreateInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event
                 InGameMapCoordinates coords;
                 for (QPointF& point : mPolygon)
                     coords += InGameMapPoint(point.x(), point.y());
-                feature->mGeometry.mType = QLatin1Literal("LineString");
+                feature->mGeometry.mType = QLatin1String("LineString");
                 feature->mGeometry.mCoordinates += coords;
                 mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
             }
@@ -814,7 +814,7 @@ void CreateInGameMapFeatureTool::addPoint(const QPointF &scenePos)
         QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
         InGameMapCoordinates coords;
         coords += InGameMapPoint(cellPos.x(), cellPos.y());
-        feature->mGeometry.mType = QLatin1Literal("Point");
+        feature->mGeometry.mType = QLatin1String("Point");
         feature->mGeometry.mCoordinates += coords;
         mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
         return;
@@ -832,7 +832,7 @@ void CreateInGameMapFeatureTool::addPoint(const QPointF &scenePos)
             coords += InGameMapPoint(maxX, minY);
             coords += InGameMapPoint(maxX, maxY);
             coords += InGameMapPoint(minX, maxY);
-            feature->mGeometry.mType = QLatin1Literal("Polygon");
+            feature->mGeometry.mType = QLatin1String("Polygon");
             feature->mGeometry.mCoordinates += coords;
             mScene->worldDocument()->addInGameMapFeature(mScene->cell(), mScene->cell()->inGameMap().mFeatures.size(), feature);
             mPolygon.clear();

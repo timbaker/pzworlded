@@ -39,12 +39,9 @@ public:
     MapReaderWorker(InterruptibleThread *thread, int id);
     ~MapReaderWorker();
 
-    typedef Tiled::Map Map;
-    typedef BuildingEditor::Building Building;
-
 signals:
-    void loaded(Map *map, MapInfo *mapInfo);
-    void loaded(Building *building, MapInfo *mapInfo);
+    void loaded(Tiled::Map *map, MapInfo *mapInfo);
+    void loaded(BuildingEditor::Building *building, MapInfo *mapInfo);
     void failedToLoad(const QString error, MapInfo *mapInfo);
 
 public slots:
@@ -53,8 +50,8 @@ public slots:
     void possiblyRaisePriority(MapInfo *mapInfo, int priority);
 
 private:
-    Map *loadMap(MapInfo *mapInfo);
-    Building *loadBuilding(MapInfo *mapInfo);
+    Tiled::Map *loadMap(MapInfo *mapInfo);
+    BuildingEditor::Building *loadBuilding(MapInfo *mapInfo);
 
     class Job {
     public:
@@ -206,9 +203,6 @@ public:
     QString errorString() const
     { return mError; }
 
-    typedef Tiled::Map Map;
-    typedef BuildingEditor::Building Building;
-
 signals:
     void mapAboutToChange(MapInfo *mapInfo);
     void mapChanged(MapInfo *mapInfo);
@@ -226,8 +220,8 @@ private slots:
     void metaTilesetAdded(Tiled::Tileset *tileset);
     void metaTilesetRemoved(Tiled::Tileset *tileset);
 
-    void mapLoadedByThread(Map *map, MapInfo *mapInfo);
-    void buildingLoadedByThread(Building *building, MapInfo *mapInfo);
+    void mapLoadedByThread(Tiled::Map *map, MapInfo *mapInfo);
+    void buildingLoadedByThread(BuildingEditor::Building *building, MapInfo *mapInfo);
     void failedToLoadByThread(const QString error, MapInfo *mapInfo);
 
     void processDeferrals();
@@ -249,13 +243,13 @@ private:
     int mDeferralDepth;
     struct MapDeferral
     {
-        MapDeferral(MapInfo *mapInfo, Map *map) :
+        MapDeferral(MapInfo *mapInfo, Tiled::Map *map) :
             mapInfo(mapInfo),
             map(map)
         {}
 
         MapInfo *mapInfo;
-        Map *map;
+        Tiled::Map *map;
     };
     QList<MapDeferral> mDeferredMaps;
     bool mDeferralQueued;

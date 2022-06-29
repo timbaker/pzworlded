@@ -24,7 +24,6 @@
 
 #include <QBoxLayout>
 #include <QCompleter>
-#include <QDirModel>
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileSystemModel>
@@ -44,7 +43,7 @@ MapsDock::MapsDock(QWidget *parent)
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setMargin(2);
+    layout->setContentsMargins(2, 2, 2, 2);
 
     mPreviewLabel->setFrameShape(QFrame::StyledPanel);
     mPreviewLabel->setFrameShadow(QFrame::Plain);
@@ -54,9 +53,9 @@ MapsDock::MapsDock(QWidget *parent)
     QHBoxLayout *dirLayout = new QHBoxLayout;
     QLabel *label = new QLabel(tr("Folder:"));
 
-    // QDirModel is obsolete, but I could not get QFileSystemModel to work here
     QLineEdit *edit = mDirectoryEdit = new QLineEdit();
-    QDirModel *model = new QDirModel(this);
+    QFileSystemModel *model = new QFileSystemModel(this);
+    model->setRootPath(QDir::rootPath());
     model->setFilter(QDir::AllDirs | QDir::Dirs | QDir::Drives | QDir::NoDotAndDotDot);
     QCompleter *completer = new QCompleter(model, this);
     edit->setCompleter(completer);
@@ -76,25 +75,25 @@ MapsDock::MapsDock(QWidget *parent)
     setWidget(widget);
     retranslateUi();
 
-    connect(button, SIGNAL(clicked()), this, SLOT(browse()));
+    connect(button, &QAbstractButton::clicked, this, &MapsDock::browse);
 
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(mapsDirectoryChanged()), this, SLOT(onMapsDirectoryChanged()));
+    connect(prefs, &Preferences::mapsDirectoryChanged, this, &MapsDock::onMapsDirectoryChanged);
     edit->setText(QDir::toNativeSeparators(prefs->mapsDirectory()));
-    connect(edit, SIGNAL(returnPressed()), this, SLOT(editedMapsDirectory()));
+    connect(edit, &QLineEdit::returnPressed, this, &MapsDock::editedMapsDirectory);
 
-    connect(mMapsView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-            SLOT(selectionChanged()));
+    connect(mMapsView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MapsDock::selectionChanged);
 
-    connect(MapImageManager::instance(), SIGNAL(mapImageChanged(MapImage*)),
-            SLOT(onMapImageChanged(MapImage*)));
-    connect(MapImageManager::instance(), SIGNAL(mapImageFailedToLoad(MapImage*)),
-            SLOT(mapImageFailedToLoad(MapImage*)));
+    connect(MapImageManager::instance(), &MapImageManager::mapImageChanged,
+            this, &MapsDock::onMapImageChanged);
+    connect(MapImageManager::instance(), &MapImageManager::mapImageFailedToLoad,
+            this, &MapsDock::mapImageFailedToLoad);
 
     // Workaround since a tabbed dockwidget that is not currently visible still
     // returns true for isVisible()
-    connect(this, SIGNAL(visibilityChanged(bool)),
-            mMapsView, SLOT(setVisible(bool)));
+    connect(this, &QDockWidget::visibilityChanged,
+            mMapsView, &QWidget::setVisible);
 }
 
 void MapsDock::browse()
@@ -192,13 +191,13 @@ MapsView::MapsView(QWidget *parent)
     setDefaultDropAction(Qt::MoveAction);
 
     Preferences *prefs = Preferences::instance();
-    connect(prefs, SIGNAL(mapsDirectoryChanged()), this, SLOT(onMapsDirectoryChanged()));
+    connect(prefs, &Preferences::mapsDirectoryChanged, this, &MapsView::onMapsDirectoryChanged);
 
     QDir mapsDir(prefs->mapsDirectory());
     if (!mapsDir.exists())
         mapsDir.setPath(QDir::currentPath());
 
-    QFileSystemModel *model = mFSModel = new QFileSystemModel;
+    QFileSystemModel *model = mFSModel = new QFileSystemModel(this);
     model->setRootPath(mapsDir.absolutePath());
 
     model->setFilter(QDir::AllDirs | QDir::NoDot | QDir::Files);
@@ -229,7 +228,7 @@ MapsView::MapsView(QWidget *parent)
     header()->setResizeMode(1, QHeaderView::ResizeToContents);
 #endif
 
-    connect(this, SIGNAL(activated(QModelIndex)), SLOT(onActivated(QModelIndex)));
+    connect(this, &QAbstractItemView::activated, this, &MapsView::onActivated);
 }
 
 QSize MapsView::sizeHint() const
@@ -271,6 +270,7 @@ void MapsView::onActivated(const QModelIndex &index)
     if (fileInfo.isDir()) {
         Preferences *prefs = Preferences::instance();
         prefs->setMapsDirectory(fileInfo.canonicalFilePath());
+        return;
     }
     if (fileInfo.suffix() == QLatin1String("pzw"))
         MainWindow::instance()->openFile(fileInfo.canonicalFilePath());

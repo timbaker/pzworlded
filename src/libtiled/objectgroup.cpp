@@ -114,7 +114,8 @@ bool ObjectGroup::isEmpty() const
 QSet<Tileset*> ObjectGroup::usedTilesets() const
 {
 #ifdef ZOMBOID
-    return mUsedTilesets.keys().toSet();
+    QList<Tileset*> keys = mUsedTilesets.keys();
+    return { keys.begin(), keys.end() };
 #else
     QSet<Tileset*> tilesets;
 

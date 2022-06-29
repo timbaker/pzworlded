@@ -128,7 +128,7 @@ signals:
     void tilesetRemoved(Tiled::Tileset *ts);
 
 private slots:
-    void tilesetChanged(Tileset *ts);
+    void tilesetChanged(Tiled::Tileset *ts);
 
 private:
     bool parse2Ints(const QString &s, int *pa, int *pb);

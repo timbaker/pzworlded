@@ -196,7 +196,7 @@ public:
     CreateInGameMapPointTool()
         : CreateInGameMapFeatureTool(Type::Point)
     {
-        setIcon(QIcon(QLatin1Literal(":/images/22x22/road-tool-edit.png")));
+        setIcon(QIcon(QLatin1String(":/images/22x22/road-tool-edit.png")));
     }
 };
 
@@ -208,7 +208,7 @@ public:
     CreateInGameMapPolygonTool()
         : CreateInGameMapFeatureTool(Type::Polygon)
     {
-        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polygon.png")));
+        setIcon(QIcon(QLatin1String(":/images/24x24/insert-polygon.png")));
     }
 };
 
@@ -220,7 +220,7 @@ public:
     CreateInGameMapPolylineTool()
         : CreateInGameMapFeatureTool(Type::Polyline)
     {
-        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-polyline.png")));
+        setIcon(QIcon(QLatin1String(":/images/24x24/insert-polyline.png")));
     }
 };
 
@@ -232,7 +232,7 @@ public:
     CreateInGameMapRectangleTool()
         : CreateInGameMapFeatureTool(Type::Rectangle)
     {
-        setIcon(QIcon(QLatin1Literal(":/images/24x24/insert-rectangle.png")));
+        setIcon(QIcon(QLatin1String(":/images/24x24/insert-rectangle.png")));
     }
 };
 

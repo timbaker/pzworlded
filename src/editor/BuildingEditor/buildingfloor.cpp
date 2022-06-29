@@ -26,11 +26,16 @@
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the MapRands class as so:
-// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<int> >
+// class TILEDSHARED_EXPORT MapRands : public QVector<QVector<quint32> >
 // Suddenly I'm getting a 'multiply-defined symbol' error.
 // I found the solution here:
 // http://www.archivum.info/qt-interest@trolltech.com/2005-12/00242/RE-Linker-Problem-while-using-QMap.html
-template class __declspec(dllimport) QVector<QVector<int> >;
+#if QT_VERSION >= 060000
+// QVector is an alias for QList
+template class __declspec(dllimport) QList<QList<quint32> >;
+#else
+template class __declspec(dllimport) QVector<QVector<quint32> >;
+#endif
 #endif
 
 using namespace BuildingEditor;
@@ -122,7 +127,7 @@ bool FloorTileGrid::replace(const QString &tile)
 bool FloorTileGrid::replace(const QRegion &rgn, const QString &tile)
 {
     bool changed = false;
-    foreach (QRect r2, rgn.rects()) {
+    for (QRect r2 : rgn) {
         r2 &= bounds();
         for (int x = r2.left(); x <= r2.right(); x++) {
             for (int y = r2.top(); y <= r2.bottom(); y++) {
@@ -141,7 +146,7 @@ bool FloorTileGrid::replace(const QRegion &rgn, const QPoint &p,
 {
     Q_ASSERT(other->bounds().translated(p).contains(rgn.boundingRect()));
     bool changed = false;
-    foreach (QRect r2, rgn.rects()) {
+    for (QRect r2 : rgn) {
         r2 &= bounds();
         for (int x = r2.left(); x <= r2.right(); x++) {
             for (int y = r2.top(); y <= r2.bottom(); y++) {
@@ -215,7 +220,7 @@ FloorTileGrid *FloorTileGrid::clone(const QRect &r)
 FloorTileGrid *FloorTileGrid::clone(const QRect &r, const QRegion &rgn)
 {
     FloorTileGrid *klone = new FloorTileGrid(r.width(), r.height());
-    foreach (QRect r2, rgn.rects()) {
+    for (QRect r2 : rgn) {
         r2 &= bounds() & r;
         for (int x = r2.left(); x <= r2.right(); x++) {
             for (int y = r2.top(); y <= r2.bottom(); y++) {
@@ -1632,8 +1637,8 @@ void BuildingFloor::LayoutToSquares()
         }
     }
 
-    FloorTileGrid *userTilesWalls = mGrimeGrid.contains(QLatin1Literal("Walls")) ? mGrimeGrid[QLatin1Literal("Walls")] : 0;
-    FloorTileGrid *userTilesWalls2 = mGrimeGrid.contains(QLatin1Literal("Walls2")) ? mGrimeGrid[QLatin1Literal("Walls2")] : 0;
+    FloorTileGrid *userTilesWalls = mGrimeGrid.contains(QLatin1String("Walls")) ? mGrimeGrid[QLatin1String("Walls")] : 0;
+    FloorTileGrid *userTilesWalls2 = mGrimeGrid.contains(QLatin1String("Walls2")) ? mGrimeGrid[QLatin1String("Walls2")] : 0;
 
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
@@ -1768,7 +1773,7 @@ QVector<QRect> BuildingFloor::roomRegion(Room *room)
 
     // Clean up the region by merging vertically-adjacent rectangles of the
     // same width.
-    QVector<QRect> rects = region.rects();
+    QVector<QRect> rects(region.begin(), region.end());
     for (int i = 0; i < rects.size(); i++) {
         QRect r = rects[i];
         if (!r.isValid()) continue;
@@ -2337,7 +2342,7 @@ TileDefWatcher::TileDefWatcher() :
     tileDefFileChecked(false),
     watching(false)
 {
-    connect(mWatcher, SIGNAL(fileChanged(QString)), SLOT(fileChanged(QString)));
+    connect(mWatcher, &FileSystemWatcher::fileChanged, this, &TileDefWatcher::fileChanged);
 }
 
 
@@ -2346,7 +2351,7 @@ void TileDefWatcher::check()
     if (!tileDefFileChecked) {
         QFileInfo fileInfo(TileMetaInfoMgr::instance()->tilesDirectory() + QString::fromLatin1("/newtiledefinitions.tiles"));
 #if 1
-        QFileInfo info2(QLatin1Literal("D:/zomboid-svn/Anims2/workdir/media/newtiledefinitions.tiles"));
+        QFileInfo info2(QLatin1String("D:/zomboid-svn/Anims2/workdir/media/newtiledefinitions.tiles"));
         if (info2.exists())
             fileInfo = info2;
 #endif
@@ -2431,11 +2436,11 @@ static bool tileHasGrimeProperties(BuildingTile *btile, GrimeProperties *props)
                         props->West = props->North = true;
                     else if (tdt->mProperties.contains(QString::fromLatin1("WallSE")))
                         props->SouthEast = true;
-                    if (tdt->mProperties.contains(QLatin1Literal("GrimeType"))) {
-                        props->FullWindow = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("FullWindow");
-                        props->Trim = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("Trim");
-                        props->DoubleLeft = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("DoubleLeft");
-                        props->DoubleRight = tdt->mProperties[QLatin1Literal("GrimeType")] == QLatin1Literal("DoubleRight");
+                    if (tdt->mProperties.contains(QLatin1String("GrimeType"))) {
+                        props->FullWindow = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("FullWindow");
+                        props->Trim = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("Trim");
+                        props->DoubleLeft = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("DoubleLeft");
+                        props->DoubleRight = tdt->mProperties[QLatin1String("GrimeType")] == QLatin1String("DoubleRight");
                     }
                 }
                 return true;

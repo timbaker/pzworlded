@@ -91,8 +91,8 @@ private:
     TileLayer *readLayer();
     void readLayerData(TileLayer *tileLayer);
     void decodeBinaryLayerData(TileLayer *tileLayer,
-                               const QStringRef &text,
-                               const QStringRef &compression);
+                               QStringView text,
+                               QStringView compression);
     void decodeCSVLayerData(TileLayer *tileLayer, const QString &text);
 
     /**
@@ -124,10 +124,10 @@ private:
 
     void readBmpImage();
     void readBmpPixels(int index, const QList<QRgb> &colors);
-    void decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors, const QStringRef &text);
+    void decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors, QStringView text);
 
     void readNoBlend();
-    void decodeNoBlendBits(MapNoBlend *noBlend, const QStringRef &text);
+    void decodeNoBlendBits(MapNoBlend *noBlend, QStringView text);
 #endif
 
     MapReader *p;
@@ -410,8 +410,8 @@ void MapReaderPrivate::readTilesetImage(Tileset *tileset)
 static void readLayerAttributes(Layer *layer,
                                 const QXmlStreamAttributes &atts)
 {
-    const QStringRef opacityRef = atts.value(QLatin1String("opacity"));
-    const QStringRef visibleRef = atts.value(QLatin1String("visible"));
+    const QStringView opacityRef = atts.value(QLatin1String("opacity"));
+    const QStringView visibleRef = atts.value(QLatin1String("visible"));
 
     bool ok;
     const float opacity = opacityRef.toString().toFloat(&ok);
@@ -454,8 +454,8 @@ void MapReaderPrivate::readLayerData(TileLayer *tileLayer)
     Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("data"));
 
     const QXmlStreamAttributes atts = xml.attributes();
-    QStringRef encoding = atts.value(QLatin1String("encoding"));
-    QStringRef compression = atts.value(QLatin1String("compression"));
+    QStringView encoding = atts.value(QLatin1String("encoding"));
+    QStringView compression = atts.value(QLatin1String("compression"));
 
     int x = 0;
     int y = 0;
@@ -501,8 +501,8 @@ void MapReaderPrivate::readLayerData(TileLayer *tileLayer)
 }
 
 void MapReaderPrivate::decodeBinaryLayerData(TileLayer *tileLayer,
-                                             const QStringRef &text,
-                                             const QStringRef &compression)
+                                             QStringView text,
+                                             QStringView compression)
 {
 #if QT_VERSION < 0x040800
     const QString textData = QString::fromRawData(text.unicode(), text.size());
@@ -550,18 +550,18 @@ void MapReaderPrivate::decodeBinaryLayerData(TileLayer *tileLayer,
 }
 
 #if defined(ZOMBOID) /*&& defined(_DEBUG)*/
-void QString_split(const QChar &sep, QString::SplitBehavior behavior, Qt::CaseSensitivity cs, const QString &in, QVector<int>& out)
+void QString_split(const QChar &sep, Qt::SplitBehavior behavior, Qt::CaseSensitivity cs, const QString &in, QVector<int>& out)
 {
     int start = 0;
     int end;
     while ((end = in.indexOf(sep, start, cs)) != -1) {
-        if (start != end || behavior == QString::KeepEmptyParts) {
+        if (start != end || behavior == Qt::KeepEmptyParts) {
             out.append(start);
             out.append(end - start);
         }
         start = end + 1;
     }
-    if (start != in.size() || behavior == QString::KeepEmptyParts) {
+    if (start != in.size() || behavior == Qt::KeepEmptyParts) {
         out.append(start);
         out.append(in.size() - start);
     }
@@ -810,7 +810,7 @@ MapObject *MapReaderPrivate::readObject()
 #else
     const QString type = atts.value(QLatin1String("type")).toString();
 #endif
-    const QStringRef visibleRef = atts.value(QLatin1String("visible"));
+    const QStringView visibleRef = atts.value(QLatin1String("visible"));
 
     const QPointF pos = pixelToTileCoordinates(mMap, x, y);
     const QPointF size = pixelToTileCoordinates(mMap, width, height);
@@ -863,7 +863,7 @@ QPolygonF MapReaderPrivate::readPolygon()
     const QXmlStreamAttributes atts = xml.attributes();
     const QString points = atts.value(QLatin1String("points")).toString();
     const QStringList pointsList = points.split(QLatin1Char(' '),
-                                                QString::SkipEmptyParts);
+                                                Qt::SkipEmptyParts);
 
     QPolygonF polygon;
     bool ok = true;
@@ -956,9 +956,9 @@ void MapReaderPrivate::readBmpSettings()
                 mMap->rbmpSettings()->setBlendsFile(fileName);
             }
             xml.skipCurrentElement();
-        } else if (xml.name() == QLatin1Literal("edges-everywhere")) {
+        } else if (xml.name() == QLatin1String("edges-everywhere")) {
             const QXmlStreamAttributes atts = xml.attributes();
-            bool everywhere = atts.value(QLatin1Literal("value")).toString() == QLatin1Literal("true");
+            bool everywhere = atts.value(QLatin1String("value")).toString() == QLatin1String("true");
             mMap->rbmpSettings()->setBlendEdgesEverywhere(everywhere);
             xml.skipCurrentElement();
         } else if (xml.name() == QLatin1String("aliases")) {
@@ -999,7 +999,7 @@ void MapReaderPrivate::readBmpAliases()
             const QXmlStreamAttributes atts = xml.attributes();
             QString name = atts.value(QLatin1String("name")).toString();
             QStringList tiles = atts.value(QLatin1String("tiles")).toString()
-                    .split(QLatin1Char(' '), QString::SkipEmptyParts);
+                    .split(QLatin1Char(' '), Qt::SkipEmptyParts);
             aliases += new BmpAlias(name, tiles);
             xml.skipCurrentElement();
         } else {
@@ -1067,9 +1067,9 @@ void MapReaderPrivate::readBmpBlends()
             }
             BmpBlend::Direction dir = dirMap[dirString];
             QStringList ExclusionList = atts.value(QLatin1String("ExclusionList"))
-                    .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+                    .toString().split(QLatin1Char(' '), Qt::SkipEmptyParts);
             QStringList exclude2 = atts.value(QLatin1String("exclude2"))
-                    .toString().split(QLatin1Char(' '), QString::SkipEmptyParts);
+                    .toString().split(QLatin1Char(' '), Qt::SkipEmptyParts);
             blends += new BmpBlend(targetLayer, mainTile, blendTile, dir,
                                    ExclusionList, exclude2);
             xml.skipCurrentElement();
@@ -1101,7 +1101,7 @@ bogusColor:
                 xml.raiseError(tr("invalid bmp-image color '%1'").arg(rgbString));
                 return;
             }
-            QStringList split = rgbString.split(QLatin1Char(' '), QString::SkipEmptyParts);
+            QStringList split = rgbString.split(QLatin1Char(' '), Qt::SkipEmptyParts);
             if (split.size() != 3)
                 goto bogusColor;
             int r = split[0].toInt();
@@ -1131,8 +1131,7 @@ void MapReaderPrivate::readBmpPixels(int index, const QList<QRgb> &colors)
     }
 }
 
-void MapReaderPrivate::decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors,
-                                       const QStringRef &text)
+void MapReaderPrivate::decodeBmpPixels(int bmpIndex, const QList<QRgb> &colors, QStringView text)
 {
 #if QT_VERSION < 0x040800
     const QString textData = QString::fromRawData(text.unicode(), text.size());
@@ -1197,7 +1196,7 @@ void MapReaderPrivate::readNoBlend()
     }
 }
 
-void MapReaderPrivate::decodeNoBlendBits(MapNoBlend *noBlend, const QStringRef &text)
+void MapReaderPrivate::decodeNoBlendBits(MapNoBlend *noBlend, QStringView text)
 {
 #if QT_VERSION < 0x040800
     const QString textData = QString::fromRawData(text.unicode(), text.size());

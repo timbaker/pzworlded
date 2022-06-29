@@ -235,7 +235,7 @@ void SpawnToolDialog::setList()
             PropertyList properties;
             resolveProperties(obj, properties);
             if (Property *p = properties.find(pd)) {
-                QStringList choices = p->mValue.split(QLatin1String(","), QString::SkipEmptyParts);
+                QStringList choices = p->mValue.split(QLatin1String(","), Qt::SkipEmptyParts);
                 foreach (QString choice, choices) {
                     int index = professions.indexOf(choice);
                     if (index >= 0) {

@@ -71,36 +71,36 @@ MapImageManager::MapImageManager() :
         mImageReaderThreads[i] = new InterruptibleThread;
         mImageReaderWorkers[i] = new MapImageReaderWorker(mImageReaderThreads[i]);
         mImageReaderWorkers[i]->moveToThread(mImageReaderThreads[i]);
-        connect(mImageReaderWorkers[i], SIGNAL(imageLoaded(QImage*,MapImage*)),
-                SLOT(imageLoadedByThread(QImage*,MapImage*)));
+        connect(mImageReaderWorkers[i], &MapImageReaderWorker::imageLoaded,
+                this, &MapImageManager::imageLoadedByThread);
         mImageReaderThreads[i]->start();
     }
 
     mImageRenderThread = new InterruptibleThread;
     mImageRenderWorker = new MapImageRenderWorker(mImageRenderThread);
     mImageRenderWorker->moveToThread(mImageRenderThread);
-    connect(mImageRenderWorker, SIGNAL(mapNeeded(MapImage*)),
-            SLOT(renderThreadNeedsMap(MapImage*)));
+    connect(mImageRenderWorker, &MapImageRenderWorker::mapNeeded,
+            this, &MapImageManager::renderThreadNeedsMap);
     qRegisterMetaType<MapImageData>("MapImageData");
     qRegisterMetaType<MapImage*>("MapImage*");
     qRegisterMetaType<MapComposite*>("MapComposite*");
     connect(mImageRenderWorker,
-            SIGNAL(imageRendered(MapImageData,MapImage*)),
-            SLOT(imageRenderedByThread(MapImageData,MapImage*)));
-    connect(mImageRenderWorker, SIGNAL(jobDone(MapComposite*)),
-            SLOT(renderJobDone(MapComposite*)));
+            &MapImageRenderWorker::imageRendered,
+            this, &MapImageManager::imageRenderedByThread);
+    connect(mImageRenderWorker, &MapImageRenderWorker::jobDone,
+            this, &MapImageManager::renderJobDone);
     mImageRenderThread->start();
 
-    connect(MapManager::instance(), SIGNAL(mapAboutToChange(MapInfo*)),
-            SLOT(mapAboutToChange(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapChanged(MapInfo*)),
-            SLOT(mapChanged(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFileChanged(MapInfo*)),
-            SLOT(mapFileChanged(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapLoaded(MapInfo*)),
-            SLOT(mapLoaded(MapInfo*)));
-    connect(MapManager::instance(), SIGNAL(mapFailedToLoad(MapInfo*)),
-            SLOT(mapFailedToLoad(MapInfo*)));
+    connect(MapManager::instance(), &MapManager::mapAboutToChange,
+            this, &MapImageManager::mapAboutToChange);
+    connect(MapManager::instance(), &MapManager::mapChanged,
+            this, &MapImageManager::mapChanged);
+    connect(MapManager::instance(), &MapManager::mapFileChanged,
+            this, &MapImageManager::mapFileChanged);
+    connect(MapManager::instance(), &MapManager::mapLoaded,
+            this, &MapImageManager::mapLoaded);
+    connect(MapManager::instance(), &MapManager::mapFailedToLoad,
+            this, &MapImageManager::mapFailedToLoad);
 }
 
 MapImageManager::~MapImageManager()
@@ -1176,7 +1176,7 @@ MapImageData MapImageRenderWorker::generateMapImage(MapComposite *mapComposite)
     QPainter painter(&image);
 
     painter.setRenderHints(QPainter::SmoothPixmapTransform |
-                           QPainter::HighQualityAntialiasing);
+                           QPainter::Antialiasing);
     painter.setTransform(QTransform::fromScale(scale, scale).translate(-sceneRect.left(), -sceneRect.top()));
 
     foreach (MapComposite::ZOrderItem zo, mapComposite->zOrder()) {

@@ -35,7 +35,7 @@ bool TilesetsTxtFile::read(const QString &path)
         return false;
     }
 
-    QString txtName = QLatin1Literal("Tilesets.txt");
+    QString txtName = QLatin1String("Tilesets.txt");
 
     // TODO: handle different versions here.
     if (simple.version() != VERSION_LATEST) {
@@ -165,7 +165,7 @@ bool TilesetsTxtFile::write(const QString &path, int revision, int sourceRevisio
         for (const Tile& tile : tileset->mTiles) {
             SimpleFileBlock tileBlock;
             tileBlock.name = QLatin1String("tile");
-            tileBlock.addValue("xy", QString(QLatin1Literal("%1,%2")).arg(tile.mX).arg(tile.mY));
+            tileBlock.addValue("xy", QString(QLatin1String("%1,%2")).arg(tile.mX).arg(tile.mY));
             tileBlock.addValue("meta-enum", tile.mMetaEnum);
             tilesetBlock.blocks += tileBlock;
         }
@@ -184,7 +184,7 @@ bool TilesetsTxtFile::write(const QString &path, int revision, int sourceRevisio
 
 bool TilesetsTxtFile::parse2Ints(const QString &s, int *pa, int *pb)
 {
-    QStringList coords = s.split(QLatin1Char(','), QString::SkipEmptyParts);
+    QStringList coords = s.split(QLatin1Char(','), Qt::SkipEmptyParts);
     if (coords.size() != 2)
         return false;
     bool ok;

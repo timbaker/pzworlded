@@ -31,7 +31,7 @@ ColorButton::ColorButton(QWidget *parent)
 {
     setColor(Qt::white);
 
-    connect(this, SIGNAL(clicked()), this, SLOT(pickColor()));
+    connect(this, &QAbstractButton::clicked, this, &ColorButton::pickColor);
 }
 
 void ColorButton::setColor(const QColor &color)

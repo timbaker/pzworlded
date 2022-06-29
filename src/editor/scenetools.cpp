@@ -1098,7 +1098,8 @@ void RoomToneTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
 
     if (RoomToneItem *item = topmostItemAt(event->scenePos())) {
-        QSet<WorldCellObject*> selection = mScene->document()->selectedObjects().toSet();
+        QList<WorldCellObject*> selectedObjects = mScene->document()->selectedObjects();
+        QSet<WorldCellObject*> selection(selectedObjects.begin(), selectedObjects.end());
         if (event->modifiers() & Qt::ShiftModifier) {
             selection += item->object();
         } else if (event->modifiers() & Qt::ControlModifier) {
@@ -1111,7 +1112,7 @@ void RoomToneTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             selection.clear();
             selection += item->object();
         }
-        mScene->document()->setSelectedObjects(selection.toList());
+        mScene->document()->setSelectedObjects({selection.begin(), selection.end()});
         event->accept();
         return;
     }
@@ -1408,7 +1409,8 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
 
     if (SpawnPointItem *item = topmostItemAt(event->scenePos())) {
-        QSet<WorldCellObject*> selection = mScene->document()->selectedObjects().toSet();
+        QList<WorldCellObject*> selectedObjects = mScene->document()->selectedObjects();
+        QSet<WorldCellObject*> selection(selectedObjects.begin(), selectedObjects.end());
         if (event->modifiers() & Qt::ShiftModifier)
             selection += item->object();
         else if (event->modifiers() & Qt::ControlModifier) {
@@ -1420,7 +1422,7 @@ void SpawnPointTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             selection.clear();
             selection += item->object();
         }
-        mScene->document()->setSelectedObjects(selection.toList());
+        mScene->document()->setSelectedObjects({selection.begin(), selection.end()});
         event->accept();
         return;
     }

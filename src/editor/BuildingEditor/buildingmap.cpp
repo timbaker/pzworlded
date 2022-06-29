@@ -300,7 +300,7 @@ void BuildingMap::suppressTiles(BuildingFloor *floor, const QRegion &rgn)
         mSuppressTiles[floor] = rgn;
     }
     if (!update.isEmpty()) {
-        foreach (QRect r, update.rects()) {
+        for (QRect r : update) {
             r &= floor->bounds(1, 1);
             pendingSquaresToTileLayers[floor] |= r;
             foreach (QString layerName, floor->grimeLayers())
@@ -346,7 +346,7 @@ static QList<QRect> cleanupRegion(QRegion region)
 {
     // Clean up the region by merging vertically-adjacent rectangles of the
     // same width.
-    QVector<QRect> rects = region.rects();
+    QVector<QRect> rects(region.begin(), region.end());
     for (int i = 0; i < rects.size(); i++) {
         QRect r = rects[i];
         if (!r.isValid()) continue;
@@ -438,7 +438,8 @@ void BuildingMap::buildingRotated()
 
     // When rotating or flipping, all the user tiles are cleared.
     // However, no signal is emitted until the buildingRotated signal.
-    pendingEraseUserTiles = mBuilding->floors().toSet();
+    QList<BuildingFloor*> floors = mBuilding->floors();
+    pendingEraseUserTiles = QSet<BuildingFloor*>(floors.begin(), floors.end());
 
     schedulePending();
 }
@@ -686,7 +687,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor)
     pendingEraseUserTiles.insert(floor);
 
     // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
-//    if (tiles.contains(QLatin1Literal("Walls")) || tiles.contains(QLatin1Literal("Walls2")))
+//    if (tiles.contains(QLatin1String("Walls")) || tiles.contains(QLatin1String("Walls2")))
         pendingLayoutToSquares.insert(floor);
 
     schedulePending();
@@ -700,7 +701,7 @@ void BuildingMap::floorTilesChanged(BuildingFloor *floor, const QString &layerNa
     pendingUserTilesToLayer[floor][layerName] |= bounds;
 
     // Painting tiles in the Walls/Walls2 layer affects which grime tiles are chosen.
-    if (layerName == QLatin1Literal("Walls") || layerName == QLatin1Literal("Walls2"))
+    if (layerName == QLatin1String("Walls") || layerName == QLatin1String("Walls2"))
         pendingLayoutToSquares.insert(floor);
 
     schedulePending();
@@ -860,7 +861,8 @@ void BuildingMap::handlePending()
     }
 
     if (pendingRecreateAll || pendingBuildingResized) {
-        pendingLayoutToSquares = mBuilding->floors().toSet();
+        QList<BuildingFloor*> floors = mBuilding->floors();
+        pendingLayoutToSquares = QSet<BuildingFloor*>(floors.begin(), floors.end());
         pendingUserTilesToLayer.clear();
         foreach (BuildingFloor *floor, mBuilding->floors()) {
             foreach (QString layerName, floor->grimeLayers()) {
@@ -935,7 +937,7 @@ void BuildingMap::handlePending()
         foreach (BuildingFloor *floor, pendingUserTilesToLayer.keys()) {
             foreach (QString layerName, pendingUserTilesToLayer[floor].keys()) {
                 QRegion rgn = pendingUserTilesToLayer[floor][layerName];
-                foreach (QRect r, rgn.rects())
+                for (QRect r : rgn)
                     userTilesToLayer(floor, layerName, r);
                 updatedLevels[floor->level()] |= rgn;
             }

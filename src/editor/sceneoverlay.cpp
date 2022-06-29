@@ -78,7 +78,7 @@ void LightSwitchOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem
 //    mCellScene->renderer()->drawFancyRectangle(painter, QRect(mX, mY, 1, 1), Qt::lightGray, mZ);
     if (option->state & QStyle::State_MouseOver) {
         QPainterPath path;
-        foreach (QRect r, mRoomRegion.rects())
+        for (const QRect &r : mRoomRegion)
             path.addPolygon(mCellScene->renderer()->tileToPixelCoords(r, mZ));
         //    painter->setPen(QPen(QColor(128, 128, 128, 200), 3));
         //    QPainterPathStroker stroker;
@@ -105,7 +105,7 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
 {
     QSettings settings;
 //    QString d = settings.value(QLatin1String("LootWindow/GameDirectory")).toString();
-    QString fileName = Preferences::instance()->tilesDirectory() + QLatin1Literal("/newtiledefinitions.tiles");
+    QString fileName = Preferences::instance()->tilesDirectory() + QLatin1String("/newtiledefinitions.tiles");
     if (QFileInfo(fileName).exists()) {
         mTileDefFile.read(fileName);
 
@@ -159,8 +159,10 @@ void LightSwitchOverlays::update()
         }
     }
 
-    QSet<QString> ignoreRooms = LightbulbsMgr::instance().rooms().toSet();
-    QSet<QString> ignoreBuildings = LightbulbsMgr::instance().maps().toSet();
+    QStringList rooms = LightbulbsMgr::instance().rooms();
+    QSet<QString> ignoreRooms(rooms.begin(), rooms.end());
+    QStringList buildings = LightbulbsMgr::instance().maps();
+    QSet<QString> ignoreBuildings(buildings.begin(), buildings.end());
 
     mMapBuildings = mScene->mMapBuildings;
     foreach (MapBuildingsNS::Building *building, mMapBuildings->buildings()) {

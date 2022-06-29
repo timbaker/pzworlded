@@ -21,6 +21,7 @@
 #include <QHash>
 #include <QList>
 #include <QMap>
+#include <QObject>
 #include <QRegion>
 #include <QString>
 #include <QStringList>

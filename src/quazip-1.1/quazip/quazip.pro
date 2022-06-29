@@ -7,6 +7,10 @@ CONFIG += static
 CONFIG -= app_bundle
 #CONFIG -= qt
 
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
+
 DEFINES += QUAZIP_BUILD QUAZIP_STATIC
 #win32:DEFINES += ZLIB_DLL
 

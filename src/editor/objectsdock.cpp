@@ -63,13 +63,13 @@ ObjectsDock::ObjectsDock(QWidget *parent)
 
     QWidget *widgetH = new QWidget(this);
     QHBoxLayout *layoutH = new QHBoxLayout(widgetH);
-    layoutH->setMargin(2);
+    layoutH->setContentsMargins(2, 2, 2, 2);
     layoutH->addWidget(widthLabel);
     layoutH->addWidget(mPolylineWidth, 1);
 
     QWidget *widget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setMargin(2);
+    layout->setContentsMargins(2, 2, 2, 2);
 
     layout->addWidget(mView);
     layout->addWidget(widgetH);
@@ -374,7 +374,11 @@ void ObjectsViewDelegate::updateEditorGeometry(QWidget *editor,
 
     if (index.column() == 0) {
         // Don't place the editor over the checkbox
+#if QT_VERSION >= 060000
+        QStyleOptionViewItem opt = option;
+#else
         QStyleOptionViewItemV4 opt = option;
+#endif
         initStyleOption(&opt, index);
         QStyle *style = QApplication::style();
         QRect textRect = style->subElementRect(QStyle::SE_ItemViewItemText, &opt);

@@ -89,13 +89,13 @@ class InGameMapGeometry
 {
 public:
     bool isLineString() const
-    { return mType == QLatin1Literal("LineString"); }
+    { return mType == QLatin1String("LineString"); }
 
     bool isPoint() const
-    { return mType == QLatin1Literal("Point"); }
+    { return mType == QLatin1String("Point"); }
 
     bool isPolygon() const
-    { return mType == QLatin1Literal("Polygon"); }
+    { return mType == QLatin1String("Polygon"); }
 
     QString mType;
     QList<InGameMapCoordinates> mCoordinates;
@@ -143,7 +143,7 @@ public:
     void set(const QString& key, int value) {
         for (auto& property : *this) {
             if (property.mKey == key) {
-                property.mValue = value;
+                property.mValue = QString::number(value);
                 return;
             }
         }

@@ -237,16 +237,16 @@ void LootWindow::setList()
             QTreeWidgetItem *cItem = new QTreeWidgetItem(bItem, QStringList() << c->mType << tr("<none>") << posStr);
             cItem->setData(0, Qt::UserRole, QVariant::fromValue(c));
             if (mDistributions.contains(all) && mDistributions[all].contains(c->mType)) {
-                cItem->setBackgroundColor(0, Qt::yellow);
+                cItem->setBackground(0, Qt::yellow);
                 worst = qMin(worst, 2);
             } else {
-                cItem->setBackgroundColor(0, Qt::red);
+                cItem->setBackground(0, Qt::red);
                 worst = qMin(worst, 1);
             }
         }
-        if (worst == 3) bItem->setBackgroundColor(0, Qt::green);
-        else if (worst == 2) bItem->setBackgroundColor(0, Qt::yellow);
-        else if (worst == 1) bItem->setBackgroundColor(0, Qt::red);
+        if (worst == 3) bItem->setBackground(0, Qt::green);
+        else if (worst == 2) bItem->setBackground(0, Qt::yellow);
+        else if (worst == 1) bItem->setBackground(0, Qt::red);
     }
 
     int i = 1;
@@ -259,18 +259,18 @@ void LootWindow::setList()
             QTreeWidgetItem *cItem = new QTreeWidgetItem(bItem, QStringList() << c->mType << roomName << posStr);
             cItem->setData(0, Qt::UserRole, QVariant::fromValue(c));
             if (mDistributions.contains(c->mRoom->name) && mDistributions[c->mRoom->name].contains(c->mType)) {
-                cItem->setBackgroundColor(0, Qt::green);
+                cItem->setBackground(0, Qt::green);
             } else if (mDistributions.contains(all) && mDistributions[all].contains(c->mType)) {
-                cItem->setBackgroundColor(0, Qt::yellow);
+                cItem->setBackground(0, Qt::yellow);
                 worst = qMin(worst, 2);
             } else {
-                cItem->setBackgroundColor(0, Qt::red);
+                cItem->setBackground(0, Qt::red);
                 worst = qMin(worst, 1);
             }
         }
-        if (worst == 3) bItem->setBackgroundColor(0, Qt::green);
-        else if (worst == 2) bItem->setBackgroundColor(0, Qt::yellow);
-        else if (worst == 1) bItem->setBackgroundColor(0, Qt::red);
+        if (worst == 3) bItem->setBackground(0, Qt::green);
+        else if (worst == 2) bItem->setBackground(0, Qt::yellow);
+        else if (worst == 1) bItem->setBackground(0, Qt::red);
         i++;
     }
 }

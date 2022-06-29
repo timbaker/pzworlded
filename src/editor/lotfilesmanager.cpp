@@ -47,6 +47,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QRandomGenerator>
 #include <QRgb>
 
 using namespace Tiled;
@@ -431,7 +432,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
 
     mJumboTreeTileset = nullptr;
     if (mJumboTreeTileset == nullptr) {
-        mJumboTreeTileset = new Tiled::Tileset(QLatin1Literal("jumbo_tree_01"), 64, 128);
+        mJumboTreeTileset = new Tiled::Tileset(QLatin1String("jumbo_tree_01"), 64, 128);
         mJumboTreeTileset->loadFromNothing(QSize(64, 128), QLatin1String("jumbo_tree_01"));
     }
     tilesets += mJumboTreeTileset;
@@ -561,7 +562,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         if (tile->used) {
             tile->id = tilecount;
             tilecount++;
-            if (tile->name.startsWith(QLatin1Literal("jumbo_tree_01"))) {
+            if (tile->name.startsWith(QLatin1String("jumbo_tree_01"))) {
                 int nnn = 0;
             }
         }
@@ -780,13 +781,13 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
         foreach (TileDefTileset *tdts, tdf->tilesets()) {
             foreach (TileDefTile *tdt, tdts->mTiles) {
                 // Get the set of all tree tiles.
-                if (tdt->mProperties.contains(QLatin1Literal("tree")) || (tdts->mName.startsWith(QLatin1Literal("vegetation_trees")))) {
+                if (tdt->mProperties.contains(QLatin1String("tree")) || (tdts->mName.startsWith(QLatin1String("vegetation_trees")))) {
                     treeTiles += QString::fromLatin1("%1_%2").arg(tdts->mName).arg(tdt->id());
                 }
                 // Get the set of all floor + vegetation tiles.
-                if (tdt->mProperties.contains(QLatin1Literal("solidfloor")) ||
-                        tdt->mProperties.contains(QLatin1Literal("FloorOverlay")) ||
-                        tdt->mProperties.contains(QLatin1Literal("vegitation"))) {
+                if (tdt->mProperties.contains(QLatin1String("solidfloor")) ||
+                        tdt->mProperties.contains(QLatin1String("FloorOverlay")) ||
+                        tdt->mProperties.contains(QLatin1String("vegitation"))) {
                     floorVegTiles += QString::fromLatin1("%1_%2").arg(tdts->mName).arg(tdt->id());
                 }
             }
@@ -902,6 +903,8 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
             }
         }
     }
+
+    QRandomGenerator qrand;
 
     while (!allTreePos.isEmpty()) {
         int r = qrand() % allTreePos.size();

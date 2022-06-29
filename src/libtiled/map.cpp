@@ -223,7 +223,8 @@ bool Map::isTilesetUsed(Tileset *tileset) const
 #ifdef ZOMBOID
 QSet<Tileset *> Map::usedTilesets() const
 {
-    return mUsedTilesets.keys().toSet();
+    QList<Tileset*> keys = mUsedTilesets.keys();
+    return { keys.begin(), keys.end() };
 }
 
 void Map::addTilesetUser(Tileset *tileset)
@@ -366,6 +367,8 @@ Map *Map::fromLayer(Layer *layer)
 }
 
 #ifdef ZOMBOID
+#include <QRandomGenerator>
+
 MapRands::MapRands(int width, int height, uint seed) :
     mSeed(seed)
 {
@@ -374,12 +377,12 @@ MapRands::MapRands(int width, int height, uint seed) :
 
 void MapRands::setSize(int width, int height)
 {
-    qsrand(mSeed);
+    QRandomGenerator qrand(mSeed);
     resize(width);
     for (int x = 0; x < width; x++) {
         (*this)[x].resize(height);
         for (int y = 0; y < height; y++)
-            (*this)[x][y] = qrand();
+            (*this)[x][y] = qrand.generate();
     }
 }
 
@@ -513,7 +516,7 @@ QList<QRgb> MapBmp::colors() const
                 colorSet += rgb;
         }
     }
-    return colorSet.toList();
+    return { colorSet.begin(), colorSet.end() };
 }
 
 /////
@@ -539,7 +542,7 @@ void MapNoBlend::replace(const MapNoBlend *other, const QRegion &rgn)
     Q_ASSERT(other->width() == bounds.width() && other->height() == bounds.height());
     QRegion clipped = rgn & QRect(0, 0, width(), height());
 
-    foreach (QRect r, clipped.rects()) {
+    for (const QRect& r : clipped) {
         for (int y = r.top(); y <= r.bottom(); y++) {
             for (int x = r.x(); x <= r.right(); x++) {
                 set(x, y, other->get(x - bounds.x(),  y - bounds.y()));
@@ -553,7 +556,7 @@ MapNoBlend MapNoBlend::copy(const QRegion &rgn)
     QRect bounds = rgn.boundingRect();
     MapNoBlend copy(layerName(), bounds.width(), bounds.height());
     QRegion clipped = rgn & QRect(0, 0, width(), height());
-    foreach (QRect r, clipped.rects()) {
+    for (const QRect& r : clipped) {
         for (int y = r.top(); y <= r.bottom(); y++) {
             for (int x = r.x(); x <= r.right(); x++) {
                 copy.set(x - bounds.x(), y - bounds.y(), get(x, y));

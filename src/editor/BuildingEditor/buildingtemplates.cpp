@@ -196,7 +196,7 @@ bool TemplatesFile::read(const QString &fileName)
 
             QList<BuildingTileEntry*> usedTiles;
             foreach (QString s, block.value("UsedTiles").split(QLatin1Char(' '),
-                                                               QString::SkipEmptyParts)) {
+                                                               Qt::SkipEmptyParts)) {
                 if (BuildingTileEntry *entry = getEntry(s, false))
                     usedTiles += entry;
             }
@@ -204,7 +204,7 @@ bool TemplatesFile::read(const QString &fileName)
 
             QList<FurnitureTiles*> usedFurniture;
             foreach (QString s, block.value("UsedFurniture").split(QLatin1Char(' '),
-                                                                   QString::SkipEmptyParts)) {
+                                                                   Qt::SkipEmptyParts)) {
                 if (FurnitureTiles *ftiles = getFurnitureTiles(s))
                     usedFurniture += ftiles;
             }
@@ -215,7 +215,7 @@ bool TemplatesFile::read(const QString &fileName)
                     Room *room = new Room;
                     room->Name = roomBlock.value("Name");
                     QStringList rgb = roomBlock.value("Color").split(QLatin1String(" "),
-                                                                     QString::SkipEmptyParts);
+                                                                     Qt::SkipEmptyParts);
                     room->Color = qRgb(rgb.at(0).toInt(),
                                        rgb.at(1).toInt(),
                                        rgb.at(2).toInt());
@@ -340,7 +340,7 @@ BuildingTileEntry *TemplatesFile::readTileEntry(SimpleFileBlock &block, QString 
             if (kv.name == QLatin1String("category"))
                 continue;
             if (kv.name == QLatin1String("offset")) {
-                QStringList split = kv.value.split(QLatin1Char(' '), QString::SkipEmptyParts);
+                QStringList split = kv.value.split(QLatin1Char(' '), Qt::SkipEmptyParts);
                 if (split.size() != 3) {
                     error = tr("Expected 'offset = name x y', got '%1'").arg(kv.value);
                     delete entry;

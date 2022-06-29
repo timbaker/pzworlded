@@ -8,6 +8,10 @@ include(../zlib/zlib.pri)
 QT       += core gui xml
 contains(QT_CONFIG, opengl): QT += opengl
 
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += openglwidgets
+}
+
 # MSVC
 win32 {
     QMAKE_CFLAGS_RELEASE += -Zi
@@ -309,3 +313,21 @@ win32 {
 }
 
 win32:INCLUDEPATH += .
+
+isEmpty(INSTALL_ONLY_BUILD) {
+    win32:CONFIG_PREFIX = $${target.path}
+    unix:CONFIG_PREFIX = $${target.path}/../share/tilezed/config
+    macx:CONFIG_PREFIX = $${target.path}/PZWorldEd.app/Contents/Config
+} else {
+    win32:CONFIG_PREFIX = $${top_builddir}
+    unix:CONFIG_PREFIX = $${top_builddir}/share/tilezed/config
+    macx:CONFIG_PREFIX = $${top_builddir}/bin/PZWorldEd.app/Contents/Config
+}
+
+configTxtFiles.path = $${CONFIG_PREFIX}
+configTxtFiles.files = \
+    $${top_srcdir}/Blends.txt \
+    $${top_srcdir}/MapBaseXML.txt \
+    $${top_srcdir}/Rules.txt \
+    $${top_srcdir}/WorldDefaults.txt
+INSTALLS += configTxtFiles

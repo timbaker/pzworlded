@@ -95,6 +95,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QRandomGenerator>
 #include <QScrollBar>
 #include <QUndoGroup>
 #include <QUndoStack>
@@ -1178,6 +1179,8 @@ void MainWindow::FromToAux(bool selectedOnly)
 
     PROGRESS progress(tr("Making a mess of things"));
 
+    QRandomGenerator qrand;
+
     foreach (QString fileName, fileNames) {
         if (MapInfo *mapInfo = MapManager::instance()->loadMap(fileName)) {
             QScopedPointer<Map> map(mapInfo->map()->clone());
@@ -1985,7 +1988,7 @@ void MainWindow::splitInGameMapPolygon()
 
     InGameMapFeature* feature2 = new InGameMapFeature(&cellDoc->cell()->inGameMap());
     InGameMapGeometry& geom = feature2->mGeometry;
-    geom.mType = QLatin1Literal("Polygon");
+    geom.mType = QLatin1String("Polygon");
     geom.mCoordinates << coords2;
     feature2->mProperties = feature->properties();
 
@@ -2157,7 +2160,7 @@ void MainWindow::removeInGameMapPoint()
     int coordIndex = featureItem->selectedCoordIndex();
     InGameMapCoordinates coords = feature->mGeometry.mCoordinates[coordIndex];
     QList<int> selection = cellDoc->selectedInGameMapPoints();
-    qSort(selection);
+    std::sort(selection.begin(), selection.end());
     for (int i = selection.size() - 1; i >= 0; i--) {
         int index = selection[i];
         if (index >= 0 && index < coords.size()) {

@@ -68,12 +68,12 @@ ToolManager::ToolManager()
 {
     mToolBar->setObjectName(QLatin1String("toolsToolBar"));
     mToolBar->setWindowTitle(tr("Tools"));
-    connect(mToolBar, SIGNAL(languageChanged()),
-            this, SLOT(languageChanged()));
+    connect((ToolBar*) mToolBar, &ToolBar::languageChanged,
+            this, &ToolManager::languageChanged);
 
     mActionGroup->setExclusive(true);
-    connect(mActionGroup, SIGNAL(triggered(QAction*)),
-            this, SLOT(actionTriggered(QAction*)));
+    connect(mActionGroup, &QActionGroup::triggered,
+            this, &ToolManager::actionTriggered);
 }
 
 ToolManager::~ToolManager()
@@ -96,8 +96,8 @@ void ToolManager::registerTool(AbstractTool *tool)
     mActionGroup->addAction(toolAction);
     mToolBar->addAction(toolAction);
 
-    connect(tool, SIGNAL(enabledChanged(bool)),
-            this, SLOT(toolEnabledChanged(bool)));
+    connect(tool, &AbstractTool::enabledChanged,
+            this, &ToolManager::toolEnabledChanged);
 
     // Select the first added tool
     if (!mSelectedTool && tool->isEnabled()) {
@@ -237,8 +237,8 @@ void ToolManager::setSelectedTool(AbstractTool *tool)
         return;
 
     if (mSelectedTool) {
-        disconnect(mSelectedTool, SIGNAL(statusInfoChanged(QString)),
-                   this, SIGNAL(statusInfoChanged(QString)));
+        disconnect(mSelectedTool, &AbstractTool::statusInfoChanged,
+                   this, &ToolManager::statusInfoChanged);
     }
 
     mSelectedTool = tool;
@@ -249,7 +249,7 @@ void ToolManager::setSelectedTool(AbstractTool *tool)
 
     if (mSelectedTool) {
         emit statusInfoChanged(mSelectedTool->statusInfo());
-        connect(mSelectedTool, SIGNAL(statusInfoChanged(QString)),
-                this, SIGNAL(statusInfoChanged(QString)));
+        connect(mSelectedTool, &AbstractTool::statusInfoChanged,
+                this, &ToolManager::statusInfoChanged);
     }
 }

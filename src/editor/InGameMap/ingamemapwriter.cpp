@@ -101,25 +101,25 @@ public:
     {
         w.writeStartElement(QLatin1String("feature"));
 
-        w.writeStartElement(QLatin1Literal("geometry"));
-        w.writeAttribute(QLatin1Literal("type"), feature->mGeometry.mType);
+        w.writeStartElement(QLatin1String("geometry"));
+        w.writeAttribute(QLatin1String("type"), feature->mGeometry.mType);
         for (auto& coords : feature->mGeometry.mCoordinates) {
-            w.writeStartElement(QLatin1Literal("coordinates"));
+            w.writeStartElement(QLatin1String("coordinates"));
             for (auto& point : coords) {
-                w.writeStartElement(QLatin1Literal("point"));
-                w.writeAttribute(QLatin1Literal("x"), QString::number(point.x));
-                w.writeAttribute(QLatin1Literal("y"), QString::number(point.y));
+                w.writeStartElement(QLatin1String("point"));
+                w.writeAttribute(QLatin1String("x"), QString::number(point.x));
+                w.writeAttribute(QLatin1String("y"), QString::number(point.y));
                 w.writeEndElement();
             }
             w.writeEndElement();
         }
         w.writeEndElement();
 
-        w.writeStartElement(QLatin1Literal("properties"));
+        w.writeStartElement(QLatin1String("properties"));
         for (auto& property : feature->mProperties) {
-            w.writeStartElement(QLatin1Literal("property"));
-            w.writeAttribute(QLatin1Literal("name"), property.mKey);
-            w.writeAttribute(QLatin1Literal("value"), property.mValue);
+            w.writeStartElement(QLatin1String("property"));
+            w.writeAttribute(QLatin1String("name"), property.mKey);
+            w.writeAttribute(QLatin1String("value"), property.mValue);
             w.writeEndElement();
         }
         w.writeEndElement();
