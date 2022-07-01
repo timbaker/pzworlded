@@ -290,6 +290,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionRemoveLot, &QAction::triggered, this, &MainWindow::removeLot);
     connect(ui->actionRemoveObject, &QAction::triggered, this, &MainWindow::removeObject);
+    connect(ui->actionSplitObjectPolygon, &QAction::triggered, this, &MainWindow::splitObjectPolygon);
     connect(ui->actionExtractLots, &QAction::triggered, this, &MainWindow::extractLots);
     connect(ui->actionExtractObjects, &QAction::triggered, this, &MainWindow::extractObjects);
     connect(ui->actionClearCell, &QAction::triggered, this, &MainWindow::clearCells);
@@ -608,6 +609,7 @@ void MainWindow::currentDocumentChanged(Document *doc)
             connect(cellDoc, &CellDocument::currentLevelChanged, this, &MainWindow::updateActions);
             connect(cellDoc, &CellDocument::selectedLotsChanged, this, &MainWindow::updateActions);
             connect(cellDoc, &CellDocument::selectedObjectsChanged, this, &MainWindow::updateActions);
+            connect(cellDoc, &CellDocument::selectedObjectPointsChanged, this, &MainWindow::updateActions);
             connect(cellDoc, &CellDocument::currentObjectGroupChanged,
                     this, &MainWindow::updateActions);
             connect(cellDoc->view(), &BaseGraphicsView::statusBarCoordinatesChanged,
@@ -1309,6 +1311,43 @@ WorldDocument *MainWindow::currentWorldDocument()
     return nullptr;
 }
 
+bool MainWindow::canSplitObjectPolygon()
+{
+    if (mCurrentDocument == nullptr) {
+        return false;
+    }
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    if (cellDoc == nullptr) {
+        return false;
+    }
+    auto& objects = cellDoc->selectedObjects();
+    if (objects.size() != 1) {
+        return false;
+    }
+    WorldCellObject* object = objects.first();
+    if (object->isPolygon() == false) {
+        return false;
+    }
+    auto& selection = cellDoc->selectedObjectPoints();
+    if (selection.size() != 2) {
+        return false;
+    }
+    int index1 = selection.first();
+    int index2 = selection.last();
+    if (index1 > index2) {
+        qSwap(index1, index2);
+    }
+
+    const WorldCellObjectPoints& points = object->points();
+    int numCoords2 = index2 - index1 + 1;
+    int numCoords1 = points.size() - numCoords2 + 2;
+
+    if (numCoords1 < 3 || numCoords2 < 3) {
+        return false;
+    }
+    return true;
+}
+
 bool MainWindow::saveFile()
 {
     if (!mCurrentDocument)
@@ -1733,6 +1772,47 @@ void MainWindow::removeObject()
         worldDoc->removeCellObject(cell, index);
     }
     undoStack->endMacro();
+}
+
+void MainWindow::splitObjectPolygon()
+{
+    if (canSplitObjectPolygon() == false) {
+        return;
+    }
+    auto* worldDoc = currentWorldDocument();
+    auto* cellDoc = mCurrentDocument->asCellDocument();
+    WorldCellObject* object = cellDoc->selectedObjects().first();
+    auto& selection = cellDoc->selectedObjectPoints();
+    int index1 = selection.first();
+    int index2 = selection.last();
+    if (index1 > index2) {
+        qSwap(index1, index2);
+    }
+
+    const WorldCellObjectPoints& points = object->points();
+    int numPoints2 = index2 - index1 + 1;
+    int numPoints1 = points.size() - numPoints2 + 2;
+
+    WorldCellObjectPoints points1;
+    for (int i = 0; i < numPoints1; i++) {
+        int index = (index2 + i) % points.size();
+        points1 << points[index];
+    }
+
+    WorldCellObjectPoints points2;
+    std::copy(points.begin() + index1, points.begin() + index2 + 1, std::back_inserter(points2));
+
+    qreal x = points2[0].x, y = points2[0].y, width = 1, height = 1;
+    int level = object->level();
+    WorldCellObject* object2 = new WorldCellObject(cellDoc->cell(), object->name(), object->type(), object->group(), x, y, level, width, height);
+    object2->setGeometryType(object->geometryType());
+    object2->setPoints(points2);
+    object2->setProperties(object->properties().clone());
+
+    worldDoc->undoStack()->beginMacro(tr("Split Object Polygon"));
+    worldDoc->setCellObjectPoints(cellDoc->cell(), object->index(), points1);
+    worldDoc->addCellObject(cellDoc->cell(), cellDoc->cell()->objects().size(), object2);
+    worldDoc->undoStack()->endMacro();
 }
 
 void MainWindow::extractLots()
@@ -2488,6 +2568,7 @@ void MainWindow::updateActions()
     bool removeObject = (cellDoc && cellDoc->selectedObjectCount())
             || (worldDoc && worldDoc->selectedObjectCount());
     ui->actionRemoveObject->setEnabled(removeObject);
+    ui->actionSplitObjectPolygon->setEnabled(canSplitObjectPolygon());
 
     ui->actionExtractLots->setEnabled(cellDoc != 0);
     ui->actionExtractObjects->setEnabled(cellDoc != 0);

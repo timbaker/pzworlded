@@ -4602,6 +4602,7 @@ QRectF CellObjectEdgeResizeHandle::edgeRect() const
     case Edge::West:
         return QRectF(x, y, T, h);
     }
+    return QRectF();
 }
 
 void CellObjectEdgeResizeHandle::updateOffsetLabel()

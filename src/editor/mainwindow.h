@@ -130,6 +130,7 @@ public slots:
 
     void removeLot();
     void removeObject();
+    void splitObjectPolygon();
     void extractLots();
     void extractObjects();
     void clearCells();
@@ -179,6 +180,8 @@ private:
     void enableDeveloperFeatures();
 
     WorldDocument *currentWorldDocument();
+
+    bool canSplitObjectPolygon();
 
     bool canSplitInGameMapPolygon();
     bool canRemoveInGameMapPoint();
