@@ -24,6 +24,7 @@
 #include "mainwindow.h"
 #include "undoredo.h"
 #include "world.h"
+#include "worldcell.h"
 #include "worldscene.h"
 #include "worldview.h"
 #include "worldwriter.h"
@@ -35,7 +36,6 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QUndoStack>
-#include <WorldCell.h>
 
 WorldDocument::WorldDocument(World *world, const QString &fileName)
     : Document(WorldDocType)
