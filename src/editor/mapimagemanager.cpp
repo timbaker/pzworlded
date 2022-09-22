@@ -29,6 +29,7 @@
 #include "mapmanager.h"
 #include "objectgroup.h"
 #include "orthogonalrenderer.h"
+#include "preferences.h"
 #include "progress.h"
 #include "staggeredrenderer.h"
 #include "tilelayer.h"
@@ -852,21 +853,55 @@ void MapImageManager::mapFailedToLoad(MapInfo *mapInfo)
 
 QFileInfo MapImageManager::imageFileInfo(const QString &mapFilePath)
 {
-    QFileInfo mapFileInfo(mapFilePath);
-    QDir mapDir = mapFileInfo.absoluteDir();
-    if (!mapDir.exists())
-        return QFileInfo();
-    QFileInfo imagesDirInfo(mapDir, QLatin1String(".pzeditor"));
-    if (!imagesDirInfo.exists()) {
-        if (!mapDir.mkdir(QLatin1String(".pzeditor")))
+    QString thumbnailsDirectory = Preferences::instance()->thumbnailsDirectory();
+    if (thumbnailsDirectory.isEmpty() || !QFileInfo::exists(thumbnailsDirectory)) {
+        QFileInfo mapFileInfo(mapFilePath);
+        QDir mapDir = mapFileInfo.absoluteDir();
+        if (!mapDir.exists()) {
             return QFileInfo();
+        }
+        QFileInfo imagesDirInfo(mapDir, QLatin1String(".pzeditor"));
+        if (!imagesDirInfo.exists()) {
+            if (!mapDir.mkdir(QLatin1String(".pzeditor"))) {
+                return QFileInfo();
+            }
+        }
+
+        // Need to distinguish BMPToTMX image formats, so include .png or .bmp
+        // in the file name.
+        QString suffix;
+        if (mapFileInfo.suffix() != QLatin1String("tmx")) {
+            suffix = QLatin1String("_") + mapFileInfo.suffix();
+        }
+
+        return QFileInfo(imagesDirInfo.absoluteFilePath() + QLatin1Char('/') +
+                         mapFileInfo.completeBaseName() + suffix + QLatin1String(".png"));
+    }
+
+    QFileInfo thumbnailDirInfo(thumbnailsDirectory);
+    QDir thumbnailDir(thumbnailDirInfo.absoluteFilePath());
+    QString canonicalDir = QFileInfo(mapFilePath).absoluteDir().canonicalPath();
+#ifdef Q_OS_WINDOWS
+    int colon = canonicalDir.indexOf(QLatin1Char(':'));
+    if (colon != -1) {
+        QString driveLetter = canonicalDir.left(colon);
+        canonicalDir = QLatin1String("Drive") + driveLetter + canonicalDir.mid(colon + 1);
+    }
+#endif
+    QFileInfo imagesDirInfo(thumbnailDir, canonicalDir);
+    if (!imagesDirInfo.exists()) {
+        if (!imagesDirInfo.dir().mkpath(imagesDirInfo.absoluteFilePath())) {
+            return QFileInfo();
+        }
     }
 
     // Need to distinguish BMPToTMX image formats, so include .png or .bmp
     // in the file name.
     QString suffix;
-    if (mapFileInfo.suffix() != QLatin1String("tmx"))
+    QFileInfo mapFileInfo(mapFilePath);
+    if (mapFileInfo.suffix() != QLatin1String("tmx")) {
         suffix = QLatin1String("_") + mapFileInfo.suffix();
+    }
 
     return QFileInfo(imagesDirInfo.absoluteFilePath() + QLatin1Char('/') +
                      mapFileInfo.completeBaseName() + suffix + QLatin1String(".png"));

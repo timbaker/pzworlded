@@ -134,6 +134,9 @@ Preferences::Preferences()
     if (configPath.isEmpty())
         configPath = QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
     mConfigDirectory = configPath;
+
+    // Use the same directory as TileZed.
+    mThumbnailsDirectory = settings.value(QLatin1String("Thumbnails/Directory")).toString();
 }
 
 Preferences::~Preferences()

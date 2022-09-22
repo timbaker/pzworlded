@@ -66,6 +66,9 @@ public:
 
     QString texturesDirectory() const;
 
+    QString thumbnailsDirectory() const
+    { return mThumbnailsDirectory; }
+
     bool useOpenGL() const { return mUseOpenGL; }
     void setUseOpenGL(bool useOpenGL);
 
@@ -165,6 +168,7 @@ private:
     bool mShowAdjacentMaps;
     bool mHighlightRoomUnderPointer;
     bool mShowOtherWorlds;
+    QString mThumbnailsDirectory;
 
     static Preferences *mInstance;
 };

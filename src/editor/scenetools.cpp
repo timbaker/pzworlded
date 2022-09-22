@@ -1067,7 +1067,7 @@ RoomToneTool::RoomToneTool()
                         QKeySequence()),
       mContextMenuVisible(false)
 {
-    new SpawnToolDialog(MainWindow::instance());
+//    new SpawnToolDialog(MainWindow::instance());
 }
 
 void RoomToneTool::activate()
