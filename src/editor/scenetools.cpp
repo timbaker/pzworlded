@@ -2316,6 +2316,7 @@ void AbstractCreatePolygonObjectTool::finishItem()
             }
             object->setGeometryType(mGeometryType);
             object->setPoints(points);
+            object->calculateBounds();
             mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
         }
         break;
@@ -2332,6 +2333,7 @@ void AbstractCreatePolygonObjectTool::finishItem()
             }
             object->setGeometryType(mGeometryType);
             object->setPoints(points);
+            object->calculateBounds();
             mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
         }
         break;
@@ -2432,6 +2434,7 @@ void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
                                                       MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
         object->setGeometryType(mGeometryType);
         object->setPoints(points);
+        object->calculateBounds();
         mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
         return;
     }

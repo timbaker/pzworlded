@@ -1468,6 +1468,7 @@ WorldCellObjectPoint WorldDocumentUndoRedo::moveCellObjectPoint(WorldCell *cell,
     const WorldCellObjectPoints& points = object->points();
     WorldCellObjectPoint old = points[pointIndex];
     object->setPoint(pointIndex, point);
+    object->calculateBounds();
     emit cellObjectPointMoved(cell, objectIndex, pointIndex);
     return old;
 }
@@ -1477,6 +1478,7 @@ WorldCellObjectPoints WorldDocumentUndoRedo::setCellObjectPoints(WorldCell *cell
     WorldCellObject* object = cell->objects().at(objectIndex);
     WorldCellObjectPoints old = object->points();
     object->setPoints(points);
+    object->calculateBounds();
     emit cellObjectPointsChanged(cell, objectIndex);
     return old;
 }

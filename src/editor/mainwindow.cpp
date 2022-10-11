@@ -1807,6 +1807,7 @@ void MainWindow::splitObjectPolygon()
     WorldCellObject* object2 = new WorldCellObject(cellDoc->cell(), object->name(), object->type(), object->group(), x, y, level, width, height);
     object2->setGeometryType(object->geometryType());
     object2->setPoints(points2);
+    object2->calculateBounds();
     object2->setProperties(object->properties().clone());
 
     worldDoc->undoStack()->beginMacro(tr("Split Object Polygon"));

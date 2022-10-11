@@ -336,6 +336,8 @@ public:
         mPoints[index] = point;
     }
 
+    void calculateBounds();
+
     void setPolylineWidth(int width)
     {
         mPolylineWidth = width;
