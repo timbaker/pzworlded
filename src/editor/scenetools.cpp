@@ -220,6 +220,17 @@ void CreateObjectTool::startNewMapObject(const QPointF &pos)
                                                pos.x(), pos.y(),
                                                mScene->document()->currentLevel(),
                                                MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
+#if 1
+    if (obj->isBasement()) {
+        if (PropertyTemplate *pt = mScene->world()->propertyTemplate(QStringLiteral("Basement"))) {
+            obj->addTemplate(obj->templates().size(), pt);
+            for (Property *property : pt->properties()) {
+                PropertyDef *pd = mScene->world()->propertyDefinition(property->mDefinition->mName);
+                obj->addProperty(obj->properties().size(), new Property(pd, pd->mDefaultValue));
+            }
+        }
+    }
+#endif
     mItem = new ObjectItem(obj, mScene);
     mItem->labelItem()->setShowSize(true);
     mItem->setZValue(10000);
@@ -4549,7 +4560,7 @@ QVariant CellObjectEdgeResizeHandle::itemChange(GraphicsItemChange change, const
         return renderer->tileToPixelCoords(mClickObjectPos + delta, level) - clickScenePos;
     } else if (change == ItemPositionHasChanged) {
         if (mCancelResize)
-            return QGraphicsItem::itemChange(change, value);;
+            return QGraphicsItem::itemChange(change, value);
         auto *objectItem = mScene->itemForObject(mObject);
         if (objectItem == nullptr)
             return QGraphicsItem::itemChange(change, value);

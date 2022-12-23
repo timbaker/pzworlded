@@ -288,6 +288,7 @@ public:
 
     int index();
 
+    bool isBasement() const;
     bool isRoomTone() const;
     bool isSpawnPoint() const;
 

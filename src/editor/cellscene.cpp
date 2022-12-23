@@ -3599,6 +3599,287 @@ void ObjectPointHandle::updateSizeLabel()
 
 /////
 
+BasementStairHandle::BasementStairHandle(BasementItem *item, CellScene *scene)
+    : QGraphicsItem(item)
+    , mItem(item)
+    , mScene(scene)
+    , mSynching(false)
+    , mMouseOver(false)
+    , mCancelMove(false)
+{
+    setFlags(QGraphicsItem::ItemIsMovable |
+             QGraphicsItem::ItemSendsGeometryChanges |
+//             QGraphicsItem::ItemIgnoresTransformations |
+             QGraphicsItem::ItemIgnoresParentOpacity);
+    setCursor(Qt::SizeAllCursor);
+    setAcceptHoverEvents(true);
+    synch();
+}
+
+QRectF BasementStairHandle::boundingRect() const
+{
+    QRectF stairRect = mItem->stairBoundsRelativeToThis();
+    stairRect.translate(-stairRect.topLeft());
+    QPolygonF scenePoly = mScene->renderer()->tileToPixelCoords(stairRect, mItem->object()->level());
+    scenePoly.translate(-mScene->renderer()->tileToPixelCoords(QPoint(), mItem->object()->level()));
+    QRectF sceneRect = scenePoly.boundingRect();
+    return sceneRect;
+}
+
+QPainterPath BasementStairHandle::shape() const
+{
+    QRectF stairRect = mItem->stairBoundsRelativeToThis();
+    stairRect.translate(-stairRect.topLeft());
+    QPolygonF scenePoly = mScene->renderer()->tileToPixelCoords(stairRect, mItem->object()->level());
+    scenePoly.translate(-mScene->renderer()->tileToPixelCoords(QPoint(), mItem->object()->level()));
+    QPainterPath path;
+    path.addPolygon(scenePoly);
+    return path;
+}
+
+void BasementStairHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
+{
+    QColor color = mItem->object()->group()->color();
+    color.setAlphaF(0.25f);
+    if (mMouseOver)
+        color.setAlphaF(1.0f);
+    painter->setBrush(color);
+    painter->setPen(Qt::black);
+    QRectF stairRect = mItem->stairBoundsRelativeToThis();
+    stairRect.translate(-stairRect.topLeft());
+    int level = mItem->object()->level();
+    QPolygonF scenePoly = mScene->renderer()->tileToPixelCoords(stairRect, level);
+    scenePoly.translate(-mScene->renderer()->tileToPixelCoords(QPoint(), mItem->object()->level()));
+    painter->drawPolygon(scenePoly);
+}
+
+void BasementStairHandle::synch()
+{
+    QRectF stairRect = mItem->stairBoundsRelativeToThis();
+    stairRect.translate(mItem->tileBounds().topLeft());
+    int level = mItem->object()->level();
+    QPointF scenePos = mScene->renderer()->tileToPixelCoords(stairRect.topLeft(), level);
+    if (scenePos != pos()) {
+        mSynching = true;
+        setPos(scenePos);
+        mSynching = false;
+    }
+}
+
+void BasementStairHandle::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+{
+    Q_UNUSED(event)
+    /*if (SubMapTool::instance()->isCurrent())*/ {
+        mMouseOver = true;
+        update();
+    }
+}
+
+void BasementStairHandle::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+{
+    Q_UNUSED(event)
+    if (mMouseOver) {
+        mMouseOver = false;
+        update();
+    }
+}
+
+void BasementStairHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        // Where the user clicked, relative to the top-left corner of the Basement object, in tile coordinates.
+        mClickObjectPos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mItem->object()->level()) - mItem->object()->pos();
+    }
+    QGraphicsItem::mousePressEvent(event);
+}
+
+void BasementStairHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsItem::mouseReleaseEvent(event);
+    QPoint offset = mItem->stairDragOffset();
+    if (event->button() == Qt::LeftButton) {
+        mItem->setStairDragOffset(QPoint());
+        synch();
+        if (mCancelMove) {
+            mCancelMove = false;
+            return;
+        }
+        if (offset.isNull())
+            return;
+        QRect stairRect = mItem->stairBoundsRelativeToThis();
+        if (stairRect.isEmpty())
+            return;
+        WorldDocument *document = mScene->document()->worldDocument();
+        document->undoStack()->beginMacro(QStringLiteral("Set Basement Stair Position"));
+        if (PropertyDef *pd_StairX = mItem->object()->cell()->world()->propertyDefinition(QStringLiteral("StairX"))) {
+            int stairX = stairRect.x() + offset.x();
+            if (Property *p_StairX = mItem->object()->properties().find(pd_StairX)) {
+                if (stairRect.x() != stairX) {
+                    document->setPropertyValue(mItem->object(), p_StairX, QString::number(stairX));
+                }
+            } else {
+                document->addProperty(mItem->object(), pd_StairX->mName, QString::number(stairX));
+            }
+        }
+        if (PropertyDef *pd_StairY = mItem->object()->cell()->world()->propertyDefinition(QStringLiteral("StairY"))) {
+            int stairY = stairRect.y() + offset.y();
+            if (Property *p_StairY = mItem->object()->properties().find(pd_StairY)) {
+                if (stairRect.y() != stairY) {
+                    document->setPropertyValue(mItem->object(), p_StairY, QString::number(stairY));
+                }
+            } else {
+                document->addProperty(mItem->object(), pd_StairY->mName, QString::number(stairY));
+            }
+        }
+        document->undoStack()->endMacro();
+    }
+
+    if (event->button() == Qt::RightButton) {
+        mCancelMove = true;
+        mItem->setStairDragOffset(QPoint());
+        synch();
+    }
+}
+
+QVariant BasementStairHandle::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if (!mSynching) {
+        if (change == ItemPositionChange) {
+            // 'value' is the soon-to-be new position of this item in QGraphicsScene coordinates.
+            if (mCancelMove) {
+                return pos();
+            }
+            int level = mItem->object()->level();
+            QPointF newTileCoords = mScene->renderer()->pixelToTileCoords(value.toPointF(), level);
+            bool bNorth = mItem->isStairDirectionNorth();
+            int w = bNorth ? 1 : 3, h = bNorth ? 3 : 1;
+            newTileCoords.rx() = std::min(newTileCoords.x(), mItem->object()->x() + mItem->object()->width() - w);
+            newTileCoords.ry() = std::min(newTileCoords.y(), mItem->object()->y() + mItem->object()->height() - h);
+            newTileCoords.rx() = std::max(newTileCoords.x(), mItem->object()->x());
+            newTileCoords.ry() = std::max(newTileCoords.y(), mItem->object()->y());
+            return mScene->renderer()->tileToPixelCoords(newTileCoords.toPoint(), level);
+        }
+        else if (change == ItemPositionHasChanged) {
+            // 'value' is pos() of this item in QGraphicsScene coordinates.
+            if (mCancelMove)
+                return QGraphicsItem::itemChange(change, value);
+            int level = mItem->object()->level();
+            QPointF oldTileCoords = mItem->object()->pos() + mItem->stairBoundsRelativeToThis().topLeft();
+            QPointF newTileCoords = mScene->renderer()->pixelToTileCoords(value.toPointF(), level);
+            mItem->setStairDragOffset((newTileCoords - oldTileCoords).toPoint());
+        }
+    }
+    return QGraphicsItem::itemChange(change, value);
+}
+
+/////
+
+BasementItem::BasementItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent)
+    : ObjectItem(object, scene, parent)
+    , mStairHandle(new BasementStairHandle(this, scene))
+{
+    mStairHandle->setVisible(false);
+}
+
+QRectF BasementItem::boundingRect() const
+{
+    QRectF bounds = ObjectItem::boundingRect();
+    QPointF pos = mObject->pos() + mDragOffset;
+    bounds |= mRenderer->boundingRect(QRect(pos.x(), pos.y(), 1, 1), mObject->level());
+    return bounds;
+}
+
+void BasementItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    ObjectItem::paint(painter, option, widget);
+    QRect stairRect = stairBoundsRelativeToThis();
+    stairRect.translate(tileBounds().toRect().topLeft());
+    stairRect.translate(mStairDragOffset);
+    QColor color = mObject->group()->color();
+    if (mIsSelected)
+        color = QColor(0x33,0x99,0xff/*,255/8*/);
+    if (isMouseOverHighlighted())
+        color = color.lighter();
+    mRenderer->drawFancyRectangle(painter, stairRect, color, mObject->level());
+}
+
+void BasementItem::setEditable(bool editable)
+{
+    ObjectItem::setEditable(editable);
+    mStairHandle->setVisible(isEditable() && !stairBoundsRelativeToThis().isEmpty());
+    mStairHandle->synch();
+}
+
+bool BasementItem::hoverToolCurrent() const
+{
+    return SelectMoveObjectTool::instance()->isCurrent();
+}
+
+void BasementItem::synchWithObject()
+{
+    ObjectItem::synchWithObject();
+    mStairHandle->synch();
+}
+
+int BasementItem::getStairOffsetX() const
+{
+    PropertyDef *pd_StairX = mObject->cell()->world()->propertyDefinition(QStringLiteral("StairX"));
+    if (pd_StairX == nullptr)
+        return 0;
+    PropertyList properties;
+    resolveProperties(mObject, properties);
+    Property *p_StairX = properties.find(pd_StairX);
+    if (p_StairX == nullptr)
+        return 0;
+    bool ok = false;
+    int stairX =  p_StairX->mValue.toInt(&ok);
+    return ok ? stairX : 0;
+}
+
+int BasementItem::getStairOffsetY() const
+{
+    PropertyDef *pd_StairY = mObject->cell()->world()->propertyDefinition(QStringLiteral("StairY"));
+    if (pd_StairY == nullptr)
+        return 0;
+    PropertyList properties;
+    resolveProperties(mObject, properties);
+    Property *p_StairY = properties.find(pd_StairY);
+    if (p_StairY == nullptr)
+        return 0;
+    bool ok = false;
+    int stairY =  p_StairY->mValue.toInt(&ok);
+    return ok ? stairY : 0;
+}
+
+QString BasementItem::getStairDirection() const
+{
+    PropertyDef *pd_Direction = mObject->cell()->world()->propertyDefinition(QStringLiteral("StairDirection"));
+    if (pd_Direction == nullptr)
+        return QStringLiteral("N");
+    PropertyList properties;
+    resolveProperties(mObject, properties);
+    Property *p_Direction = properties.find(pd_Direction);
+    if (p_Direction == nullptr)
+        return pd_Direction->mDefaultValue;
+    return p_Direction->mValue;
+}
+
+bool BasementItem::isStairDirectionNorth() const
+{
+    return getStairDirection() == QStringLiteral("N");
+}
+
+QRect BasementItem::stairBoundsRelativeToThis() const
+{
+    int stairX = getStairOffsetX();
+    int stairY = getStairOffsetY();
+    bool bNorth = isStairDirectionNorth();
+    QRect stairRect(stairX, stairY, bNorth ? 1 : 3, bNorth ? 3 : 1);
+    return stairRect;
+}
+
+/////
+
 RoomToneItem::RoomToneItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent) :
     ObjectItem(object, scene, parent),
     mImage(QImage(QStringLiteral(":/images/SpeakerIcon.png")))
@@ -5507,6 +5788,8 @@ ObjectItem *CellScene::newObjectItem(WorldCellObject *obj, QGraphicsItem *parent
 {
     if (obj == nullptr)
         return nullptr;
+    if (obj->isBasement())
+        return new BasementItem(obj, this, parent);
     if (obj->isRoomTone())
         return new RoomToneItem(obj, this, parent);
     if (obj->isSpawnPoint())

@@ -115,7 +115,7 @@ public:
 
     CellScene *cellScene() const { return mScene; }
 
-    void setEditable(bool editable);
+    virtual void setEditable(bool editable);
     bool isEditable() const { return mIsEditable; }
 
     /**
@@ -127,7 +127,7 @@ public:
 
     WorldCellObject *object() const { return mObject; }
 
-    void synchWithObject();
+    virtual void synchWithObject();
 
     void setDragOffset(const QPointF &offset);
     QPointF dragOffset() const { return mDragOffset; }
@@ -139,6 +139,7 @@ public:
 
     bool isMouseOverHighlighted() const;
 
+    virtual bool isBasement() const { return false; }
     virtual bool isRoomTone() const { return false; }
     virtual bool isSpawnPoint() const { return false; }
     virtual bool hoverToolCurrent() const;
@@ -245,6 +246,68 @@ protected:
     int mHoverRefCount = 0;
     QGraphicsRectItem *mSizeItemBG;
     QGraphicsSimpleTextItem *mSizeItem;
+};
+
+/////
+
+class BasementItem;
+
+// A draggable control that updates the StairX and StairY properties on a Basement object.
+class BasementStairHandle : public QGraphicsItem
+{
+public:
+    BasementStairHandle(BasementItem *item, CellScene *scene);
+
+    QRectF boundingRect() const override;
+    QPainterPath shape() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
+    void synch();
+
+protected:
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+
+private:
+    BasementItem *mItem;
+    CellScene *mScene;
+    bool mSynching;
+    bool mMouseOver;
+    bool mCancelMove;
+    QPointF mClickObjectPos;
+};
+
+class BasementItem : public ObjectItem
+{
+public:
+    BasementItem(WorldCellObject *object, CellScene *scene, QGraphicsItem *parent = nullptr);
+
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override;
+    void setEditable(bool editable) override;
+    bool isBasement() const override { return true; }
+    bool hoverToolCurrent() const override;
+    void synchWithObject() override;
+    int getStairOffsetX() const;
+    int getStairOffsetY() const;
+    QString getStairDirection() const;
+    bool isStairDirectionNorth() const;
+    QRect stairBoundsRelativeToThis() const;
+    void setStairDragOffset(const QPoint& offset)
+    {
+        mStairDragOffset = offset;
+        update();
+    }
+    QPoint stairDragOffset() const
+    {
+        return mStairDragOffset;
+    }
+private:
+    QPoint mStairDragOffset;
+    BasementStairHandle *mStairHandle;
 };
 
 /////
