@@ -379,6 +379,7 @@
     <addaction name="separator"/>
     <addaction name="actionReadInGameMapFeaturesXML"/>
     <addaction name="actionWriteInGameMapFeaturesXML"/>
+    <addaction name="actionOverwriteInGameMapFeaturesXML"/>
     <addaction name="actionCreateImagePyramid"/>
    </widget>
    <addaction name="fileMenu"/>
@@ -959,6 +960,11 @@
   <action name="actionSplitObjectPolygon">
    <property name="text">
     <string>Split Object Polygon</string>
+   </property>
+  </action>
+  <action name="actionOverwriteInGameMapFeaturesXML">
+   <property name="text">
+    <string>Overwrite XXX</string>
    </property>
   </action>
  </widget>
