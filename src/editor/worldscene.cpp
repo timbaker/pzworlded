@@ -21,6 +21,8 @@
 #include "bmptotmx.h"
 #include "celldocument.h"
 #include "documentmanager.h"
+#include "loadthumbnailsdialog.h"
+#include "mainwindow.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
 #include "preferences.h"
@@ -217,12 +219,14 @@ WorldScene::WorldScene(WorldDocument *worldDoc, QObject *parent)
             this, &WorldScene::mapImageChanged);
 
     if (Preferences::instance()->worldThumbnails()) {
-        PROGRESS progress(QStringLiteral("Loading thumbnails"));
+        PROGRESS_HIDER hider;
+        LoadThumbnailsDialog dialog(this, MainWindow::instance());
+        dialog.show();
         int numThumbnails = mPendingThumbnails.size();
         handlePendingThumbnails();
         while (mPendingThumbnails.isEmpty() == false) {
-            PROGRESS progress(QStringLiteral("Loading thumbnails %1 / %2").arg(numThumbnails - mPendingThumbnails.size()).arg(numThumbnails));
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            dialog.setPrompt(QStringLiteral("Loading thumbnails %1 / %2").arg(numThumbnails - mPendingThumbnails.size()).arg(numThumbnails));
+            qApp->processEvents(QEventLoop::AllEvents);
         }
     }
 }
@@ -356,6 +360,11 @@ void WorldScene::pasteCellsFromClipboard()
 {
     ToolManager::instance()->selectTool(mPasteCellsTool);
     //    mActiveTool = mPasteCellsTool;
+}
+
+void WorldScene::cancelLoadingThumbnails()
+{
+    mPendingThumbnails.clear();
 }
 
 void WorldScene::worldAboutToResize(const QSize &newSize)
@@ -784,12 +793,13 @@ void WorldScene::worldThumbnailsChanged(bool thumbs)
         foreach (WorldCellItem *item, mCellItems)
             mPendingThumbnails += item;
 
-        PROGRESS progress(QStringLiteral("Loading thumbnails"));
+        LoadThumbnailsDialog dialog(this, MainWindow::instance());
+        dialog.show();
         int numThumbnails = mPendingThumbnails.size();
         handlePendingThumbnails();
         while (mPendingThumbnails.isEmpty() == false) {
-            PROGRESS progress(QStringLiteral("Loading thumbnails %1 / %2").arg(numThumbnails - mPendingThumbnails.size()).arg(numThumbnails));
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            dialog.setPrompt(QStringLiteral("Loading thumbnails %1 / %2").arg(numThumbnails - mPendingThumbnails.size()).arg(numThumbnails));
+            qApp->processEvents(QEventLoop::AllEvents);
         }
 
     } else {
