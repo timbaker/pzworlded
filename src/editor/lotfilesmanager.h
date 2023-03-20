@@ -304,6 +304,19 @@ private:
     QString mError;
 };
 
+struct JumboZone
+{
+    QString zoneName;
+    quint8 density;
+
+    JumboZone(const QString& zoneName, quint8 density)
+        : zoneName(zoneName)
+        , density(density)
+    {
+
+    }
+};
+
 class LotFilesManager : public QObject
 {
     Q_OBJECT
@@ -363,6 +376,7 @@ private:
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
     QImage ZombieSpawnMap;
+    QList<const JumboZone*> mJumboZoneList;
     LotFile::Stats mStats;
 
     QString mError;

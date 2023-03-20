@@ -6,7 +6,7 @@ if {[llength [info commands console]]} {
 set BIN C:/Programming/PZWorldEd/dist64
 set SRC C:/Programming/PZWorldEd/pzworlded
 set QT_DIR C:/Programming/QtSDK2015/5.15.2/msvc2019_64
-set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd}
+set DEST {C:\Programming\ProjectZomboid\Tools\WorldEd}
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
@@ -14,7 +14,7 @@ if {$argc > 0} {
             puts "dist.tcl: 32-bit"
             set BIN C:/Programming/PZWorldEd/dist32
             set QT_DIR C:/Programming/QtSDK2015/5.15.2/msvc2019
-            set DEST {C:\Users\Tim\Desktop\ProjectZomboid\Tools\WorldEd32}
+            set DEST {C:\Programming\ProjectZomboid\Tools\WorldEd32}
         }
         64bit {
             puts "dist.tcl: 64-bit"

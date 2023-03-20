@@ -19,6 +19,7 @@
 #define BUILDING_H
 
 #include "properties.h"
+#include "worldconstants.h"
 
 #include <QList>
 #include <QRect>
@@ -34,7 +35,7 @@ class BuildingTileEntry;
 class FurnitureTiles;
 class Room;
 
-#define MAX_BUILDING_FLOORS 8
+#define MAX_BUILDING_FLOORS MAX_WORLD_LEVELS
 
 class Building
 {

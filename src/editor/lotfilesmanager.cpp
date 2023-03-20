@@ -30,6 +30,7 @@
 #include "tilesetmanager.h"
 #include "world.h"
 #include "worldcell.h"
+#include "worldconstants.h"
 #include "worlddocument.h"
 
 #include "InGameMap/clipper.hpp"
@@ -79,6 +80,12 @@ void LotFilesManager::deleteInstance()
 LotFilesManager::LotFilesManager(QObject *parent)
     : QObject(parent)
 {
+    mJumboZoneList += new JumboZone(QStringLiteral("DeepForest"), 100);
+    mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
+    mJumboZoneList += new JumboZone(QStringLiteral("FarmLand"), 80);
+    mJumboZoneList += new JumboZone(QStringLiteral("Forest"), 50);
+    mJumboZoneList += new JumboZone(QStringLiteral("TownZone"), 80);
+    mJumboZoneList += new JumboZone(QStringLiteral("Vegitation"), 10);
 }
 
 LotFilesManager::~LotFilesManager()
@@ -318,7 +325,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return true;
     }
 
-    MaxLevel = 15;
+    MaxLevel = MAX_WORLD_LEVELS;
 
     int mapWidth = mapInfo->width();
     int mapHeight = mapInfo->height();
@@ -795,18 +802,26 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     }
 
     quint8 grid[300][300];
+    quint8 densityGrid[300][300];
     for (int y = 0; y < 300; y++) {
         for (int x = 0; x < 300; x++) {
             grid[x][y] = PREVENT_JUMBO;
+            densityGrid[x][y] = 0;
         }
     }
 
-    // Allow jumbo trees in Forest and DeepForest zones
-    auto FOREST = cell->world()->objectType(QStringLiteral("Forest"));
-    auto DEEP_FOREST = cell->world()->objectType(QStringLiteral("DeepForest"));
+    QHash<ObjectType*,const JumboZone*> objectTypeMap;
+    for (const JumboZone* jumboZone : qAsConst(mJumboZoneList)) {
+        if (ObjectType *objectType = cell->world()->objectType(jumboZone->zoneName)) {
+            objectTypeMap[objectType] = jumboZone;
+        }
+    }
+
+    PropertyDef *JumboDensity = cell->world()->propertyDefinition(QStringLiteral("JumboDensity"));
+
     ClipperLib::Path zonePath;
     for (WorldCellObject *obj : cell->objects()) {
-        if ((obj->level() != 0) || !((obj->type() == FOREST) || (obj->type() == DEEP_FOREST))) {
+        if ((obj->level() != 0) || !objectTypeMap.contains(obj->type())) {
             continue;
         }
         if (obj->isPoint() || obj->isPolyline()) {
@@ -816,6 +831,15 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
         if (obj->isPolygon()) {
             for (const auto &pt : obj->points()) {
                 zonePath << ClipperLib::IntPoint(pt.x * 100, pt.y * 100);
+            }
+        }
+        quint8 density = objectTypeMap[obj->type()]->density;
+        Property* property = JumboDensity ? obj->properties().find(JumboDensity) : nullptr;
+        if (property != nullptr) {
+            bool ok = false;
+            int value = property->mValue.toInt(&ok);
+            if (ok && (value >= 0) && (value <= 100)) {
+                density = value;
             }
         }
         int ox = obj->x(), oy = obj->y(), ow = obj->width(), oh = obj->height();
@@ -829,6 +853,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
                 }
                 if (x >= 0 && x < 300 && y >= 0 && y < 300) {
                     grid[x][y] = JUMBO_ZONE;
+                    densityGrid[x][y] = std::max(densityGrid[x][y], density);
                 }
             }
         }
@@ -894,12 +919,14 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     QList<QPoint> allTreePos;
     for (int y = 0; y < 300; y++) {
         for (int x = 0; x < 300; x++) {
-            foreach (LotFile::Entry *e, mGridData[x][y][0].Entries) {
+            const auto& entries = mGridData[x][y][0].Entries;
+            for (LotFile::Entry *e : entries) {
                 LotFile::Tile *tile = TileMap[e->gid];
-                if (treeTiles.contains(tile->name)) {
-                    allTreePos += QPoint(x, y);
-                    break;
+                if (treeTiles.contains(tile->name) == false) {
+                    continue;
                 }
+                allTreePos += QPoint(x, y);
+                break;
             }
         }
     }
@@ -910,7 +937,8 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
         int r = qrand() % allTreePos.size();
         QPoint treePos = allTreePos.takeAt(r);
         quint8 g = grid[treePos.x()][treePos.y()];
-        if (g == JUMBO_ZONE) {
+        quint8 density = densityGrid[treePos.x()][treePos.y()];
+        if ((g == JUMBO_ZONE) && (qrand() % 100 < density)) {
             grid[treePos.x()][treePos.y()] = JUMBO_TREE;
             // Remove all trees surrounding a jumbo tree.
             for (int dy = -1; dy <= 1; dy++) {

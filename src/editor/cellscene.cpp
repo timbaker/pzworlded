@@ -32,6 +32,7 @@
 #include "undoredo.h"
 #include "world.h"
 #include "worldcell.h"
+#include "worldconstants.h"
 #include "worlddocument.h"
 #include "zoomable.h"
 

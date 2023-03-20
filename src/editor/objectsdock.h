@@ -18,6 +18,8 @@
 #ifndef OBJECTSDOCK_H
 #define OBJECTSDOCK_H
 
+#include "worldconstants.h"
+
 #include <QDockWidget>
 #include <QSpinBox>
 #include <QStyledItemDelegate>
@@ -113,7 +115,7 @@ private:
         QSet<WorldObjectGroup*> expandedGroups;
     };
 
-    Level mExpandedLevels[16];
+    Level mExpandedLevels[MAX_WORLD_LEVELS];
 };
 
 class ObjectsViewDelegate : public QStyledItemDelegate

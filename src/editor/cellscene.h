@@ -22,6 +22,7 @@
 
 #include "sceneoverlay.h"
 #include "worldcell.h"
+#include "worldconstants.h"
 
 #include "map.h"
 #include "tile.h"
@@ -743,7 +744,7 @@ public:
     CellScene *mScene = nullptr;
     MapComposite *mMapComposite = nullptr;
     QRect mBounds;
-    std::array<LayerGroupVBO*,16> mLayerVBOs;
+    std::array<LayerGroupVBO*,MAX_WORLD_LEVELS> mLayerVBOs;
     QList<Tiled::Tileset*> mUsedTilesets;
     QMap<QString,int> mLayerNameToIndex;
 };

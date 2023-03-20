@@ -182,6 +182,7 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapwriter.h \
     InGameMap/ingamemapwriterbinary.h \
     tilesetstxtfile.h \
+    worldconstants.h \
     worldview.h \
     worldscene.h \
     world.h \
