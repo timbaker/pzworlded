@@ -384,8 +384,9 @@ void BuildingMap::addRoomDefObjects(Map *map)
 void BuildingMap::addRoomDefObjects(Map *map, BuildingFloor *floor)
 {
     Building *building = floor->building();
-    ObjectGroup *objectGroup = new ObjectGroup(tr("%1_RoomDefs").arg(floor->level()),
+    ObjectGroup *objectGroup = new ObjectGroup(QLatin1String("RoomDefs"),
                                                0, 0, map->width(), map->height());
+    objectGroup->setLevel(floor->level());
     map->addLayer(objectGroup);
 
     int delta = (building->floorCount() - 1 - floor->level()) * 3;
@@ -509,13 +510,13 @@ void BuildingMap::BuildingToMap()
 
     mLayerToSection.clear();
     foreach (BuildingFloor *floor, mBuilding->floors()) {
-        foreach (QString name, layerNames(floor->level())) {
-            QString layerName = tr("%1_%2").arg(floor->level()).arg(name);
-            TileLayer *tl = new TileLayer(layerName,
-                                          0, 0, mapSize.width(), mapSize.height());
+        foreach (QString nameWithoutPrefix, layerNames(floor->level())) {
+            QString layerName = nameWithoutPrefix;
+            TileLayer *tl = new TileLayer(layerName, 0, 0, mapSize.width(), mapSize.height());
+            tl->setLevel(floor->level());
             mMap->addLayer(tl);
-            mLayerToSection[layerName] = layerToSection.contains(name)
-                    ? layerToSection[name] : -1;
+            mLayerToSection[layerName] = layerToSection.contains(nameWithoutPrefix)
+                    ? layerToSection[nameWithoutPrefix] : -1;
         }
     }
 

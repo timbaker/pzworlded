@@ -25,6 +25,7 @@
 #include "BuildingEditor/buildingtiles.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "maprenderer.h"
 #include "tilelayer.h"
 #include "tileset.h"
@@ -188,9 +189,11 @@ void BmpBlender::tilesetRemoved(const QString &tilesetName)
 
 void BmpBlender::tilesToPixels(int x1, int y1, int x2, int y2)
 {
-    int index = mMap->indexOfLayer(STR_0Floor, Layer::TileLayerType);
+    MapLevel *mapLevel = mMap->mapLevelForZ(0);
+    if (mapLevel == nullptr) return;
+    int index = mapLevel->indexOfLayer(STR_0Floor, Layer::TileLayerType);
     if (index == -1) return;
-    TileLayer *floorLayer = mMap->layerAt(index)->asTileLayer();
+    TileLayer *floorLayer = mapLevel->layerAt(index)->asTileLayer();
 
     x1 = qBound(0, x1, mMap->width() - 1);
     x2 = qBound(0, x2, mMap->width() - 1);
@@ -514,8 +517,9 @@ void BmpBlender::imagesToTileGrids(int x1, int y1, int x2, int y2)
 
     // Hack - If a pixel is black, and the user-drawn map tile in 0_Floor is
     // one of the Rules.txt tiles, pretend that that pixel exists in the image.
-    int index = mMap->indexOfLayer(STR_0Floor, Layer::TileLayerType);
-    TileLayer *floorLayer = (index == -1) ? nullptr : mMap->layerAt(index)->asTileLayer();
+    MapLevel *mapLevel = mMap->mapLevelForZ(0);
+    int index = mapLevel ? mapLevel->indexOfLayer(STR_0Floor, Layer::TileLayerType) : -1;
+    TileLayer *floorLayer = (index == -1) ? nullptr : mapLevel->layerAt(index)->asTileLayer();
 
     x1 = qBound(0, x1, mMap->width() - 1);
     x2 = qBound(0, x2, mMap->width() - 1);

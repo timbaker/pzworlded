@@ -31,6 +31,7 @@
 #include "map.h"
 
 #include "layer.h"
+#include "maplevel.h"
 #include "objectgroup.h"
 #include "tile.h"
 #include "tilelayer.h"
@@ -56,7 +57,7 @@ Map::Map(Orientation orientation,
 
 Map::~Map()
 {
-    qDeleteAll(mLayers);
+    qDeleteAll(mLevels);
 #ifdef ZOMBOID
     qDeleteAll(mNoBlend);
 #endif
@@ -91,62 +92,166 @@ void Map::adjustDrawMargins(const QMargins &margins)
 #endif
 }
 
+void Map::addMapLevel(MapLevel *mapLevel)
+{
+    if (mapLevel == nullptr) {
+        return;
+    }
+    Q_ASSERT(mapLevel->map() == this);
+    if (mapLevels().contains(mapLevel)) {
+        return;
+    }
+    if (mapLevelForZ(mapLevel->level()) != nullptr) {
+        return;
+    }
+    for (int i = 0; i < mapLevels().size(); i++) {
+        MapLevel *mapLevel2 = mapLevels().at(i);
+        if (mapLevel->level() < mapLevel2->level()) {
+            mLevels.insert(i, mapLevel);
+            return;
+        }
+    }
+    mLevels.append(mapLevel);
+}
+
+MapLevel *Map::takeMapLevel(int level)
+{
+    for (int i = 0; i < mapLevels().size(); i++) {
+        MapLevel *mapLevel = mapLevels().at(i);
+        if (mapLevel->level() == level) {
+            return mLevels.takeAt(level);
+        }
+    }
+    return nullptr;
+}
+
+MapLevel *Map::mapLevelForZ(int z) const
+{
+    for (MapLevel *mapLevel : mapLevels()) {
+        if (mapLevel->level() == z) {
+            return mapLevel;
+        }
+    }
+    return nullptr;
+}
+
+MapLevel *Map::minMapLevel() const
+{
+    return mapLevels().isEmpty() ? nullptr : mapLevels().first();
+}
+
+MapLevel *Map::maxMapLevel() const
+{
+    return mapLevels().isEmpty() ? nullptr : mapLevels().last();
+}
+
+int Map::layerCount() const
+{
+    int count = 0;
+    for (MapLevel *level : mapLevels()) {
+        count += level->layerCount();
+    };
+    return count;
+}
+
 int Map::layerCount(Layer::Type type) const
 {
     int count = 0;
-    foreach (Layer *layer, mLayers)
-       if (layer->type() == type)
-           count++;
+    for (MapLevel *mapLevel : mapLevels()) {
+        count += mapLevel->layerCount(type);
+    };
     return count;
+}
+
+Layer *Map::layerAt(int index) const
+{
+    int count = 0;
+    for (MapLevel *mapLevel : mapLevels()) {
+        if (count + mapLevel->layerCount() > index) {
+            return mapLevel->layerAt(index - count);
+        }
+        count += mapLevel->layerCount();
+    };
+    return nullptr;
+}
+
+QList<Layer *> Map::layers() const
+{
+    QList<Layer*> layers;
+    for (MapLevel *mapLevel : mapLevels()) {
+        layers.append(mapLevel->layers());
+    }
+    return layers;
 }
 
 QList<Layer*> Map::layers(Layer::Type type) const
 {
     QList<Layer*> layers;
-    foreach (Layer *layer, mLayers)
-        if (layer->type() == type)
-            layers.append(layer);
+    for (MapLevel *mapLevel : mapLevels()) {
+        layers.append(mapLevel->layers(type));
+    }
     return layers;
 }
 
 QList<ObjectGroup*> Map::objectGroups() const
 {
     QList<ObjectGroup*> layers;
-    foreach (Layer *layer, mLayers)
-        if (ObjectGroup *og = layer->asObjectGroup())
-            layers.append(og);
+    for (MapLevel *mapLevel : mapLevels()) {
+        layers.append(mapLevel->objectGroups());
+    }
     return layers;
 }
 
 QList<TileLayer*> Map::tileLayers() const
 {
     QList<TileLayer*> layers;
-    foreach (Layer *layer, mLayers)
-        if (TileLayer *tl = layer->asTileLayer())
-            layers.append(tl);
+    for (MapLevel *mapLevel : mapLevels()) {
+        layers.append(mapLevel->tileLayers());
+    }
     return layers;
 }
 
 void Map::addLayer(Layer *layer)
 {
-    adoptLayer(layer);
-    mLayers.append(layer);
+    MapLevel *mapLevel = mapLevelForZ(layer->level());
+    if (mapLevel == nullptr) {
+        mapLevel = new MapLevel(this, layer->level());
+        addMapLevel(mapLevel);
+    }
+    mapLevel->addLayer(layer);
 }
 
 int Map::indexOfLayer(const QString &layerName, uint layertypes) const
 {
-    for (int index = 0; index < mLayers.size(); index++)
-        if (layerAt(index)->name() == layerName
-                && (layertypes & layerAt(index)->type()))
-            return index;
-
+    int level;
+    if (MapLevel::levelForLayer(layerName, &level)) {
+        if (MapLevel *mapLevel = mapLevelForZ(level)) {
+            QString layerName2 = MapLevel::layerNameWithoutPrefix(layerName);
+            int count = 0;
+            for (MapLevel *mapLevel2 : mapLevels()) {
+                if (mapLevel2 == mapLevel)
+                    break;
+                count += mapLevel2->layerCount();
+            }
+            return count + mapLevel->indexOfLayer(layerName2);
+        }
+        return -1;
+    }
+    int count = 0;
+    for (MapLevel *mapLevel : mapLevels()) {
+        int index = mapLevel->indexOfLayer(layerName, layertypes);
+        if (index != -1) {
+            return count + index;
+        }
+        count += mapLevel->layerCount();
+    }
     return -1;
 }
 
 void Map::insertLayer(int index, Layer *layer)
 {
-    adoptLayer(layer);
-    mLayers.insert(index, layer);
+//    adoptLayer(layer);
+//    mLayers.insert(index, layer);
 }
 
 void Map::adoptLayer(Layer *layer)
@@ -164,6 +269,9 @@ void Map::adoptLayer(Layer *layer)
 
 Layer *Map::takeLayerAt(int index)
 {
+#if 1
+    return nullptr;
+#else
     Layer *layer = mLayers.takeAt(index);
 #ifdef ZOMBOID
     Q_ASSERT(layer->map() == this);
@@ -174,6 +282,7 @@ Layer *Map::takeLayerAt(int index)
         removeTilesetUser(ts);
 #endif
     return layer;
+#endif
 }
 
 void Map::addTileset(Tileset *tileset)
@@ -201,8 +310,11 @@ void Map::replaceTileset(Tileset *oldTileset, Tileset *newTileset)
     const int index = mTilesets.indexOf(oldTileset);
     Q_ASSERT(index != -1);
 
-    foreach (Layer *layer, mLayers)
-        layer->replaceReferencesToTileset(oldTileset, newTileset);
+    for (MapLevel *level : mLevels) {
+        for (Layer *layer : level->layers()) {
+            layer->replaceReferencesToTileset(oldTileset, newTileset);
+        }
+    }
 
     mTilesets.replace(index, newTileset);
 }
@@ -278,17 +390,6 @@ bool Map::hasUsedMissingTilesets() const
     return false;
 }
 
-void Map::addTileLayerGroup(ZTileLayerGroup *tileLayerGroup)
-{
-    int arrayIndex = 0;
-    foreach(ZTileLayerGroup *g1, tileLayerGroups()) {
-        if (g1->level() >= tileLayerGroup->level())
-            break;
-        arrayIndex++;
-    }
-    mTileLayerGroups.insert(arrayIndex, tileLayerGroup);
-}
-
 MapNoBlend *Map::noBlend(const QString &layerName)
 {
     if (!mNoBlend.contains(layerName))
@@ -301,8 +402,9 @@ Map *Map::clone() const
 {
     Map *o = new Map(mOrientation, mWidth, mHeight, mTileWidth, mTileHeight);
     o->mDrawMargins = mDrawMargins;
-    foreach (const Layer *layer, mLayers)
-        o->addLayer(layer->clone());
+    for (const MapLevel *level : mapLevels()) {
+        o->addMapLevel(level->clone(o));
+    }
     o->mTilesets = mTilesets;
 #ifdef ZOMBOID
     Q_ASSERT(o->mUsedTilesets == mUsedTilesets);

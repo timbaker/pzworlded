@@ -28,6 +28,7 @@ class WorldCell;
 
 namespace Tiled {
 class Map;
+class MapLevel;
 class Layer;
 class TileLayer;
 class ZTileLayerGroup;
@@ -58,10 +59,10 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex &index) const;
 
-    QModelIndex index(CompositeLayerGroup *g) const;
+    QModelIndex index(Tiled::MapLevel *g) const;
     QModelIndex index(Tiled::TileLayer *tl) const;
 
-    CompositeLayerGroup *toTileLayerGroup(const QModelIndex &index) const;
+    Tiled::MapLevel *toMapLevel(const QModelIndex &index) const;
     Tiled::TileLayer *toTileLayer(const QModelIndex &index) const;
 
     void setCellDocument(CellDocument *doc);
@@ -81,9 +82,9 @@ private:
     {
     public:
         Item()
-            : parent(0)
-            , group(0)
-            , layer(0)
+            : parent(nullptr)
+            , mapLevel(nullptr)
+            , layer(nullptr)
         {
 
         }
@@ -93,17 +94,17 @@ private:
             qDeleteAll(children);
         }
 
-        Item(Item *parent, int indexInParent, CompositeLayerGroup *g)
+        Item(Item *parent, int indexInParent, Tiled::MapLevel *mapLevel)
             : parent(parent)
-            , group(g)
-            , layer(0)
+            , mapLevel(mapLevel)
+            , layer(nullptr)
         {
             parent->children.insert(indexInParent, this);
         }
 
         Item(Item *parent, int indexInParent, Tiled::TileLayer *tl)
             : parent(parent)
-            , group(0)
+            , mapLevel(nullptr)
             , layer(tl)
         {
             parent->children.insert(indexInParent, this);
@@ -111,12 +112,12 @@ private:
 
         Item *parent;
         QList<Item*> children;
-        CompositeLayerGroup *group;
+        Tiled::MapLevel *mapLevel;
         Tiled::TileLayer *layer;
     };
 
     Item *toItem(const QModelIndex &index) const;
-    Item *toItem(CompositeLayerGroup *g) const;
+    Item *toItem(Tiled::MapLevel *mapLevel) const;
     Item *toItem(Tiled::TileLayer *tl) const;
 
     CellDocument *mCellDocument;

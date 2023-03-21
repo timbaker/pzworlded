@@ -80,6 +80,8 @@ public:
      */
     void setName(const QString &name) { mName = name; }
 
+    QString nameWithPrefix() const;
+
     /**
      * Returns the opacity of this layer.
      */

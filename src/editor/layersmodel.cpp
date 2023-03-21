@@ -24,6 +24,7 @@
 #include "worlddocument.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "tilelayer.h"
 
 using namespace Tiled;
@@ -110,15 +111,17 @@ QVariant LayersModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     }
-    if (ZTileLayerGroup *g = toTileLayerGroup(index)) {
+    if (MapLevel *mapLevel = toMapLevel(index)) {
         switch (role) {
         case Qt::DisplayRole:
         case Qt::EditRole:
-            return QString(tr("Level %1")).arg(g->level());
+            return QString(tr("Level %1")).arg(mapLevel->level());
         case Qt::DecorationRole:
             return QVariant();
-        case Qt::CheckStateRole:
+        case Qt::CheckStateRole: {
+            CompositeLayerGroup *g = mMapComposite->layerGroupForLevel(mapLevel->level());
             return g->isVisible() ? Qt::Checked : Qt::Unchecked;
+        }
         case OpacityRole:
             return qreal(1);
         default:
@@ -147,11 +150,12 @@ bool LayersModel::setData(const QModelIndex &index, const QVariant &value,
         }
         return false;
     }
-    if (ZTileLayerGroup *g = toTileLayerGroup(index)) {
+    if (MapLevel *mapLevel = toMapLevel(index)) {
         switch (role) {
         case Qt::CheckStateRole:
             {
             Qt::CheckState c = static_cast<Qt::CheckState>(value.toInt());
+            CompositeLayerGroup *g = mMapComposite->layerGroupForLevel(mapLevel->level());
             mCellDocument->setLayerGroupVisibility(g, c == Qt::Checked);
             emit dataChanged(index, index);
             return true;
@@ -183,9 +187,9 @@ QVariant LayersModel::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-QModelIndex LayersModel::index(CompositeLayerGroup *g) const
+QModelIndex LayersModel::index(MapLevel *mapLevel) const
 {
-    Item *item = toItem(g);
+    Item *item = toItem(mapLevel);
     int row = item->parent->children.indexOf(item);
     return createIndex(row, 0, item);
 }
@@ -197,10 +201,10 @@ QModelIndex LayersModel::index(TileLayer *tl) const
     return createIndex(row, 0, item);
 }
 
-CompositeLayerGroup *LayersModel::toTileLayerGroup(const QModelIndex &index) const
+MapLevel *LayersModel::toMapLevel(const QModelIndex &index) const
 {
     if (index.isValid())
-        return toItem(index)->group;
+        return toItem(index)->mapLevel;
     return 0;
 }
 
@@ -218,20 +222,20 @@ LayersModel::Item *LayersModel::toItem(const QModelIndex &index) const
     return 0;
 }
 
-LayersModel::Item *LayersModel::toItem(CompositeLayerGroup *g) const
+LayersModel::Item *LayersModel::toItem(MapLevel *mapLevel) const
 {
     if (!mRootItem)
         return 0;
     foreach (Item *item, mRootItem->children)
-        if (item->group == g)
+        if (item->mapLevel == mapLevel)
             return item;
     return 0;
 }
 
 LayersModel::Item *LayersModel::toItem(TileLayer *tl) const
 {
-    CompositeLayerGroup *g = mMapComposite->tileLayersForLevel(tl->level());
-    Item *parent = toItem(g);
+    MapLevel *mapLevel = mMap->mapLevelForZ(tl->level());
+    Item *parent = toItem(mapLevel);
     foreach (Item *item, parent->children)
         if (item->layer == tl)
             return item;
@@ -285,9 +289,9 @@ void LayersModel::setModelData()
 
     if (mCellDocument) {
         mRootItem = new Item();
-        foreach (CompositeLayerGroup *g, mMapComposite->sortedLayerGroups()) {
-            Item *parent = new Item(mRootItem, 0, g);
-            foreach (TileLayer *tl, g->layers())
+        for (MapLevel *mapLevel : mMap->mapLevels()) {
+            Item *parent = new Item(mRootItem, 0, mapLevel);
+            foreach (TileLayer *tl, mapLevel->tileLayers())
                 new Item(parent, 0, tl);
         }
     }
@@ -313,7 +317,8 @@ void LayersModel::layerGroupAdded(int level)
 
 void LayersModel::layerGroupVisibilityChanged(ZTileLayerGroup *layerGroup)
 {
-    QModelIndex index = this->index(dynamic_cast<CompositeLayerGroup*>(layerGroup));
+    MapLevel *mapLevel = mMap->mapLevelForZ(layerGroup->level());
+    QModelIndex index = this->index(mapLevel);
     emit dataChanged(index, index);
 }
 

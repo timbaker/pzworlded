@@ -20,6 +20,7 @@
 #include "bmpblender.h"
 #include "bmptotmxconfirmdialog.h"
 #include "mainwindow.h"
+#include "mapcomposite.h"
 #include "mapmanager.h"
 #include "preferences.h"
 #include "progress.h"
@@ -709,9 +710,12 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
     }
 
     foreach (LayerInfo layer, mLayers) {
+        int level = 0;
+        MapComposite::levelForLayer(layer.mName, &level);
         if (layer.mType == LayerInfo::Tile) {
             TileLayer *tl = new TileLayer(layer.mName, 0, 0,
                                           map.width(), map.height());
+            tl->setLevel(level);
             map.addLayer(tl);
             if (!settings.copyPixels) {
                 if (TileLayer *blendLayer = blendLayers[tl->name()])
@@ -720,6 +724,7 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
         } else if (layer.mType == LayerInfo::Object) {
             ObjectGroup *og = new ObjectGroup(layer.mName, 0, 0,
                                               map.width(), map.height());
+            og->setLevel(level);
             map.addLayer(og);
         }
     }

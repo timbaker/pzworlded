@@ -150,9 +150,9 @@ void CompositeLayerGroup::addTileLayer(TileLayer *layer, int index)
     mForceNonEmpty.insert(index, false);
 #endif // BUILDINGED
 #if 1 // ROAD_CRUD
-    if (layer->name() == QLatin1String("0_Floor"))
+    if (mLevel == 0 && layer->name() == QLatin1String("Floor"))
         mRoadLayer0 = layer;
-    if (layer->name() == QLatin1String("0_FloorOverlay"))
+    if (mLevel == 0 && layer->name() == QLatin1String("FloorOverlay"))
         mRoadLayer1 = layer;
 #endif // ROAD_CRUD
 }
@@ -212,8 +212,8 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
         mOwner->bmpBlender()->flush(renderer, rect, mOwner->originRecursive());
 }
 
-static QLatin1String sFloor("0_Floor"); // FIXME: thread safe?
-static QLatin1String sAboveLot("_AboveLot");
+static QLatin1String sFloor("Floor"); // FIXME: thread safe?
+static QLatin1String sAboveLot("AboveLot");
 
 bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                                          QVector<const Cell *> &cells,
@@ -518,7 +518,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                         cells.resize(root->mKeepFloorLayerCount);
                         cleared = true;
                     }
-                    cells.append(TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
+                    cells.append(TilePlusLayer(tl->nameWithPrefix(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
                     if (mMaxFloorLayer >= index)
                         mOwner->mKeepFloorLayerCount = cells.size();
                     continue;
@@ -531,8 +531,8 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                     cell = &tlBmpBlend->cellAt(subPos);
                 }
             }
-            if (!cell->isEmpty() && (root == mOwner) && tl->name().contains(sAboveLot)) {
-                aboveLotCells += TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]);
+            if (!cell->isEmpty() && (root == mOwner) && tl->name().startsWith(sAboveLot)) {
+                aboveLotCells += TilePlusLayer(tl->nameWithPrefix(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]);
                 continue;
             }
             if (!cell->isEmpty()) {
@@ -551,7 +551,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                     }
                     cleared = true;
                 }
-                cells.append(TilePlusLayer(tl->name(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
+                cells.append(TilePlusLayer(tl->nameWithPrefix(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
                 if (owner()->parent() == root) {
                     cells.last().mSubMap = owner();
                 }
@@ -717,7 +717,7 @@ void CompositeLayerGroup::synch()
         }
         if (!mLevel && (!mOwner->parent() || mOwner->isAdjacentMap()) &&
                 (index == mMaxFloorLayer + 1) &&
-                tl->name().startsWith(QLatin1String("0_Floor")))
+                tl->name().startsWith(QLatin1String("Floor")))
             mMaxFloorLayer = index;
         ++index;
     }
@@ -781,7 +781,7 @@ bool CompositeLayerGroup::setBmpBlendLayers(const QList<TileLayer *> &layers)
     mBmpBlendLayers.fill(nullptr);
     foreach (TileLayer *tl, layers) {
         for (int i = 0; i < mLayers.size(); i++) {
-            if (mLayers[i]->name() == tl->name()) {
+            if (mLayers[i]->name() == MapComposite::layerNameWithoutPrefix(tl->name())) {
                 mBmpBlendLayers[i] = tl;
                 if (mOwner->bmpBlender()->blendLayers().contains(tl->name()))
                     mNoBlends[i] = mMap->noBlend(tl->name());
@@ -1011,18 +1011,13 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
 
     int index = 0;
     foreach (Layer *layer, mMap->layers()) {
-        int level;
-        if (levelForLayer(layer, &level)) {
-            // FIXME: no changing of mMap should happen after it is loaded!
-            layer->setLevel(level); // for ObjectGroup,ImageLayer as well
-
-            if (TileLayer *tl = layer->asTileLayer()) {
-                if (!mLayerGroups.contains(level))
-                    mLayerGroups[level] = new CompositeLayerGroup(this, level);
-                mLayerGroups[level]->addTileLayer(tl, index);
-                if (!mapInfo->isBeingEdited())
-                    mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
-            }
+        int level = layer->level();
+        if (TileLayer *tl = layer->asTileLayer()) {
+            if (!mLayerGroups.contains(level))
+                mLayerGroups[level] = new CompositeLayerGroup(this, level);
+            mLayerGroups[level]->addTileLayer(tl, index);
+            if (!mapInfo->isBeingEdited())
+                mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
         }
         ++index;
     }
@@ -1036,8 +1031,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     // by the LotManager).
     if (!mapInfo->isBeingEdited()) {
         foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
-            int levelOffset;
-            (void) levelForLayer(objectGroup, &levelOffset);
+            int levelOffset = objectGroup->level();
             foreach (MapObject *object, objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
 #if 1
@@ -1247,6 +1241,7 @@ void MapComposite::layerAboutToBeRemoved(int index)
 
 void MapComposite::layerRenamed(int index)
 {
+#if 0
     Layer *layer = mMap->layerAt(index);
 
     int oldLevel = layer->level();
@@ -1277,13 +1272,13 @@ void MapComposite::layerRenamed(int index)
             emit layerAddedToGroup(index);
         }
     }
+#endif
 }
 
 void MapComposite::addLayerToGroup(int index)
 {
     Layer *layer = mMap->layerAt(index);
     Q_ASSERT(layer->isTileLayer());
-    Q_ASSERT(levelForLayer(layer));
     if (TileLayer *tl = layer->asTileLayer()) {
         int level = tl->level();
         if (!mLayerGroups.contains(level)) {
@@ -1506,11 +1501,9 @@ MapComposite::ZOrderList MapComposite::zOrder()
     int layerIndex = -1;
     foreach (Layer *layer, mMap->layers()) {
         ++layerIndex;
-        int level;
-        bool hasGroup = levelForLayer(layer, &level);
+        int level = layer->level();
         if (layer->isTileLayer()) {
-            // The layer may not be in a group yet during renaming.
-            if (hasGroup && mLayerGroups.contains(level)) {
+            if (mLayerGroups.contains(level)) {
                 if (!seenLevels.contains(level)) {
                     seenLevels += level;
                     previousGroup = mLayerGroups[level];
@@ -1706,18 +1699,13 @@ void MapComposite::recreate()
 
     int index = 0;
     foreach (Layer *layer, mMap->layers()) {
-        int level;
-        if (levelForLayer(layer, &level)) {
-            // FIXME: no changing of mMap should happen after it is loaded!
-            layer->setLevel(level); // for ObjectGroup,ImageLayer as well
-
-            if (TileLayer *tl = layer->asTileLayer()) {
-                if (!mLayerGroups.contains(level))
-                    mLayerGroups[level] = new CompositeLayerGroup(this, level);
-                mLayerGroups[level]->addTileLayer(tl, index);
-                if (!mMapInfo->isBeingEdited())
-                    mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
-            }
+        int level = layer->level();
+        if (TileLayer *tl = layer->asTileLayer()) {
+            if (!mLayerGroups.contains(level))
+                mLayerGroups[level] = new CompositeLayerGroup(this, level);
+            mLayerGroups[level]->addTileLayer(tl, index);
+            if (!mMapInfo->isBeingEdited())
+                mLayerGroups[level]->setLayerVisibility(tl, !layer->name().contains(QLatin1String("NoRender")));
         }
         ++index;
     }
@@ -1731,8 +1719,7 @@ void MapComposite::recreate()
     // by the LotManager).
     if (!mMapInfo->isBeingEdited()) {
         foreach (ObjectGroup *objectGroup, mMap->objectGroups()) {
-            int levelOffset;
-            (void) levelForLayer(objectGroup, &levelOffset);
+            int levelOffset = objectGroup->level();
             foreach (MapObject *object, objectGroup->objects()) {
                 if (object->name() == QLatin1String("lot") && !object->type().isEmpty()) {
                     // FIXME: if this sub-map is converted from LevelIsometric to Isometric,

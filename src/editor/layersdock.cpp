@@ -25,6 +25,7 @@
 #include "worlddocument.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "tilelayer.h"
 
 #include <QBoxLayout>
@@ -123,7 +124,8 @@ void LayersDock::saveExpandedLevels(CellDocument *doc)
     mExpandedLevels[doc].clear();
     MapComposite *mapComposite = doc->scene()->mapComposite();
     foreach (CompositeLayerGroup *g, mapComposite->layerGroups()) {
-        if (mView->isExpanded(mView->model()->index(g)))
+        MapLevel *mapLevel = doc->scene()->map()->mapLevelForZ(g->level());
+        if (mView->isExpanded(mView->model()->index(mapLevel)))
             mExpandedLevels[doc].append(g);
     }
 }
@@ -132,8 +134,10 @@ void LayersDock::restoreExpandedLevels(CellDocument *doc)
 {
     if (!mExpandedLevels.contains(doc))
         mView->collapseAll();
-    foreach (CompositeLayerGroup *g, mExpandedLevels[doc])
-        mView->setExpanded(mView->model()->index(g), true);
+    foreach (CompositeLayerGroup *g, mExpandedLevels[doc]) {
+        MapLevel *mapLevel = doc->scene()->map()->mapLevelForZ(g->level());
+        mView->setExpanded(mView->model()->index(mapLevel), true);
+    }
     mExpandedLevels[doc].clear();
 #if 0
     // Also restore the selection
@@ -244,8 +248,10 @@ void LayersView::setCellDocument(CellDocument *doc)
         mSynching = true;
         if (TileLayer *tl = mCellDocument->currentTileLayer())
             setCurrentIndex(model()->index(tl));
-        else if (CompositeLayerGroup *g = mCellDocument->currentLayerGroup())
-            setCurrentIndex(model()->index(g));
+        else if (CompositeLayerGroup *g = mCellDocument->currentLayerGroup()) {
+            MapLevel *mapLevel = mCellDocument->scene()->map()->mapLevelForZ(g->level());
+            setCurrentIndex(model()->index(mapLevel));
+        }
         mSynching = false;
     } else {
         model()->setCellDocument(0);
@@ -277,8 +283,8 @@ void LayersView::selectionChanged(const QItemSelection &selected, const QItemSel
             if (layerIndex != mCellDocument->currentLayerIndex())
                 mCellDocument->setCurrentLayerIndex(layerIndex);
         }
-        if (CompositeLayerGroup *g = model()->toTileLayerGroup(index)) {
-            int level = g->level();
+        if (MapLevel *mapLevel = model()->toMapLevel(index)) {
+            int level = mapLevel->level();
             if (level != mCellDocument->currentLevel())
                 mCellDocument->setCurrentLevel(level);
         }
@@ -303,7 +309,8 @@ void LayersView::currentLevelOrLayerIndexChanged(int index)
     }
     if (CompositeLayerGroup *g = mCellDocument->currentLayerGroup()) {
         mSynching = true;
-        setCurrentIndex(model()->index(g));
+        MapLevel *mapLevel = mCellDocument->scene()->map()->mapLevelForZ(g->level());
+        setCurrentIndex(model()->index(mapLevel));
         mSynching = false;
         return;
     }

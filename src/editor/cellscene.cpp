@@ -40,6 +40,7 @@
 
 #include "isometricrenderer.h"
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 #include "tile.h"
@@ -1317,7 +1318,7 @@ exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
                 if (CompositeLayerGroup *rootLayerGroup = mc->root()->layerGroupForLevel(mLayerGroup->level())) {
                     for (int i = 0; i < rootLayerGroup->layerCount(); i++) {
                         TileLayer *layer = rootLayerGroup->layers()[i];
-                        mcVBO->mLayerNameToIndex[layer->name()] = i;
+                        mcVBO->mLayerNameToIndex[layer->nameWithPrefix()] = i;
                     }
                 }
 
@@ -4880,18 +4881,15 @@ void CellScene::loadMap()
         for (const QString& layerName : defaultLayerNames) {
             QString withoutPrefix = MapComposite::layerNameWithoutPrefix(layerName);
             QString withPrefix = QStringLiteral("%1_%2").arg(level).arg(withoutPrefix);
-            bool exists = false;
-            const QList<TileLayer*> tileLayers = mMap->tileLayers();
-            for (TileLayer* layer : tileLayers) {
-                if (layer->name() == withPrefix) {
-                    exists = true;
-                    break;
-                }
+            MapLevel *mapLevel = mMap->mapLevelForZ(level);
+            if (mapLevel) {
+                if (mapLevel->indexOfLayer(withoutPrefix, Layer::TileLayerType) != -1)
+                    continue;
             }
-            if (exists)
-                continue;
-            TileLayer* layer = new TileLayer(withPrefix, 0, 0, 300, 300);
-            mMap->insertLayer(mMap->layerCount(), layer);
+            TileLayer* layer = new TileLayer(withoutPrefix, 0, 0, 300, 300);
+            layer->setLevel(level);
+            mMap->addLayer(layer);
+//            mMap->insertLayer(mMap->layerCount(), layer);
         }
     }
 #endif
