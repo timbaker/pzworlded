@@ -267,7 +267,7 @@ TileLayer *CellDocument::currentTileLayer() const
 
 void CellDocument::setCurrentLevel(int level)
 {
-    Q_ASSERT(level >= 0 && level < scene()->mapComposite()->layerGroupCount());
+    Q_ASSERT(level >= MIN_WORLD_LEVEL && level <= MAX_WORLD_LEVEL /*scene()->mapComposite()->layerGroupCount()*/);
     mCurrentLevel = level;
     mCurrentLayerIndex = -1;
     emit currentLevelChanged(mCurrentLevel);

@@ -217,8 +217,13 @@ public:
         return screenPolygon;
     }
 
+    void setMinLevel(int level) { mMinLevel = level; }
+    int minLevel() const { return mMinLevel; }
+
     void setMaxLevel(int level) { mMaxLevel = level; }
     int maxLevel() const { return mMaxLevel; }
+
+    int totalLevels() const { return maxLevel() - minLevel() + 1; }
 
     bool *mAbortDrawing;
 
@@ -259,6 +264,7 @@ protected:
 private:
     const Map *mMap;
 #ifdef ZOMBOID
+    int mMinLevel;
     int mMaxLevel;
     bool m2x;
 #endif

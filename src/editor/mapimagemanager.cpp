@@ -1187,11 +1187,15 @@ MapImageData MapImageRenderWorker::generateMapImage(MapComposite *mapComposite)
     renderer->mAbortDrawing = workerThread()->var();
 
     // Don't draw empty levels
+    int minLevel = 0;
     int maxLevel = 0;
     foreach (CompositeLayerGroup *layerGroup, mapComposite->sortedLayerGroups()) {
-        if (!layerGroup->bounds().isEmpty())
+        if (!layerGroup->bounds().isEmpty()) {
+            minLevel = std::min(minLevel, layerGroup->level());
             maxLevel = layerGroup->level();
+        }
     }
+    renderer->setMinLevel(minLevel);
     renderer->setMaxLevel(maxLevel);
 
     foreach (MapComposite *mc, mapComposite->maps())

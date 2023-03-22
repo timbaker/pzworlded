@@ -147,17 +147,36 @@ void CellMiniMapItem::paint(QPainter *painter,
 {
     Q_UNUSED(option)
 
+    QVector<const LotImage*> lotImages;
+    for (const LotImage &lotImage : mLotImages) {
+        if (!lotImage.mMapImage || lotImage.mLevel >= 0)
+            continue;
+        lotImages += &lotImage;
+    }
+    std::sort(lotImages.begin(), lotImages.end(), [](const LotImage *lotImage1, const LotImage *lotImage2) {
+        return lotImage1->mBounds.bottom() > lotImage2->mBounds.bottom();
+    });
+    for (const LotImage *lotImage : lotImages) {
+        paintLotImage(painter, *lotImage);
+    }
+
     if (mMapImage) {
         QRectF target = mMapImageBounds;
         QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
         painter->drawImage(target, mMapImage->image(), source);
     }
 
-    foreach (const LotImage &lotImage, mLotImages) {
-        if (!lotImage.mMapImage) continue;
-        QRectF target = lotImage.mBounds;
-        QRectF source = QRect(QPoint(0, 0), lotImage.mMapImage->image().size());
-        painter->drawImage(target, lotImage.mMapImage->image(), source);
+    lotImages.clear();
+    for (const LotImage &lotImage : mLotImages) {
+        if (!lotImage.mMapImage || lotImage.mLevel < 0)
+            continue;
+        lotImages += &lotImage;
+    }
+    std::sort(lotImages.begin(), lotImages.end(), [](const LotImage *lotImage1, const LotImage *lotImage2) {
+        return lotImage1->mBounds.bottom() > lotImage2->mBounds.bottom();
+    });
+    for (const LotImage *lotImage : lotImages) {
+        paintLotImage(painter, *lotImage);
     }
 }
 
@@ -192,6 +211,7 @@ void CellMiniMapItem::updateLotImage(int index)
         mLotImages[index].mBounds = QRectF();
         mLotImages[index].mMapImage = 0;
     }
+    mLotImages[index].mLevel = lot->level();
 }
 
 void CellMiniMapItem::updateBoundingRect()
@@ -272,6 +292,16 @@ void CellMiniMapItem::mapImageChanged(MapImage *mapImage)
             return;
         }
     }
+}
+
+void CellMiniMapItem::paintLotImage(QPainter *painter, const LotImage &lotImage)
+{
+    if (lotImage.mMapImage == nullptr) {
+        return;
+    }
+    QRectF target = lotImage.mBounds;
+    QRectF source = QRect(QPoint(0, 0), lotImage.mMapImage->image().size());
+    painter->drawImage(target, lotImage.mMapImage->image(), source);
 }
 
 /////
@@ -1228,13 +1258,13 @@ LayerGroupVBO *MapCompositeVBO::getLayerVBO(CompositeLayerGroupItem *item)
         mUsedTilesets = mMapComposite->usedTilesets();
     }
 #endif
-    LayerGroupVBO* layerVBO = mLayerVBOs[item->layerGroup()->level()];
+    LayerGroupVBO* layerVBO = mLayerVBOs[item->layerGroup()->level() + WORLD_GROUND_LEVEL];
     if (layerVBO == nullptr) {
         layerVBO = new LayerGroupVBO();
         layerVBO->mMapCompositeVBO = this;
         layerVBO->mLayerGroupItem = item;
         layerVBO->mLayerGroup = item->layerGroup();
-        mLayerVBOs[item->layerGroup()->level()] = layerVBO;
+        mLayerVBOs[item->layerGroup()->level() + WORLD_GROUND_LEVEL] = layerVBO;
     }
     return layerVBO;
 }
@@ -3651,7 +3681,7 @@ void BasementStairHandle::paint(QPainter *painter, const QStyleOptionGraphicsIte
     stairRect.translate(-stairRect.topLeft());
     int level = mItem->object()->level();
     QPolygonF scenePoly = mScene->renderer()->tileToPixelCoords(stairRect, level);
-    scenePoly.translate(-mScene->renderer()->tileToPixelCoords(QPoint(), mItem->object()->level()));
+    scenePoly.translate(-mScene->renderer()->tileToPixelCoords(QPoint(), level));
     painter->drawPolygon(scenePoly);
 }
 
@@ -4875,7 +4905,7 @@ void CellScene::loadMap()
 #if 1
     // Add any missing default tile layers so the user can hide/show them in the Layers Dock.
     // FIXME: mMap is shared, is this safe?
-    for (int level = 0; level < MAX_WORLD_LEVELS; level++)
+    for (int level = MIN_WORLD_LEVEL; level <= MAX_WORLD_LEVEL; level++)
     {
         QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
         for (const QString& layerName : defaultLayerNames) {
@@ -4905,6 +4935,7 @@ void CellScene::loadMap()
 
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
 
+    mRenderer->setMinLevel(mMapComposite->minLevel());
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
     connect(mMapComposite, &MapComposite::layerGroupAdded,
             this, &CellScene::layerGroupAdded);
@@ -4921,7 +4952,7 @@ void CellScene::loadMap()
         addItem(item);
         item->synchWithObject(); // for ObjectLabelItem
         mObjectItems += item;
-        mMapComposite->ensureMaxLevels(obj->level());
+        mMapComposite->checkMinMaxLevels(obj->level(), obj->level());
     }
 
     // FIXME: This creates a new CellRoadItem for every road in the world,
@@ -5073,12 +5104,11 @@ void CellScene::lotLevelChanged(WorldCellLot *lot)
 //        item->subMapMoved(); // also called in synchLayerGroups()
 
         // Make sure there are enough layer-groups to display the submap
+        int minLevel = lot->level() + item->subMap()->minLevel();
         int maxLevel = lot->level() + item->subMap()->maxLevel();
-        if (maxLevel > mMapComposite->maxLevel()) {
-            mMapComposite->ensureMaxLevels(maxLevel);
-//            foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups())
-//                layerGroup->synch();
-        }
+        mMapComposite->checkMinMaxLevels(minLevel, maxLevel);
+//      foreach (CompositeLayerGroup *layerGroup, mMapComposite->layerGroups())
+//          layerGroup->synch();
 
         doLater(AllGroups | Bounds | Synch | ZOrder);
 
@@ -5899,7 +5929,7 @@ void CellScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 void CellScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
 {
     int level = document()->currentLevel();
-    if (level < 0) {
+    if (level < MIN_WORLD_LEVEL || level > MAX_WORLD_LEVEL) {
         event->ignore();
         return;
     }
@@ -6260,10 +6290,9 @@ void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
         mLotToMC[lot]->setLevel(lot->level());
 
         // Make sure there are enough layer-groups to display the submap
+        int minLevel = lot->level() + mLotToMC[lot]->minLevel();
         int maxLevel = lot->level() +  mLotToMC[lot]->maxLevel();
-        if (maxLevel > mMapComposite->maxLevel()) {
-            mMapComposite->ensureMaxLevels(maxLevel);
-        }
+        mMapComposite->checkMinMaxLevels(minLevel, maxLevel);
 
         scene()->mapCompositeNeedsSynch();
     }
@@ -6480,7 +6509,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
 //            scene()->addItem(item);
             item->synchWithObject(); // for ObjectLabelItem
             mObjectItems += item;
-            mMapComposite->ensureMaxLevels(obj->level());
+            mMapComposite->checkMinMaxLevels(obj->level(), obj->level());
         }
 
         qDeleteAll(mInGameMapFeatureItems);

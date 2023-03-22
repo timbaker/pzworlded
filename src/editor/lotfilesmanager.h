@@ -369,8 +369,8 @@ private:
     Tiled::Tileset *mJumboTreeTileset;
     QMap<int,LotFile::Tile*> TileMap;
     QVector<QVector<QVector<LotFile::Square> > > mGridData;
-    int MaxLevel;
-    int Version;
+    int mMinLevel;
+    int mMaxLevel;
     QList<LotFile::RoomRect*> mRoomRects;
     QMap<int,QList<LotFile::RoomRect*> > mRoomRectByLevel;
     QList<LotFile::Room*> roomList;

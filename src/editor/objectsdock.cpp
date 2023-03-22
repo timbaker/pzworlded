@@ -177,7 +177,7 @@ void ObjectsDock::selectionChanged()
     QModelIndexList selection = mView->selectionModel()->selectedIndexes();
     if (selection.size() == mView->model()->columnCount()) {
         QModelIndex index = selection.first();
-        int level = -1;
+        int level = MIN_WORLD_LEVEL - 1;
 
         if (ObjectsModel::Level *levelPtr = mView->model()->toLevel(index))
             level = levelPtr->level;
@@ -198,7 +198,7 @@ void ObjectsDock::selectionChanged()
             objectGroup = obj->group();
         }
 
-        if (level >= 0)
+        if (level != MIN_WORLD_LEVEL - 1)
             mCellDoc->setCurrentLevel(level);
     }
 
@@ -557,7 +557,7 @@ void ObjectsView::saveExpandedLevels()
     for (int i = 0; i < nLevels; i++) {
         const QModelIndex levelIndex = mModel->index(i, 0);
         ObjectsModel::Level* modelLevel = mModel->toLevel(levelIndex);
-        Level& level = mExpandedLevels[modelLevel->level];
+        Level& level = mExpandedLevels[modelLevel->level + WORLD_GROUND_LEVEL];
         level.expanded = isExpanded(levelIndex);
 
         int nGroups = mModel->rowCount(levelIndex);
@@ -589,7 +589,7 @@ void ObjectsView::restoreExpandedLevels()
     for (int i = 0; i < nLevels; i++) {
         const QModelIndex levelIndex = mModel->index(i, 0);
         ObjectsModel::Level* modelLevel = mModel->toLevel(levelIndex);
-        Level& level = mExpandedLevels[modelLevel->level];
+        Level& level = mExpandedLevels[modelLevel->level + WORLD_GROUND_LEVEL];
         setExpanded(levelIndex, level.expanded);
 
         int nGroups = mModel->rowCount(levelIndex);
@@ -1068,7 +1068,12 @@ void ObjectsModel::setModelData()
         return;
     }
 
-    int maxLevel;
+#if 1
+    int minLevel = MIN_WORLD_LEVEL;
+    int maxLevel = MAX_WORLD_LEVEL;
+#else
+    int minLevel = 0;
+    int maxLevel = 0;
     if (mCellDoc) {
         maxLevel = mCellDoc->scene()->mapComposite()->maxLevel();
     } else {
@@ -1076,10 +1081,10 @@ void ObjectsModel::setModelData()
         foreach (WorldCellObject *obj, mCell->objects())
             maxLevel = qMax(obj->level(), maxLevel);
     }
-
+#endif
     mRootItem = new Item();
 
-    for (int level = 0; level <= maxLevel; level++)
+    for (int level = minLevel; level <= maxLevel; level++)
         mLevels += new Level(level);
 
     foreach (Level *level, mLevels) {

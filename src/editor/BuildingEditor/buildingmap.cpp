@@ -553,6 +553,7 @@ void BuildingMap::BuildingToMap()
     }
 
     // Do this before calculating the bounds of CompositeLayerGroupItem
+    mMapRenderer->setMinLevel(mMapComposite->minLevel());
     mMapRenderer->setMaxLevel(mMapComposite->maxLevel());
 }
 

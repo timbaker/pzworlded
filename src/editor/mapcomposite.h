@@ -294,6 +294,7 @@ public:
     void setGroupVisible(bool visible) { mGroupVisible = visible; }
     bool isGroupVisible() const { return mGroupVisible; }
 
+    int minLevel() const { return mMinLevel; }
     int maxLevel() const { return mMaxLevel; }
 
     QPoint orientAdjustPos() const { return mOrientAdjustPos; }
@@ -318,7 +319,7 @@ public:
     void saveOpacity();
     void restoreOpacity();
 
-    void ensureMaxLevels(int maxLevel);
+    void checkMinMaxLevels(int minLevel, int maxLevel);
 
     struct ZOrderItem
     {

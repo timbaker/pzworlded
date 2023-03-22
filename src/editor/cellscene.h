@@ -500,7 +500,10 @@ private:
 
         QRectF mBounds;
         MapImage *mMapImage;
+        int mLevel;
     };
+
+    void paintLotImage(QPainter *painter, const LotImage &lotImage);
 
     CellScene *mScene;
     WorldCell *mCell;

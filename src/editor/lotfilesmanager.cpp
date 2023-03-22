@@ -53,6 +53,11 @@
 
 using namespace Tiled;
 
+static int VERSION1 = 1; // Added 4-byte 'LOTH' at start of .lotheader files.
+                         // Added 4-byte 'LOTP' at start of .lotpack files, followed by 4-byte version number.
+
+static int VERSION_LATEST = VERSION1;
+
 static void SaveString(QDataStream& out, const QString& str)
 {
     for (int i = 0; i < str.length(); i++) {
@@ -325,8 +330,6 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return true;
     }
 
-    MaxLevel = MAX_WORLD_LEVELS;
-
     int mapWidth = mapInfo->width();
     int mapHeight = mapInfo->height();
 
@@ -335,8 +338,11 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     for (int x = 0; x < mapWidth; x++) {
         mGridData[x].resize(mapHeight);
         for (int y = 0; y < mapHeight; y++)
-            mGridData[x][y].fill(LotFile::Square(), MaxLevel);
+            mGridData[x][y].fill(LotFile::Square(), MAX_WORLD_LEVELS);
     }
+
+    mMinLevel = 10000;
+    mMaxLevel = -10000;
 
     Tile *missingTile = Tiled::Internal::TilesetManager::instance()->missingTile();
     QVector<const Tiled::Cell *> cells(40);
@@ -348,7 +354,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             for (int x = d; x < mapWidth; x++) {
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
-                for (const Tiled::Cell *cell : cells) {
+                for (const Tiled::Cell *cell : qAsConst(cells)) {
                     if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;
                     if (mapInfo->orientation() == Map::Isometric) {
@@ -358,11 +364,17 @@ bool LotFilesManager::generateCell(WorldCell *cell)
                     if (lx >= mapWidth) continue;
                     if (ly >= mapHeight) continue;
                     LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));
-                    mGridData[lx][ly][lg->level()].Entries.append(e);
+                    mGridData[lx][ly][lg->level() - MIN_WORLD_LEVEL].Entries.append(e);
                     TileMap[e->gid]->used = true;
+                    mMinLevel = std::min(mMinLevel, lg->level());
+                    mMaxLevel = std::max(mMaxLevel, lg->level());
                 }
             }
         }
+    }
+
+    if (mMinLevel == 10000) {
+        mMinLevel = mMaxLevel = 0;
     }
 
     generateBuildingObjects(mapWidth, mapHeight);
@@ -389,6 +401,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     QDataStream out(&file);
     out.setByteOrder(QDataStream::LittleEndian);
 
+    out << quint8('L') << quint8('O') << quint8('T') << quint8('P');
+
+    out << qint32(VERSION_LATEST);
+
     int WorldDiv = CELL_WIDTH / CHUNK_WIDTH;
     // C# 'long' is signed 64-bit integer
     out << qint32(WorldDiv * WorldDiv);
@@ -405,7 +421,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         }
     }
 
-    file.seek(4);
+    file.seek(4 + 4 + 4); // 'LOTS' + version + #chunks
     for (int m = 0; m < WorldDiv * WorldDiv; m++)
         out << qint64(PositionMap[m]);
 
@@ -561,8 +577,9 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
     QDataStream out(&file);
     out.setByteOrder(QDataStream::LittleEndian);
 
-    Version = 0;
-    out << qint32(Version);
+    out << quint8('L') << quint8('O') << quint8('T') << quint8('H');
+
+    out << qint32(VERSION_LATEST);
 
     int tilecount = 0;
     for (LotFile::Tile *tile : TileMap) {
@@ -582,10 +599,10 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         }
     }
 
-    out << quint8(0);
     out << qint32(CHUNK_WIDTH);
     out << qint32(CHUNK_HEIGHT);
-    out << qint32(MaxLevel);
+    out << qint32(mMinLevel);
+    out << qint32(mMaxLevel);
 
     out << qint32(roomList.count());
     for (LotFile::Room *room : roomList) {
@@ -672,12 +689,12 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
     int wy = cell->y() * 300 + cy * CHUNK_HEIGHT;
 
     int notdonecount = 0;
-    for (int z = 0; z < MaxLevel; z++)  {
+    for (int z = mMinLevel; z <= mMaxLevel; z++)  {
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int y = 0; y < CHUNK_HEIGHT; y++) {
                 int gx = cx * CHUNK_WIDTH + x;
                 int gy = cy * CHUNK_HEIGHT + y;
-                const QList<LotFile::Entry*> &entries = mGridData[gx][gy][z].Entries;
+                const QList<LotFile::Entry*> &entries = mGridData[gx][gy][z - MIN_WORLD_LEVEL].Entries;
                 if (entries.count() == 0)
                     notdonecount++;
                 else {
@@ -720,11 +737,11 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
         for (int y = rr->y; y < rr->y + rr->h; y++) {
 
             // Remember the room at each position in the map.
-            mGridData[x][y][room->floor].roomID = room->ID;
+            mGridData[x][y][room->floor - MIN_WORLD_LEVEL].roomID = room->ID;
 
             /* Examine every tile inside the room.  If the tile's metaEnum >= 0
                then create a new RoomObject for it. */
-            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor - MIN_WORLD_LEVEL].Entries) {
                 int metaEnum = TileMap[entry->gid]->metaEnum;
                 if (metaEnum >= 0) {
                     LotFile::RoomObject object;
@@ -742,7 +759,7 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
     int y = rr->y + rr->h;
     if (y < mapHeight) {
         for (int x = rr->x; x < rr->x + rr->w; x++) {
-            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor - MIN_WORLD_LEVEL].Entries) {
                 int metaEnum = TileMap[entry->gid]->metaEnum;
                 if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumNorth(metaEnum)) {
                     LotFile::RoomObject object;
@@ -760,7 +777,7 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
     int x = rr->x + rr->w;
     if (x < mapWidth) {
         for (int y = rr->y; y < rr->y + rr->h; y++) {
-            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor].Entries) {
+            foreach (LotFile::Entry *entry, mGridData[x][y][room->floor - MIN_WORLD_LEVEL].Entries) {
                 int metaEnum = TileMap[entry->gid]->metaEnum;
                 if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumWest(metaEnum)) {
                     LotFile::RoomObject object;
@@ -862,7 +879,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     for (int y = 0; y < 300; y++) {
         for (int x = 0; x < 300; x++) {
             // Prevent jumbo trees near any second-story tiles
-            if (!mGridData[x][y][1].Entries.isEmpty()) {
+            if (!mGridData[x][y][1 - MIN_WORLD_LEVEL].Entries.isEmpty()) {
                 for (int yy = y; yy <= y + 4; yy++) {
                     for (int xx = x; xx <= x + 4; xx++) {
                         if (xx >= 0 && xx < 300 && yy >= 0 && yy < 300)
@@ -872,7 +889,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
             }
 
             // Prevent jumbo trees near non-floor, non-vegetation (fences, etc)
-            foreach (LotFile::Entry *e, mGridData[x][y][0].Entries) {
+            foreach (LotFile::Entry *e, mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries) {
                 LotFile::Tile *tile = TileMap[e->gid];
                 if (!floorVegTiles.contains(tile->name)) {
                     for (int yy = y - 1; yy <= y + 1; yy++) {
@@ -919,7 +936,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     QList<QPoint> allTreePos;
     for (int y = 0; y < 300; y++) {
         for (int x = 0; x < 300; x++) {
-            const auto& entries = mGridData[x][y][0].Entries;
+            const auto& entries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
             for (LotFile::Entry *e : entries) {
                 LotFile::Tile *tile = TileMap[e->gid];
                 if (treeTiles.contains(tile->name) == false) {
@@ -957,7 +974,8 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     for (int y = 0; y < 300; y++) {
         for (int x = 0; x < 300; x++) {
             if (grid[x][y] == JUMBO_TREE) {
-                foreach (LotFile::Entry *e, mGridData[x][y][0].Entries) {
+                QList<LotFile::Entry*>& squareEntries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
+                for (LotFile::Entry *e : squareEntries) {
                     LotFile::Tile *tile = TileMap[e->gid];
                     if (treeTiles.contains(tile->name)) {
                         e->gid = mTilesetToFirstGid[mJumboTreeTileset];
@@ -967,11 +985,12 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
                 }
             }
             if (grid[x][y] == REMOVE_TREE) {
-                for (int i = 0; i < mGridData[x][y][0].Entries.size(); i++) {
-                    LotFile::Entry *e = mGridData[x][y][0].Entries[i];
+                QList<LotFile::Entry*>& squareEntries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
+                for (int i = 0; i < squareEntries.size(); i++) {
+                    LotFile::Entry *e = squareEntries[i];
                     LotFile::Tile *tile = TileMap[e->gid];
                     if (treeTiles.contains(tile->name)) {
-                        mGridData[x][y][0].Entries.removeAt(i);
+                        squareEntries.removeAt(i);
                         break;
                     }
                 }
@@ -1027,7 +1046,7 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
 
 int LotFilesManager::getRoomID(int x, int y, int z)
 {
-    return mGridData[x][y][z].roomID;
+    return mGridData[x][y][z - MIN_WORLD_LEVEL].roomID;
 #if 0
     int n = 0;
     foreach (LotFile::Room *room, roomList) {

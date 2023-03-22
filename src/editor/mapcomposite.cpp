@@ -1105,7 +1105,7 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
         mMinLevel = 0;
 #ifdef WORLDED
     if (!mParent && !mMapInfo->isBeingEdited())
-        mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVELS - 1);
+        mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVEL);
 #endif // WORLDED
 
     mSortedLayerGroups.clear();
@@ -1163,7 +1163,7 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
     if (creating)
         return subMap;
 
-    ensureMaxLevels(levelOffset + subMap->maxLevel());
+    checkMinMaxLevels(levelOffset + subMap->minLevel(), levelOffset + subMap->maxLevel());
 
     foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
         layerGroup->setNeedsSynch(true);
@@ -1171,7 +1171,7 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
 
     MapComposite *mc = this;
     while (mc->mParent) {
-        mc->mParent->ensureMaxLevels(mc->levelOffset() + mc->maxLevel());
+        mc->mParent->checkMinMaxLevels(mc->levelOffset() + mc->minLevel(), mc->levelOffset() + mc->maxLevel());
         // FIXME: setNeedsSynch() on mc->mParent's layergroups
         mc = mc->mParent;
     }
@@ -1403,6 +1403,9 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
                     maxLevel = levelRecursive() + layerGroup->level();
             }
         }
+        unionSceneRects(bounds,
+                        renderer->boundingRect(mapTileBounds, renderer->minLevel()),
+                        bounds);
         if (maxLevel > renderer->maxLevel())
             maxLevel = renderer->maxLevel();
         unionSceneRects(bounds,
@@ -1466,13 +1469,14 @@ void MapComposite::restoreOpacity()
         subMap->restoreOpacity();
 }
 
-void MapComposite::ensureMaxLevels(int maxLevel)
+void MapComposite::checkMinMaxLevels(int minLevel, int maxLevel)
 {
+    minLevel = qMin(minLevel, mMinLevel);
     maxLevel = qMax(maxLevel, mMaxLevel);
-    if (mMinLevel == 0 && maxLevel < mLayerGroups.size())
+    if (mMinLevel == minLevel && maxLevel == mMaxLevel)
         return;
 
-    for (int level = 0; level <= maxLevel; level++) {
+    for (int level = minLevel; level <= maxLevel; level++) {
         if (!mLayerGroups.contains(level)) {
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
 
@@ -1573,7 +1577,7 @@ bool MapComposite::mapChanged(MapInfo *mapInfo)
     bool changed = false;
     foreach (MapComposite *subMap, mSubMaps) {
         if (subMap->mapChanged(mapInfo)) {
-            ensureMaxLevels(subMap->levelOffset() + subMap->maxLevel());
+            checkMinMaxLevels(subMap->levelOffset() + subMap->minLevel(), subMap->levelOffset() + subMap->maxLevel());
             if (!changed) {
                 foreach (CompositeLayerGroup *layerGroup, mLayerGroups)
                     layerGroup->setNeedsSynch(true);
@@ -1771,10 +1775,10 @@ void MapComposite::recreate()
             mMaxLevel = subMap->mLevelOffset + subMap->mMaxLevel;
 
     if (mMinLevel == 10000)
-        mMinLevel = 0;
+        mMinLevel = MIN_WORLD_LEVEL;
 #ifdef WORLDED
     if (!mParent && !mMapInfo->isBeingEdited())
-        mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVELS - 1);
+        mMaxLevel = qMax(mMaxLevel, MAX_WORLD_LEVEL);
 #endif
 
     for (int level = mMinLevel; level <= mMaxLevel; ++level) {

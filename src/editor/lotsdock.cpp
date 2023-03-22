@@ -24,6 +24,7 @@
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "worldcell.h"
+#include "worldconstants.h"
 #include "worlddocument.h"
 
 #include "maprenderer.h"
@@ -126,7 +127,7 @@ void LotsDock::selectionChanged()
 
     QModelIndexList selection = mView->selectionModel()->selectedIndexes();
     if (selection.size() == mView->model()->columnCount()) {
-        int level = -1;
+        int level = MIN_WORLD_LEVEL - 1;
         if (LotsModel::Level *levelPtr = mView->model()->toLevel(selection.first()))
             level = levelPtr->level;
         if (WorldCellLot *lot = mView->model()->toLot(selection.first())) {
@@ -135,7 +136,7 @@ void LotsDock::selectionChanged()
                                                                        lot->level()));
             level = lot->level();
         }
-        if (level >= 0)
+        if (level != MIN_WORLD_LEVEL - 1)
             mCellDoc->setCurrentLevel(level);
     }
 
@@ -638,7 +639,7 @@ LotsModel::Item *LotsModel::toItem(int level) const
 
 LotsModel::Item *LotsModel::toItem(WorldCellLot *lot) const
 {
-    Level *level = mLevels[lot->level()];
+    Level *level = mLevels[lot->level() + WORLD_GROUND_LEVEL];
     Item *parent = toItem(level);
     foreach (Item *item, parent->children)
         if (item->lot == lot)
@@ -661,7 +662,9 @@ void LotsModel::setModelData()
         return;
     }
 
-    int maxLevel;
+    int minLevel = MIN_WORLD_LEVEL;
+    int maxLevel = MAX_WORLD_LEVEL;
+#if 0
     if (mCellDoc) {
         maxLevel = mCellDoc->scene()->mapComposite()->maxLevel();
     } else {
@@ -669,10 +672,10 @@ void LotsModel::setModelData()
         foreach (WorldCellLot *lot, mCell->lots())
             maxLevel = qMax(lot->level(), maxLevel);
     }
-
+#endif
     mRootItem = new Item();
 
-    for (int level = 0; level <= maxLevel; level++)
+    for (int level = minLevel; level <= maxLevel; level++)
         mLevels += new Level(level);
 
     foreach (Level *level, mLevels)

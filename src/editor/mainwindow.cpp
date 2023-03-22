@@ -705,7 +705,7 @@ void MainWindow::selectLevelAbove()
 {
     if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
         int level = cellDoc->currentLevel();
-        if (level < cellDoc->scene()->mapComposite()->maxLevel())
+        if (level < MAX_WORLD_LEVEL /*cellDoc->scene()->mapComposite()->maxLevel()*/)
             cellDoc->setCurrentLevel(level + 1);
     }
 }
@@ -714,7 +714,7 @@ void MainWindow::selectLevelBelow()
 {
     if (CellDocument *cellDoc = mCurrentDocument->asCellDocument()) {
         int level = cellDoc->currentLevel();
-        if (level > 0)
+        if (level > MIN_WORLD_LEVEL)
             cellDoc->setCurrentLevel(level - 1);
     }
 }
@@ -2625,8 +2625,8 @@ void MainWindow::updateActions()
         int level = cellDoc->currentLevel();
         ui->currentLevelButton->setText(tr("Level: %1 ").arg(level)); // extra space cuz of down-arrow placement on Windows
         ui->currentLevelButton->setEnabled(true);
-        ui->actionLevelAbove->setEnabled(level < cellDoc->scene()->mapComposite()->maxLevel());
-        ui->actionLevelBelow->setEnabled(level > 0);
+        ui->actionLevelAbove->setEnabled(level < MAX_WORLD_LEVEL /*cellDoc->scene()->mapComposite()->maxLevel()*/);
+        ui->actionLevelBelow->setEnabled(level > MIN_WORLD_LEVEL);
         WorldObjectGroup *og = cellDoc->currentObjectGroup();
         ui->objectGroupButton->setText(tr("Obj Grp: %1 ")
                                        .arg((og && !og->name().isEmpty())
