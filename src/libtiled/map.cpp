@@ -250,8 +250,19 @@ int Map::indexOfLayer(const QString &layerName, uint layertypes) const
 
 void Map::insertLayer(int index, Layer *layer)
 {
-//    adoptLayer(layer);
-//    mLayers.insert(index, layer);
+    MapLevel *mapLevel = mapLevelForZ(layer->level());
+    if (mapLevel == nullptr) {
+        mapLevel = new MapLevel(this, layer->level());
+        addMapLevel(mapLevel);
+    }
+    int count = 0;
+    for (MapLevel *mapLevel2 : mapLevels()) {
+        if (mapLevel2 == mapLevel) {
+            mapLevel->insertLayer(index - count, layer);
+            return;
+        }
+        count += mapLevel2->layerCount();
+    }
 }
 
 void Map::adoptLayer(Layer *layer)
@@ -269,20 +280,15 @@ void Map::adoptLayer(Layer *layer)
 
 Layer *Map::takeLayerAt(int index)
 {
-#if 1
+    int count = 0;
+    for (MapLevel *mapLevel : mapLevels()) {
+        if (index < count + mapLevel->layerCount()) {
+            return mapLevel->takeLayerAt(index - count);
+        }
+        count += mapLevel->layerCount();
+    }
+    Q_ASSERT(false);
     return nullptr;
-#else
-    Layer *layer = mLayers.takeAt(index);
-#ifdef ZOMBOID
-    Q_ASSERT(layer->map() == this);
-#endif
-    layer->setMap(0);
-#ifdef ZOMBOID
-    foreach (Tileset *ts, layer->usedTilesets())
-        removeTilesetUser(ts);
-#endif
-    return layer;
-#endif
 }
 
 void Map::addTileset(Tileset *tileset)

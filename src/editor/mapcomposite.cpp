@@ -1241,13 +1241,12 @@ void MapComposite::layerAboutToBeRemoved(int index)
 
 void MapComposite::layerRenamed(int index)
 {
-#if 0
     Layer *layer = mMap->layerAt(index);
 
     int oldLevel = layer->level();
-    int newLevel;
+    int newLevel = layer->level();
     bool hadGroup = false;
-    bool hasGroup = levelForLayer(layer, &newLevel);
+    bool hasGroup = true;
     CompositeLayerGroup *oldGroup = 0;
 
     if (TileLayer *tl = layer->asTileLayer()) {
@@ -1257,7 +1256,7 @@ void MapComposite::layerRenamed(int index)
             oldGroup->layerRenamed(tl);
     }
 
-    if ((oldLevel != newLevel) || (hadGroup != hasGroup)) {
+    if (hadGroup != hasGroup) {
         if (hadGroup) {
             emit layerAboutToBeRemovedFromGroup(index);
             removeLayerFromGroup(index);
@@ -1272,7 +1271,6 @@ void MapComposite::layerRenamed(int index)
             emit layerAddedToGroup(index);
         }
     }
-#endif
 }
 
 void MapComposite::addLayerToGroup(int index)
