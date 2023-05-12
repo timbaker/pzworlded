@@ -1,6 +1,8 @@
 #ifndef CHUNKMAP_H
 #define CHUNKMAP_H
 
+#include <BuildingEditor/buildingtiles.h>
+
 #include <QMap>
 #include <QObject>
 #include <QRect>
@@ -242,6 +244,7 @@ public:
     int getRoomAt(int x, int y, int z);
 
     QStringList tilesUsed;
+    QList<BuildingEditor::BuildingTile> buildingTiles;
     QMap<int,RoomDef*> Rooms;
     QList<BuildingDef*> Buildings;
 

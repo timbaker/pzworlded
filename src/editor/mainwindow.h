@@ -148,6 +148,7 @@ public slots:
     void readInGameMapFeaturesXML();
     void writeInGameMapFeaturesXML();
     void overwriteInGameMapFeaturesXML();
+    void createInGameMapImage();
     void creaeInGameMapImagePyramid();
 
     void setStatusBarCoords(int x, int y);

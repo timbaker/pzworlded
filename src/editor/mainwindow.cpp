@@ -74,6 +74,7 @@
 
 #include "InGameMap/ingamemapfeaturegenerator.h"
 #include "InGameMap/ingamemapdock.h"
+#include "InGameMap/ingamemapimagedialog.h"
 #include "InGameMap/ingamemapimagepyramidwindow.h"
 #include "InGameMap/ingamemapreader.h"
 #include "InGameMap/ingamemapscene.h"
@@ -308,6 +309,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionReadInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::readInGameMapFeaturesXML);
     connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML);
     connect(ui->actionOverwriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML);
+    connect(ui->actionCreateWorldImage, &QAction::triggered, this, &MainWindow::createInGameMapImage);
     connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
 
     connect(ui->actionSnapToGrid, &QAction::toggled, prefs, &Preferences::setSnapToGrid);
@@ -2408,6 +2410,12 @@ void MainWindow::overwriteInGameMapFeaturesXML()
     }
 }
 
+void MainWindow::createInGameMapImage()
+{
+    InGameMapImageDialog dialog(this);
+    dialog.exec();
+}
+
 void MainWindow::creaeInGameMapImagePyramid()
 {
     InGameMapImagePyramidWindow *window = new InGameMapImagePyramidWindow(this);
@@ -2626,6 +2634,7 @@ void MainWindow::updateActions()
     }
     ui->actionOverwriteInGameMapFeaturesXML->setText(tr("Overwrite %1").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
     ui->actionOverwriteInGameMapFeaturesXML->setEnabled(hasDoc && hasReadFeaturesXML);
+    ui->actionCreateWorldImage->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);

@@ -230,7 +230,7 @@
      <x>0</x>
      <y>0</y>
      <width>1011</width>
-     <height>21</height>
+     <height>17</height>
     </rect>
    </property>
    <widget class="QMenu" name="fileMenu">
@@ -380,6 +380,7 @@
     <addaction name="actionReadInGameMapFeaturesXML"/>
     <addaction name="actionWriteInGameMapFeaturesXML"/>
     <addaction name="actionOverwriteInGameMapFeaturesXML"/>
+    <addaction name="actionCreateWorldImage"/>
     <addaction name="actionCreateImagePyramid"/>
    </widget>
    <addaction name="fileMenu"/>
@@ -965,6 +966,11 @@
   <action name="actionOverwriteInGameMapFeaturesXML">
    <property name="text">
     <string>Overwrite XXX</string>
+   </property>
+  </action>
+  <action name="actionCreateWorldImage">
+   <property name="text">
+    <string>Create World Image...</string>
    </property>
   </action>
  </widget>
