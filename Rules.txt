@@ -1015,3 +1015,247 @@ rule
     layer = 0_Vegetation
     condition = 145 135 60
 }
+
+rule
+{
+    label = Dense Bushes & Grass (dark)
+    bitmap = 1
+    color = 200 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        darklonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Bushes & Grass (dark)
+    bitmap = 1
+    color = 150 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        darklonggrass
+        darkmedgrass
+        darkshortgrass
+	darklonggrass
+        darklonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Sparse Bushes & Grass (dark)
+    bitmap = 1
+    color = 100 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        darklonggrass
+        darklonggrass
+        darkmedgrass
+        darkshortgrass
+	darklonggrass
+        darklonggrass
+        darkmedgrass
+        darkshortgrass
+	darklonggrass
+        darklonggrass
+        darkmedgrass
+        darkshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 90 100 35
+}
+rule
+{
+    label = Dense Bushes & Grass (medium)
+    bitmap = 1
+    color = 200 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        medlonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Bushes & Grass (medium)
+    bitmap = 1
+    color = 150 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+	medlonggrass
+        medlonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Sparse Bushes & Grass (medium)
+    bitmap = 1
+    color = 100 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+	medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+	medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+	medlonggrass
+        medlonggrass
+        medmedgrass
+        medshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 117 117 47
+}
+rule
+{
+    label = Dense Bushes & Grass (light)
+    bitmap = 1
+    color = 200 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        lightlonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
+}
+rule
+{
+    label = Bushes & Grass (light)
+    bitmap = 1
+    color = 150 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+        lightlonggrass
+        lightlonggrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
+}
+rule
+{
+    label = Sparse Bushes & Grass (light)
+    bitmap = 1
+    color = 100 0 200
+    tiles = [
+        vegetation_foliage_01_8
+        vegetation_foliage_01_9
+        vegetation_foliage_01_10
+        vegetation_foliage_01_11
+        vegetation_foliage_01_12
+        vegetation_foliage_01_13
+        vegetation_foliage_01_14
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+        lightlonggrass
+        lightlonggrass
+        lightmedgrass
+        lightshortgrass
+    ]
+    layer = 0_Vegetation
+    condition = 145 135 60
+}
+rule
+{
+    label = Farm Corn (dead)
+    bitmap = 1
+    color = 255 128 0
+    tiles = [
+        vegetation_farm_01_32
+        vegetation_farm_01_33
+        vegetation_farm_01_34
+        vegetation_farm_01_35
+        vegetation_farm_01_36
+        vegetation_farm_01_37
+        vegetation_farm_01_38
+        vegetation_farm_01_39
+    ]
+    layer = 0_Vegetation
+}
+rule
+{
+    label = Farm Corn 2 (dead)
+    bitmap = 1
+    color = 220 100 0
+    tiles = [
+        vegetation_farm_01_40
+        vegetation_farm_01_41
+        vegetation_farm_01_42
+        vegetation_farm_01_43
+        vegetation_farm_01_44
+        vegetation_farm_01_45
+        vegetation_farm_01_46
+        vegetation_farm_01_47
+    ]
+    layer = 0_Vegetation
+}

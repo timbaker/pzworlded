@@ -221,8 +221,12 @@ bool InGameMapWriterBinary::writeWorld(World *world, const QString &filePath)
 
     // /tmp/tempXYZ -> foo.pzw
     tempFile.close();
-    if (!tempFile.rename(filePath)) {
-        d->mError = QString(QLatin1String("Error renaming file!\nFrom: %1\nTo: %2\n\n%3"))
+    if (tempFile.rename(filePath)) {
+        // If anything above failed, the temp file should auto-remove, but not after
+        // a successful save.
+        tempFile.setAutoRemove(false);
+    } else if (!tempFile.copy(filePath)) {
+        d->mError = QString(QLatin1String("Error copying file!\nFrom: %1\nTo: %2\n\n%3"))
                 .arg(tempFile.fileName())
                 .arg(filePath)
                 .arg(tempFile.errorString());
@@ -231,10 +235,6 @@ bool InGameMapWriterBinary::writeWorld(World *world, const QString &filePath)
             backupFile.rename(filePath); // might fail
         return false;
     }
-
-    // If anything above failed, the temp file should auto-remove, but not after
-    // a successful save.
-    tempFile.setAutoRemove(false);
 
     return true;
 }
