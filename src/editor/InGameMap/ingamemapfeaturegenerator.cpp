@@ -17,6 +17,7 @@
 
 #include "ingamemapfeaturegenerator.h"
 
+#include "generatelotsfailuredialog.h"
 #include "lotfilesmanager.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
@@ -74,6 +75,8 @@ bool InGameMapFeatureGenerator::generateWorld(WorldDocument *worldDoc, InGameMap
     }
     PROGRESS progress(QStringLiteral("Generating %1 features").arg(typeStr));
 
+    mFailures.clear();
+
     mWorldDoc->undoStack()->beginMacro(QStringLiteral("Generate InGameMap %1 Features").arg(typeStr));
 
     if (mode == GenerateSelected) {
@@ -96,6 +99,16 @@ bool InGameMapFeatureGenerator::generateWorld(WorldDocument *worldDoc, InGameMap
     mWorldDoc->undoStack()->endMacro();
 
     MapManager::instance()->purgeUnreferencedMaps();
+
+    if (!mFailures.isEmpty()) {
+        QStringList errorList;
+        for (const GenerateCellFailure &failure : mFailures) {
+            errorList += QString(QStringLiteral("Cell %1,%2: %3")).arg(failure.cell->x()).arg(failure.cell->y()).arg(failure.error);
+        }
+        GenerateLotsFailureDialog dialog(errorList, MainWindow::instance());
+        dialog.exec();
+    }
+
 #if 0
     // While displaying this, the MapManager's FileSystemWatcher might see some
     // changed .tmx files, which results in the PROGRESS dialog being displayed.
@@ -176,14 +189,17 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     DelayedMapLoader mapLoader;
     mapLoader.addMap(mapInfo);
 
+    WorldCellLotList lots;
     for (WorldCellLot *lot : cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
+            lots += lot;
         } else {
-            mError = MapManager::instance()->errorString();
-            return false;
+            mFailures += GenerateCellFailure(cell, MapManager::instance()->errorString());
+//            mError = MapManager::instance()->errorString();
+//            return false;
         }
     }
 
@@ -193,7 +209,7 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     }
 
     // This method won't work for buildings in the TMX, it only works for separate building files.
-    for (WorldCellLot *lot : cell->lots()) {
+    for (WorldCellLot *lot : lots) {
         MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
         if (info != nullptr && info->map() != nullptr) {
             for (ObjectGroup *og : info->map()->objectGroups()) {

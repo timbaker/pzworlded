@@ -32,6 +32,7 @@ namespace Tiled {
 class ObjectGroup;
 }
 
+
 class InGameMapFeatureGenerator : public QObject
 {
     Q_OBJECT
@@ -44,6 +45,17 @@ public:
         FeatureBuilding,
         FeatureTree,
         FeatureWater
+    };
+    struct GenerateCellFailure
+    {
+        WorldCell* cell;
+        QString error;
+
+        GenerateCellFailure(WorldCell* cell, const QString& error)
+            : cell(cell)
+            , error(error)
+        {
+        }
     };
 
     explicit InGameMapFeatureGenerator(QObject *parent = nullptr);
@@ -67,6 +79,7 @@ private:
     WorldDocument *mWorldDoc;
     QString mError;
     FeatureType mFeatureType;
+    QList<GenerateCellFailure> mFailures;
 };
 
 #endif // INGAMEMAP_FEATURE_GENERATOR_H
