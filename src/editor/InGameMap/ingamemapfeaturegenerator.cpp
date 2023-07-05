@@ -212,10 +212,15 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     for (WorldCellLot *lot : lots) {
         MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
         if (info != nullptr && info->map() != nullptr) {
+            QRect bounds;
+            QVector<QRect> rects;
             for (ObjectGroup *og : info->map()->objectGroups()) {
-                if (processObjectGroup(cell, info, og, lot->level(), lot->pos()) == false) {
+                if (processObjectGroup(cell, info, og, lot->level(), lot->pos(), bounds, rects) == false) {
                     return false;
                 }
+            }
+            if (traceBuildingOutline(cell, info, bounds, rects) == false) {
+                return false;
             }
         }
     }
@@ -451,7 +456,7 @@ public:
                 OutlineCellPtr cell = get(x, y);
                 // every poly must have a nw corner.
                 // this should only happen once.
-                if (cell && cell->n && cell->w && cell->inner && !(cell->tw | cell->tn | cell->te | cell->ts)) {
+                if (cell && cell->n && cell->w && cell->inner && !(cell->tw || cell->tn || cell->te || cell->ts)) {
                     QPolygon nodes = trace(*cell);
                     if (nodes.isEmpty())
                         continue;
@@ -551,7 +556,8 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
     return true;
 }
 
-bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *mapInfo, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
+bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *mapInfo, ObjectGroup *objectGroup, int levelOffset,
+                                                   const QPoint &offset, QRect &bounds, QVector<QRect> &rects)
 {
     if (objectGroup->name().contains(QLatin1String("RoomDefs")) == false) {
         return true;
@@ -562,13 +568,7 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *map
         return true;
     level += levelOffset;
 
-    if (level != 0)
-        return true;
-
-    QRect bounds;
-    QVector<QRect> rects;
-
-    foreach (const MapObject *mapObject, objectGroup->objects()) {
+    for (const MapObject *mapObject : objectGroup->objects()) {
 #if 0
         if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
             continue;
@@ -604,6 +604,11 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *map
         rects += { x, y, w, h };
     }
 
+    return true;
+}
+
+bool InGameMapFeatureGenerator::traceBuildingOutline(WorldCell *cell, MapInfo *mapInfo, QRect &bounds, QVector<QRect> &rects)
+{
     if (bounds.isEmpty())
         return true;
 
