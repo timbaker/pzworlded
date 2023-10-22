@@ -39,6 +39,8 @@ class ObjectGroup;
 #define CELL_WIDTH 300
 #define CELL_HEIGHT 300
 
+#define CHUNKS_PER_CELL 30
+
 #define CHUNK_WIDTH 10
 #define CHUNK_HEIGHT 10
 
