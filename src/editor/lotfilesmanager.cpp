@@ -317,6 +317,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     if (!generateHeader(cell, mapComposite))
         return false;
 
+#if 0
     bool chunkDataOnly = false;
     if (chunkDataOnly) {
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
@@ -327,6 +328,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
         return true;
     }
+#endif
 
     int mapWidth = mapInfo->width();
     int mapHeight = mapInfo->height();
@@ -424,8 +426,13 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     file.close();
 
+    LotFile::RectLookup<LotFile::RoomRect> roomRectLookup;
+    roomRectLookup.clear(CHUNKS_PER_CELL, CHUNKS_PER_CELL);
+    for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
+        roomRectLookup.add(rr, rr->bounds());
+    }
     Navigate::ChunkDataFile cdf;
-    cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
+    cdf.fromMap(cell->x(), cell->y(), mapComposite, roomRectLookup, lotSettings);
 
     return true;
 }
@@ -463,6 +470,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     TileMap[0] = new LotFile::Tile;
 
     mTilesetToFirstGid.clear();
+    mTilesetNameToFirstGid.clear();
     uint firstGid = 1;
     for (Tileset *tileset : tilesets) {
         if (!handleTileset(tileset, firstGid))
@@ -476,6 +484,11 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     // Only RoomRects with matching names and with # in the name are merged.
     for (int level : mRoomRectByLevel.keys()) {
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
+        // Use spatial partitioning to speed up the code below.
+        mRoomRectLookup.clear(CHUNKS_PER_CELL, CHUNKS_PER_CELL);
+        for (LotFile::RoomRect *rr : rrList) {
+            mRoomRectLookup.add(rr, rr->bounds());
+        }
         for (LotFile::RoomRect *rr : rrList) {
             if (rr->room == nullptr) {
                 rr->room = new LotFile::Room(rr->nameWithoutSuffix(),
@@ -485,7 +498,9 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             }
             if (!rr->name.contains(QLatin1Char('#')))
                 continue;
-            for (LotFile::RoomRect *comp : rrList) {
+            QList<LotFile::RoomRect*> rrList2;
+            mRoomRectLookup.overlapping(QRect(rr->bounds().adjusted(-1, -1, 1, 1)), rrList2);
+            for (LotFile::RoomRect *comp : rrList2) {
                 if (comp == rr)
                     continue;
                 if (comp->room == rr->room)
@@ -515,6 +530,12 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     mStats.numRoomRects += mRoomRects.size();
     mStats.numRooms += roomList.size();
 
+    mRoomLookup.clear(CHUNKS_PER_CELL, CHUNKS_PER_CELL);
+    for (LotFile::Room *r : roomList) {
+        r->mBounds = r->calculateBounds();
+        mRoomLookup.add(r, r->bounds());
+    }
+
     // Merge adjacent rooms into buildings.
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
@@ -524,7 +545,9 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             buildingList += r->building;
             r->building->RoomList += r;
         }
-        for (LotFile::Room *comp : roomList) {
+        QList<LotFile::Room*> roomList2;
+        mRoomLookup.overlapping(r->bounds().adjusted(-1, -1, 1, 1), roomList2);
+        for (LotFile::Room *comp : roomList2) {
             if (comp == r)
                 continue;
             if (r->building == comp->building)
@@ -1018,6 +1041,13 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
 
     // TODO: Verify that two tilesets sharing the same name are identical
     // between maps.
+#if 1
+    auto it = mTilesetNameToFirstGid.find(name);
+    if (it != mTilesetNameToFirstGid.end()) {
+        mTilesetToFirstGid.insert(tileset, it.value());
+        return true;
+    }
+#else
     QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
     QMap<const Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
     while (i != i_end) {
@@ -1028,6 +1058,7 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
         }
         ++i;
     }
+#endif
 
     for (int i = 0; i < tileset->tileCount(); ++i) {
         int localID = i;
@@ -1038,6 +1069,7 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
     }
 
     mTilesetToFirstGid.insert(tileset, firstGid);
+    mTilesetNameToFirstGid.insert(name, firstGid);
     firstGid += tileset->tileCount();
 
     return true;

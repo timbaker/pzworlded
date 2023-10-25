@@ -1,7 +1,7 @@
 #ifndef CHUNKDATAFILE_H
 #define CHUNKDATAFILE_H
 
-#include <QList>
+#include "lotfilesmanager.h"
 
 class GenerateLotsSettings;
 class MapComposite;
@@ -16,7 +16,7 @@ class ChunkDataFile
 {
 public:
     ChunkDataFile();
-    void fromMap(int cellX, int cellY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects, const GenerateLotsSettings &settings);
+    void fromMap(int cellX, int cellY, MapComposite *mapComposite, const LotFile::RectLookup<LotFile::RoomRect> &roomRectLookup, const GenerateLotsSettings &settings);
 };
 
 } // namespace Navigate

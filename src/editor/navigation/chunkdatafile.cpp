@@ -16,9 +16,8 @@ ChunkDataFile::ChunkDataFile()
 {
 }
 
-void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects, const GenerateLotsSettings &settings)
+void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, const LotFile::RectLookup<LotFile::RoomRect> &roomRectLookup, const GenerateLotsSettings &settings)
 {
-
     QString lotsDirectory = settings.exportDir;
     QFile file(lotsDirectory + QString::fromLatin1("/chunkdata_%1_%2.bin")
                .arg(settings.worldOrigin.x() + cellX).arg(settings.worldOrigin.y() + cellY));
@@ -48,6 +47,9 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
 
     for (int yy = 0; yy < CHUNKS_PER_CELL; yy++) {
         for (int xx = 0; xx < CHUNKS_PER_CELL; xx++) {
+            QList<LotFile::RoomRect*> roomRects;
+            QRect chunkRect(xx * IsoChunk::WIDTH, yy * IsoChunk::WIDTH, IsoChunk::WIDTH, IsoChunk::WIDTH);
+            roomRectLookup.overlapping(chunkRect, roomRects);
             IsoChunk *chunk = new IsoChunk(xx, yy, mapComposite, roomRects);
             int empty = 0, solid = 0, water = 0, room = 0;
             for (int y = 0; y < IsoChunk::WIDTH; y++) {

@@ -75,6 +75,9 @@ SOURCES += main.cpp\
     InGameMap/ingamemapundo.cpp \
     InGameMap/ingamemapwriter.cpp \
     InGameMap/ingamemapwriterbinary.cpp \
+    navigation/chunkdatafile256.cpp \
+    navigation/isochunk256.cpp \
+    navigation/isogridsquare256.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -183,6 +186,9 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapwriter.h \
     InGameMap/ingamemapwriterbinary.h \
     lotfilesmanager256.h \
+    navigation/chunkdatafile256.h \
+    navigation/isochunk256.h \
+    navigation/isogridsquare256.h \
     tilesetstxtfile.h \
     worldconstants.h \
     worldview.h \

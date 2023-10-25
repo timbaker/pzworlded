@@ -94,6 +94,7 @@ private:
 
     WorldDocument *mWorldDoc;
     QMap<const Tiled::Tileset*,uint> mTilesetToFirstGid;
+    QMap<QString, uint> mTilesetNameToFirstGid;
     Tiled::Tileset *mJumboTreeTileset;
     QMap<int,LotFile::Tile*> TileMap;
     QVector<QVector<QVector<LotFile::Square> > > mGridData;
@@ -101,6 +102,8 @@ private:
     int mMaxLevel;
     QList<LotFile::RoomRect*> mRoomRects;
     QMap<int,QList<LotFile::RoomRect*> > mRoomRectByLevel;
+    LotFile::RectLookup<LotFile::RoomRect> mRoomRectLookup;
+    LotFile::RectLookup<LotFile::Room> mRoomLookup;
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
     QImage ZombieSpawnMap;

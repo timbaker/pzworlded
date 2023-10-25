@@ -22,6 +22,8 @@
 
 #include <QObject>
 
+#include <cmath>
+
 class BMPToTMXImages;
 class MapComposite;
 class MapInfo;
@@ -46,6 +48,13 @@ class ObjectGroup;
 
 namespace LotFile
 {
+
+template<typename T>
+T clamp(T v, T min, T max)
+{
+    return qMin(qMax(v, min), max);
+};
+
 class Tile
 {
 public:
@@ -236,6 +245,11 @@ public:
         return false;
     }
 
+    const QRect& bounds() const
+    {
+        return mBounds;
+    }
+
     QRect calculateBounds() const
     {
         QRect bounds;
@@ -255,6 +269,7 @@ public:
     Building *building;
     QList<RoomRect*> rects;
     QList<RoomObject> objects;
+    QRect mBounds;
 };
 
 class Building
@@ -266,13 +281,75 @@ public:
         if (RoomList.isEmpty()) {
             return bounds;
         }
-        bounds = RoomList[0]->calculateBounds();
+        bounds = RoomList[0]->bounds();
         for (int i = 1; i < RoomList.size(); i++) {
-            bounds = bounds.united(RoomList[i]->calculateBounds());
+            bounds = bounds.united(RoomList[i]->bounds());
         }
         return bounds;
     }
     QList<Room*> RoomList;
+};
+
+template <typename T>
+class RectLookup
+{
+public:
+    RectLookup()
+    {
+
+    }
+
+    void clear(int widthInChunks, int heightInChunks)
+    {
+        for (int i = 0; i < mGrid.size(); i++) {
+            mGrid[i].clear();
+        }
+        mWidthInChunks = widthInChunks;
+        mHeightInChunks = heightInChunks;
+        mGrid.resize(mWidthInChunks * mHeightInChunks);
+    }
+
+    void add(T* element, const QRect& bounds)
+    {
+        int xMin = bounds.x() / CHUNK_WIDTH;
+        int yMin = bounds.y() / CHUNK_HEIGHT;
+        int xMax = std::ceil((bounds.x() + bounds.width()) / float(CHUNK_WIDTH));
+        int yMax = std::ceil((bounds.y() + bounds.height()) / float(CHUNK_HEIGHT));
+        xMin = clamp(xMin, 0, mWidthInChunks-1);
+        yMin = clamp(yMin, 0, mHeightInChunks-1);
+        xMax = clamp(xMax, 0, mWidthInChunks-1);
+        yMax = clamp(yMax, 0, mHeightInChunks-1);
+        for (int y = yMin; y <= yMax; y++) {
+            for (int x = xMin; x <= xMax; x++) {
+                mGrid[x + y * mWidthInChunks] += element;
+            }
+        }
+    }
+
+    void overlapping(const QRect& rect, QList<T*>& elements) const
+    {
+        int xMin = rect.x() / CHUNK_WIDTH;
+        int yMin = rect.y() / CHUNK_HEIGHT;
+        int xMax = std::ceil((rect.x() + rect.width()) / float(CHUNK_WIDTH));
+        int yMax = std::ceil((rect.y() + rect.height()) / float(CHUNK_HEIGHT));
+        xMin = clamp(xMin, 0, mWidthInChunks-1);
+        yMin = clamp(yMin, 0, mHeightInChunks-1);
+        xMax = clamp(xMax, 0, mWidthInChunks-1);
+        yMax = clamp(yMax, 0, mHeightInChunks-1);
+        for (int y = yMin; y <= yMax; y++) {
+            for (int x = xMin; x <= xMax; x++) {
+                for (T* e : mGrid[x + y * mWidthInChunks]) {
+                    if (elements.contains(e) == false) {
+                        elements += e;
+                    }
+                }
+            }
+        }
+    }
+
+    int mWidthInChunks;
+    int mHeightInChunks;
+    QVector<QVector<T*>> mGrid;
 };
 
 class Stats
@@ -394,6 +471,7 @@ private:
     WorldDocument *mWorldDoc;
     QList<LotFile::Zone*> ZoneList;
     QMap<const Tiled::Tileset*,uint> mTilesetToFirstGid;
+    QMap<QString, uint> mTilesetNameToFirstGid;
     Tiled::Tileset *mJumboTreeTileset;
     QMap<int,LotFile::Tile*> TileMap;
     QVector<QVector<QVector<LotFile::Square> > > mGridData;
@@ -401,6 +479,8 @@ private:
     int mMaxLevel;
     QList<LotFile::RoomRect*> mRoomRects;
     QMap<int,QList<LotFile::RoomRect*> > mRoomRectByLevel;
+    LotFile::RectLookup<LotFile::RoomRect> mRoomRectLookup;
+    LotFile::RectLookup<LotFile::Room> mRoomLookup;
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
     QImage ZombieSpawnMap;

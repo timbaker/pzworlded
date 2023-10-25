@@ -33,8 +33,8 @@
 
 #include "InGameMap/clipper.hpp"
 
-#include "navigation/chunkdatafile.h"
-#include "navigation/isogridsquare.h"
+#include "navigation/chunkdatafile256.h"
+#include "navigation/isogridsquare256.h"
 
 #include "objectgroup.h"
 #include "tile.h"
@@ -136,7 +136,7 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
         return false;
     }
 
-    if (!Navigate::IsoGridSquare::loadTileDefFiles(lotSettings, mError)) {
+    if (!Navigate::IsoGridSquare256::loadTileDefFiles(lotSettings, mError)) {
         return false;
     }
 
@@ -299,6 +299,9 @@ bool LotFilesManager256::generateCell(int cell256X, int cell256Y)
     mMaxLevel = -10000;
 
     Tile *missingTile = Tiled::Internal::TilesetManager::instance()->missingTile();
+    QRect cellBounds256(cell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH,
+                        cell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_WIDTH,
+                        CELL_SIZE_256, CELL_SIZE_256);
     QVector<const Tiled::Cell *> cells(40);
     for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
         lg->prepareDrawing2();
@@ -319,9 +322,11 @@ bool LotFilesManager256::generateCell(int cell256X, int cell256Y)
                     if (ly >= mapHeight) continue;
                     LotFile::Entry *e = new LotFile::Entry(cellToGid(cell));
                     mGridData[lx][ly][lg->level() - MIN_WORLD_LEVEL].Entries.append(e);
-                    TileMap[e->gid]->used = true;
-                    mMinLevel = std::min(mMinLevel, lg->level());
-                    mMaxLevel = std::max(mMaxLevel, lg->level());
+                    if (cellBounds256.contains(lx, ly)) {
+                        TileMap[e->gid]->used = true;
+                        mMinLevel = std::min(mMinLevel, lg->level());
+                        mMaxLevel = std::max(mMaxLevel, lg->level());
+                    }
                 }
             }
         }
@@ -384,10 +389,14 @@ bool LotFilesManager256::generateCell(int cell256X, int cell256Y)
     }
 
     file.close();
-#if 0
-    Navigate::ChunkDataFile cdf;
-    cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
-#endif
+
+    mRoomRectLookup.clear(CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256);
+    for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
+        mRoomRectLookup.add(rr, rr->bounds());
+    }
+    Navigate::ChunkDataFile256 cdf;
+    cdf.fromMap(combinedMaps, mapComposite, mRoomRectLookup, lotSettings);
+
     return true;
 }
 
@@ -420,6 +429,7 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
     TileMap[0] = new LotFile::Tile;
 
     mTilesetToFirstGid.clear();
+    mTilesetNameToFirstGid.clear();
     uint firstGid = 1;
     for (Tileset *tileset : tilesets) {
         if (!handleTileset(tileset, firstGid))
@@ -432,12 +442,15 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
         }
     }
 
-    // TODO: Use spatial partitioning to improve performance of the below code.
-
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
     for (int level : mRoomRectByLevel.keys()) {
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
+        // Use spatial partitioning to speed up the code below.
+        mRoomRectLookup.clear(combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
+        for (LotFile::RoomRect *rr : rrList) {
+            mRoomRectLookup.add(rr, rr->bounds());
+        }
         for (LotFile::RoomRect *rr : rrList) {
             if (rr->room == nullptr) {
                 rr->room = new LotFile::Room(rr->nameWithoutSuffix(), rr->floor);
@@ -446,7 +459,9 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
             }
             if (!rr->name.contains(QLatin1Char('#')))
                 continue;
-            for (LotFile::RoomRect *comp : rrList) {
+            QList<LotFile::RoomRect*> rrList2;
+            mRoomRectLookup.overlapping(QRect(rr->bounds().adjusted(-1, -1, 1, 1)), rrList2);
+            for (LotFile::RoomRect *comp : rrList2) {
                 if (comp == rr)
                     continue;
                 if (comp->room == rr->room)
@@ -472,6 +487,12 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
         }
     }
 
+    mRoomLookup.clear(combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
+    for (LotFile::Room *r : roomList) {
+        r->mBounds = r->calculateBounds();
+        mRoomLookup.add(r, r->bounds());
+    }
+
     // Merge adjacent rooms into buildings.
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
@@ -481,7 +502,9 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
             buildingList += r->building;
             r->building->RoomList += r;
         }
-        for (LotFile::Room *comp : roomList) {
+        QList<LotFile::Room*> roomList2;
+        mRoomLookup.overlapping(r->bounds().adjusted(-1, -1, 1, 1), roomList2);
+        for (LotFile::Room *comp : roomList2) {
             if (comp == r)
                 continue;
             if (r->building == comp->building)
@@ -757,7 +780,7 @@ void LotFilesManager256::generateJumboTrees(CombinedCellMaps& combinedMaps)
 
     QSet<QString> treeTiles;
     QSet<QString> floorVegTiles;
-    for (TileDefFile *tdf : Navigate::IsoGridSquare::mTileDefFiles) {
+    for (TileDefFile *tdf : Navigate::IsoGridSquare256::mTileDefFiles) {
         for (TileDefTileset *tdts : tdf->tilesets()) {
             for (TileDefTile *tdt : tdts->mTiles) {
                 // Get the set of all tree tiles.
@@ -798,7 +821,8 @@ void LotFilesManager256::generateJumboTrees(CombinedCellMaps& combinedMaps)
 
     ClipperLib::Path zonePath;
     for (WorldCell* cell : combinedMaps.mCells) {
-        QPoint cellPos300((cell->x() + lotSettings.worldOrigin.x() - combinedMaps.mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.x() - combinedMaps.mMinCell300Y) * CELL_HEIGHT);
+        QPoint cellPos300((cell->x() + lotSettings.worldOrigin.x() - combinedMaps.mMinCell300X) * CELL_WIDTH,
+                          (cell->y() + lotSettings.worldOrigin.y() - combinedMaps.mMinCell300Y) * CELL_HEIGHT);
         for (WorldCellObject *obj : cell->objects()) {
             if ((obj->level() != 0) || !objectTypeMap.contains(obj->type())) {
                 continue;
@@ -887,22 +911,6 @@ void LotFilesManager256::generateJumboTrees(CombinedCellMaps& combinedMaps)
         }
     }
 
-#if 0
-    // Prevent jumbo trees near second-story rooms.
-    for (LotFile::Room *room : roomList) {
-//        if (room->floor != 1)
-//            continue;
-        for (LotFile::RoomRect *rr : room->rects) {
-            for (int y = rr->y - 1; y < rr->y + rr->h + 4 + 1; y++) {
-                for (int x = rr->x - 1; x < rr->x + rr->w + 4 + 1; x++) {
-                    if (x >= 0 && x < CELL_WIDTH && y >= 0 && y < CELL_HEIGHT)
-                        grid[x][y] = PREVENT_JUMBO;
-                }
-            }
-        }
-    }
-#endif
-
     // Get a list of all tree positions in the cell.
     QList<QPoint> allTreePos;
     for (int y = 0; y < CELL_SIZE_256; y++) {
@@ -985,6 +993,13 @@ bool LotFilesManager256::handleTileset(const Tiled::Tileset *tileset, uint &firs
 
     // TODO: Verify that two tilesets sharing the same name are identical
     // between maps.
+#if 1
+    auto it = mTilesetNameToFirstGid.find(name);
+    if (it != mTilesetNameToFirstGid.end()) {
+        mTilesetToFirstGid.insert(tileset, it.value());
+        return true;
+    }
+#else
     QMap<const Tileset*,uint>::const_iterator i = mTilesetToFirstGid.begin();
     QMap<const Tileset*,uint>::const_iterator i_end = mTilesetToFirstGid.end();
     while (i != i_end) {
@@ -995,16 +1010,18 @@ bool LotFilesManager256::handleTileset(const Tiled::Tileset *tileset, uint &firs
         }
         ++i;
     }
+#endif
 
     for (int i = 0; i < tileset->tileCount(); ++i) {
         int localID = i;
         int ID = firstGid + localID;
-        LotFile::Tile *tile = new LotFile::Tile(name + QLatin1String("_") + QString::number(localID));
+        LotFile::Tile *tile = new LotFile::Tile(QStringLiteral("%1_%2").arg(name).arg(localID));
         tile->metaEnum = TileMetaInfoMgr::instance()->tileEnumValue(tileset->tileAt(i));
         TileMap[ID] = tile;
     }
 
     mTilesetToFirstGid.insert(tileset, firstGid);
+    mTilesetNameToFirstGid.insert(name, firstGid);
     firstGid += tileset->tileCount();
 
     return true;

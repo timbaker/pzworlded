@@ -19,12 +19,15 @@ IsoChunk::IsoChunk(int wx, int wy, MapComposite *mapComposite, const QList<LotFi
     }
 
     QRect bounds(worldXMin(), worldYMin(), WIDTH, WIDTH);
-    foreach (LotFile::RoomRect *rect, roomRects) {
+    for (LotFile::RoomRect *rect : roomRects) {
         if (rect->bounds().intersects(bounds)) {
-            for (int y = rect->y; y < rect->y + rect->h; y++)
-                for (int x = rect->x; x < rect->x + rect->w; x++)
-                    if (containsWorldPos(x, y, 0))
+            for (int y = rect->y; y < rect->y + rect->h; y++) {
+                for (int x = rect->x; x < rect->x + rect->w; x++) {
+                    if (containsWorldPos(x, y, 0)) {
                         squares[x - worldXMin()][y - worldYMin()]->mRoom = true;
+                    }
+                }
+            }
         }
     }
 }
