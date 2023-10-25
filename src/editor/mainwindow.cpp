@@ -34,6 +34,7 @@
 #include "lootwindow.h"
 #include "lotsdock.h"
 #include "lotfilesmanager.h"
+#include "lotfilesmanager256.h"
 #include "lotpackwindow.h"
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
@@ -252,6 +253,10 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::generateLotsAll);
     connect(ui->actionGenerateLotsSelected, &QAction::triggered,
             this, &MainWindow::generateLotsSelected);
+    connect(ui->actionGenerateLotsAll8x8, &QAction::triggered,
+            this, &MainWindow::generateLotsAll8x8);
+    connect(ui->actionGenerateLotsSelected8x8, &QAction::triggered,
+            this, &MainWindow::generateLotsSelected8x8);
     connect(ui->actionBMPToTMXAll, &QAction::triggered,
             this, &MainWindow::BMPToTMXAll);
     connect(ui->actionBMPToTMXSelected, &QAction::triggered,
@@ -1467,6 +1472,34 @@ void MainWindow::generateLotsSelected()
     generateLots(this, mCurrentDocument, LotFilesManager::GenerateSelected);
 }
 
+static void generateLots8x8(MainWindow *mainWin, Document *doc, LotFilesManager256::GenerateMode mode)
+{
+    if (!doc)
+        return;
+    WorldDocument *worldDoc = doc->asWorldDocument();
+    if (!worldDoc)
+        return;
+    GenerateLotsDialog dialog(worldDoc, mainWin);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    if (LotFilesManager256::instance()->generateWorld(worldDoc, mode) == false) {
+        QMessageBox::warning(mainWin, mainWin->tr("Lot Generation Failed!"), LotFilesManager256::instance()->errorString());
+    }
+#if 0
+    TileMetaInfoMgr::deleteInstance();
+#endif
+}
+
+void MainWindow::generateLotsAll8x8()
+{
+    generateLots8x8(this, mCurrentDocument, LotFilesManager256::GenerateAll);
+}
+
+void MainWindow::generateLotsSelected8x8()
+{
+    generateLots8x8(this, mCurrentDocument, LotFilesManager256::GenerateSelected);
+}
+
 void MainWindow::generateLotSettingsChanged()
 {
     // Update the tab names when worldOrigin changes.
@@ -2529,6 +2562,8 @@ void MainWindow::updateActions()
     ui->actionGenerateLotsAll->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
                                                worldDoc->selectedCellCount());
+    ui->actionGenerateLotsAll8x8->setEnabled(worldDoc != 0);
+    ui->actionGenerateLotsSelected8x8->setEnabled(worldDoc && worldDoc->selectedCellCount());
 
     ui->menuBMP_To_TMX->setEnabled(worldDoc != 0);
     ui->actionBMPToTMXAll->setEnabled(worldDoc != 0);

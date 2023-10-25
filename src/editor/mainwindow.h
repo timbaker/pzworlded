@@ -104,6 +104,8 @@ public slots:
 
     void generateLotsAll();
     void generateLotsSelected();
+    void generateLotsAll8x8();
+    void generateLotsSelected8x8();
     void generateLotSettingsChanged();
 
     void BMPToTMXAll();

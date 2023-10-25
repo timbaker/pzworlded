@@ -236,6 +236,19 @@ public:
         return false;
     }
 
+    QRect calculateBounds() const
+    {
+        QRect bounds;
+        if (rects.isEmpty()) {
+            return bounds;
+        }
+        bounds = rects[0]->bounds();
+        for (int i = 1; i < rects.size(); i++) {
+            bounds = bounds.united(rects[i]->bounds());
+        }
+        return bounds;
+    }
+
     int ID;
     int floor;
     QString name;
@@ -247,6 +260,18 @@ public:
 class Building
 {
 public:
+    QRect calculateBounds() const
+    {
+        QRect bounds;
+        if (RoomList.isEmpty()) {
+            return bounds;
+        }
+        bounds = RoomList[0]->calculateBounds();
+        for (int i = 1; i < RoomList.size(); i++) {
+            bounds = bounds.united(RoomList[i]->calculateBounds());
+        }
+        return bounds;
+    }
     QList<Room*> RoomList;
 };
 
@@ -334,6 +359,7 @@ public:
 
     bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
     bool generateCell(WorldCell *cell);
+    bool generateCell256(WorldDocument *worldDoc, int cell256X, int cell256Y);
     bool generateHeader(WorldCell *cell, MapComposite *mapComposite);
     bool generateHeaderAux(WorldCell *cell, MapComposite *mapComposite);
     bool generateChunk(QDataStream &out, WorldCell *cell, MapComposite *mapComposite, int cx, int cy);

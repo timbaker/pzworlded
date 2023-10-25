@@ -44,11 +44,10 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
     int WATER_CHUNK = 3;
     int ROOM_CHUNK = 4;
 
-
     quint8 *bitsArray = new quint8[IsoChunk::WIDTH * IsoChunk::WIDTH];
 
-    for (int yy = 0; yy < 30; yy++) {
-        for (int xx = 0; xx < 30; xx++) {
+    for (int yy = 0; yy < CHUNKS_PER_CELL; yy++) {
+        for (int xx = 0; xx < CHUNKS_PER_CELL; xx++) {
             IsoChunk *chunk = new IsoChunk(xx, yy, mapComposite, roomRects);
             int empty = 0, solid = 0, water = 0, room = 0;
             for (int y = 0; y < IsoChunk::WIDTH; y++) {

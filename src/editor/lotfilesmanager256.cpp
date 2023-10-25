@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2023, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -15,15 +15,15 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "lotfilesmanager.h"
+#include "lotfilesmanager256.h"
 
 #include "generatelotsfailuredialog.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
 #include "mapmanager.h"
 #include "mapobject.h"
-#include "objectgroup.h"
 #include "progress.h"
+#include "tiledeffile.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
 #include "world.h"
@@ -36,18 +36,13 @@
 #include "navigation/chunkdatafile.h"
 #include "navigation/isogridsquare.h"
 
+#include "objectgroup.h"
 #include "tile.h"
 #include "tileset.h"
 
-#include <qmath.h>
-#include <QDateTime>
-#include <QDebug>
-#include <QDir>
-#include <QFile>
-#include <QFileDialog>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QRandomGenerator>
-#include <QRgb>
 
 using namespace Tiled;
 
@@ -56,6 +51,15 @@ static int VERSION1 = 1; // Added 4-byte 'LOTH' at start of .lotheader files.
 
 static int VERSION_LATEST = VERSION1;
 
+static QString nameOfTileset(const Tileset *tileset)
+{
+    QString name = tileset->imageSource();
+    if (name.contains(QLatin1String("/")))
+        name = name.mid(name.lastIndexOf(QLatin1String("/")) + 1);
+    name.replace(QLatin1String(".png"), QLatin1String(""));
+    return name;
+}
+
 static void SaveString(QDataStream& out, const QString& str)
 {
     for (int i = 0; i < str.length(); i++) {
@@ -63,36 +67,6 @@ static void SaveString(QDataStream& out, const QString& str)
         out << quint8(str[i].toLatin1());
     }
     out << quint8('\n');
-}
-
-LotFilesManager *LotFilesManager::mInstance = nullptr;
-
-LotFilesManager *LotFilesManager::instance()
-{
-    if (!mInstance)
-        mInstance = new LotFilesManager();
-    return mInstance;
-}
-
-void LotFilesManager::deleteInstance()
-{
-    delete mInstance;
-    mInstance = 0;
-}
-
-LotFilesManager::LotFilesManager(QObject *parent)
-    : QObject(parent)
-{
-    mJumboZoneList += new JumboZone(QStringLiteral("DeepForest"), 100);
-    mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
-    mJumboZoneList += new JumboZone(QStringLiteral("FarmLand"), 80);
-    mJumboZoneList += new JumboZone(QStringLiteral("Forest"), 50);
-    mJumboZoneList += new JumboZone(QStringLiteral("TownZone"), 80);
-    mJumboZoneList += new JumboZone(QStringLiteral("Vegitation"), 10);
-}
-
-LotFilesManager::~LotFilesManager()
-{
 }
 
 namespace {
@@ -109,7 +83,40 @@ struct GenerateCellFailure
 };
 }
 
-bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
+/////
+
+LotFilesManager256 *LotFilesManager256::mInstance = nullptr;
+
+LotFilesManager256 *LotFilesManager256::instance()
+{
+    if (mInstance == nullptr) {
+        mInstance = new LotFilesManager256();
+    }
+    return mInstance;
+}
+
+void LotFilesManager256::deleteInstance()
+{
+    delete mInstance;
+    mInstance = 0;
+}
+
+LotFilesManager256::LotFilesManager256(QObject *parent)
+    : QObject(parent)
+{
+    mJumboZoneList += new JumboZone(QStringLiteral("DeepForest"), 100);
+    mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
+    mJumboZoneList += new JumboZone(QStringLiteral("FarmLand"), 80);
+    mJumboZoneList += new JumboZone(QStringLiteral("Forest"), 50);
+    mJumboZoneList += new JumboZone(QStringLiteral("TownZone"), 80);
+    mJumboZoneList += new JumboZone(QStringLiteral("Vegitation"), 10);
+}
+
+LotFilesManager256::~LotFilesManager256()
+{
+}
+
+bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
     mWorldDoc = worldDoc;
 
@@ -152,6 +159,9 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
     progress.update(QLatin1String("Generating .lot files"));
 
     World *world = worldDoc->world();
+
+    // A single 300x300 cell may overlap 4, 6, or 9 256x256 cells.
+    mDoneCells256.clear();
 
     QList<GenerateCellFailure> failures;
 
@@ -196,9 +206,11 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
     return true;
 }
 
-bool LotFilesManager::generateCell(WorldCell *cell)
+bool LotFilesManager256::generateCell(WorldCell *cell)
 {
-//    if (cell->x() != 5 || cell->y() != 3) return true;
+    if (cell == nullptr)
+        return true;
+
     if (cell->mapFilePath().isEmpty())
         return true;
 
@@ -209,114 +221,56 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
     }
 
-#if 0
-    // Don't regenerate the .lot files unless the cell's map is newer than
-    // the .lot files.
-    // TODO: check the modification time of all the lots included by the map.
-    // TODO: check for roads changing
-    {
-    QFileInfo mapFileInfo(cell->mapFilePath());
-    QString fileName = tr("world_%1_%2.lotpack")
-            .arg(cell->x())
-            .arg(cell->y());
-    QString lotsDirectory = Preferences::instance()->lotsDirectory();
-    QFileInfo lotFileInfo(lotsDirectory + QLatin1Char('/') + fileName);
-    if (lotFileInfo.exists() && mapFileInfo.exists() &&
-            (mapFileInfo.lastModified() < lotFileInfo.lastModified()))
-        return true;
-    }
-#endif
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
 
-#if 1
-    PROGRESS progress(tr("Loading maps (%1,%2)")
-                      .arg(cell->x()).arg(cell->y()));
-
-    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
-                                                       QString(), true);
-    if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
-        return false;
-    }
-
-    DelayedMapLoader mapLoader;
-    mapLoader.addMap(mapInfo);
-
-    for (WorldCellLot *lot : cell->lots()) {
-        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
-                                                            QString(), true,
-                                                            MapManager::PriorityMedium)) {
-            mapLoader.addMap(info);
-        } else {
-            mError = MapManager::instance()->errorString();
-            return false;
+    int cell300X = lotSettings.worldOrigin.x() + cell->x();
+    int cell300Y = lotSettings.worldOrigin.y() + cell->y();
+    int minCell256X = std::floor(cell300X * CELL_WIDTH / float(CELL_SIZE_256));
+    int minCell256Y = std::floor(cell300Y * CELL_HEIGHT / float(CELL_SIZE_256));
+    int maxCell256X = std::ceil(((cell300X + 1) * CELL_WIDTH - 1) / float(CELL_SIZE_256));
+    int maxCell256Y = std::ceil(((cell300Y + 1) * CELL_HEIGHT - 1) / float(CELL_SIZE_256));
+    for (int cell256Y = minCell256Y; cell256Y < maxCell256Y; cell256Y++) {
+        for (int cell256X = minCell256X; cell256X < maxCell256X; cell256X++) {
+            QPair<int, int> doneCell(cell256X, cell256Y);
+            if (mDoneCells256.contains(doneCell)) {
+                continue;
+            }
+            mDoneCells256.insert(doneCell);
+            if (generateCell(cell256X, cell256Y) == false) {
+                return false;
+            }
         }
     }
+    return true;
+}
 
-    // The cell map must be loaded before creating the MapComposite, which will
-    // possibly load embedded lots.
-    while (mapInfo->isLoading())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+bool LotFilesManager256::generateCell(int cell256X, int cell256Y)
+{
+    PROGRESS progress(tr("Loading maps (%1,%2)").arg(cell256X).arg(cell256Y));
 
-    MapComposite staticMapComposite(mapInfo);
-    MapComposite *mapComposite = &staticMapComposite;
-    while (mapComposite->waitingForMapsToLoad() || mapLoader.isLoading())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-    if (!mapLoader.errorString().isEmpty()) {
-        mError = mapLoader.errorString();
+    CombinedCellMaps combinedMaps;
+    combinedMaps.load(mWorldDoc, cell256X, cell256Y);
+    if (combinedMaps.mError.isEmpty() == false) {
+        mError = combinedMaps.mError;
         return false;
     }
+    MapComposite* mapComposite = combinedMaps.mMapComposite;
+    MapInfo* mapInfo = mapComposite->mapInfo();
 
-    for (WorldCellLot *lot : cell->lots()) {
-        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
-        Q_ASSERT(info && info->map());
-        mapComposite->addMap(info, lot->pos(), lot->level());
-    }
-
-    mapComposite->generateRoadLayers(QPoint(cell->x() * CELL_WIDTH, cell->y() * CELL_HEIGHT),
-                                     cell->world()->roads());
-
-    progress.update(tr("Generating .lot files (%1,%2)")
-                      .arg(cell->x()).arg(cell->y()));
-#else
-    MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath());
-    if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
-        return false;
-    }
-
-    PROGRESS progress(tr("Generating .lot files (%1,%2)")
-                      .arg(cell->x()).arg(cell->y()));
-
-    MapComposite staticMapComposite(mapInfo);
-    MapComposite *mapComposite = &staticMapComposite;
-    while (mapComposite->waitingForMapsToLoad())
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-    mapComposite->generateRoadLayers(QPoint(cell->x() * CELL_WIDTH, cell->y() * CELL_HEIGHT),
-                                     cell->world()->roads());
-
-    for (WorldCellLot *lot : cell->lots()) {
-        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName())) {
-            mapComposite->addMap(info, lot->pos(), lot->level());
-        } else {
-            mError = MapManager::instance()->errorString();
-            return false;
-        }
-    }
-#endif
-
+    progress.update(tr("Generating .lot files (%1,%2)").arg(cell256X).arg(cell256Y));
 
     // Check for missing tilesets.
     for (MapComposite *mc : mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
-            mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
-                    .arg(cell->x()).arg(cell->y()).arg(mc->mapInfo()->path());
+            mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3").arg(cell256X).arg(cell256Y).arg(mc->mapInfo()->path());
             return false;
         }
     }
 
-    if (!generateHeader(cell, mapComposite))
+    if (generateHeader(combinedMaps, mapComposite) == false) {
         return false;
-
+    }
+#if 0
     bool chunkDataOnly = false;
     if (chunkDataOnly) {
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
@@ -327,18 +281,20 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
         return true;
     }
-
-    int mapWidth = mapInfo->width();
-    int mapHeight = mapInfo->height();
+#endif
+    int mapWidth = combinedMaps.mCellsWidth * CELL_WIDTH;
+    int mapHeight = combinedMaps.mCellsHeight * CELL_HEIGHT;
 
     // Resize the grid and cleanup data from the previous cell.
     mGridData.resize(mapWidth);
     for (int x = 0; x < mapWidth; x++) {
         mGridData[x].resize(mapHeight);
-        for (int y = 0; y < mapHeight; y++)
+        for (int y = 0; y < mapHeight; y++) {
             mGridData[x][y].fill(LotFile::Square(), MAX_WORLD_LEVELS);
+        }
     }
 
+    // FIXME: This is for all the 300x300 cells, not just the single 256x256 cell.
     mMinLevel = 10000;
     mMaxLevel = -10000;
 
@@ -377,17 +333,17 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     generateBuildingObjects(mapWidth, mapHeight);
 
-    generateJumboTrees(cell, mapComposite);
+    generateJumboTrees(combinedMaps);
 
-    generateHeaderAux(cell, mapComposite);
+    generateHeaderAux(cell256X, cell256Y);
 
     /////
 
     const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
 
     QString fileName = tr("world_%1_%2.lotpack")
-            .arg(lotSettings.worldOrigin.x() + cell->x())
-            .arg(lotSettings.worldOrigin.y() + cell->y());
+            .arg(cell256X)
+            .arg(cell256Y);
 
     QString lotsDirectory = lotSettings.exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);
@@ -404,46 +360,47 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     out << qint32(VERSION_LATEST);
 
     // C# 'long' is signed 64-bit integer
-    out << qint32(CHUNKS_PER_CELL * CHUNKS_PER_CELL);
-    for (int m = 0; m < CHUNKS_PER_CELL * CHUNKS_PER_CELL; m++)
+    out << qint32(CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256);
+    for (int m = 0; m < CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256; m++) {
         out << qint64(m);
+    }
 
     QList<qint64> PositionMap;
 
-    for (int x = 0; x < mapWidth / CHUNK_WIDTH; x++) {
-        for (int y = 0; y < mapHeight / CHUNK_HEIGHT; y++) {
+    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
+        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
             PositionMap += file.pos();
-            if (!generateChunk(out, cell, mapComposite, x, y))
+            int chunkX = cell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH + x * CHUNK_SIZE_256;
+            int chunkY = cell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT + y * CHUNK_SIZE_256;
+            if (generateChunk(out, chunkX, chunkY) == false) {
                 return false;
+            }
         }
     }
 
     file.seek(4 + 4 + 4); // 'LOTS' + version + #chunks
-    for (int m = 0; m < CHUNKS_PER_CELL * CHUNKS_PER_CELL; m++)
+    for (int m = 0; m < CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256; m++) {
         out << qint64(PositionMap[m]);
+    }
 
     file.close();
-
+#if 0
     Navigate::ChunkDataFile cdf;
     cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
-
+#endif
     return true;
 }
 
-bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite)
+bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapComposite *mapComposite)
 {
-    Q_UNUSED(cell)
-
     qDeleteAll(mRoomRects);
     qDeleteAll(roomList);
     qDeleteAll(buildingList);
-    qDeleteAll(ZoneList);
 
     mRoomRects.clear();
     mRoomRectByLevel.clear();
     roomList.clear();
     buildingList.clear();
-    ZoneList.clear();
 
     // Create the set of all tilesets used by the map and its sub-maps.
     QList<Tileset*> tilesets;
@@ -469,8 +426,13 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             return false;
     }
 
-    if (!processObjectGroups(cell, mapComposite))
-        return false;
+    for (WorldCell *cell : combinedMaps.mCells) {
+        if (processObjectGroups(combinedMaps, cell, mapComposite) == false) {
+            return false;
+        }
+    }
+
+    // TODO: Use spatial partitioning to improve performance of the below code.
 
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
@@ -478,8 +440,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
         for (LotFile::RoomRect *rr : rrList) {
             if (rr->room == nullptr) {
-                rr->room = new LotFile::Room(rr->nameWithoutSuffix(),
-                                             rr->floor);
+                rr->room = new LotFile::Room(rr->nameWithoutSuffix(), rr->floor);
                 rr->room->rects += rr;
                 roomList += rr->room;
             }
@@ -510,10 +471,6 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             }
         }
     }
-    for (int i = 0; i < roomList.size(); i++)
-        roomList[i]->ID = i;
-    mStats.numRoomRects += mRoomRects.size();
-    mStats.numRooms += roomList.size();
 
     // Merge adjacent rooms into buildings.
     // Rooms on different levels that overlap in x/y are merged into the
@@ -549,20 +506,48 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
             }
         }
     }
+
+    // Remove buildings with their north-west corner not in the cell.
+    // Buildings may extend past the east and south edges of the 256x256 cell.
+    QRect cellBounds256(0, 0, CELL_SIZE_256, CELL_SIZE_256);
+    for (int i = buildingList.size() - 1; i >= 0; i--) {
+        LotFile::Building* building = buildingList[i];
+        QRect bounds = building->calculateBounds();
+        if (bounds.isEmpty()) {
+            continue;
+        }
+        if (cellBounds256.contains(bounds.topLeft())) {
+            continue;
+        }
+        for (LotFile::Room *room : building->RoomList) {
+            for (LotFile::RoomRect *roomRect : room->rects) {
+                mRoomRects.removeOne(roomRect);
+                mRoomRectByLevel[roomRect->floor].removeOne(roomRect);
+                delete roomRect;
+            }
+            roomList.removeOne(room);
+            delete room;
+        }
+        buildingList.removeAt(i);
+        delete building;
+    }
+
+    for (int i = 0; i < roomList.size(); i++) {
+        roomList[i]->ID = i;
+    }
+    mStats.numRoomRects += mRoomRects.size();
+    mStats.numRooms += roomList.size();
+
     mStats.numBuildings += buildingList.size();
 
     return true;
 }
 
-bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapComposite)
+bool LotFilesManager256::generateHeaderAux(int cell256X, int cell256Y)
 {
-    Q_UNUSED(mapComposite)
-
-    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
-
     QString fileName = tr("%1_%2.lotheader")
-            .arg(lotSettings.worldOrigin.x() + cell->x())
-            .arg(lotSettings.worldOrigin.y() + cell->y());
+            .arg(cell256X)
+            .arg(cell256Y);
 
     QString lotsDirectory = mWorldDoc->world()->getGenerateLotsSettings().exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);
@@ -596,8 +581,8 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         }
     }
 
-    out << qint32(CHUNK_WIDTH);
-    out << qint32(CHUNK_HEIGHT);
+    out << qint32(CHUNK_SIZE_256);
+    out << qint32(CHUNK_SIZE_256);
     out << qint32(mMinLevel);
     out << qint32(mMaxLevel);
 
@@ -630,64 +615,35 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
         }
     }
 
-    for (int x = 0; x < CHUNKS_PER_CELL; x++) {
-        for (int y = 0; y < CHUNKS_PER_CELL; y++) {
-            QRgb pixel = ZombieSpawnMap.pixel(cell->x() * CHUNKS_PER_CELL + x,
-                                              cell->y() * CHUNKS_PER_CELL + y);
-            out << quint8(qRed(pixel));
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
+    int minCell300X = lotSettings.worldOrigin.x();
+    int minCell300Y = lotSettings.worldOrigin.y();
+    int x1 = cell256X * CELL_SIZE_256 - minCell300X * CELL_WIDTH;
+    int y1 = cell256Y * CELL_SIZE_256 - minCell300Y * CELL_WIDTH;
+    int x2 = x1 + CHUNK_SIZE_256;
+    int y2 = y1 + CHUNK_SIZE_256;
+
+    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
+        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
+            qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256, x2, y2);
+            out << density;
         }
     }
-
-#if 0
-    out << qint32(cell->objects().size());
-    for (WorldCellObject *o : cell->objects()) {
-        SaveString(out, o->name());
-        SaveString(out, o->type()->name());
-        out << qint32(o->x());
-        out << qint32(o->y());
-        out << qint32(o->level());
-        out << qint32(o->width());
-        out << qint32(o->height());
-        PropertyList properties;
-        resolveProperties(o, properties);
-        out << qint32(properties.size());
-        for (Property *p : properties) {
-            SaveString(out, p->mDefinition->mName);
-            SaveString(out, p->mValue);
-        }
-    }
-#endif
-
-#if 0
-    out << qint32(ZoneList.count());
-    for (LotFile::Zone *zone : ZoneList) {
-        SaveString(out, zone->name);
-        SaveString(out, zone->val);
-        out << qint32(zone->x);
-        out << qint32(zone->y);
-        out << qint32(zone->z);
-        out << qint32(zone->width);
-        out << qint32(zone->height);
-    }
-#endif
 
     file.close();
 
     return true;
 }
 
-bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
-                                    MapComposite *mapComposite, int cx, int cy)
+bool LotFilesManager256::generateChunk(QDataStream &out, int chunkX, int chunkY)
 {
-    Q_UNUSED(cell)
-    Q_UNUSED(mapComposite)
-
     int notdonecount = 0;
     for (int z = mMinLevel; z <= mMaxLevel; z++)  {
-        for (int x = 0; x < CHUNK_WIDTH; x++) {
-            for (int y = 0; y < CHUNK_HEIGHT; y++) {
-                int gx = cx * CHUNK_WIDTH + x;
-                int gy = cy * CHUNK_HEIGHT + y;
+        for (int x = 0; x < CHUNK_SIZE_256; x++) {
+            for (int y = 0; y < CHUNK_SIZE_256; y++) {
+                int gx = chunkX + x;
+                int gy = chunkY + y;
                 const QList<LotFile::Entry*> &entries = mGridData[gx][gy][z - MIN_WORLD_LEVEL].Entries;
                 if (entries.count() == 0) {
                     notdonecount++;
@@ -716,7 +672,7 @@ bool LotFilesManager::generateChunk(QDataStream &out, WorldCell *cell,
     return true;
 }
 
-void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
+void LotFilesManager256::generateBuildingObjects(int mapWidth, int mapHeight)
 {
     for (LotFile::Room *room : roomList) {
         for (LotFile::RoomRect *rr : room->rects) {
@@ -725,14 +681,14 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight)
     }
 }
 
-void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
-                                              LotFile::Room *room, LotFile::RoomRect *rr)
+void LotFilesManager256::generateBuildingObjects(int mapWidth, int mapHeight, LotFile::Room *room, LotFile::RoomRect *rr)
 {
     for (int x = rr->x; x < rr->x + rr->w; x++) {
         for (int y = rr->y; y < rr->y + rr->h; y++) {
             LotFile::Square& square = mGridData[x][y][room->floor - MIN_WORLD_LEVEL];
 
             // Remember the room at each position in the map.
+            // TODO: Remove this, it isn't used by Java code now.
             square.roomID = room->ID;
 
             /* Examine every tile inside the room.  If the tile's metaEnum >= 0
@@ -790,8 +746,10 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
     }
 }
 
-void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapComposite)
+void LotFilesManager256::generateJumboTrees(CombinedCellMaps& combinedMaps)
 {
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
     const quint8 JUMBO_ZONE = 1;
     const quint8 PREVENT_JUMBO = 2;
     const quint8 REMOVE_TREE = 3;
@@ -816,10 +774,10 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
         }
     }
 
-    quint8 grid[CELL_WIDTH][CELL_HEIGHT];
-    quint8 densityGrid[CELL_WIDTH][CELL_HEIGHT];
-    for (int y = 0; y < CELL_HEIGHT; y++) {
-        for (int x = 0; x < CELL_WIDTH; x++) {
+    quint8 grid[CELL_SIZE_256][CELL_SIZE_256];
+    quint8 densityGrid[CELL_SIZE_256][CELL_SIZE_256];
+    for (int y = 0; y < CELL_SIZE_256; y++) {
+        for (int x = 0; x < CELL_SIZE_256; x++) {
             grid[x][y] = PREVENT_JUMBO;
             densityGrid[x][y] = 0;
         }
@@ -827,73 +785,87 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
 
     QHash<ObjectType*,const JumboZone*> objectTypeMap;
     for (const JumboZone* jumboZone : qAsConst(mJumboZoneList)) {
-        if (ObjectType *objectType = cell->world()->objectType(jumboZone->zoneName)) {
+        if (ObjectType *objectType = mWorldDoc->world()->objectType(jumboZone->zoneName)) {
             objectTypeMap[objectType] = jumboZone;
         }
     }
 
-    PropertyDef *JumboDensity = cell->world()->propertyDefinition(QStringLiteral("JumboDensity"));
+    PropertyDef *JumboDensity = mWorldDoc->world()->propertyDefinition(QStringLiteral("JumboDensity"));
+
+    QRect cellBounds256(combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH,
+                        combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT,
+                        CELL_SIZE_256, CELL_SIZE_256);
 
     ClipperLib::Path zonePath;
-    for (WorldCellObject *obj : cell->objects()) {
-        if ((obj->level() != 0) || !objectTypeMap.contains(obj->type())) {
-            continue;
-        }
-        if (obj->isPoint() || obj->isPolyline()) {
-            continue;
-        }
-        zonePath.clear();
-        if (obj->isPolygon()) {
-            for (const auto &pt : obj->points()) {
-                zonePath << ClipperLib::IntPoint(pt.x * 100, pt.y * 100);
+    for (WorldCell* cell : combinedMaps.mCells) {
+        QPoint cellPos300((cell->x() + lotSettings.worldOrigin.x() - combinedMaps.mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.x() - combinedMaps.mMinCell300Y) * CELL_HEIGHT);
+        for (WorldCellObject *obj : cell->objects()) {
+            if ((obj->level() != 0) || !objectTypeMap.contains(obj->type())) {
+                continue;
             }
-        }
-        quint8 density = objectTypeMap[obj->type()]->density;
-        Property* property = JumboDensity ? obj->properties().find(JumboDensity) : nullptr;
-        if (property != nullptr) {
-            bool ok = false;
-            int value = property->mValue.toInt(&ok);
-            if (ok && (value >= 0) && (value <= 100)) {
-                density = value;
+            if (obj->isPoint() || obj->isPolyline()) {
+                continue;
             }
-        }
-        int ox = obj->x(), oy = obj->y(), ow = obj->width(), oh = obj->height();
-        for (int y = oy; y < oy + oh; y++) {
-            for (int x = ox; x < ox + ow; x++) {
-                if ((zonePath.empty() == false)) {
-                    ClipperLib::IntPoint pt(x * 100 + 50, y * 100 + 50); // center of the square
-                    if (ClipperLib::PointInPolygon(pt, zonePath) == 0) {
-                        continue;
-                    }
+            zonePath.clear();
+            if (obj->isPolygon()) {
+                for (const auto &pt : obj->points()) {
+                    zonePath << ClipperLib::IntPoint(cellPos300.x() + pt.x * 100, cellPos300.y() + pt.y * 100);
                 }
-                if (x >= 0 && x < CELL_WIDTH && y >= 0 && y < CELL_HEIGHT) {
-                    grid[x][y] = JUMBO_ZONE;
-                    densityGrid[x][y] = std::max(densityGrid[x][y], density);
+            }
+            quint8 density = objectTypeMap[obj->type()]->density;
+            Property* property = JumboDensity ? obj->properties().find(JumboDensity) : nullptr;
+            if (property != nullptr) {
+                bool ok = false;
+                int value = property->mValue.toInt(&ok);
+                if (ok && (value >= 0) && (value <= 100)) {
+                    density = value;
+                }
+            }
+            int ox = cellPos300.x() + obj->x();
+            int oy = cellPos300.y() + obj->y();
+            int ow = obj->width();
+            int oh = obj->height();
+            for (int y = oy; y < oy + oh; y++) {
+                for (int x = ox; x < ox + ow; x++) {
+                    if ((zonePath.empty() == false)) {
+                        ClipperLib::IntPoint pt(x * 100 + 50, y * 100 + 50); // center of the square
+                        if (ClipperLib::PointInPolygon(pt, zonePath) == 0) {
+                            continue;
+                        }
+                    }
+                    int gx = x - cellBounds256.x();
+                    int gy = y - cellBounds256.y();
+                    if ((gx >= 0) && (gx < CELL_SIZE_256) && (gy >= 0) && (gy < CELL_SIZE_256)) {
+                        grid[gx][gy] = JUMBO_ZONE;
+                        densityGrid[gx][gy] = std::max(densityGrid[gx][gy], density);
+                    }
                 }
             }
         }
     }
 
-    for (int y = 0; y < CELL_HEIGHT; y++) {
-        for (int x = 0; x < CELL_WIDTH; x++) {
+    for (int y = 0; y < CELL_SIZE_256; y++) {
+        for (int x = 0; x < CELL_SIZE_256; x++) {
             // Prevent jumbo trees near any second-story tiles
-            if (!mGridData[x][y][1 - MIN_WORLD_LEVEL].Entries.isEmpty()) {
+            int wx = x + cellBounds256.x();
+            int wy = y + cellBounds256.y();
+            if (!mGridData[wx][wy][1 - MIN_WORLD_LEVEL].Entries.isEmpty()) {
                 for (int yy = y; yy <= y + 4; yy++) {
                     for (int xx = x; xx <= x + 4; xx++) {
-                        if (xx >= 0 && xx < CELL_WIDTH && yy >= 0 && yy < CELL_HEIGHT)
+                        if (xx >= 0 && xx < CELL_SIZE_256 && yy >= 0 && yy < CELL_SIZE_256)
                             grid[xx][yy] = PREVENT_JUMBO;
                     }
                 }
             }
 
             // Prevent jumbo trees near non-floor, non-vegetation (fences, etc)
-            const auto& entries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
+            const auto& entries = mGridData[wx][wy][0 - MIN_WORLD_LEVEL].Entries;
             for (LotFile::Entry *e : entries) {
                 LotFile::Tile *tile = TileMap[e->gid];
                 if (!floorVegTiles.contains(tile->name)) {
                     for (int yy = y - 1; yy <= y + 1; yy++) {
                         for (int xx = x - 1; xx <= x + 1; xx++) {
-                            if (xx >= 0 && xx < CELL_WIDTH && yy >= 0 && yy < CELL_HEIGHT)
+                            if (xx >= 0 && xx < CELL_SIZE_256 && yy >= 0 && yy < CELL_SIZE_256)
                                 grid[xx][yy] = PREVENT_JUMBO;
                         }
                     }
@@ -905,12 +877,12 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
 
     // Prevent jumbo trees near north/west edges of cells
     for (int y = 0; y < 4; y++) {
-        for (int x = 0; x < CELL_WIDTH; x++) {
+        for (int x = 0; x < CELL_SIZE_256; x++) {
             grid[x][y] = PREVENT_JUMBO;
         }
     }
     for (int x = 0; x < 4; x++) {
-        for (int y = 0; y < CELL_HEIGHT; y++) {
+        for (int y = 0; y < CELL_SIZE_256; y++) {
             grid[x][y] = PREVENT_JUMBO;
         }
     }
@@ -933,9 +905,11 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
 
     // Get a list of all tree positions in the cell.
     QList<QPoint> allTreePos;
-    for (int y = 0; y < CELL_HEIGHT; y++) {
-        for (int x = 0; x < CELL_WIDTH; x++) {
-            const auto& entries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
+    for (int y = 0; y < CELL_SIZE_256; y++) {
+        for (int x = 0; x < CELL_SIZE_256; x++) {
+            int wx = x + cellBounds256.x();
+            int wy = y + cellBounds256.y();
+            const auto& entries = mGridData[wx][wy][0 - MIN_WORLD_LEVEL].Entries;
             for (LotFile::Entry *e : entries) {
                 LotFile::Tile *tile = TileMap[e->gid];
                 if (treeTiles.contains(tile->name) == false) {
@@ -963,17 +937,19 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
                         continue;
                     int x = treePos.x() + dx;
                     int y = treePos.y() + dy;
-                    if (x >= 0 && x < CELL_WIDTH && y >= 0 && y < CELL_HEIGHT)
+                    if (x >= 0 && x < CELL_SIZE_256 && y >= 0 && y < CELL_SIZE_256)
                         grid[x][y] = REMOVE_TREE;
                 }
             }
         }
     }
 
-    for (int y = 0; y < CELL_HEIGHT; y++) {
-        for (int x = 0; x < CELL_WIDTH; x++) {
+    for (int y = 0; y < CELL_SIZE_256; y++) {
+        for (int x = 0; x < CELL_SIZE_256; x++) {
+            int wx = x + cellBounds256.x();
+            int wy = y + cellBounds256.y();
             if (grid[x][y] == JUMBO_TREE) {
-                QList<LotFile::Entry*>& squareEntries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
+                QList<LotFile::Entry*>& squareEntries = mGridData[wx][wy][0 - MIN_WORLD_LEVEL].Entries;
                 for (LotFile::Entry *e : squareEntries) {
                     LotFile::Tile *tile = TileMap[e->gid];
                     if (treeTiles.contains(tile->name)) {
@@ -984,7 +960,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
                 }
             }
             if (grid[x][y] == REMOVE_TREE) {
-                QList<LotFile::Entry*>& squareEntries = mGridData[x][y][0 - MIN_WORLD_LEVEL].Entries;
+                QList<LotFile::Entry*>& squareEntries = mGridData[wx][wy][0 - MIN_WORLD_LEVEL].Entries;
                 for (int i = 0; i < squareEntries.size(); i++) {
                     LotFile::Entry *e = squareEntries[i];
                     LotFile::Tile *tile = TileMap[e->gid];
@@ -998,16 +974,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     }
 }
 
-static QString nameOfTileset(const Tileset *tileset)
-{
-    QString name = tileset->imageSource();
-    if (name.contains(QLatin1String("/")))
-        name = name.mid(name.lastIndexOf(QLatin1String("/")) + 1);
-    name.replace(QLatin1String(".png"), QLatin1String(""));
-    return name;
-}
-
-bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGid)
+bool LotFilesManager256::handleTileset(const Tiled::Tileset *tileset, uint &firstGid)
 {
     if (!tileset->fileName().isEmpty()) {
         mError = tr("Only tileset image files supported, not external tilesets");
@@ -1043,27 +1010,12 @@ bool LotFilesManager::handleTileset(const Tiled::Tileset *tileset, uint &firstGi
     return true;
 }
 
-int LotFilesManager::getRoomID(int x, int y, int z)
+int LotFilesManager256::getRoomID(int x, int y, int z)
 {
     return mGridData[x][y][z - MIN_WORLD_LEVEL].roomID;
-#if 0
-    int n = 0;
-    for (LotFile::Room *room : roomList) {
-        if (room->floor != z)
-            continue;
-
-        if ((x >= room->x && x < room->x + room->w) &&
-                (y >= room->y && y < room->y + room->h))
-            return n;
-
-        n++;
-    }
-
-    return -1;
-#endif
 }
 
-uint LotFilesManager::cellToGid(const Cell *cell)
+uint LotFilesManager256::cellToGid(const Cell *cell)
 {
     Tileset *tileset = cell->tile->tileset();
 
@@ -1086,28 +1038,31 @@ uint LotFilesManager::cellToGid(const Cell *cell)
 #endif
 }
 
-bool LotFilesManager::processObjectGroups(WorldCell *cell, MapComposite *mapComposite)
+bool LotFilesManager256::processObjectGroups(CombinedCellMaps &combinedMaps, WorldCell *cell, MapComposite *mapComposite)
 {
     for (Layer *layer : mapComposite->map()->layers()) {
         if (ObjectGroup *og = layer->asObjectGroup()) {
-            if (!processObjectGroup(cell, og, mapComposite->levelRecursive(),
-                                    mapComposite->originRecursive()))
+            if (!processObjectGroup(combinedMaps, cell, og, mapComposite->levelRecursive(), mapComposite->originRecursive()))
                 return false;
         }
     }
 
     for (MapComposite *subMap : mapComposite->subMaps())
-        if (!processObjectGroups(cell, subMap))
+        if (!processObjectGroups(combinedMaps, cell, subMap))
             return false;
 
     return true;
 }
 
-bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGroup,
-                                         int levelOffset, const QPoint &offset)
+bool LotFilesManager256::processObjectGroup(CombinedCellMaps &combinedMaps, WorldCell *cell, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
 {
     int level = objectGroup->level();
     level += levelOffset;
+
+    // Align with the 256x256 cell.
+    QPoint offset1 = offset;
+    offset1.rx() -= combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH;
+    offset1.ry() -= combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT;
 
     for (const MapObject *mapObject : objectGroup->objects()) {
 #if 0
@@ -1117,10 +1072,10 @@ bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
         if (!mapObject->width() || !mapObject->height())
             continue;
 
-        int x = qFloor(mapObject->x());
-        int y = qFloor(mapObject->y());
-        int w = qCeil(mapObject->x() + mapObject->width()) - x;
-        int h = qCeil(mapObject->y() + mapObject->height()) - y;
+        int x = std::floor(mapObject->x());
+        int y = std::floor(mapObject->y());
+        int w = std::ceil(mapObject->x() + mapObject->width()) - x;
+        int h = std::ceil(mapObject->y() + mapObject->height()) - y;
 
         QString name = mapObject->name();
         if (name.isEmpty())
@@ -1131,10 +1086,6 @@ bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
             y += 3 * level;
         }
 
-        // Apply the MapComposite offset in the top-level map.
-        x += offset.x();
-        y += offset.y();
-
         if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
             if (x < 0 || y < 0 || x + w > CELL_WIDTH || y + h > CELL_HEIGHT) {
                 x = qBound(0, x, CELL_WIDTH);
@@ -1143,21 +1094,18 @@ bool LotFilesManager::processObjectGroup(WorldCell *cell, ObjectGroup *objectGro
                         .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
                 return false;
             }
-            LotFile::RoomRect *rr = new LotFile::RoomRect(name, x, y, level,
-                                                          w, h);
+            // Apply the MapComposite offset in the top-level map.
+            x += offset1.x();
+            y += offset1.y();
+            LotFile::RoomRect *rr = new LotFile::RoomRect(name, x, y, level, w, h);
             mRoomRects += rr;
             mRoomRectByLevel[level] += rr;
-        } else {
-            LotFile::Zone *z = new LotFile::Zone(name,
-                                                 mapObject->type(),
-                                                 x, y, level, w, h);
-            ZoneList.append(z);
         }
     }
     return true;
 }
 
-void LotFilesManager::resolveProperties(PropertyHolder *ph, PropertyList &result)
+void LotFilesManager256::resolveProperties(PropertyHolder *ph, PropertyList &result)
 {
     for (PropertyTemplate *pt : ph->templates())
         resolveProperties(pt, result);
@@ -1167,68 +1115,104 @@ void LotFilesManager::resolveProperties(PropertyHolder *ph, PropertyList &result
     }
 }
 
-/////
-
-DelayedMapLoader::DelayedMapLoader()
+qint8 LotFilesManager256::calculateZombieDensity(int x1, int y1, int x2, int y2)
 {
-    connect(MapManager::instance(), &MapManager::mapLoaded,
-            this, &DelayedMapLoader::mapLoaded);
-    connect(MapManager::instance(), &MapManager::mapFailedToLoad,
-            this, &DelayedMapLoader::mapFailedToLoad);
-}
-
-void DelayedMapLoader::addMap(MapInfo *info)
-{
-    mLoading += new SubMapLoading(info);
-}
-
-bool DelayedMapLoader::isLoading()
-{
-    for (int i = 0; i < mLoading.size(); i++) {
-        if (mLoading[i]->mapInfo->isLoading())
-            return true;
+    // TODO: Get the total depth of 8x8 squares, then divide by 64.
+    Q_UNUSED(x2)
+    Q_UNUSED(y2)
+    if (x1 < 0 || y1 < 0 || x1 >= ZombieSpawnMap.size().width() || y1 >= ZombieSpawnMap.size().height()) {
+        return 0;
     }
-    return false;
-}
-
-void DelayedMapLoader::mapLoaded(MapInfo *mapInfo)
-{
-    for (int i = 0; i < mLoading.size(); i++) {
-        SubMapLoading *sml = mLoading[i];
-        if (sml->mapInfo == mapInfo) {
-            mLoaded += new SubMapLoading(mapInfo); // add reference
-            delete mLoading.takeAt(i);
-            --i;
-            // Keep going, could be duplicate submaps to load
-        }
-    }
-}
-
-void DelayedMapLoader::mapFailedToLoad(MapInfo *mapInfo)
-{
-    for (int i = 0; i < mLoading.size(); i++) {
-        if (mLoading[i]->mapInfo == mapInfo) {
-            mError = MapManager::instance()->errorString();
-            delete mLoading.takeAt(i);
-            --i;
-            // Keep going, could be duplicate submaps to load
-        }
-    }
+    int chunk300X = std::floor(x1 / float(CHUNK_WIDTH));
+    int chunk300Y = std::floor(y1 / float(CHUNK_HEIGHT));
+    QRgb pixel = ZombieSpawnMap.pixel(chunk300X, chunk300Y);
+    return quint8(qRed(pixel));
 }
 
 /////
 
-DelayedMapLoader::SubMapLoading::SubMapLoading(MapInfo *info) :
-    mapInfo(info), holdsReference(false)
+CombinedCellMaps::CombinedCellMaps()
 {
-    if (mapInfo->map()) {
-        MapManager::instance()->addReferenceToMap(mapInfo);
-        holdsReference = true;
-    }
+
 }
 
-DelayedMapLoader::SubMapLoading::~SubMapLoading()
+CombinedCellMaps::~CombinedCellMaps()
 {
-    if (holdsReference)
-        MapManager::instance()->removeReferenceToMap(mapInfo);
+    MapInfo* mapInfo = mMapComposite->mapInfo(); // 256x256
+    delete mMapComposite;
+    delete mapInfo->map();
+    delete mapInfo;
+}
+
+bool CombinedCellMaps::load(WorldDocument *worldDoc, int cell256X, int cell256Y)
+{
+    const GenerateLotsSettings &lotSettings = worldDoc->world()->getGenerateLotsSettings();
+    mCell256X = cell256X;
+    mCell256Y = cell256Y;
+    int minCell300X = std::floor(cell256X * CELL_SIZE_256 / float(CELL_WIDTH));
+    int minCell300Y = std::floor(cell256Y * CELL_SIZE_256 / float(CELL_HEIGHT));
+    int maxCell300X = std::ceil(((cell256X + 1) * CELL_SIZE_256 - 1) / float(CELL_WIDTH));
+    int maxCell300Y = std::ceil(((cell256Y + 1) * CELL_SIZE_256 - 1) / float(CELL_HEIGHT));
+    mMinCell300X = minCell300X;
+    mMinCell300Y = minCell300Y;
+    mCellsWidth = maxCell300X - minCell300X;
+    mCellsHeight = maxCell300Y - minCell300Y;
+    mCells.clear();
+    for (int cell300Y = minCell300Y; cell300Y < maxCell300Y; cell300Y++) {
+        for (int cell300X = minCell300X; cell300X < maxCell300X; cell300X++) {
+            WorldCell* cell = worldDoc->world()->cellAt(cell300X - lotSettings.worldOrigin.x(), cell300Y - lotSettings.worldOrigin.y());
+            if (cell == nullptr) {
+                continue;
+            }
+            if (cell->mapFilePath().isEmpty()) {
+                continue;
+            }
+            MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(), QString(), true);
+            if (mapInfo == nullptr) {
+                mError = MapManager::instance()->errorString();
+                return false;
+            }
+            mLoader.addMap(mapInfo);
+            for (WorldCellLot *lot : cell->lots()) {
+                if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(), QString(), true, MapManager::PriorityMedium)) {
+                    mLoader.addMap(info);
+                } else {
+                    mError = MapManager::instance()->errorString();
+                    return false;
+                }
+            }
+            mCells += cell;
+        }
+    }
+    while (mLoader.isLoading()) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+    if (mLoader.errorString().isEmpty() == false) {
+        mError = mLoader.errorString();
+        return false;
+    }
+
+    MapInfo* mapInfo = getCombinedMap();
+    mMapComposite = new MapComposite(mapInfo);
+    for (WorldCell* cell : mCells) {
+        MapInfo *info = MapManager::instance()->mapInfo(cell->mapFilePath());
+        QPoint cellPos((cell->x() + lotSettings.worldOrigin.x() - mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.y() - mMinCell300Y) * CELL_HEIGHT);
+        MapComposite* subMap = mMapComposite->addMap(info, cellPos, 0);
+        subMap->setLotFilesManagerMap(true);
+        for (WorldCellLot *lot : cell->lots()) {
+            MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+            subMap->addMap(info, lot->pos(), lot->level());
+        }
+    }
+    mMapComposite->synch(); //
+    return true;
+}
+
+MapInfo *CombinedCellMaps::getCombinedMap()
+{
+    QString mapFilePath(QLatin1String("<LotFilesManagerMap>"));
+    Map *map = new Map(Map::LevelIsometric, mCellsWidth * CELL_WIDTH, mCellsHeight * CELL_HEIGHT, 64, 32);
+    MapInfo *mapInfo = new MapInfo(map);
+    mapInfo->setFilePath(mapFilePath);
+    return mapInfo;
 }

@@ -980,3 +980,20 @@ void MapReaderWorker::debugJobs(const char *msg)
     }
     noise() << "MRW #" << mID << ": " << msg << "\n" << out;
 }
+
+MapInfo::MapInfo(Tiled::Map *map)
+    : mOrientation(map->orientation())
+    , mWidth(map->width())
+    , mHeight(map->height())
+    , mTileWidth(map->tileWidth())
+    , mTileHeight(map->tileHeight())
+    , mMap(map)
+    , mPlaceholder(false)
+    , mBeingEdited(false)
+#ifdef WORLDED
+    , mMapRefCount(0)
+    , mReferenceEpoch(0)
+#endif
+    , mLoading(false)
+{
+}

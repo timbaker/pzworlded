@@ -380,6 +380,11 @@ public:
     bool isAdjacentMap()/* const*/
     { return mIsAdjacentMap;/*mParent ? mParent->mAdjacentMaps.contains(this) : false;*/ }
 
+    void setLotFilesManagerMap(bool b)
+    { mIsLotFilesManagerMap = b; }
+    bool isLotFilesManagerMap() const
+    { return mIsLotFilesManagerMap; }
+
     bool waitingForMapsToLoad() const;
 
     void setSuppressRegion(const QRegion &rgn, int level);
@@ -446,6 +451,7 @@ private:
     bool mSavedShowBMPTiles;
     bool mSavedShowMapTiles;
     bool mIsAdjacentMap;
+    bool mIsLotFilesManagerMap;
 
     Tiled::Internal::BmpBlender *mBmpBlender;
 

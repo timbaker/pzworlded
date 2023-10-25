@@ -268,7 +268,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                 cells.append(cell);
                 opacities.append(mLayerOpacity[index]);
                 if (mMaxFloorLayer >= index)
-                    mOwner->mKeepFloorLayerCount = cells.size();
+                    root->mKeepFloorLayerCount = cells.size();
                 continue;
             }
         }
@@ -320,7 +320,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                 opacities.append(0.25);
 #endif
             if (mMaxFloorLayer >= index)
-                mOwner->mKeepFloorLayerCount = cells.size();
+                root->mKeepFloorLayerCount = cells.size();
         }
 
         // Draw the no-blend tile.
@@ -335,7 +335,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             cells.append(&mNoBlendCell);
             opacities.append(0.25);
             if (mMaxFloorLayer >= index)
-                mOwner->mKeepFloorLayerCount = cells.size();
+                root->mKeepFloorLayerCount = cells.size();
         }
     }
 
@@ -377,7 +377,7 @@ void CompositeLayerGroup::prepareDrawing2()
 // layers (so NoRender layers are included) and visibility of sub-maps.
 bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell *> &cells) const
 {
-    MapComposite *root = mOwner->root();
+    MapComposite *root = mOwner->rootOrAdjacent();
     if (root == mOwner)
         root->mKeepFloorLayerCount = 0;
 
@@ -408,7 +408,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                     }
                     cells.append(cell);
                     if (mMaxFloorLayer >= index)
-                        mOwner->mKeepFloorLayerCount = cells.size();
+                        root->mKeepFloorLayerCount = cells.size();
                     continue;
                 }
             }
@@ -437,7 +437,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell 
                 }
                 cells.append(cell);
                 if (mMaxFloorLayer >= index)
-                    mOwner->mKeepFloorLayerCount = cells.size();
+                    root->mKeepFloorLayerCount = cells.size();
             }
         }
     }
@@ -520,7 +520,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                     }
                     cells.append(TilePlusLayer(tl->nameWithPrefix(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]));
                     if (mMaxFloorLayer >= index)
-                        mOwner->mKeepFloorLayerCount = cells.size();
+                        root->mKeepFloorLayerCount = cells.size();
                     continue;
                 }
             }
@@ -715,10 +715,11 @@ void CompositeLayerGroup::synch()
             maxMargins(m, tl->drawMargins(), m);
             mAnyVisibleLayers = true;
         }
-        if (!mLevel && (!mOwner->parent() || mOwner->isAdjacentMap()) &&
+        if (!mLevel && (!mOwner->parent() || mOwner->isAdjacentMap() || mOwner->isLotFilesManagerMap()) &&
                 (index == mMaxFloorLayer + 1) &&
-                tl->name().startsWith(QLatin1String("Floor")))
+                tl->name().startsWith(sFloor)) {
             mMaxFloorLayer = index;
+        }
         ++index;
     }
 
@@ -993,11 +994,14 @@ MapComposite::MapComposite(MapInfo *mapInfo, Map::Orientation orientRender,
     , mShowBMPTiles(true)
     , mShowMapTiles(true)
     , mIsAdjacentMap(false)
+    , mIsLotFilesManagerMap(false)
     , mBmpBlender(new Tiled::Internal::BmpBlender(mMap, this))
     , mSuppressLevel(0)
 {
 #ifdef WORLDED
-    MapManager::instance()->addReferenceToMap(mMapInfo);
+    if (mMapInfo->path() == QStringLiteral("<LotFilesManagerMap>") == false) {
+        MapManager::instance()->addReferenceToMap(mMapInfo);
+    }
 #endif
     if (mOrientRender == Map::Unknown)
         mOrientRender = mMap->orientation();
@@ -1129,6 +1133,8 @@ MapComposite::~MapComposite()
     qDeleteAll(mSubMaps);
     qDeleteAll(mLayerGroups);
 #ifdef WORLDED
+    if ((mMapInfo != nullptr) && (mMapInfo->path() == QStringLiteral("<LotFilesManagerMap>")))
+        return;
     if (mMapInfo)
         MapManager::instance()->removeReferenceToMap(mMapInfo);
 #endif
@@ -1806,7 +1812,7 @@ MapComposite *MapComposite::root()
 MapComposite *MapComposite::rootOrAdjacent()
 {
     MapComposite *root = this;
-    while (!root->isAdjacentMap() && root->parent())
+    while (!root->isAdjacentMap() && !root->isLotFilesManagerMap() && root->parent())
         root = root->parent();
     return root;
 }

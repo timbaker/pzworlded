@@ -61,6 +61,7 @@ OBJECTS_DIR = .obj
 
 SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
+    lotfilesmanager256.cpp \
         mainwindow.cpp \
     InGameMap/clipper.cpp \
     InGameMap/ingamemapcell.cpp \
@@ -181,6 +182,7 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapundo.h \
     InGameMap/ingamemapwriter.h \
     InGameMap/ingamemapwriterbinary.h \
+    lotfilesmanager256.h \
     tilesetstxtfile.h \
     worldconstants.h \
     worldview.h \

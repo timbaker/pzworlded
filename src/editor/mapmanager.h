@@ -95,6 +95,8 @@ public:
 
     }
 
+    MapInfo(Tiled::Map *map);
+
     bool isValid() const { return mWidth > 0 && mHeight > 0; }
 
     Tiled::Map::Orientation orientation() const { return mOrientation; }
