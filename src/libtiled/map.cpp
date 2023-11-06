@@ -227,13 +227,17 @@ int Map::indexOfLayer(const QString &layerName, uint layertypes) const
     if (MapLevel::levelForLayer(layerName, &level)) {
         if (MapLevel *mapLevel = mapLevelForZ(level)) {
             QString layerName2 = MapLevel::layerNameWithoutPrefix(layerName);
+            int index = mapLevel->indexOfLayer(layerName2, layertypes);
+            if (index == -1) {
+                return -1;
+            }
             int count = 0;
             for (MapLevel *mapLevel2 : mapLevels()) {
                 if (mapLevel2 == mapLevel)
                     break;
                 count += mapLevel2->layerCount();
             }
-            return count + mapLevel->indexOfLayer(layerName2);
+            return count + index;
         }
         return -1;
     }
