@@ -30,6 +30,7 @@
 
 namespace Tiled
 {
+class SquarePropertiesGrid;
 class ZTileLayerGroup;
 
 class TILEDSHARED_EXPORT MapLevel
@@ -121,14 +122,22 @@ public:
      * The caller becomes responsible for the lifetime of this layer.
      */
     Layer *takeLayerAt(int index);
-#if 0
-    void setTileLayerGroup(ZTileLayerGroup *tileLayerGroup);
 
-    ZTileLayerGroup *tileLayerGroup()
+    SquarePropertiesGrid *squarePropertiesGrid()
     {
-        return mTileLayerGroup;
+        return mSquarePropertiesGrid;
     }
-#endif
+
+    const SquarePropertiesGrid *squarePropertiesGrid() const
+    {
+        return mSquarePropertiesGrid;
+    }
+
+    void setSquarePropertiesGrid(SquarePropertiesGrid* spg)
+    {
+        mSquarePropertiesGrid = spg;
+    }
+
 private:
     void adoptLayer(Layer *layer);
 
@@ -136,9 +145,7 @@ private:
     Map *mMap;
     int mZ;
     QList<Layer*> mLayers;
-#if 0
-    ZTileLayerGroup *mTileLayerGroup;
-#endif
+    SquarePropertiesGrid *mSquarePropertiesGrid;
 };
 
 } // namespace Tiled

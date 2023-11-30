@@ -33,6 +33,7 @@ SOURCES += compression.cpp \
     objectgroup.cpp \
     orthogonalrenderer.cpp \
     properties.cpp \
+    squareproperties.cpp \
     staggeredrenderer.cpp \
     texture_atlas.c \
     tilelayer.cpp \
@@ -55,6 +56,7 @@ HEADERS += compression.h \
     objectgroup.h \
     orthogonalrenderer.h \
     properties.h \
+    squareproperties.h \
     staggeredrenderer.h \
     texture_atlas.h \
     tile.h \

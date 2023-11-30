@@ -325,6 +325,7 @@ private:
 
     BuildingFloor *readFloor();
     void decodeCSVFloorData(BuildingFloor *floor, const QString &text);
+    void decodeCSVSquareProperties(BuildingFloor *floor, const QString &text);
     Room *getRoom(BuildingFloor *floor, int x, int y, int index);
 
     void decodeCSVTileData(BuildingFloor *floor, const QString &layerName, const QString &text);
@@ -776,6 +777,14 @@ BuildingFloor *BuildingReaderPrivate::readFloor()
                     decodeCSVFloorData(floor, xml.text().toString());
                 }
             }
+        } else if (xml.name() == QLatin1String("attributes")) {
+            while (xml.readNext() != QXmlStreamReader::Invalid) {
+                if (xml.isEndElement())
+                    break;
+                if (xml.isCharacters() && !xml.isWhitespace()) {
+                    decodeCSVSquareProperties(floor, xml.text().toString());
+                }
+            }
         } else if (xml.name() == QLatin1String("tiles")) {
             const QXmlStreamAttributes atts = xml.attributes();
             const QString layerName = atts.value(QLatin1String("layer")).toString();
@@ -1116,6 +1125,76 @@ void BuildingReaderPrivate::decodeCSVFloorData(BuildingFloor *floor,
             return;
         }
         floor->SetRoomAt(x, y, getRoom(floor, x, y, index));
+    }
+}
+
+void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, const QString &text)
+{
+    int start = 0;
+    int end = text.length();
+    while (start < end && text.at(start).isSpace()) {
+        start++;
+    }
+    int x = 0, y = 0;
+    const QChar sep(QLatin1Char(','));
+    const QChar nullChar(QLatin1Char('0'));
+    Tiled::SquarePropertiesGrid *sag = floor->squarePropertiesGrid();
+    Tiled::Properties sa;
+    Tiled::Properties emptyAttributes;
+    const QStringList &SQUARE_ATTRIBUTES = getSquareAttributeNames();
+    while ((end = text.indexOf(sep, start, Qt::CaseSensitive)) != -1) {
+        if ((end - start == 1) && (text.at(start) == nullChar)) {
+            sag->replace(x, y, emptyAttributes);
+        } else {
+            bool conversionOk;
+            uint bits = text.mid(start, end - start).toUInt(&conversionOk, 16);
+            if (!conversionOk) {
+                xml.raiseError(
+                        tr("Unable to parse <attributes> at (%1,%2) on floor %3")
+                               .arg(x + 1).arg(y + 1).arg(floor->level()));
+                return;
+            }
+            sa.clear();
+            for (int i = 0; i < SQUARE_ATTRIBUTES.size(); i++) {
+                if (bits & (1 << i)) {
+                    sa.insert(SQUARE_ATTRIBUTES[i], QString());
+                }
+            }
+            sag->replace(x, y, sa);
+        }
+        start = end + 1;
+        if (++x == floor->width()) {
+            ++y;
+            if (y >= floor->height()) {
+                xml.raiseError(tr("Corrupt <attributes> for floor %1")
+                               .arg(floor->level()));
+                return;
+            }
+            x = 0;
+        }
+    }
+    end = text.size();
+    while (start < end && text.at(end-1).isSpace()) {
+        end--;
+    }
+    if ((end - start == 1) && (text.at(start) == nullChar)) {
+        sag->replace(x, y, emptyAttributes);
+    } else {
+        bool conversionOk;
+        uint bits = text.mid(start, end - start).toUInt(&conversionOk, 16);
+        if (!conversionOk) {
+            xml.raiseError(
+                    tr("Unable to parse <attributes> at (%1,%2) on floor %3")
+                           .arg(x + 1).arg(y + 1).arg(floor->level()));
+            return;
+        }
+        sa.clear();
+        for (int i = 0; i < SQUARE_ATTRIBUTES.size(); i++) {
+            if (bits & (1 << i)) {
+                sa.insert(SQUARE_ATTRIBUTES[i], QString());
+            }
+        }
+        sag->replace(x, y, sa);
     }
 }
 

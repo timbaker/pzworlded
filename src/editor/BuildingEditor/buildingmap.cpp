@@ -27,6 +27,7 @@
 
 #include "bmpblender.h"
 #include "mapcomposite.h"
+#include "maplevel.h"
 #include "mapmanager.h"
 #include "tilemetainfomgr.h"
 #include "tilesetmanager.h"
@@ -318,6 +319,11 @@ Map *BuildingMap::mergedMap() const
         if (TileLayer *tl = map->layerAt(i)->asTileLayer())
             tl->merge(tl->position(), mMap->layerAt(i)->asTileLayer());
 
+    }
+    for (BuildingFloor *floor : mBuilding->floors()) {
+        Tiled::SquarePropertiesGrid *spg = floor->squarePropertiesGrid();
+        MapLevel *mapLevel = map->mapLevelForZ(floor->level());
+        mapLevel->squarePropertiesGrid()->copy(*spg);
     }
     return map;
 }

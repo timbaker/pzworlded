@@ -21,9 +21,11 @@
 #include "mapmanager.h"
 #include "tilesetmanager.h"
 
+#include "maplevel.h"
 #include "mapobject.h"
 #include "maprenderer.h"
 #include "objectgroup.h"
+#include "squareproperties.h"
 #include "tilelayer.h"
 
 #include <QDebug>
@@ -339,6 +341,16 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
         }
     }
 
+    if (MapLevel *mapLevel = mMap->mapLevelForZ(mLevel)) {
+        Tiled::SquarePropertiesGrid *spg = mapLevel->squarePropertiesGrid();
+        if (spg->hasPropertiesAt(pos.x(), pos.y())) {
+            const Tiled::Properties &properties = spg->at(pos.x(), pos.y());
+            if (properties.contains(QStringLiteral("KeepWalls"))) {
+                int dbg = 1;
+            }
+        }
+    }
+
     // Overwrite map cells with sub-map cells at this location.
     // Chop off sub-map cells that aren't in the root- or adjacent-map's bounds.
     QRect rootBounds(root->originRecursive(), root->mapInfo()->size());
@@ -496,6 +508,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
     if (root == mOwner)
         root->mKeepFloorLayerCount = 0;
 
+    QVector<TilePlusLayer> selfCells;
     QVector<TilePlusLayer> aboveLotCells;
 
     bool cleared = false;
@@ -536,6 +549,11 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                 continue;
             }
             if (!cell->isEmpty()) {
+                selfCells += TilePlusLayer(tl->nameWithPrefix(), cell->tile, mVisibleLayers[index], mLayerOpacity[index]);
+                if (owner()->parent() == root) {
+                    selfCells.last().mSubMap = owner();
+                }
+#if 0
                 if (!cleared) {
                     if (mLevel == 0) {
                         bool isFloor = (index == 0) && (tl->name() == sFloor);
@@ -557,9 +575,60 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                 }
                 if (mMaxFloorLayer >= index)
                     root->mKeepFloorLayerCount = cells.size();
+#endif
             }
         }
     }
+
+    if ((cells.isEmpty() == false) && (selfCells.isEmpty() == false)) {
+        bool bKeepFloors = false;
+        bool bKeepWalls = false;
+        if (MapLevel *mapLevel = mMap->mapLevelForZ(mLevel)) {
+            Tiled::SquarePropertiesGrid *spg = mapLevel->squarePropertiesGrid();
+            if (spg->hasPropertiesAt(pos.x(), pos.y())) {
+                const Tiled::Properties &properties = spg->at(pos.x(), pos.y());
+                if (properties.contains(QStringLiteral("KeepFloors"))) {
+                    bKeepFloors = true;
+                }
+                if (properties.contains(QStringLiteral("KeepWalls"))) {
+                    bKeepWalls = true;
+                }
+            }
+        }
+        if (mLevel == 0) {
+            int maxFloor = -1;
+            for (int i = 0; i < cells.size(); i++) {
+                const TilePlusLayer& cell = cells.at(i);
+                if (cell.mLayerName.startsWith(QStringLiteral("0_Floor"))) {
+                    maxFloor = i;
+                } else {
+                    break;
+                }
+            }
+            const TilePlusLayer& selfCell = selfCells.at(0);
+            if (selfCell.mLayerName == QStringLiteral("0_Floor")) {
+                bKeepFloors = true;
+                // Hide other maps' floor tiles when our MapComposite is visible.
+                for (int i = 0; i < maxFloor; i++) {
+                    cells[i].mHideIfVisible = owner();
+                }
+            } else {
+                bKeepFloors = true;
+            }
+        }
+        for (int i = 0; i < cells.size(); i++) {
+            const TilePlusLayer& cell = cells.at(i);
+            int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
+            if (bKeepFloors && cell.mLayerName.mid(p).startsWith(sFloor)) {
+                continue;
+            }
+            if (bKeepWalls && cell.mLayerName.mid(p).startsWith(QStringLiteral("Wall"))) {
+                continue;
+            }
+            cells.remove(i--);
+        }
+    }
+    cells += selfCells;
 
     // Overwrite map cells with sub-map cells at this location
     // Chop off sub-map cells that aren't in the root- or adjacent-map's bounds.

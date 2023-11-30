@@ -304,6 +304,29 @@ public:
         w.writeCharacters(text);
         w.writeEndElement();
 
+        // Write square attributes
+        text.clear();
+        text += newline;
+        count = 0;
+        Tiled::SquarePropertiesGrid *sag = floor->squarePropertiesGrid();
+        for (int y = 0; y < floor->height(); y++) {
+            for (int x = 0; x < floor->width(); x++) {
+                if (sag->hasPropertiesAt(x, y) == false)
+                    text += zero;
+                else {
+                    const Tiled::Properties& sa = sag->at(x, y);
+                    int bits = toBits(sa, getSquareAttributeNames());
+                    text += QString::number(bits, 16);
+                }
+                if (++count < max)
+                    text += comma;
+            }
+            text += newline;
+        }
+        w.writeStartElement(QLatin1String("attributes"));
+        w.writeCharacters(text);
+        w.writeEndElement();
+
         // Write user tile indices.
         foreach (QString layerName, floor->grimeLayers()) {
             if (floor->grime()[layerName]->isEmpty())
@@ -462,6 +485,18 @@ public:
         int index = mFurnitureTiles.indexOf(ftiles);
         Q_ASSERT(index >= 0);
         return QString::number(index);
+    }
+
+    int toBits(const Tiled::Properties& properties, const QStringList& attributeNames) const
+    {
+        int bits = 0;
+        for (const QString& key : properties.keys()) {
+            int index = attributeNames.indexOf(key);
+            if (index != -1) {
+                bits |= 1 << index;
+            }
+        }
+        return bits;
     }
 
     Building *mBuilding;

@@ -26,6 +26,7 @@
 #include "maplevel.h"
 
 #include "map.h"
+#include "squareproperties.h"
 #include "tilelayer.h"
 
 using namespace Tiled;
@@ -33,6 +34,7 @@ using namespace Tiled;
 MapLevel::MapLevel(Map *map, int level)
     : mMap(map)
     , mZ(level)
+    , mSquarePropertiesGrid(new SquarePropertiesGrid(map->width(), map->height()))
 {
 
 }
@@ -40,6 +42,7 @@ MapLevel::MapLevel(Map *map, int level)
 MapLevel::~MapLevel()
 {
     qDeleteAll(mLayers);
+    delete mSquarePropertiesGrid;
 }
 
 QString MapLevel::layerNameWithoutPrefix(const QString &name)
@@ -74,6 +77,7 @@ MapLevel *MapLevel::clone(Map *map) const
     for (Layer *layer : layers()) {
         copy->addLayer(layer->clone());
     }
+    copy->squarePropertiesGrid()->copy(*squarePropertiesGrid());
     return copy;
 }
 
