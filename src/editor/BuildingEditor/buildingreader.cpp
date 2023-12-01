@@ -1138,13 +1138,13 @@ void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, cons
     int x = 0, y = 0;
     const QChar sep(QLatin1Char(','));
     const QChar nullChar(QLatin1Char('0'));
-    Tiled::SquarePropertiesGrid *sag = floor->squarePropertiesGrid();
-    Tiled::Properties sa;
-    Tiled::Properties emptyAttributes;
-    const QStringList &SQUARE_ATTRIBUTES = getSquareAttributeNames();
+    Tiled::PropertiesGrid *propertiesGrid = floor->squarePropertiesGrid();
+    Tiled::Properties properties;
+    Tiled::Properties emptyProperties;
+    const QStringList &SQUARE_PROPERTIES = getSquarePropertyNames();
     while ((end = text.indexOf(sep, start, Qt::CaseSensitive)) != -1) {
         if ((end - start == 1) && (text.at(start) == nullChar)) {
-            sag->replace(x, y, emptyAttributes);
+            propertiesGrid->replace(x, y, emptyProperties);
         } else {
             bool conversionOk;
             uint bits = text.mid(start, end - start).toUInt(&conversionOk, 16);
@@ -1154,13 +1154,13 @@ void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, cons
                                .arg(x + 1).arg(y + 1).arg(floor->level()));
                 return;
             }
-            sa.clear();
-            for (int i = 0; i < SQUARE_ATTRIBUTES.size(); i++) {
+            properties.clear();
+            for (int i = 0; i < SQUARE_PROPERTIES.size(); i++) {
                 if (bits & (1 << i)) {
-                    sa.insert(SQUARE_ATTRIBUTES[i], QString());
+                    properties.insert(SQUARE_PROPERTIES[i], QString());
                 }
             }
-            sag->replace(x, y, sa);
+            propertiesGrid->replace(x, y, properties);
         }
         start = end + 1;
         if (++x == floor->width()) {
@@ -1178,7 +1178,7 @@ void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, cons
         end--;
     }
     if ((end - start == 1) && (text.at(start) == nullChar)) {
-        sag->replace(x, y, emptyAttributes);
+        propertiesGrid->replace(x, y, emptyProperties);
     } else {
         bool conversionOk;
         uint bits = text.mid(start, end - start).toUInt(&conversionOk, 16);
@@ -1188,13 +1188,13 @@ void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, cons
                            .arg(x + 1).arg(y + 1).arg(floor->level()));
             return;
         }
-        sa.clear();
-        for (int i = 0; i < SQUARE_ATTRIBUTES.size(); i++) {
+        properties.clear();
+        for (int i = 0; i < SQUARE_PROPERTIES.size(); i++) {
             if (bits & (1 << i)) {
-                sa.insert(SQUARE_ATTRIBUTES[i], QString());
+                properties.insert(SQUARE_PROPERTIES[i], QString());
             }
         }
-        sag->replace(x, y, sa);
+        propertiesGrid->replace(x, y, properties);
     }
 }
 

@@ -26,7 +26,7 @@
 #include "maplevel.h"
 
 #include "map.h"
-#include "squareproperties.h"
+#include "propertiesgrid.h"
 #include "tilelayer.h"
 
 using namespace Tiled;
@@ -34,7 +34,7 @@ using namespace Tiled;
 MapLevel::MapLevel(Map *map, int level)
     : mMap(map)
     , mZ(level)
-    , mSquarePropertiesGrid(new SquarePropertiesGrid(map->width(), map->height()))
+    , mSquarePropertiesGrid(new PropertiesGrid(map->width(), map->height()))
 {
 
 }

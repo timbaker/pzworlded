@@ -321,7 +321,7 @@ Map *BuildingMap::mergedMap() const
 
     }
     for (BuildingFloor *floor : mBuilding->floors()) {
-        Tiled::SquarePropertiesGrid *spg = floor->squarePropertiesGrid();
+        Tiled::PropertiesGrid *spg = floor->squarePropertiesGrid();
         MapLevel *mapLevel = map->mapLevelForZ(floor->level());
         mapLevel->squarePropertiesGrid()->copy(*spg);
     }

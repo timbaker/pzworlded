@@ -23,18 +23,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "squareproperties.h"
+#include "propertiesgrid.h"
 
 using namespace Tiled;
 
-SquarePropertiesGrid *SquarePropertiesGrid::clone() const
+PropertiesGrid *PropertiesGrid::clone() const
 {
-    return new SquarePropertiesGrid(*this);
+    return new PropertiesGrid(*this);
 }
 
-SquarePropertiesGrid *SquarePropertiesGrid::clone(const QRect &r) const
+PropertiesGrid *PropertiesGrid::clone(const QRect &r) const
 {
-    SquarePropertiesGrid *klone = new SquarePropertiesGrid(r.width(), r.height());
+    PropertiesGrid *klone = new PropertiesGrid(r.width(), r.height());
     const QRect r2 = r & bounds();
     for (int x = r2.left(); x <= r2.right(); x++) {
         for (int y = r2.top(); y <= r2.bottom(); y++) {
@@ -44,10 +44,10 @@ SquarePropertiesGrid *SquarePropertiesGrid::clone(const QRect &r) const
     return klone;
 }
 
-SquarePropertiesGrid *SquarePropertiesGrid::clone(const QRegion &rgn) const
+PropertiesGrid *PropertiesGrid::clone(const QRegion &rgn) const
 {
     QRect r = rgn.boundingRect();
-    SquarePropertiesGrid *klone = new SquarePropertiesGrid(r.width(), r.height());
+    PropertiesGrid *klone = new PropertiesGrid(r.width(), r.height());
     for (QRect r2 : rgn) {
         r2 &= bounds();
         for (int x = r2.left(); x <= r2.right(); x++) {
@@ -59,7 +59,7 @@ SquarePropertiesGrid *SquarePropertiesGrid::clone(const QRegion &rgn) const
     return klone;
 }
 
-void SquarePropertiesGrid::copy(const SquarePropertiesGrid &other)
+void PropertiesGrid::copy(const PropertiesGrid &other)
 {
     QRect r = bounds() & other.bounds();
     for (int y = r.top(); y <= r.bottom(); y++) {
@@ -69,7 +69,7 @@ void SquarePropertiesGrid::copy(const SquarePropertiesGrid &other)
     }
 }
 
-void SquarePropertiesGrid::copy(const SquarePropertiesGrid &other, const QRegion &rgn)
+void PropertiesGrid::copy(const PropertiesGrid &other, const QRegion &rgn)
 {
     for (QRect r2 : rgn) {
         r2 &= bounds() & other.bounds();
@@ -81,7 +81,7 @@ void SquarePropertiesGrid::copy(const SquarePropertiesGrid &other, const QRegion
     }
 }
 
-QRegion SquarePropertiesGrid::region() const
+QRegion PropertiesGrid::region() const
 {
     QRegion rgn;
     for (int index : mCells.keys()) {

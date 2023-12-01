@@ -308,14 +308,14 @@ public:
         text.clear();
         text += newline;
         count = 0;
-        Tiled::SquarePropertiesGrid *sag = floor->squarePropertiesGrid();
+        Tiled::PropertiesGrid *sag = floor->squarePropertiesGrid();
         for (int y = 0; y < floor->height(); y++) {
             for (int x = 0; x < floor->width(); x++) {
                 if (sag->hasPropertiesAt(x, y) == false)
                     text += zero;
                 else {
                     const Tiled::Properties& sa = sag->at(x, y);
-                    int bits = toBits(sa, getSquareAttributeNames());
+                    int bits = toBits(sa, getSquarePropertyNames());
                     text += QString::number(bits, 16);
                 }
                 if (++count < max)

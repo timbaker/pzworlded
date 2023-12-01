@@ -23,8 +23,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SQUAREPROPERTIES_H
-#define SQUAREPROPERTIES_H
+#ifndef PROPERTIESGRID_H
+#define PROPERTIESGRID_H
 
 #include "properties.h"
 
@@ -33,10 +33,10 @@
 
 namespace Tiled {
 
-class TILEDSHARED_EXPORT SquarePropertiesGrid
+class TILEDSHARED_EXPORT PropertiesGrid
 {
 public:
-    SquarePropertiesGrid(int width, int height) :
+    PropertiesGrid(int width, int height) :
         mWidth(width),
         mHeight(height)
     {
@@ -116,12 +116,12 @@ public:
         mCells.clear();
     }
 
-    SquarePropertiesGrid *clone() const;
-    SquarePropertiesGrid *clone(const QRect &r) const;
-    SquarePropertiesGrid *clone(const QRegion &rgn) const;
+    PropertiesGrid *clone() const;
+    PropertiesGrid *clone(const QRect &r) const;
+    PropertiesGrid *clone(const QRegion &rgn) const;
 
-    void copy(const SquarePropertiesGrid& other);
-    void copy(const SquarePropertiesGrid& other, const QRegion &rgn);
+    void copy(const PropertiesGrid& other);
+    void copy(const PropertiesGrid& other, const QRegion &rgn);
 
     QRegion region() const;
 
@@ -133,4 +133,4 @@ private:
 
 } // namespace Tiled
 
-#endif // SQUAREPROPERTIES_H
+#endif // PROPERTIESGRID_H

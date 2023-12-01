@@ -30,7 +30,7 @@
 
 namespace Tiled
 {
-class SquarePropertiesGrid;
+class PropertiesGrid;
 class ZTileLayerGroup;
 
 class TILEDSHARED_EXPORT MapLevel
@@ -123,17 +123,17 @@ public:
      */
     Layer *takeLayerAt(int index);
 
-    SquarePropertiesGrid *squarePropertiesGrid()
+    PropertiesGrid *squarePropertiesGrid()
     {
         return mSquarePropertiesGrid;
     }
 
-    const SquarePropertiesGrid *squarePropertiesGrid() const
+    const PropertiesGrid *squarePropertiesGrid() const
     {
         return mSquarePropertiesGrid;
     }
 
-    void setSquarePropertiesGrid(SquarePropertiesGrid* spg)
+    void setSquarePropertiesGrid(PropertiesGrid* spg)
     {
         mSquarePropertiesGrid = spg;
     }
@@ -145,7 +145,7 @@ private:
     Map *mMap;
     int mZ;
     QList<Layer*> mLayers;
-    SquarePropertiesGrid *mSquarePropertiesGrid;
+    PropertiesGrid *mSquarePropertiesGrid;
 };
 
 } // namespace Tiled

@@ -25,7 +25,7 @@
 #include "mapobject.h"
 #include "maprenderer.h"
 #include "objectgroup.h"
-#include "squareproperties.h"
+#include "propertiesgrid.h"
 #include "tilelayer.h"
 
 #include <QDebug>
@@ -341,16 +341,6 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
         }
     }
 
-    if (MapLevel *mapLevel = mMap->mapLevelForZ(mLevel)) {
-        Tiled::SquarePropertiesGrid *spg = mapLevel->squarePropertiesGrid();
-        if (spg->hasPropertiesAt(pos.x(), pos.y())) {
-            const Tiled::Properties &properties = spg->at(pos.x(), pos.y());
-            if (properties.contains(QStringLiteral("KeepWalls"))) {
-                int dbg = 1;
-            }
-        }
-    }
-
     // Overwrite map cells with sub-map cells at this location.
     // Chop off sub-map cells that aren't in the root- or adjacent-map's bounds.
     QRect rootBounds(root->originRecursive(), root->mapInfo()->size());
@@ -583,8 +573,9 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
     if ((cells.isEmpty() == false) && (selfCells.isEmpty() == false)) {
         bool bKeepFloors = false;
         bool bKeepWalls = false;
+        bool bKeepOther = false;
         if (MapLevel *mapLevel = mMap->mapLevelForZ(mLevel)) {
-            Tiled::SquarePropertiesGrid *spg = mapLevel->squarePropertiesGrid();
+            Tiled::PropertiesGrid *spg = mapLevel->squarePropertiesGrid();
             if (spg->hasPropertiesAt(pos.x(), pos.y())) {
                 const Tiled::Properties &properties = spg->at(pos.x(), pos.y());
                 if (properties.contains(QStringLiteral("KeepFloors"))) {
@@ -593,9 +584,13 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
                 if (properties.contains(QStringLiteral("KeepWalls"))) {
                     bKeepWalls = true;
                 }
+                if (properties.contains(QStringLiteral("KeepOther"))) {
+                    bKeepOther = true;
+                }
             }
         }
         if (mLevel == 0) {
+            // Get the index of the maximum Floor layer so far (not in this map).
             int maxFloor = -1;
             for (int i = 0; i < cells.size(); i++) {
                 const TilePlusLayer& cell = cells.at(i);
@@ -619,10 +614,17 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
         for (int i = 0; i < cells.size(); i++) {
             const TilePlusLayer& cell = cells.at(i);
             int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
-            if (bKeepFloors && cell.mLayerName.mid(p).startsWith(sFloor)) {
+            QString layerNameWithoutPrefix = cell.mLayerName.mid(p);
+            bool isFloor = layerNameWithoutPrefix.startsWith(sFloor);
+            bool isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Wall"));
+            bool isOther = (isFloor || isWall) == false;
+            if (bKeepFloors && isFloor) {
                 continue;
             }
-            if (bKeepWalls && cell.mLayerName.mid(p).startsWith(QStringLiteral("Wall"))) {
+            if (bKeepWalls && isWall) {
+                continue;
+            }
+            if (bKeepOther && isOther) {
                 continue;
             }
             cells.remove(i--);

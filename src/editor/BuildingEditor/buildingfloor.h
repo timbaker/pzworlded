@@ -18,7 +18,7 @@
 #ifndef BUILDINGFLOOR_H
 #define BUILDINGFLOOR_H
 
-#include "squareproperties.h"
+#include "propertiesgrid.h"
 
 #include <QHash>
 #include <QList>
@@ -99,75 +99,7 @@ private:
     QString mEmptyCell;
 };
 
-extern const QStringList& getSquareAttributeNames();
-
-class SquareAttributes : public QStringList
-{
-public:
-    int toBits(const QStringList& attributeNames) const
-    {
-        int bits = 0;
-        for (int i = 0; i < size(); i++) {
-            int index = attributeNames.indexOf(at(i));
-            if (index != -1) {
-                bits |= 1 << index;
-            }
-        }
-        return bits;
-    }
-};
-
-class SquareAttributesGrid
-{
-public:
-    SquareAttributesGrid(int width, int height);
-
-    int width() const { return mWidth; }
-    int height() const { return mHeight; }
-    int size() const { return mWidth * mHeight; }
-
-    QRect bounds() const
-    {
-        return QRect(0, 0, mWidth, mHeight);
-    }
-
-    const SquareAttributes &at(int index) const;
-
-    const SquareAttributes &at(int x, int y) const
-    {
-        Q_ASSERT(isValidPosition(x, y));
-        return at(x + y * mWidth);
-    }
-
-    void replace(int index, const SquareAttributes &atts);
-    void replace(int x, int y, const SquareAttributes &atts);
-
-    void clear();
-
-    bool isValidPosition(int x, int y) const
-    {
-        return (x >= 0) && (x < mWidth) && (y >= 0) && (y < mHeight);
-    }
-
-    bool hasAttributesFor(int x, int y) const
-    {
-        return isValidPosition(x, y) && mCells.contains(x + y * mWidth);
-    }
-
-    SquareAttributesGrid *clone() const;
-    SquareAttributesGrid *clone(const QRect &r) const;
-    SquareAttributesGrid *clone(const QRegion &rgn) const;
-
-    void copy(const SquareAttributesGrid& other);
-    void copy(const SquareAttributesGrid& other, const QRegion &rgn);
-
-    QRegion region() const;
-
-private:
-    int mWidth, mHeight;
-    QHash<int, SquareAttributes> mCells;
-    SquareAttributes mEmptyCell;
-};
+extern const QStringList& getSquarePropertyNames();
 
 class BuildingFloor
 {
@@ -345,7 +277,7 @@ public:
 
     QVector<QVector<Room*> > resizeGrid(const QSize &newSize) const;
     QMap<QString,FloorTileGrid*> resizeGrime(const QSize &newSize) const;
-    Tiled::SquarePropertiesGrid *resizeSquarePropertiesGrid(const QSize &newSize) const;
+    Tiled::PropertiesGrid *resizeSquarePropertiesGrid(const QSize &newSize) const;
 
     void rotate(bool right);
     void flip(bool horizontal);
@@ -393,15 +325,15 @@ public:
         return 1.0f;
     }
 
-    Tiled::SquarePropertiesGrid *squarePropertiesGrid() { return mSquarePropertiesGrid; }
-    Tiled::SquarePropertiesGrid *setSquarePropertiesGrid(Tiled::SquarePropertiesGrid *other);
-    Tiled::SquarePropertiesGrid *createSquarePropertiesGrid() const;
+    Tiled::PropertiesGrid *squarePropertiesGrid() { return mSquarePropertiesGrid; }
+    Tiled::PropertiesGrid *setSquarePropertiesGrid(Tiled::PropertiesGrid *other);
+    Tiled::PropertiesGrid *createSquarePropertiesGrid() const;
 
 private:
     Building *mBuilding;
     QVector<QVector<Room*> > mRoomAtPos;
     QVector<QVector<int> > mIndexAtPos;
-    Tiled::SquarePropertiesGrid* mSquarePropertiesGrid;
+    Tiled::PropertiesGrid* mSquarePropertiesGrid;
     int mLevel;
     QList<BuildingObject*> mObjects;
     QMap<QString,FloorTileGrid*> mGrimeGrid;
