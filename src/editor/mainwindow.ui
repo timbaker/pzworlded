@@ -387,6 +387,7 @@
     <addaction name="separator"/>
     <addaction name="actionReadInGameMapFeaturesXML"/>
     <addaction name="actionWriteInGameMapFeaturesXML"/>
+    <addaction name="actionWriteInGameMapFeaturesXML_256"/>
     <addaction name="actionCreateImagePyramid"/>
    </widget>
    <addaction name="fileMenu"/>
@@ -977,6 +978,18 @@
   <action name="actionGenerateLotsSelected8x8">
    <property name="text">
     <string>Selected Cells Only...</string>
+   </property>
+  </action>
+  <action name="actionWriteInGameMapFeaturesXML_256">
+   <property name="icon">
+    <iconset resource="editor.qrc">
+     <normaloff>:/images/16x16/document-save-as.png</normaloff>:/images/16x16/document-save-as.png</iconset>
+   </property>
+   <property name="text">
+    <string>Write Features XML 8x8...</string>
+   </property>
+   <property name="toolTip">
+    <string>Don't forget to do this!</string>
    </property>
   </action>
  </widget>

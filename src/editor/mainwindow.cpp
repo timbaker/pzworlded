@@ -311,7 +311,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionAddInGameMapHole, &QAction::triggered, this, &MainWindow::addInGameMapHole);
     connect(ui->actionRemoveInGameMapHole, &QAction::triggered, this, &MainWindow::removeInGameMapHole);
     connect(ui->actionReadInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::readInGameMapFeaturesXML);
-    connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML);
+    connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML_300);
+    connect(ui->actionWriteInGameMapFeaturesXML_256, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML_256);
     connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
 
     connect(ui->actionSnapToGrid, &QAction::toggled, prefs, &Preferences::setSnapToGrid);
@@ -2380,7 +2381,17 @@ void MainWindow::clearMapOnly()
     undoStack->endMacro();
 }
 
-void MainWindow::writeInGameMapFeaturesXML()
+void MainWindow::writeInGameMapFeaturesXML_300()
+{
+    writeInGameMapFeaturesXML(false);
+}
+
+void MainWindow::writeInGameMapFeaturesXML_256()
+{
+    writeInGameMapFeaturesXML(true);
+}
+
+void MainWindow::writeInGameMapFeaturesXML(bool b256)
 {
     WorldDocument *worldDoc = currentWorldDocument();
 
@@ -2412,7 +2423,7 @@ void MainWindow::writeInGameMapFeaturesXML()
     }
 
     InGameMapWriterBinary writerBinary;
-    if (!writerBinary.writeWorld(worldDoc->world(), fileName + QStringLiteral(".bin"))) {
+    if (!writerBinary.writeWorld(worldDoc->world(), fileName + QStringLiteral(".bin"), b256)) {
         qWarning("Failed to write InGameMap Binary.");
         return;
     }

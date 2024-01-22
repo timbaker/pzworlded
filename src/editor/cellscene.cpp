@@ -4486,6 +4486,17 @@ void CellScene::setTool(AbstractTool *tool)
         }
     }
 
+    for (SubMapItem *item : mSubMapItems) {
+        int currentLevel = mDocument->currentLevel();
+        bool visible = item->subMap()->isVisible()
+                && mDocument->isLotLevelVisible(currentLevel)
+                && SubMapTool::instance()->isCurrent();
+        if (mHighlightCurrentLevel) {
+            visible &= (item->subMap()->levelOffset() == currentLevel);
+        }
+        item->setVisible(visible);
+    }
+
     // Restack ObjectItems and SubMapItems based on the current tool.
     // This is to ensure the mouse-over highlight works as expected.
     setGraphicsSceneZOrder();
@@ -5611,7 +5622,12 @@ void CellScene::handlePendingUpdates()
     if (mPendingFlags & LotVisibility) {
         foreach (SubMapItem *item, mSubMapItems) {
             WorldCellLot *lot = item->lot();
-            bool visible = mDocument->isLotLevelVisible(lot->level()) && item->subMap()->isVisible();
+            bool visible = mDocument->isLotLevelVisible(lot->level()) &&
+                    item->subMap()->isVisible() &&
+                    SubMapTool::instance()->isCurrent();
+            if (mHighlightCurrentLevel) {
+                visible &= (document()->currentLevel() == lot->level());
+            }
             item->setVisible(visible);
         }
     }
@@ -5734,7 +5750,8 @@ void CellScene::updateCurrentLevelHighlight()
 
         foreach (SubMapItem *item, mSubMapItems)
             item->setVisible(item->subMap()->isVisible() &&
-                             mDocument->isLotLevelVisible(item->subMap()->levelOffset()));
+                             mDocument->isLotLevelVisible(item->subMap()->levelOffset()) &&
+                             SubMapTool::instance()->isCurrent());
 
         foreach (ObjectItem *item, mObjectItems)
             item->setVisible(shouldObjectItemBeVisible(item));
@@ -5765,7 +5782,8 @@ void CellScene::updateCurrentLevelHighlight()
     foreach (SubMapItem *item, mSubMapItems) {
         bool visible = item->subMap()->isVisible()
                 && (item->subMap()->levelOffset() == currentLevel)
-                && mDocument->isLotLevelVisible(currentLevel);
+                && mDocument->isLotLevelVisible(currentLevel)
+                && SubMapTool::instance()->isCurrent();
         item->setVisible(visible);
     }
     foreach (ObjectItem *item, mObjectItems) {
@@ -5985,6 +6003,45 @@ void CellScene::dropEvent(QGraphicsSceneDragDropEvent *event)
     if (mDnDItem) {
         QPoint dropPos = mDnDItem->dropPosition();
         int level = document()->currentLevel();
+#if 1
+        QFileInfo fileInfo(mDnDItem->mapInfo()->path());
+        if (fileInfo.fileName().startsWith(QStringLiteral("ba_"))) {
+            // Check for dropping a basement access lot onto a Basement object.
+            auto& objects = document()->cell()->objects();
+            WorldCellObject *basementObject = nullptr;
+            for (int i = objects.size() - 1; i >= 0; i--) {
+                WorldCellObject *object = objects.at(i);
+                if (object->level() != level) {
+                    continue;
+                }
+                if (object->isBasement() == false) {
+                    continue;
+                }
+                if (object->bounds().contains(dropPos) == false) {
+                    continue;
+                }
+                basementObject = object;
+                break;
+            }
+            if (basementObject != nullptr) {
+                if (PropertyDef *pd_Access = world()->propertyDefinition(QStringLiteral("Access"))) {
+                    worldDocument()->undoStack()->beginMacro(QStringLiteral("Assign Basement Access"));
+                    Property *p_Access = basementObject->properties().find(pd_Access);
+                    if (p_Access == nullptr) {
+                        worldDocument()->addProperty(basementObject, pd_Access->mName);
+                    }
+                    p_Access = basementObject->properties().find(pd_Access);
+                    worldDocument()->setPropertyValue(basementObject, p_Access, fileInfo.completeBaseName());
+                    worldDocument()->undoStack()->endMacro();
+                }
+                Preferences::instance()->setHighlightCurrentLevel(mWasHighlightCurrentLevel);
+                delete mDnDItem;
+                mDnDItem = nullptr;
+                event->accept();
+                return;
+            }
+        }
+#endif
         WorldCellLot *lot = new WorldCellLot(cell(), mDnDItem->mapInfo()->path(),
                                              dropPos.x(), dropPos.y(), level,
                                              mDnDItem->mapInfo()->width(),

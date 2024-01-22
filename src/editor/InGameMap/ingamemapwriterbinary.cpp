@@ -29,8 +29,139 @@
 #include <QTemporaryFile>
 #include <QXmlStreamWriter>
 
+#include <cmath>
+
 #define VERSION1 1
-#define VERSION_LATEST 1
+#define VERSION2 2 // Added cell size (for 256x256 cells)
+#define VERSION_LATEST VERSION2
+
+namespace
+{
+
+class WorldConverter
+{
+public:
+    World *convertWorld(World *worldOld, int cellSizeOld, int cellSizeNew)
+    {
+        mCellSizeOld = cellSizeOld;
+        mCellSizeNew = cellSizeNew;
+
+        const GenerateLotsSettings &generateLotsSettings = worldOld->getGenerateLotsSettings();
+        mWorldBoundsOld = worldOld->bounds().translated(generateLotsSettings.worldOrigin);
+
+        int minCell256X = std::floor(mWorldBoundsOld.left() * mCellSizeOld / float(mCellSizeNew));
+        int minCell256Y = std::floor(mWorldBoundsOld.top() * mCellSizeOld / float(mCellSizeNew));
+        int maxCell256X = std::ceil(((mWorldBoundsOld.right() + 1) * mCellSizeOld - 1) / float(mCellSizeNew));
+        int maxCell256Y = std::ceil(((mWorldBoundsOld.bottom() + 1) * mCellSizeOld - 1) / float(mCellSizeNew));
+        mWorldBoundsNew = QRect(minCell256X, minCell256Y, maxCell256X - minCell256X, maxCell256Y - minCell256Y);
+
+        World *world256 = new World(mWorldBoundsNew.width(), mWorldBoundsNew.height());
+
+        GenerateLotsSettings generateLotsSettingsNew;
+        generateLotsSettingsNew.worldOrigin = mWorldBoundsNew.topLeft();
+        world256->setGenerateLotsSettings(generateLotsSettingsNew);
+
+        for (int cell300Y = 0; cell300Y < mWorldBoundsOld.height(); cell300Y++) {
+            for (int cell300X = 0; cell300X < mWorldBoundsOld.width(); cell300X++) {
+                WorldCell *cell300 = worldOld->cellAt(cell300X, cell300Y);
+                for (InGameMapFeature *feature300 : cell300->inGameMap().features()) {
+                    addFeature(world256, feature300);
+                }
+            }
+        }
+        return world256;
+    }
+
+    void addFeature(World *world256, InGameMapFeature *oldFeature)
+    {
+        int minCellX = getMinSquareX(oldFeature) / mCellSizeNew;
+        int minCellY = getMinSquareY(oldFeature) / mCellSizeNew;
+        int maxCellX = getMaxSquareX(oldFeature) / mCellSizeNew;
+        int maxCellY = getMaxSquareY(oldFeature) / mCellSizeNew;
+        for (int y = minCellY; y <= maxCellY; y++) {
+            for (int x = minCellX; x <= maxCellX; x++) {
+                InGameMapCell *newCell = &world256->cellAt(x - mWorldBoundsNew.x(), y - mWorldBoundsNew.y())->inGameMap();
+                InGameMapFeature *newFeature = new InGameMapFeature(newCell);
+                convertFeature(newFeature, oldFeature);
+                newCell->mFeatures += newFeature;
+            }
+        }
+    }
+
+    int getMinSquareX(InGameMapFeature *feature)
+    {
+        double min = std::numeric_limits<double>::max();
+        InGameMapGeometry &geometry = feature->mGeometry;
+        for (InGameMapCoordinates &coords : geometry.mCoordinates) {
+            for (InGameMapPoint &point : coords) {
+                min = std::min(min, point.x);
+            }
+        }
+        return (mWorldBoundsOld.x() + feature->cell()->x()) * mCellSizeOld + min;
+    }
+
+    int getMinSquareY(InGameMapFeature *feature)
+    {
+        double min = std::numeric_limits<double>::max();
+        InGameMapGeometry &geometry = feature->mGeometry;
+        for (InGameMapCoordinates &coords : geometry.mCoordinates) {
+            for (InGameMapPoint &point : coords) {
+                min = std::min(min, point.y);
+            }
+        }
+        return (mWorldBoundsOld.y() + feature->cell()->y()) * mCellSizeOld + min;
+    }
+
+    int getMaxSquareX(InGameMapFeature *feature)
+    {
+        double max = std::numeric_limits<double>::lowest();
+        InGameMapGeometry &geometry = feature->mGeometry;
+        for (InGameMapCoordinates &coords : geometry.mCoordinates) {
+            for (InGameMapPoint &point : coords) {
+                max = std::max(max, point.x);
+            }
+        }
+        return (mWorldBoundsOld.x() + feature->cell()->x()) * mCellSizeOld + max;
+    }
+
+    int getMaxSquareY(InGameMapFeature *feature)
+    {
+        double max = std::numeric_limits<double>::lowest();
+        InGameMapGeometry &geometry = feature->mGeometry;
+        for (InGameMapCoordinates &coords : geometry.mCoordinates) {
+            for (InGameMapPoint &point : coords) {
+                max = std::max(max, point.y);
+            }
+        }
+        return (mWorldBoundsOld.y() + feature->cell()->y()) * mCellSizeOld + max;
+    }
+
+    void convertFeature(InGameMapFeature *newFeature, InGameMapFeature *oldFeature)
+    {
+        InGameMapGeometry &newGeometry = newFeature->mGeometry;
+        InGameMapGeometry &oldGeometry = oldFeature->mGeometry;
+        for (InGameMapCoordinates &oldCoords : oldGeometry.mCoordinates) {
+            InGameMapCoordinates newCoordinates;
+            newGeometry.mType = oldGeometry.mType;
+            for (InGameMapPoint &oldPoint : oldCoords) {
+                double oldX = (mWorldBoundsOld.x() + oldFeature->cell()->x()) * mCellSizeOld + oldPoint.x;
+                double oldY = (mWorldBoundsOld.y() + oldFeature->cell()->y()) * mCellSizeOld + oldPoint.y;
+                double newX = oldX - (mWorldBoundsNew.x() + newFeature->cell()->x()) * mCellSizeNew;
+                double newY = oldY - (mWorldBoundsNew.y() + newFeature->cell()->y()) * mCellSizeNew;
+                newCoordinates += InGameMapPoint(newX, newY);
+            }
+            newGeometry.mCoordinates += newCoordinates;
+        }
+        newFeature->mProperties = oldFeature->mProperties;
+    }
+
+    int mCellSizeOld;
+    int mCellSizeNew;
+    QRect mWorldBoundsOld;
+    QRect mWorldBoundsNew;
+};
+
+} // namespace anonymous
 
 class InGameMapWriterBinaryPrivate
 {
@@ -52,7 +183,7 @@ public:
         return true;
     }
 
-    void writeWorld(World *world, QIODevice *device, const QString &absDirPath)
+    void writeWorld(World *world, QIODevice *device, const QString &absDirPath, bool b256)
     {
         mMapDir = QDir(absDirPath);
         mWorld = world;
@@ -60,15 +191,16 @@ public:
         QDataStream writer(device);
         writer.setByteOrder(QDataStream::LittleEndian);
 
-        writeWorld(writer, world);
+        writeWorld(writer, world, b256);
     }
 
-    void writeWorld(QDataStream &w, World *world)
+    void writeWorld(QDataStream &w, World *world, bool b256)
     {
         w << quint8('I') << quint8('G') << quint8('M') << quint8('B');
 
         w << qint32(VERSION_LATEST);
 
+        w << qint32(b256 ? 256 : 300); // cell size
         w << qint32(world->width());
         w << qint32(world->height());
 
@@ -183,13 +315,13 @@ InGameMapWriterBinary::~InGameMapWriterBinary()
     delete d;
 }
 
-bool InGameMapWriterBinary::writeWorld(World *world, const QString &filePath)
+bool InGameMapWriterBinary::writeWorld(World *world, const QString &filePath, bool b256)
 {
     QTemporaryFile tempFile;
     if (!d->openFile(&tempFile))
         return false;
 
-    writeWorld(world, &tempFile, QFileInfo(filePath).absolutePath());
+    writeWorld(world, &tempFile, QFileInfo(filePath).absolutePath(), b256);
 
     if (tempFile.error() != QFile::NoError) {
         d->mError = tempFile.errorString();
@@ -239,9 +371,16 @@ bool InGameMapWriterBinary::writeWorld(World *world, const QString &filePath)
     return true;
 }
 
-void InGameMapWriterBinary::writeWorld(World *world, QIODevice *device, const QString &absDirPath)
+void InGameMapWriterBinary::writeWorld(World *world, QIODevice *device, const QString &absDirPath, bool b256)
 {
-    d->writeWorld(world, device, absDirPath);
+    if (b256) {
+        WorldConverter converter;
+        World *world256 = converter.convertWorld(world, 300, 256);
+        d->writeWorld(world256, device, absDirPath, true);
+        delete world256;
+        return;
+    }
+    d->writeWorld(world, device, absDirPath, false);
 }
 
 QString InGameMapWriterBinary::errorString() const

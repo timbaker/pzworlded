@@ -148,7 +148,8 @@ public slots:
     void removeInGameMapHole();
     void removeInGameMapPoint();
     void readInGameMapFeaturesXML();
-    void writeInGameMapFeaturesXML();
+    void writeInGameMapFeaturesXML_300();
+    void writeInGameMapFeaturesXML_256();
     void creaeInGameMapImagePyramid();
 
     void setStatusBarCoords(int x, int y);
@@ -190,6 +191,7 @@ private:
     bool canAddInGameMapHole();
     bool canRemoveInGameMapHole();
     bool canConvertToInGameMapPolygon();
+    void writeInGameMapFeaturesXML(bool b256);
 
     struct ViewHint
     {
