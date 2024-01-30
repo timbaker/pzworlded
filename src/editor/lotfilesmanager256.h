@@ -82,7 +82,7 @@ private:
     bool processObjectGroups(CombinedCellMaps &combinedMaps, WorldCell *cell, MapComposite *mapComposite);
     bool processObjectGroup(CombinedCellMaps &combinedMaps,WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
     void resolveProperties(PropertyHolder *ph, PropertyList &result);
-    qint8 calculateZombieDensity(int x1, int y1, int x2, int y2);
+    qint8 calculateZombieDensity(int x, int y);
 
 private:
     Q_DISABLE_COPY(LotFilesManager256)

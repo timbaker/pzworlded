@@ -586,22 +586,23 @@ bool LotFilesManager256::generateHeaderAux(int cell256X, int cell256Y)
 
     out << qint32(VERSION_LATEST);
 
-    int tilecount = 0;
+    QList<LotFile::Tile*> usedTiles;
     for (LotFile::Tile *tile : TileMap) {
         if (tile->used) {
-            tile->id = tilecount;
-            tilecount++;
+            usedTiles += tile;
             if (tile->name.startsWith(QLatin1String("jumbo_tree_01"))) {
                 int nnn = 0;
             }
         }
     }
-    out << qint32(tilecount);
-
-    for (LotFile::Tile *tile : TileMap) {
-        if (tile->used) {
-            SaveString(out, tile->name);
-        }
+    out << qint32(usedTiles.size());
+    std::sort(usedTiles.begin(), usedTiles.end(), [](const LotFile::Tile *a, const LotFile::Tile *b) {
+        return QString::compare(a->name, b->name, Qt::CaseSensitive) < 0;
+    });
+    for (int i = 0; i < usedTiles.size(); i++) {
+        LotFile::Tile *tile = usedTiles[i];
+        SaveString(out, tile->name);
+        tile->id = i;
     }
 
     out << qint32(CHUNK_SIZE_256);
@@ -644,12 +645,10 @@ bool LotFilesManager256::generateHeaderAux(int cell256X, int cell256Y)
     int minCell300Y = lotSettings.worldOrigin.y();
     int x1 = cell256X * CELL_SIZE_256 - minCell300X * CELL_WIDTH;
     int y1 = cell256Y * CELL_SIZE_256 - minCell300Y * CELL_WIDTH;
-    int x2 = x1 + CHUNK_SIZE_256;
-    int y2 = y1 + CHUNK_SIZE_256;
 
     for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
         for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
-            qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256, x2, y2);
+            qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256);
             out << density;
         }
     }
@@ -1132,16 +1131,14 @@ void LotFilesManager256::resolveProperties(PropertyHolder *ph, PropertyList &res
     }
 }
 
-qint8 LotFilesManager256::calculateZombieDensity(int x1, int y1, int x2, int y2)
+qint8 LotFilesManager256::calculateZombieDensity(int x, int y)
 {
     // TODO: Get the total depth of 8x8 squares, then divide by 64.
-    Q_UNUSED(x2)
-    Q_UNUSED(y2)
-    if (x1 < 0 || y1 < 0 || x1 >= ZombieSpawnMap.size().width() || y1 >= ZombieSpawnMap.size().height()) {
+    int chunk300X = std::floor(x / float(CHUNK_WIDTH));
+    int chunk300Y = std::floor(y / float(CHUNK_HEIGHT));
+    if (chunk300X < 0 || chunk300Y < 0 || chunk300X >= ZombieSpawnMap.size().width() || chunk300Y >= ZombieSpawnMap.size().height()) {
         return 0;
     }
-    int chunk300X = std::floor(x1 / float(CHUNK_WIDTH));
-    int chunk300Y = std::floor(y1 / float(CHUNK_HEIGHT));
     QRgb pixel = ZombieSpawnMap.pixel(chunk300X, chunk300Y);
     return quint8(qRed(pixel));
 }
