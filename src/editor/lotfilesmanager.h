@@ -381,6 +381,22 @@ public:
     {
     }
 
+    void reset()
+    {
+        numBuildings = 0;
+        numRooms = 0;
+        numRoomRects = 0;
+        numRoomObjects = 0;
+    }
+
+    void combine(const Stats& rhs)
+    {
+        numBuildings += rhs.numBuildings;
+        numRooms += rhs.numRooms;
+        numRoomRects += rhs.numRoomRects;
+        numRoomObjects += rhs.numRoomObjects;
+    }
+
     int numBuildings;
     int numRooms;
     int numRoomRects;
