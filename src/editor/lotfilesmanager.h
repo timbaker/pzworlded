@@ -294,29 +294,39 @@ template <typename T>
 class RectLookup
 {
 public:
-    RectLookup()
+    RectLookup(int squaresPerChunk) :
+        mMinSquareX(-1),
+        mMinSquareY(-1),
+        mSquaresPerChunk(squaresPerChunk)
     {
 
     }
 
-    void clear(int widthInChunks, int heightInChunks)
+    void clear(int minSquareX, int minSquareY, int widthInChunks, int heightInChunks)
     {
         for (int i = 0; i < mGrid.size(); i++) {
             mGrid[i].clear();
         }
+        mMinSquareX = minSquareX;
+        mMinSquareY = minSquareY;
         mWidthInChunks = widthInChunks;
         mHeightInChunks = heightInChunks;
         mGrid.resize(mWidthInChunks * mHeightInChunks);
+        mBoundsInSquares = QRect(mMinSquareX, mMinSquareY, mWidthInChunks * mSquaresPerChunk, mHeightInChunks * mSquaresPerChunk);
     }
 
     void add(T* element, const QRect& bounds)
     {
-        int xMin = bounds.x() / CHUNK_WIDTH;
-        int yMin = bounds.y() / CHUNK_HEIGHT;
-        int xMax = std::ceil((bounds.x() + bounds.width()) / float(CHUNK_WIDTH));
-        int yMax = std::ceil((bounds.y() + bounds.height()) / float(CHUNK_HEIGHT));
-        xMin = clamp(xMin, 0, mWidthInChunks-1);
-        yMin = clamp(yMin, 0, mHeightInChunks-1);
+        QRect bounds1(bounds & mBoundsInSquares);
+        if (bounds1.isEmpty()) {
+            return;
+        }
+        int xMin = (bounds1.x() - mMinSquareX) / mSquaresPerChunk;
+        int yMin = (bounds1.y() - mMinSquareY) / mSquaresPerChunk;
+        int xMax = std::ceil((bounds1.x() + bounds1.width() - mMinSquareX) / float(mSquaresPerChunk));
+        int yMax = std::ceil((bounds1.y() + bounds1.height() - mMinSquareY) / float(mSquaresPerChunk));
+//        xMin = clamp(xMin, 0, mWidthInChunks-1);
+//        yMin = clamp(yMin, 0, mHeightInChunks-1);
         xMax = clamp(xMax, 0, mWidthInChunks-1);
         yMax = clamp(yMax, 0, mHeightInChunks-1);
         for (int y = yMin; y <= yMax; y++) {
@@ -328,12 +338,16 @@ public:
 
     void overlapping(const QRect& rect, QList<T*>& elements) const
     {
-        int xMin = rect.x() / CHUNK_WIDTH;
-        int yMin = rect.y() / CHUNK_HEIGHT;
-        int xMax = std::ceil((rect.x() + rect.width()) / float(CHUNK_WIDTH));
-        int yMax = std::ceil((rect.y() + rect.height()) / float(CHUNK_HEIGHT));
-        xMin = clamp(xMin, 0, mWidthInChunks-1);
-        yMin = clamp(yMin, 0, mHeightInChunks-1);
+        QRect rect1(rect & mBoundsInSquares);
+        if (rect1.isEmpty()) {
+            return;
+        }
+        int xMin = (rect1.x() - mMinSquareX) / mSquaresPerChunk;
+        int yMin = (rect1.y() - mMinSquareY) / mSquaresPerChunk;
+        int xMax = std::ceil((rect1.x() + rect1.width() - mMinSquareX) / float(mSquaresPerChunk));
+        int yMax = std::ceil((rect1.y() + rect1.height() - mMinSquareY) / float(mSquaresPerChunk));
+//        xMin = clamp(xMin, 0, mWidthInChunks-1);
+//        yMin = clamp(yMin, 0, mHeightInChunks-1);
         xMax = clamp(xMax, 0, mWidthInChunks-1);
         yMax = clamp(yMax, 0, mHeightInChunks-1);
         for (int y = yMin; y <= yMax; y++) {
@@ -347,8 +361,12 @@ public:
         }
     }
 
+    int mSquaresPerChunk;
+    int mMinSquareX;
+    int mMinSquareY;
     int mWidthInChunks;
     int mHeightInChunks;
+    QRect mBoundsInSquares;
     QVector<QVector<T*>> mGrid;
 };
 

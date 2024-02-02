@@ -82,6 +82,8 @@ void LotFilesManager::deleteInstance()
 
 LotFilesManager::LotFilesManager(QObject *parent)
     : QObject(parent)
+    , mRoomRectLookup(CHUNK_WIDTH)
+    , mRoomLookup(CHUNK_WIDTH)
 {
     mJumboZoneList += new JumboZone(QStringLiteral("DeepForest"), 100);
     mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
@@ -426,8 +428,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     file.close();
 
-    LotFile::RectLookup<LotFile::RoomRect> roomRectLookup;
-    roomRectLookup.clear(CHUNKS_PER_CELL, CHUNKS_PER_CELL);
+    LotFile::RectLookup<LotFile::RoomRect> roomRectLookup(CHUNK_WIDTH);
+    roomRectLookup.clear(0, 0, CHUNKS_PER_CELL, CHUNKS_PER_CELL);
     for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
         roomRectLookup.add(rr, rr->bounds());
     }
@@ -485,7 +487,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     for (int level : mRoomRectByLevel.keys()) {
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
         // Use spatial partitioning to speed up the code below.
-        mRoomRectLookup.clear(CHUNKS_PER_CELL, CHUNKS_PER_CELL);
+        mRoomRectLookup.clear(0, 0, CHUNKS_PER_CELL, CHUNKS_PER_CELL);
         for (LotFile::RoomRect *rr : rrList) {
             mRoomRectLookup.add(rr, rr->bounds());
         }
@@ -530,7 +532,7 @@ bool LotFilesManager::generateHeader(WorldCell *cell, MapComposite *mapComposite
     mStats.numRoomRects += mRoomRects.size();
     mStats.numRooms += roomList.size();
 
-    mRoomLookup.clear(CHUNKS_PER_CELL, CHUNKS_PER_CELL);
+    mRoomLookup.clear(0, 0, CHUNKS_PER_CELL, CHUNKS_PER_CELL);
     for (LotFile::Room *r : roomList) {
         r->mBounds = r->calculateBounds();
         mRoomLookup.add(r, r->bounds());

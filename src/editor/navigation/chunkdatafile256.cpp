@@ -62,14 +62,14 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
     quint8 *bitsArray = new quint8[CHUNK_SIZE_256 * CHUNK_SIZE_256];
 
     int cellMinX256 = combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH;
-    int cellMinY256 = combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_WIDTH;
+    int cellMinY256 = combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT;
 
     for (int yy = 0; yy < CHUNKS_PER_CELL_256; yy++) {
         for (int xx = 0; xx < CHUNKS_PER_CELL_256; xx++) {
-            QList<LotFile::RoomRect*> roomRects;
             QRect chunkRect(cellMinX256 + xx * CHUNK_SIZE_256, cellMinY256 + yy * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
+            QList<LotFile::RoomRect*> roomRects;
             roomRectLookup.overlapping(chunkRect, roomRects);
-            IsoChunk256 *chunk = new IsoChunk256(xx, yy, mapComposite, roomRects);
+            IsoChunk256 *chunk = new IsoChunk256(chunkRect.x(), chunkRect.y(), mapComposite, roomRects);
             int empty = 0, solid = 0, water = 0, room = 0;
             for (int y = 0; y < CHUNK_SIZE_256; y++) {
                 for (int x = 0; x < CHUNK_SIZE_256; x++) {

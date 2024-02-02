@@ -103,6 +103,8 @@ void LotFilesManager256::deleteInstance()
 
 LotFilesManager256::LotFilesManager256(QObject *parent)
     : QObject(parent)
+    , mRoomRectLookup(CHUNK_SIZE_256)
+    , mRoomLookup(CHUNK_SIZE_256)
 {
     mJumboZoneList += new JumboZone(QStringLiteral("DeepForest"), 100);
     mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
@@ -270,15 +272,21 @@ bool LotFilesManager256::generateCell(int cell256X, int cell256Y)
     if (generateHeader(combinedMaps, mapComposite) == false) {
         return false;
     }
-#if 0
-    bool chunkDataOnly = false;
+#if 1
+    bool chunkDataOnly = true;
     if (chunkDataOnly) {
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
             lg->prepareDrawing2();
         }
         const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
-        Navigate::ChunkDataFile cdf;
-        cdf.fromMap(cell->x(), cell->y(), mapComposite, mRoomRectByLevel[0], lotSettings);
+        mRoomRectLookup.clear(combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH,
+                              combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT,
+                              CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256);
+        for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
+            mRoomRectLookup.add(rr, rr->bounds());
+        }
+        Navigate::ChunkDataFile256 cdf;
+        cdf.fromMap(combinedMaps, mapComposite, mRoomRectLookup, lotSettings);
         return true;
     }
 #endif
@@ -390,7 +398,9 @@ bool LotFilesManager256::generateCell(int cell256X, int cell256Y)
 
     file.close();
 
-    mRoomRectLookup.clear(CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256);
+    mRoomRectLookup.clear(combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH,
+                          combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT,
+                          CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256);
     for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
         mRoomRectLookup.add(rr, rr->bounds());
     }
@@ -447,7 +457,7 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
     for (int level : mRoomRectByLevel.keys()) {
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
         // Use spatial partitioning to speed up the code below.
-        mRoomRectLookup.clear(combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
+        mRoomRectLookup.clear(0, 0, combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
         for (LotFile::RoomRect *rr : rrList) {
             mRoomRectLookup.add(rr, rr->bounds());
         }
@@ -487,7 +497,7 @@ bool LotFilesManager256::generateHeader(CombinedCellMaps& combinedMaps, MapCompo
         }
     }
 
-    mRoomLookup.clear(combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
+    mRoomLookup.clear(0, 0, combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
     for (LotFile::Room *r : roomList) {
         r->mBounds = r->calculateBounds();
         mRoomLookup.add(r, r->bounds());

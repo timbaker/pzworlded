@@ -23,15 +23,15 @@
 
 using namespace Navigate;
 
-IsoChunk256::IsoChunk256(int wx, int wy, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects) :
-    wx(wx),
-    wy(wy),
+IsoChunk256::IsoChunk256(int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects) :
+    mMinSquareX(minSquareX),
+    mMinSquareY(minSquareY),
     mMapComposite(mapComposite)
 {
     int z = 0;
     for (int y = 0; y < CHUNK_SIZE_256; y++) {
         for (int x = 0; x < CHUNK_SIZE_256; x++) {
-            squares[x][y] = new IsoGridSquare256(wx * CHUNK_SIZE_256 + x, wy * CHUNK_SIZE_256 + y, z, this);
+            squares[x][y] = new IsoGridSquare256(mMinSquareX + x, mMinSquareY + y, z, this);
         }
     }
 

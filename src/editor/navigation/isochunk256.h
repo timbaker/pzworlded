@@ -33,22 +33,22 @@ class IsoGridSquare256;
 class IsoChunk256
 {
 public:
-    IsoChunk256(int wx, int wy, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects);
+    IsoChunk256(int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects);
     ~IsoChunk256();
 
     IsoGridSquare256 *getGridSquare(int x, int y, int z);
     IsoGridSquare256 *getGridSquareWorldPos(int x, int y, int z);
     bool contains(int x, int y, int z);
     bool containsWorldPos(int x, int y, int z);
-    int worldXMin() { return wx * CHUNK_SIZE_256; }
-    int worldYMin() { return wy * CHUNK_SIZE_256; }
-    int worldXMax() { return (wx + 1) * CHUNK_SIZE_256; }
-    int worldYMax() { return (wy + 1) * CHUNK_SIZE_256; }
+    int worldXMin() { return mMinSquareX; }
+    int worldYMin() { return mMinSquareY; }
+    int worldXMax() { return mMinSquareX + CHUNK_SIZE_256; }
+    int worldYMax() { return mMinSquareY + CHUNK_SIZE_256; }
 
     void orderedCellsAt(int x, int y, QVector<const Tiled::Cell *> &cells);
 
-    int wx;
-    int wy;
+    int mMinSquareX;
+    int mMinSquareY;
     IsoGridSquare256 *squares[CHUNK_SIZE_256][CHUNK_SIZE_256];
 
     MapComposite *mMapComposite;
