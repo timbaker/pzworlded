@@ -62,14 +62,13 @@ WorldMiniMapItem::WorldMiniMapItem(WorldScene *scene, QGraphicsItem *parent) :
     QGraphicsItem(parent),
     mScene(scene)
 {
-    for (int i = 0; i < mScene->world()->bmps().size(); i++)
-        bmpAdded(i);
+    for (WorldBMP *bmp : mScene->world()->bmps()) {
+        insertBmp(mImages.size(), bmp);
+    }
 
-    foreach (OtherWorld *otherWorld, mScene->otherWorlds()) {
-        foreach (WorldBMP *bmp, otherWorld->mWorld->bmps()) {
-            if (MapImage *mapImage = MapImageManager::instance()->getMapImage(bmp->filePath())) {
-                mImages[bmp] = mapImage;
-            }
+    for (OtherWorld *otherWorld : mScene->otherWorlds()) {
+        for (WorldBMP *bmp : otherWorld->mWorld->bmps()) {
+            insertBmp(mImages.size(), bmp);
         }
     }
 
@@ -104,14 +103,14 @@ void WorldMiniMapItem::paint(QPainter *painter,
 {
     Preferences *prefs = Preferences::instance();
 
-    foreach (WorldBMP *bmp, mImages.keys()) {
-        if (MapImage *mapImage = mImages[bmp]) {
+    for (const WorldBMPImage &bmpImage : mImages) {
+        if (MapImage *mapImage = bmpImage.mapImage) {
             const QImage &image = mapImage->miniMapImage();
-            QRect bmpBounds = bmp->bounds();
-            if (bmp->world() != mScene->world()) { // OtherWorld.mBMP
+            QRect bmpBounds = bmpImage.bmp->bounds();
+            if (bmpImage.bmp->world() != mScene->world()) { // OtherWorld.mBMP
                 if (!prefs->showOtherWorlds())
                     continue;
-                bmpBounds.translate(bmp->world()->getGenerateLotsSettings().worldOrigin - mScene->world()->getGenerateLotsSettings().worldOrigin);
+                bmpBounds.translate(bmpImage.bmp->world()->getGenerateLotsSettings().worldOrigin - mScene->world()->getGenerateLotsSettings().worldOrigin);
             }
             QRectF target = mScene->boundingRect(bmpBounds);
             QRectF source = QRect(QPoint(), image.size());
@@ -136,16 +135,12 @@ void WorldMiniMapItem::worldResized()
 void WorldMiniMapItem::bmpAdded(int index)
 {
     WorldBMP *bmp = mScene->world()->bmps().at(index);
-    if (MapImage *mapImage = MapImageManager::instance()->getMapImage(bmp->filePath())) {
-        mImages[bmp] = mapImage;
-    }
-    update();
+    insertBmp(index, bmp);
 }
 
 void WorldMiniMapItem::bmpAboutToBeRemoved(int index)
 {
-    WorldBMP *bmp = mScene->world()->bmps().at(index);
-    mImages.remove(bmp);
+    mImages.removeAt(index);
     update();
 }
 
@@ -157,6 +152,16 @@ void WorldMiniMapItem::bmpCoordsChanged(int index)
 
 void WorldMiniMapItem::showOtherWorlds(bool show)
 {
+    Q_UNUSED(show)
     prepareGeometryChange();
+    update();
+}
+
+void WorldMiniMapItem::insertBmp(int index, WorldBMP *bmp)
+{
+    WorldBMPImage bmpImage;
+    bmpImage.bmp = bmp;
+    bmpImage.mapImage = MapImageManager::instance()->getMapImage(bmp->filePath());
+    mImages.insert(index, bmpImage);
     update();
 }

@@ -49,8 +49,17 @@ private slots:
     void showOtherWorlds(bool show);
 
 private:
+    struct WorldBMPImage
+    {
+        WorldBMP* bmp;
+        MapImage* mapImage;
+    };
+
+    void insertBmp(int index, WorldBMP *bmp);
+
+private:
     WorldScene *mScene;
-    QMap<WorldBMP*,MapImage*> mImages;
+    QList<WorldBMPImage> mImages;
 };
 
 class WorldView : public BaseGraphicsView
