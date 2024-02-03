@@ -432,6 +432,9 @@ public:
         w.writeStartElement(QLatin1String("worldOrigin"));
         writePoint(w, QLatin1String("origin"), settings.worldOrigin);
         w.writeEndElement();
+        w.writeStartElement(QLatin1String("numberOfThreads"));
+        w.writeAttribute(QLatin1String("count"), QString::number(settings.numberOfThreads));
+        w.writeEndElement();
         w.writeEndElement(); // </GenerateLots>
     }
 

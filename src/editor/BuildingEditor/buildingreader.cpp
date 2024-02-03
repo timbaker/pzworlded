@@ -1276,7 +1276,11 @@ QString BuildingReaderPrivate::getUserTile(BuildingFloor *floor, int x, int y, i
 
 void BuildingReaderPrivate::readUnknownElement()
 {
-    qDebug() << "Unknown element (fixme):" << xml.name() << mPath;
+    qDebug() << tr("Unknown element \"%3\"\n\nLine %1, column %2 %4")
+                .arg(xml.lineNumber())
+                .arg(xml.columnNumber())
+                .arg(xml.name())
+                .arg(mPath);
     xml.skipCurrentElement();
 }
 

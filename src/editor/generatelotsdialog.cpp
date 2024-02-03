@@ -40,6 +40,11 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->xOrigin->setValue(settings.worldOrigin.x());
     ui->yOrigin->setValue(settings.worldOrigin.y());
 
+    // Number of threads
+    ui->numThreadsSlider->setMinimum(1);
+    ui->numThreadsSlider->setMaximum(10);
+    ui->numThreadsSlider->setValue(settings.numberOfThreads);
+
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked,
             this, &GenerateLotsDialog::apply);
 }
@@ -100,6 +105,7 @@ void GenerateLotsDialog::accept()
     settings.zombieSpawnMap = mZombieSpawnMap;
     settings.tileDefFolder = mTileDefFolder;
     settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
+    settings.numberOfThreads = ui->numThreadsSlider->value();
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
@@ -116,6 +122,7 @@ void GenerateLotsDialog::apply()
     settings.zombieSpawnMap = mZombieSpawnMap;
     settings.tileDefFolder = mTileDefFolder;
     settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
+    settings.numberOfThreads = ui->numThreadsSlider->value();
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 

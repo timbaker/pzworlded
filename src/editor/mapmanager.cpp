@@ -317,9 +317,9 @@ public:
             return NULL;
 
         if (mapFilePath.endsWith(QLatin1String(".tbx")))
-            return readBuilding(&file, QFileInfo(mapFilePath).absolutePath());
+            return readBuilding(&file, QFileInfo(mapFilePath).absoluteFilePath());
 
-        return readMap(&file, QFileInfo(mapFilePath).absolutePath());
+        return readMap(&file, QFileInfo(mapFilePath).absoluteFilePath());
     }
 
     MapInfo *readMap(QIODevice *device, const QString &path)
@@ -375,7 +375,7 @@ public:
 
     MapInfo *readBuilding(QIODevice *device, const QString &path)
     {
-        Q_UNUSED(path)
+        mPath = path;
 
         mError.clear();
         mMapInfo = NULL;
@@ -427,7 +427,21 @@ public:
                                tileWidth, tileHeight);
 
         while (xml.readNextStartElement()) {
-            if (xml.name() == QLatin1String("properties")) {
+            if (xml.name() == QLatin1String("furniture")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("tile_entry")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("user_tiles")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("used_tiles")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("used_furniture")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("room")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("floor")) {
+                xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("properties")) {
                 mMapInfo->setProperties(readProperties());
                 break;
             } else {
@@ -481,11 +495,16 @@ public:
 
     void readUnknownElement()
     {
-        qDebug() << "Unknown element (fixme):" << xml.name();
+        qDebug() << tr("Unknown element \"%3\"\n\nLine %1, column %2 %4")
+                    .arg(xml.lineNumber())
+                    .arg(xml.columnNumber())
+                    .arg(xml.name())
+                    .arg(mPath);
         xml.skipCurrentElement();
     }
 
     QXmlStreamReader xml;
+    QString mPath;
     MapInfo *mMapInfo;
     QString mError;
 };

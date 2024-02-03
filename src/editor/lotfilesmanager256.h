@@ -19,13 +19,13 @@
 #define LOTFILESMANAGER256_H
 
 #include "lotfilesmanager.h"
+#include "threads.h"
 
 #define CELL_SIZE_256 256
 #define CHUNKS_PER_CELL_256 32
 #define CHUNK_SIZE_256 8
 
 class ExportLotsProgressDialog;
-class InterruptibleThread;
 
 class CombinedCellMaps
 {
@@ -55,7 +55,7 @@ public:
 
 class LotFilesManager256;
 
-class LotFilesWorker256 : public QObject
+class LotFilesWorker256 : public BaseWorker
 {
     Q_OBJECT
 public:
@@ -69,6 +69,7 @@ public:
     };
 
     LotFilesWorker256(LotFilesManager256 *manager, InterruptibleThread *thread);
+    void work() override;
     bool generateHeader(CombinedCellMaps &combinedMaps, MapComposite *mapComposite);
     bool generateHeaderAux(int cell256X, int cell256Y);
     bool generateChunk(QDataStream &out, int chunkX, int chunkY);
@@ -86,7 +87,8 @@ public:
 //    const QString tr(const char *str) const;
 
 public slots:
-    bool generateCell(CombinedCellMaps *combinedMaps);
+    void addJob();
+    bool generateCell();
 
 private:
     Q_DISABLE_COPY(LotFilesWorker256)
@@ -156,6 +158,9 @@ private:
 
     explicit LotFilesManager256(QObject *parent = nullptr);
     ~LotFilesManager256();
+
+    void startThreads(int numberOfThreads);
+    void stopThreads();
     void updateWorkers();
     LotFilesWorker256 *getFirstWorkerWithStatus(LotFilesWorker256::Status status);
     LotFilesWorker256 *getIdleWorker();
@@ -178,8 +183,5 @@ private:
 
     friend class LotFilesWorker256;
 };
-
-#include <QMetaType>
-Q_DECLARE_METATYPE(CombinedCellMaps*)
 
 #endif // LOTFILESMANAGER256_H

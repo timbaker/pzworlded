@@ -122,13 +122,15 @@ public:
     QString zombieSpawnMap;
     QString tileDefFolder;
     QPoint worldOrigin;
+    int numberOfThreads = 1;
 
     bool operator == (const GenerateLotsSettings &other)
     {
         return exportDir == other.exportDir &&
                 zombieSpawnMap == other.zombieSpawnMap &&
                 tileDefFolder == other.tileDefFolder &&
-                worldOrigin == other.worldOrigin;
+                worldOrigin == other.worldOrigin &&
+                numberOfThreads == other.numberOfThreads;
     }
 
     bool operator != (const GenerateLotsSettings &other)

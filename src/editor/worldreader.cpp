@@ -630,6 +630,11 @@ private:
                 if (readPoint(QLatin1String("origin"), pos))
                     settings.worldOrigin = pos;
                 xml.skipCurrentElement();
+            } else if (xml.name() == QLatin1String("numberOfThreads")) {
+                int count = xml.attributes().value(QLatin1String("count")).toInt();
+                count = std::min(count, 10);
+                settings.numberOfThreads = std::max(count, 1);
+                xml.skipCurrentElement();
             } else
                 readUnknownElement();
         }
@@ -694,7 +699,11 @@ private:
 
     void readUnknownElement()
     {
-        qDebug() << "Unknown element (fixme):" << xml.name();
+        qDebug() << tr("Unknown element \"%3\"\n\nLine %1, column %2 %4")
+                    .arg(xml.lineNumber())
+                    .arg(xml.columnNumber())
+                    .arg(xml.name())
+                    .arg(mPath);
         xml.skipCurrentElement();
     }
 

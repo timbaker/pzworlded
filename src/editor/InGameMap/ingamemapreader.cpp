@@ -236,7 +236,10 @@ private:
 
     void readUnknownElement()
     {
-        qDebug() << "Unknown element (fixme):" << xml.name();
+        qDebug() << tr("Unknown element \"%3\"\n\nLine %1, column %2")
+                    .arg(xml.lineNumber())
+                    .arg(xml.columnNumber())
+                    .arg(xml.name());
         xml.skipCurrentElement();
     }
 

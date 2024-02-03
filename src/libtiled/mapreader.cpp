@@ -223,7 +223,11 @@ bool MapReaderPrivate::openFile(QFile *file)
 
 void MapReaderPrivate::readUnknownElement()
 {
-    qDebug() << "Unknown element (fixme):" << xml.name();
+    qDebug() << tr("Unknown element \"%3\"\n\nLine %1, column %2 %4")
+                .arg(xml.lineNumber())
+                .arg(xml.columnNumber())
+                .arg(xml.name())
+                .arg(mPath);
     xml.skipCurrentElement();
 }
 
