@@ -53,6 +53,7 @@ void TileMetaInfoMgr::deleteInstance()
 void TileMetaInfoMgr::changeTilesDirectory(const QString &path)
 {
     Preferences::instance()->setTilesDirectory(path); // must be done before loading tilesets
+    TilesetManager::instance()->tilesetDirectoryChanged();
     foreach (Tileset *ts, tilesets()) {
         if (ts->isMissing())
             continue; // keep the relative path

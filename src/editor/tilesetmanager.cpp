@@ -231,8 +231,20 @@ void TilesetManager::setReloadTilesetsOnChange(bool enabled)
     // TODO: Clear the file system watcher when disabled
 }
 
+void TilesetManager::tilesetDirectoryChanged()
+{
+    mTilesetPaths.clear();
+}
+
 bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &path1x, QString &path2x)
 {
+    TilesetPaths paths = mTilesetPaths.value(tilesetName);
+    if (paths.bValid) {
+        path1x = paths.path1x;
+        path2x = paths.path2x;
+        return true;
+    }
+
     QString tiles1xDir = Preferences::instance()->tilesDirectory();
     QString tiles2xDir = Preferences::instance()->tiles2xDirectory();
 
@@ -244,9 +256,17 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
     path2x = dir2x.filePath(fileName);
 
     if (QImageReader(path2x).size().isValid()) {
+        paths.bValid = true;
+        paths.path1x = path1x;
+        paths.path2x = path2x;
+        mTilesetPaths[tilesetName] = paths;
         return true;
     }
     if (QImageReader(path1x).size().isValid()) {
+        paths.bValid = true;
+        paths.path1x = path1x;
+        paths.path2x = path2x;
+        mTilesetPaths[tilesetName] = paths;
         return true;
     }
 
@@ -257,6 +277,10 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
         if (QImageReader(try2x).size().isValid()) {
             path1x = QDir(dir1x.filePath(dirInfo.fileName())).filePath(fileName);
             path2x = try2x;
+            paths.bValid = true;
+            paths.path1x = path1x;
+            paths.path2x = path2x;
+            mTilesetPaths[tilesetName] = paths;
             return true;
         }
     }
@@ -268,6 +292,10 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
         if (QImageReader(try1x).size().isValid()) {
             path1x = try1x;
             path2x = QDir(dir2x.filePath(dirInfo.fileName())).filePath(fileName);
+            paths.bValid = true;
+            paths.path1x = path1x;
+            paths.path2x = path2x;
+            mTilesetPaths[tilesetName] = paths;
             return true;
         }
     }

@@ -104,6 +104,14 @@ struct TilesetSpec
     int margin;
 };
 
+class TilesetPaths
+{
+public:
+    bool bValid = false;
+    QString path1x;
+    QString path2x;
+};
+
 /**
  * The tileset manager keeps track of all tilesets used by loaded maps. It also
  * watches the tileset images for changes and will attempt to reload them when
@@ -176,6 +184,8 @@ public:
     { return mReloadTilesetsOnChange; }
 
 #ifdef ZOMBOID
+    void tilesetDirectoryChanged();
+
     bool getTilesetFileName(const QString &tilesetName, QString &path1x, QString &path2x);
 
     void changeTilesetSource(Tileset *tileset, const QString &source, bool missing);
@@ -266,6 +276,7 @@ private:
     QSet<QString> mChangedFiles;
     QTimer mChangedFilesTimer;
     bool mReloadTilesetsOnChange;
+    QMap<QString,TilesetPaths> mTilesetPaths;
 };
 
 } // namespace Internal
