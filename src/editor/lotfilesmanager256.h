@@ -24,6 +24,7 @@
 #define CHUNKS_PER_CELL_256 32
 #define CHUNK_SIZE_256 8
 
+class ExportLotsProgressDialog;
 class InterruptibleThread;
 
 class CombinedCellMaps
@@ -36,6 +37,9 @@ public:
     int checkLoading(WorldDocument *worldDoc);
     MapInfo* getCombinedMap();
     void moveToThread(MapComposite *mapComposite, QThread *thread);
+
+    static QRect toCellRect256(const QRect& cellRect300);
+    static QRect toCellRect300(const QRect& cellRect256);
 
     int mCell256X;
     int mCell256Y;
@@ -144,6 +148,9 @@ public:
 
 signals:
 
+private slots:
+    void cancel();
+
 private:
     Q_DISABLE_COPY(LotFilesManager256)
 
@@ -159,12 +166,15 @@ private:
     WorldDocument *mWorldDoc;
     QImage ZombieSpawnMap;
     QList<const JumboZone*> mJumboZoneList;
+    QRect mCellBounds256;
     QSet<QPair<int, int>> mDoneCells256;
     QVector<InterruptibleThread*> mWorkerThreads;
     QVector<LotFilesWorker256*> mWorkers;
     LotFile::Stats mStats;
+    ExportLotsProgressDialog *mProgressDialog;
     QVector<GenerateCellFailure> mFailures;
     QString mError;
+    bool mCancel = false;
 
     friend class LotFilesWorker256;
 };

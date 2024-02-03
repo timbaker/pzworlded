@@ -60,6 +60,7 @@ RCC_DIR = .rcc
 OBJECTS_DIR = .obj
 
 SOURCES += main.cpp\
+    exportlotsprogressdialog.cpp \
     generatelotsfailuredialog.cpp \
     lotfilesmanager256.cpp \
         mainwindow.cpp \
@@ -172,6 +173,7 @@ SOURCES += main.cpp\
     waterflow.cpp
 
 HEADERS  += mainwindow.h \
+    exportlotsprogressdialog.h \
     generatelotsfailuredialog.h \
     InGameMap/clipper.hpp \
     InGameMap/ingamemapcell.h \
@@ -283,6 +285,7 @@ HEADERS  += mainwindow.h \
     waterflow.h
 
 FORMS    += mainwindow.ui \
+    exportlotsprogressdialog.ui \
     generatelotsfailuredialog.ui \
     InGameMap/ingamemapimagepyramidwindow.ui \
     InGameMap/ingamemappropertiesform.ui \

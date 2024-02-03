@@ -17,6 +17,7 @@
 
 #include "lotfilesmanager256.h"
 
+#include "exportlotsprogressdialog.h"
 #include "generatelotsfailuredialog.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
@@ -87,8 +88,9 @@ void LotFilesManager256::deleteInstance()
     mInstance = 0;
 }
 
-LotFilesManager256::LotFilesManager256(QObject *parent)
-    : QObject(parent)
+LotFilesManager256::LotFilesManager256(QObject *parent) :
+    QObject(parent),
+    mProgressDialog(nullptr)
 {
     mJumboZoneList += new JumboZone(QStringLiteral("DeepForest"), 100);
     mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
@@ -122,10 +124,23 @@ LotFilesManager256::~LotFilesManager256()
 bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
     mWorldDoc = worldDoc;
-
-    PROGRESS progress(QLatin1String("Reading Zombie Spawn Map"));
-
     const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
+    mCellBounds256 = CombinedCellMaps::toCellRect256(QRect(lotSettings.worldOrigin, QSize(mWorldDoc->world()->size())));
+
+    ExportLotsProgressDialog progress(MainWindow::instance());
+    progress.setModal(true);
+    mProgressDialog = &progress;
+    connect(mProgressDialog, &ExportLotsProgressDialog::cancelled, this, &LotFilesManager256::cancel);
+    progress.show();
+    progress.activateWindow();
+    progress.raise();
+    qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
+    progress.setWorldSize(mCellBounds256.width(), mCellBounds256.height());
+    progress.setPrompt(QLatin1String("Reading Zombie Spawn Map"));
+
+    mCancel = false;
+
     QString spawnMap = lotSettings.zombieSpawnMap;
     if (!QFileInfo(spawnMap).exists()) {
         mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
@@ -159,7 +174,7 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
 
     mStats.reset();
 
-    progress.update(QLatin1String("Generating .lot files"));
+    progress.setPrompt(QLatin1String("Generating .lot files"));
 
     World *world = worldDoc->world();
 
@@ -170,6 +185,22 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
 
     if (mode == GenerateSelected) {
         for (WorldCell *cell : worldDoc->selectedCells()) {
+            if (cell->mapFilePath().isEmpty()) {
+                continue;
+            }
+            int cell300X = lotSettings.worldOrigin.x() + cell->x();
+            int cell300Y = lotSettings.worldOrigin.y() + cell->y();
+            QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(cell300X, cell300Y, 1, 1));
+            for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+                for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+                    mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Pending);
+                }
+            }
+        }
+        for (WorldCell *cell : worldDoc->selectedCells()) {
+            if (mCancel) {
+                break;
+            }
             if (!generateCell(cell)) {
                 mFailures += GenerateCellFailure(cell, mError);
 //                return false;
@@ -179,6 +210,26 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 WorldCell* cell = world->cellAt(x, y);
+                if (cell->mapFilePath().isEmpty()) {
+                    continue;
+                }
+                QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(lotSettings.worldOrigin.x() + x, lotSettings.worldOrigin.y() + y, 1, 1));
+                for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+                    for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+                        mProgressDialog->setCellStatus(cell256X - mCellBounds256.x(), cell256Y - mCellBounds256.y(), ExportLotsProgressDialog::CellStatus::Pending);
+                    }
+                }
+            }
+        }
+        for (int y = 0; y < world->height(); y++) {
+            if (mCancel) {
+                break;
+            }
+            for (int x = 0; x < world->width(); x++) {
+                WorldCell* cell = world->cellAt(x, y);
+                if (mCancel) {
+                    break;
+                }
                 if (!generateCell(cell)) {
                     mFailures += GenerateCellFailure(cell, mError);
 //                    return false;
@@ -192,11 +243,12 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
         if (getBusyWorker() == nullptr) {
             break;
         }
-        qApp->processEvents(QEventLoop::ProcessEventsFlag::ExcludeUserInputEvents);
+        qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
         Sleep::msleep(1000 / 30);
     }
 
-    progress.release();
+    qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
+    progress.setVisible(false);
 
     if (!mFailures.isEmpty()) {
         QStringList errorList;
@@ -237,18 +289,22 @@ bool LotFilesManager256::generateCell(WorldCell *cell)
 
     int cell300X = lotSettings.worldOrigin.x() + cell->x();
     int cell300Y = lotSettings.worldOrigin.y() + cell->y();
-    int minCell256X = std::floor(cell300X * CELL_WIDTH / float(CELL_SIZE_256));
-    int minCell256Y = std::floor(cell300Y * CELL_HEIGHT / float(CELL_SIZE_256));
-    int maxCell256X = std::ceil(((cell300X + 1) * CELL_WIDTH - 1) / float(CELL_SIZE_256));
-    int maxCell256Y = std::ceil(((cell300Y + 1) * CELL_HEIGHT - 1) / float(CELL_SIZE_256));
-    for (int cell256Y = minCell256Y; cell256Y < maxCell256Y; cell256Y++) {
-        for (int cell256X = minCell256X; cell256X < maxCell256X; cell256X++) {
+    QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(cell300X, cell300Y, 1, 1));
+    for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+        if (mCancel) {
+            break;
+        }
+        for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+            if (mCancel) {
+                break;
+            }
             QPair<int, int> doneCell(cell256X, cell256Y);
             if (mDoneCells256.contains(doneCell)) {
                 continue;
             }
             mDoneCells256.insert(doneCell);
             if (generateCell(cell, cell256X, cell256Y) == false) {
+                mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Failed);
                 return false;
             }
         }
@@ -264,12 +320,21 @@ void LotFilesManager256::updateWorkers()
             int loadStatus = worker->mCombinedCellMaps->checkLoading(mWorldDoc);
             if (loadStatus == -1) {
                 mFailures += GenerateCellFailure(worker->mCell, worker->mError);
+                mProgressDialog->setCellStatus(worker->mCombinedCellMaps->mCell256X - mCellBounds256.left(),
+                                               worker->mCombinedCellMaps->mCell256Y - mCellBounds256.top(),
+                                               ExportLotsProgressDialog::CellStatus::Failed);
                 delete worker->mCombinedCellMaps;
                 worker->mCombinedCellMaps = nullptr;
                 worker->mStatus = LotFilesWorker256::Status::Idle;
             }
             if (loadStatus == 1) {
-                qApp->processEvents(QEventLoop::ProcessEventsFlag::ExcludeUserInputEvents); // handle any pending signal-to-slot before moving threads
+                if (mCancel) {
+                    delete worker->mCombinedCellMaps;
+                    worker->mCombinedCellMaps = nullptr;
+                    worker->mStatus = LotFilesWorker256::Status::Idle;
+                    continue;
+                }
+                qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents); // handle any pending signal-to-slot before moving threads
                 worker->mCombinedCellMaps->moveToThread(worker->mCombinedCellMaps->mMapComposite, mWorkerThreads[i]);
                 worker->mStatus = LotFilesWorker256::Status::Working;
                 QMetaObject::invokeMethod(worker,
@@ -279,11 +344,17 @@ void LotFilesManager256::updateWorkers()
         }
         if (worker->mStatus == LotFilesWorker256::Status::Error) {
             mFailures += GenerateCellFailure(worker->mCell, worker->mError);
+            mProgressDialog->setCellStatus(worker->mCombinedCellMaps->mCell256X - mCellBounds256.left(),
+                                           worker->mCombinedCellMaps->mCell256Y - mCellBounds256.top(),
+                                           ExportLotsProgressDialog::CellStatus::Failed);
             delete worker->mCombinedCellMaps;
             worker->mCombinedCellMaps = nullptr;
             worker->mStatus = LotFilesWorker256::Status::Idle;
         }
         if (worker->mStatus == LotFilesWorker256::Status::Finished) {
+            mProgressDialog->setCellStatus(worker->mCombinedCellMaps->mCell256X - mCellBounds256.left(),
+                                           worker->mCombinedCellMaps->mCell256Y - mCellBounds256.top(),
+                                           ExportLotsProgressDialog::CellStatus::Exported);
             delete worker->mCombinedCellMaps;
             worker->mCombinedCellMaps = nullptr;
             worker->mStatus = LotFilesWorker256::Status::Idle;
@@ -319,10 +390,10 @@ bool LotFilesManager256::generateCell(WorldCell *cell, int cell256X, int cell256
     LotFilesWorker256 *worker = nullptr;
     while ((worker = getIdleWorker()) == nullptr) {
         updateWorkers();
-        qApp->processEvents(QEventLoop::ProcessEventsFlag::ExcludeUserInputEvents);
+        qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
         Sleep::msleep(1000 / 30);
     }
-    PROGRESS progress(tr("Loading maps (%1,%2)").arg(cell256X).arg(cell256Y));
+    mProgressDialog->setPrompt(tr("Loading maps (%1,%2)").arg(cell256X).arg(cell256Y));
     CombinedCellMaps *combinedMaps = new CombinedCellMaps();
     bool ok = combinedMaps->startLoading(mWorldDoc, cell256X, cell256Y);
     if ((ok == false) || (combinedMaps->mError.isEmpty() == false)) {
@@ -334,6 +405,12 @@ bool LotFilesManager256::generateCell(WorldCell *cell, int cell256X, int cell256
     worker->mCell = cell;
     worker->mStatus = LotFilesWorker256::Status::LoadingMaps;
     return true;
+}
+
+void LotFilesManager256::cancel()
+{
+    mCancel = true;
+    mProgressDialog->setPrompt(tr("Stopping..."));
 }
 
 bool LotFilesWorker256::generateCell(CombinedCellMaps *combinedMapsPtr)
@@ -1280,6 +1357,9 @@ CombinedCellMaps::CombinedCellMaps()
 
 CombinedCellMaps::~CombinedCellMaps()
 {
+    if (mMapComposite == nullptr) {
+        return;
+    }
     MapInfo* mapInfo = mMapComposite->mapInfo(); // 256x256
     delete mMapComposite;
     delete mapInfo->map();
@@ -1291,10 +1371,11 @@ bool CombinedCellMaps::startLoading(WorldDocument *worldDoc, int cell256X, int c
     const GenerateLotsSettings &lotSettings = worldDoc->world()->getGenerateLotsSettings();
     mCell256X = cell256X;
     mCell256Y = cell256Y;
-    int minCell300X = std::floor(cell256X * CELL_SIZE_256 / float(CELL_WIDTH));
-    int minCell300Y = std::floor(cell256Y * CELL_SIZE_256 / float(CELL_HEIGHT));
-    int maxCell300X = std::ceil(((cell256X + 1) * CELL_SIZE_256 - 1) / float(CELL_WIDTH));
-    int maxCell300Y = std::ceil(((cell256Y + 1) * CELL_SIZE_256 - 1) / float(CELL_HEIGHT));
+    QRect cellBounds300 = toCellRect300(QRect(cell256X, cell256Y, 1, 1));
+    int minCell300X = cellBounds300.x();
+    int minCell300Y = cellBounds300.y();
+    int maxCell300X = cellBounds300.right() + 1;
+    int maxCell300Y = cellBounds300.bottom() + 1;
     mMinCell300X = minCell300X;
     mMinCell300Y = minCell300Y;
     mCellsWidth = maxCell300X - minCell300X;
@@ -1370,4 +1451,22 @@ void CombinedCellMaps::moveToThread(MapComposite *mapComposite, QThread *thread)
     for (MapComposite *subMap : mapComposite->subMaps()) {
         moveToThread(subMap, thread);
     }
+}
+
+QRect CombinedCellMaps::toCellRect256(const QRect &cellRect300)
+{
+    int minCell256X = std::floor(cellRect300.x() * CELL_WIDTH / float(CELL_SIZE_256));
+    int minCell256Y = std::floor(cellRect300.y() * CELL_HEIGHT / float(CELL_SIZE_256));
+    int maxCell256X = std::ceil(((cellRect300.right() + 1) * CELL_WIDTH - 1) / float(CELL_SIZE_256));
+    int maxCell256Y = std::ceil(((cellRect300.bottom() + 1) * CELL_HEIGHT - 1) / float(CELL_SIZE_256));
+    return QRect(minCell256X, minCell256Y, maxCell256X - minCell256X, maxCell256Y - minCell256Y);
+}
+
+QRect CombinedCellMaps::toCellRect300(const QRect &cellRect256)
+{
+    int minCell300X = std::floor(cellRect256.x() * CELL_SIZE_256 / float(CELL_WIDTH));
+    int minCell300Y = std::floor(cellRect256.y() * CELL_SIZE_256 / float(CELL_HEIGHT));
+    int maxCell300X = std::ceil(((cellRect256.right() + 1) * CELL_SIZE_256 - 1) / float(CELL_WIDTH));
+    int maxCell300Y = std::ceil(((cellRect256.bottom() + 1) * CELL_SIZE_256 - 1) / float(CELL_HEIGHT));
+    return QRect(minCell300X, minCell300Y, maxCell300X - minCell300X, maxCell300Y - minCell300Y);
 }
