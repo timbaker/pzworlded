@@ -486,6 +486,8 @@ public:
     const QList<OtherWorld*> &otherWorlds() const
     { return mOtherWorlds; }
 
+    void cancelLoadingThumbnails();
+
 signals:
     
 public slots:

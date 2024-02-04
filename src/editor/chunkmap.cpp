@@ -814,7 +814,16 @@ void IsoMetaGrid::Create(const QString &directory)
 
             for (int n = 0; n < tilecount; ++n) {
                 QString str = IsoLot::readString(in);
-                info->tilesUsed += str.trimmed();
+                str = str.trimmed();
+                info->tilesUsed += str;
+
+                QString tilesetName;
+                int tileID;
+                if (BuildingEditor::BuildingTilesMgr::parseTileName(str, tilesetName, tileID)) {
+                    info->buildingTiles += BuildingEditor::BuildingTile(tilesetName, tileID);
+                } else {
+                    info->buildingTiles += BuildingEditor::BuildingTile(str, -1);
+                }
             }
 
             IsoLot::readByte(in);

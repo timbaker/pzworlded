@@ -150,6 +150,9 @@ public slots:
     void readInGameMapFeaturesXML();
     void writeInGameMapFeaturesXML_300();
     void writeInGameMapFeaturesXML_256();
+    void overwriteInGameMapFeaturesXML_300();
+    void overwriteInGameMapFeaturesXML_256();
+    void createInGameMapImage();
     void creaeInGameMapImagePyramid();
 
     void setStatusBarCoords(int x, int y);
@@ -192,6 +195,7 @@ private:
     bool canRemoveInGameMapHole();
     bool canConvertToInGameMapPolygon();
     void writeInGameMapFeaturesXML(bool b256);
+    void overwriteInGameMapFeaturesXML(bool b256);
 
     struct ViewHint
     {

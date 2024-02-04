@@ -75,6 +75,7 @@
 
 #include "InGameMap/ingamemapfeaturegenerator.h"
 #include "InGameMap/ingamemapdock.h"
+#include "InGameMap/ingamemapimagedialog.h"
 #include "InGameMap/ingamemapimagepyramidwindow.h"
 #include "InGameMap/ingamemapreader.h"
 #include "InGameMap/ingamemapscene.h"
@@ -313,6 +314,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionReadInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::readInGameMapFeaturesXML);
     connect(ui->actionWriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML_300);
     connect(ui->actionWriteInGameMapFeaturesXML_256, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML_256);
+    connect(ui->actionOverwriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML);
+    connect(ui->actionOverwriteInGameMapFeaturesXML_256, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML_256);
+    connect(ui->actionCreateWorldImage, &QAction::triggered, this, &MainWindow::createInGameMapImage);
     connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
 
     connect(ui->actionSnapToGrid, &QAction::toggled, prefs, &Preferences::setSnapToGrid);
@@ -2333,6 +2337,8 @@ void MainWindow::readInGameMapFeaturesXML()
     if (bFeatureToolActive == false && EditInGameMapFeatureTool::instance().isEnabled()) {
         ToolManager::instance()->selectTool(EditInGameMapFeatureTool::instancePtr());
     }
+
+    updateActions();
 }
 
 void MainWindow::clearCells()
@@ -2391,6 +2397,16 @@ void MainWindow::writeInGameMapFeaturesXML_256()
     writeInGameMapFeaturesXML(true);
 }
 
+void MainWindow::overwriteInGameMapFeaturesXML_300()
+{
+    overwriteInGameMapFeaturesXML(false);
+}
+
+void MainWindow::overwriteInGameMapFeaturesXML_256()
+{
+    overwriteInGameMapFeaturesXML(true);
+}
+
 void MainWindow::writeInGameMapFeaturesXML(bool b256)
 {
     WorldDocument *worldDoc = currentWorldDocument();
@@ -2427,6 +2443,32 @@ void MainWindow::writeInGameMapFeaturesXML(bool b256)
         qWarning("Failed to write InGameMap Binary.");
         return;
     }
+}
+
+void MainWindow::overwriteInGameMapFeaturesXML(bool b256)
+{
+    WorldDocument *worldDoc = currentWorldDocument();
+
+    PROGRESS progress(QStringLiteral("Writing InGameMap XML"), this);
+
+    InGameMapWriter writer;
+    QString fileName = Preferences::instance()->worldMapXMLFile();
+    if (!writer.writeWorld(worldDoc->world(), fileName)) {
+        qWarning("Failed to write InGameMap XML.");
+        return;
+    }
+
+    InGameMapWriterBinary writerBinary;
+    if (!writerBinary.writeWorld(worldDoc->world(), fileName + QStringLiteral(".bin"), b256)) {
+        qWarning("Failed to write InGameMap Binary.");
+        return;
+    }
+}
+
+void MainWindow::createInGameMapImage()
+{
+    InGameMapImageDialog dialog(this);
+    dialog.exec();
 }
 
 void MainWindow::creaeInGameMapImagePyramid()
@@ -2563,6 +2605,7 @@ void MainWindow::updateActions()
     bool hasDoc = doc != 0;
     CellDocument *cellDoc = hasDoc ? doc->asCellDocument() : 0;
     WorldDocument *worldDoc = hasDoc ? doc->asWorldDocument() : 0;
+    World *world = worldDoc ? worldDoc->world() : (cellDoc ? cellDoc->world() : nullptr);
 
     ui->actionSave->setEnabled(hasDoc);
     ui->actionSaveAs->setEnabled(hasDoc);
@@ -2635,6 +2678,22 @@ void MainWindow::updateActions()
     ui->actionConvertToPolygon->setEnabled(canConvertToInGameMapPolygon());
     ui->actionReadInGameMapFeaturesXML->setEnabled(hasDoc);
     ui->actionWriteInGameMapFeaturesXML->setEnabled(hasDoc);
+    QString featuresXML = Preferences::instance()->worldMapXMLFile();
+    bool hasReadFeaturesXML = false;
+    if (hasDoc && !featuresXML.isEmpty()) {
+        for (auto* cell : world->cells()) {
+            const InGameMapFeatures &features = cell->inGameMap().features();
+            if (features.isEmpty() == false) {
+                hasReadFeaturesXML = true;
+                break;
+            }
+        }
+    }
+    ui->actionOverwriteInGameMapFeaturesXML->setText(tr("Overwrite %1").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
+    ui->actionOverwriteInGameMapFeaturesXML->setEnabled(hasDoc && hasReadFeaturesXML);
+    ui->actionOverwriteInGameMapFeaturesXML_256->setText(tr("Overwrite %1 8x8").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
+    ui->actionOverwriteInGameMapFeaturesXML_256->setEnabled(hasDoc && hasReadFeaturesXML);
+    ui->actionCreateWorldImage->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);

@@ -17,6 +17,7 @@
 
 #include "ingamemapfeaturegenerator.h"
 
+#include "generatelotsfailuredialog.h"
 #include "lotfilesmanager.h"
 #include "mainwindow.h"
 #include "mapcomposite.h"
@@ -74,6 +75,8 @@ bool InGameMapFeatureGenerator::generateWorld(WorldDocument *worldDoc, InGameMap
     }
     PROGRESS progress(QStringLiteral("Generating %1 features").arg(typeStr));
 
+    mFailures.clear();
+
     mWorldDoc->undoStack()->beginMacro(QStringLiteral("Generate InGameMap %1 Features").arg(typeStr));
 
     if (mode == GenerateSelected) {
@@ -96,6 +99,16 @@ bool InGameMapFeatureGenerator::generateWorld(WorldDocument *worldDoc, InGameMap
     mWorldDoc->undoStack()->endMacro();
 
     MapManager::instance()->purgeUnreferencedMaps();
+
+    if (!mFailures.isEmpty()) {
+        QStringList errorList;
+        for (const GenerateCellFailure &failure : mFailures) {
+            errorList += QString(QStringLiteral("Cell %1,%2: %3")).arg(failure.cell->x()).arg(failure.cell->y()).arg(failure.error);
+        }
+        GenerateLotsFailureDialog dialog(errorList, MainWindow::instance());
+        dialog.exec();
+    }
+
 #if 0
     // While displaying this, the MapManager's FileSystemWatcher might see some
     // changed .tmx files, which results in the PROGRESS dialog being displayed.
@@ -176,14 +189,17 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     DelayedMapLoader mapLoader;
     mapLoader.addMap(mapInfo);
 
+    WorldCellLotList lots;
     for (WorldCellLot *lot : cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
+            lots += lot;
         } else {
-            mError = MapManager::instance()->errorString();
-            return false;
+            mFailures += GenerateCellFailure(cell, MapManager::instance()->errorString());
+//            mError = MapManager::instance()->errorString();
+//            return false;
         }
     }
 
@@ -193,13 +209,18 @@ bool InGameMapFeatureGenerator::doBuildings(WorldCell *cell, MapInfo *mapInfo)
     }
 
     // This method won't work for buildings in the TMX, it only works for separate building files.
-    for (WorldCellLot *lot : cell->lots()) {
+    for (WorldCellLot *lot : lots) {
         MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
         if (info != nullptr && info->map() != nullptr) {
+            QRect bounds;
+            QVector<QRect> rects;
             for (ObjectGroup *og : info->map()->objectGroups()) {
-                if (processObjectGroup(cell, info, og, lot->level(), lot->pos()) == false) {
+                if (processObjectGroup(cell, info, og, lot->level(), lot->pos(), bounds, rects) == false) {
                     return false;
                 }
+            }
+            if (traceBuildingOutline(cell, info, bounds, rects) == false) {
+                return false;
             }
         }
     }
@@ -435,7 +456,7 @@ public:
                 OutlineCellPtr cell = get(x, y);
                 // every poly must have a nw corner.
                 // this should only happen once.
-                if (cell && cell->n && cell->w && cell->inner && !(cell->tw | cell->tn | cell->te | cell->ts)) {
+                if (cell && cell->n && cell->w && cell->inner && !(cell->tw || cell->tn || cell->te || cell->ts)) {
                     QPolygon nodes = trace(*cell);
                     if (nodes.isEmpty())
                         continue;
@@ -533,7 +554,8 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
     return true;
 }
 
-bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *mapInfo, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
+bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *mapInfo, ObjectGroup *objectGroup, int levelOffset,
+                                                   const QPoint &offset, QRect &bounds, QVector<QRect> &rects)
 {
     if (objectGroup->name().contains(QLatin1String("RoomDefs")) == false) {
         return true;
@@ -542,13 +564,7 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *map
     int level = objectGroup->level();
     level += levelOffset;
 
-    if (level != 0)
-        return true;
-
-    QRect bounds;
-    QVector<QRect> rects;
-
-    foreach (const MapObject *mapObject, objectGroup->objects()) {
+    for (const MapObject *mapObject : objectGroup->objects()) {
 #if 0
         if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
             continue;
@@ -584,6 +600,11 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *map
         rects += { x, y, w, h };
     }
 
+    return true;
+}
+
+bool InGameMapFeatureGenerator::traceBuildingOutline(WorldCell *cell, MapInfo *mapInfo, QRect &bounds, QVector<QRect> &rects)
+{
     if (bounds.isEmpty())
         return true;
 

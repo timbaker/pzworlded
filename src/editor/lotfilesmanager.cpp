@@ -97,20 +97,6 @@ LotFilesManager::~LotFilesManager()
 {
 }
 
-namespace {
-struct GenerateCellFailure
-{
-    WorldCell* cell;
-    QString error;
-
-    GenerateCellFailure(WorldCell* cell, const QString& error)
-        : cell(cell)
-        , error(error)
-    {
-    }
-};
-}
-
 bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 {
     mWorldDoc = worldDoc;
@@ -155,12 +141,11 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 
     World *world = worldDoc->world();
 
-    QList<GenerateCellFailure> failures;
+    mFailures.clear();
 
     if (mode == GenerateSelected) {
         for (WorldCell *cell : worldDoc->selectedCells()) {
             if (!generateCell(cell)) {
-                failures += GenerateCellFailure(cell, mError);
 //                return false;
             }
         }
@@ -169,7 +154,6 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
             for (int x = 0; x < world->width(); x++) {
                 WorldCell* cell = world->cellAt(x, y);
                 if (!generateCell(cell)) {
-                    failures += GenerateCellFailure(cell, mError);
 //                    return false;
                 }
             }
@@ -178,9 +162,9 @@ bool LotFilesManager::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
 
     progress.release();
 
-    if (!failures.isEmpty()) {
+    if (!mFailures.isEmpty()) {
         QStringList errorList;
-        for (GenerateCellFailure failure : failures) {
+        for (const GenerateCellFailure& failure : mFailures) {
             errorList += QString(QStringLiteral("Cell %1,%2: %3")).arg(failure.cell->x()).arg(failure.cell->y()).arg(failure.error);
         }
         GenerateLotsFailureDialog dialog(errorList, MainWindow::instance());
@@ -206,8 +190,9 @@ bool LotFilesManager::generateCell(WorldCell *cell)
 
     if ((cell->x() + 1) * CHUNKS_PER_CELL > ZombieSpawnMap.width() ||
             (cell->y() + 1) * CHUNKS_PER_CELL > ZombieSpawnMap.height()) {
-        mError = tr("The Zombie Spawn Map doesn't cover cell %1,%2.")
+        QString mError = tr("The Zombie Spawn Map doesn't cover cell %1,%2.")
                 .arg(cell->x()).arg(cell->y());
+        mFailures += GenerateCellFailure(cell, mError);
         return false;
     }
 
@@ -236,21 +221,24 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     MapInfo *mapInfo = MapManager::instance()->loadMap(cell->mapFilePath(),
                                                        QString(), true);
     if (!mapInfo) {
-        mError = MapManager::instance()->errorString();
+        QString mError = MapManager::instance()->errorString();
+        mFailures += GenerateCellFailure(cell, mError);
         return false;
     }
 
     DelayedMapLoader mapLoader;
     mapLoader.addMap(mapInfo);
 
+    WorldCellLotList lots;
     for (WorldCellLot *lot : cell->lots()) {
         if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(),
                                                             QString(), true,
                                                             MapManager::PriorityMedium)) {
             mapLoader.addMap(info);
+            lots += lot;
         } else {
-            mError = MapManager::instance()->errorString();
-            return false;
+            mFailures += GenerateCellFailure(cell, MapManager::instance()->errorString());
+//            return false;
         }
     }
 
@@ -268,7 +256,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
         return false;
     }
 
-    for (WorldCellLot *lot : cell->lots()) {
+    for (WorldCellLot *lot : lots) {
         MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
         Q_ASSERT(info && info->map());
         mapComposite->addMap(info, lot->pos(), lot->level());
@@ -310,14 +298,17 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     // Check for missing tilesets.
     for (MapComposite *mc : mapComposite->maps()) {
         if (mc->map()->hasUsedMissingTilesets()) {
-            mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
+            QString mError = tr("Some tilesets are missing in a map in cell %1,%2:\n%3")
                     .arg(cell->x()).arg(cell->y()).arg(mc->mapInfo()->path());
+            mFailures += GenerateCellFailure(cell, mError);
             return false;
         }
     }
 
-    if (!generateHeader(cell, mapComposite))
+    if (!generateHeader(cell, mapComposite)) {
+        mFailures += GenerateCellFailure(cell, mError);
         return false;
+    }
 
 #if 0
     bool chunkDataOnly = false;
@@ -396,7 +387,8 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     QString lotsDirectory = lotSettings.exportDir;
     QFile file(lotsDirectory + QLatin1Char('/') + fileName);
     if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
-        mError = tr("Could not open file for writing.");
+        QString mError = tr("Could not open file for writing.");
+        mFailures += GenerateCellFailure(cell, mError);
         return false;
     }
 
@@ -417,8 +409,10 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     for (int x = 0; x < mapWidth / CHUNK_WIDTH; x++) {
         for (int y = 0; y < mapHeight / CHUNK_HEIGHT; y++) {
             PositionMap += file.pos();
-            if (!generateChunk(out, cell, mapComposite, x, y))
+            if (!generateChunk(out, cell, mapComposite, x, y)) {
+                mFailures += GenerateCellFailure(cell, QLatin1String("generateChunk() failed"));
                 return false;
+            }
         }
     }
 

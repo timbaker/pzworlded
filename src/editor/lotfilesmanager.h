@@ -468,6 +468,18 @@ public:
         GenerateSelected
     };
 
+    struct GenerateCellFailure
+    {
+        WorldCell* cell;
+        QString error;
+
+        GenerateCellFailure(WorldCell* cell, const QString& error)
+            : cell(cell)
+            , error(error)
+        {
+        }
+    };
+
     bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
     bool generateCell(WorldCell *cell);
     bool generateCell256(WorldDocument *worldDoc, int cell256X, int cell256Y);
@@ -520,7 +532,7 @@ private:
     QImage ZombieSpawnMap;
     QList<const JumboZone*> mJumboZoneList;
     LotFile::Stats mStats;
-
+    QList<GenerateCellFailure> mFailures;
     QString mError;
 };
 

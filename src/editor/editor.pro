@@ -62,12 +62,14 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     exportlotsprogressdialog.cpp \
     generatelotsfailuredialog.cpp \
+    loadthumbnailsdialog.cpp \
     lotfilesmanager256.cpp \
         mainwindow.cpp \
     InGameMap/clipper.cpp \
     InGameMap/ingamemapcell.cpp \
     InGameMap/ingamemapdock.cpp \
     InGameMap/ingamemapfeaturegenerator.cpp \
+    InGameMap/ingamemapimagedialog.cpp \
     InGameMap/ingamemapimagepyramidwindow.cpp \
     InGameMap/ingamemappropertiesform.cpp \
     InGameMap/ingamemappropertydialog.cpp \
@@ -179,6 +181,7 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapcell.h \
     InGameMap/ingamemapdock.h \
     InGameMap/ingamemapfeaturegenerator.h \
+    InGameMap/ingamemapimagedialog.h \
     InGameMap/ingamemapimagepyramidwindow.h \
     InGameMap/ingamemappropertiesform.h \
     InGameMap/ingamemappropertydialog.h \
@@ -187,6 +190,7 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapundo.h \
     InGameMap/ingamemapwriter.h \
     InGameMap/ingamemapwriterbinary.h \
+    loadthumbnailsdialog.h \
     lotfilesmanager256.h \
     navigation/chunkdatafile256.h \
     navigation/isochunk256.h \
@@ -287,9 +291,11 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui \
     exportlotsprogressdialog.ui \
     generatelotsfailuredialog.ui \
+    InGameMap/ingamemapimagedialog.ui \
     InGameMap/ingamemapimagepyramidwindow.ui \
     InGameMap/ingamemappropertiesform.ui \
     InGameMap/ingamemappropertydialog.ui \
+    loadthumbnailsdialog.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \

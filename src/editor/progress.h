@@ -39,6 +39,10 @@ public:
 
     void setMainWindow(QWidget *parent);
 
+    bool isVisible();
+    void hide();
+    void show();
+
 private:
     QWidget *mMainWindow;
     QDialog *mDialog;
@@ -88,6 +92,28 @@ public:
 private:
     QWidget *mMainWindow;
     bool mReleased = false;
+};
+
+class PROGRESS_HIDER
+{
+public:
+    PROGRESS_HIDER()
+        : mVisible(Progress::instance()->isVisible())
+    {
+        if (mVisible) {
+            Progress::instance()->hide();
+        }
+    }
+
+    ~PROGRESS_HIDER()
+    {
+        if (mVisible) {
+            Progress::instance()->show();
+        }
+    }
+
+private:
+    bool mVisible;
 };
 
 #endif // PROGRESS_H
