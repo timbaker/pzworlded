@@ -42,6 +42,10 @@ InGameMapImageDialog::InGameMapImageDialog(QWidget *parent) :
     const GenerateLotsSettings &settings = world->getGenerateLotsSettings();
     ui->inputMapPath->setText(settings.exportDir);
 
+    ui->buttonGroup->setId(ui->radioButton300, 1);
+    ui->buttonGroup->setId(ui->radioButton256, 2);
+    ui->radioButton256->setChecked(true);
+
     connect(ui->buttonBrowseMap, &QToolButton::clicked, this, &InGameMapImageDialog::chooseMapDirectory);
     connect(ui->buttonBrowseImage, &QToolButton::clicked, this, &InGameMapImageDialog::chooseOutputFile);
     connect(ui->buttonCreateImage, &QPushButton::clicked, this, &InGameMapImageDialog::clickedTheButton);
@@ -110,7 +114,8 @@ void InGameMapImageDialog::createImage()
     qDeleteAll(IsoLot::InfoHeaders);
     IsoLot::InfoHeaders.clear();
 
-    IsoMetaGrid metaGrid;
+    bool b256 = ui->radioButton256->isChecked();
+    IsoMetaGrid metaGrid((IsoConstants(b256)));
     metaGrid.Create(inputPath);
     QSize worldSize(metaGrid.maxx - metaGrid.minx + 1, metaGrid.maxy - metaGrid.miny + 1);
 
@@ -158,17 +163,34 @@ void InGameMapImageDialog::cellToImage(QImage &image, const QString &mapDirector
     QDataStream in(&buffer);
     in.setByteOrder(QDataStream::LittleEndian);
 
-    for (int chunkY = 0; chunkY < 300 / 10; chunkY++) {
-        for (int chunkX = 0; chunkX < 300 / 10; chunkX++) {
-            int index = chunkX * IsoChunkMap::ChunkGridWidth + chunkY;
-            buffer.seek(4 + index * 8);
+    int version = IsoLot::VERSION0;
+    char magic[4] = { 0 };
+    in.readRawData(magic, 4);
+    if (magic[0] == 'L' && magic[1] == 'O' && magic[2] == 'T' && magic[3] == 'P') {
+        version = IsoLot::readInt(in);
+        if (version < IsoLot::VERSION0 || version > IsoLot::VERSION_LATEST) {
+            return;
+        }
+    } else {
+        buffer.seek(0);
+    }
+    bool b256 = ui->radioButton256->isChecked();
+    int CHUNKS_PER_CELL = b256 ? 32 : 30;
+    int SQUARES_PER_CHUNK = b256 ? 8 : 10;
+    int SQUARES_PER_CELL = CHUNKS_PER_CELL * SQUARES_PER_CHUNK;
+
+    for (int chunkY = 0; chunkY < CHUNKS_PER_CELL; chunkY++) {
+        for (int chunkX = 0; chunkX < CHUNKS_PER_CELL; chunkX++) {
+            int index = chunkX * CHUNKS_PER_CELL + chunkY;
+            // Skip 'LOTP' + version + #chunks
+            buffer.seek((version >= IsoLot::VERSION1 ? 8 : 0) + 4 + index * 8);
             qint64 pos;
             in >> pos;
             buffer.seek(pos);
             int skip = 0;
-            for (int z = 0; z < header->levels; ++z) {
-                for (int x = 0; x < IsoChunkMap::ChunksPerWidth; ++x) {
-                    for (int y = 0; y < IsoChunkMap::ChunksPerWidth; ++y) {
+            for (int z = header->minLevel; z <= header->maxLevel; ++z) {
+                for (int x = 0; x < SQUARES_PER_CHUNK; ++x) {
+                    for (int y = 0; y < SQUARES_PER_CHUNK; ++y) {
                         if (skip > 0) {
                             --skip;
                             continue;
@@ -189,8 +211,8 @@ void InGameMapImageDialog::cellToImage(QImage &image, const QString &mapDirector
 //                            this->data[x][y][z] += d;
                             QString tileName = header->tilesUsed[tileNameIndex];
                             BuildingEditor::BuildingTile buildingTile = header->buildingTiles[tileNameIndex];
-                            int pixelX = (cellX - metaGrid.minx) * 300 + chunkX * 10 + x;
-                            int pixelY = (cellY - metaGrid.miny) * 300 + chunkY * 10 + y;
+                            int pixelX = (cellX - metaGrid.minx) * SQUARES_PER_CELL + chunkX * SQUARES_PER_CHUNK + x;
+                            int pixelY = (cellY - metaGrid.miny) * SQUARES_PER_CELL + chunkY * SQUARES_PER_CHUNK + y;
                             tileToImage(image, buildingTile, pixelX, pixelY);
                         }
                     }

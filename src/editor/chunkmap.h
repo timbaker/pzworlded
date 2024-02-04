@@ -14,12 +14,28 @@ class QBuffer;
 class BuildingDef;
 class IsoCell;
 class IsoChunk;
+class IsoChunkLevel;
 class IsoChunkMap;
 class IsoRoom;
 class IsoWorld;
 class LotHeader;
 class RoomDef;
 class SliceY;
+
+struct IsoConstants
+{
+    int CHUNKS_PER_CELL;
+    int SQUARES_PER_CHUNK;
+    int SQUARES_PER_CELL;
+
+    IsoConstants(bool b256) :
+        CHUNKS_PER_CELL(b256 ? 32 : 30),
+        SQUARES_PER_CHUNK(b256 ? 8 : 10),
+        SQUARES_PER_CELL(CHUNKS_PER_CELL * SQUARES_PER_CHUNK)
+    {
+
+    }
+};
 
 class IsoCoord
 {
@@ -67,10 +83,27 @@ public:
     static QList<IsoGridSquare*> isoGridSquareCache;
 };
 
+class IsoChunkLevel
+{
+public:
+    IsoChunkLevel();
+    IsoChunkLevel *init(IsoChunk *chunk, int level);
+    void clear();
+    void release();
+    void reuseGridSquares();
+
+    static IsoChunkLevel *alloc();
+
+    IsoChunk *mChunk;
+    int mLevel;
+    QVector<QVector<IsoGridSquare*> > mSquares;
+};
+
 class IsoChunk
 {
 public:
-    IsoChunk(IsoCell *cell = 0);
+    IsoChunk(IsoCell *cell);
+    ~IsoChunk();
 
     void Load(int wx, int wy);
     void LoadForLater(int wx, int wy);
@@ -79,6 +112,22 @@ public:
     void update();
     void RecalcSquaresTick();
 
+    void setMinMaxLevel(int minLevel, int maxLevel);
+    IsoChunkLevel *getLevelData(int level);
+    int getMinLevel() const
+    {
+        return mMinLevel;
+    }
+    int getMaxLevel() const
+    {
+        return mMaxLevel;
+    }
+    bool isValidLevel(int level) const
+    {
+        return level >= getMinLevel() && level <= getMaxLevel();
+    }
+    int squaresIndexOfLevel(int worldSquareZ) const;
+    QVector<QVector<IsoGridSquare* > > &getSquaresForLevel(int level);
     void setSquare(int x, int y, int z, IsoGridSquare *square);
     IsoGridSquare *getGridSquare(int x, int y, int z);
     IsoRoom *getRoom(int roomID);
@@ -87,12 +136,14 @@ public:
 
     void Save(bool bSaveQuit);
 
-    QVector<QVector<QVector<IsoGridSquare*> > > squares;
+    IsoCell *Cell;
+    const IsoConstants isoConstants;
+    int mMinLevel;
+    int mMaxLevel;
+    QVector<IsoChunkLevel*> mLevels;
     LotHeader *lotheader;
     int wx;
     int wy;
-
-    IsoCell *Cell;
 };
 
 class IsoChunkMap
@@ -129,18 +180,18 @@ public:
     
     void ProcessChunkPos(int x, int y);
 
-    int getWidthInTiles() const { return CellSize; }
+    int getWidthInTiles() const { return ChunkGridWidth * isoConstants.SQUARES_PER_CHUNK; }
 
     int getWorldXMinTiles();
     int getWorldYMinTiles();
 
-    static const int ChunkDiv = 10;
-    static const int ChunksPerWidth = 10; // Number of tiles per chunk.
+//    static const int ChunksPerWidth = 10; // Number of tiles per chunk.
     static const int ChunkGridWidth = 30; // Columns/Rows of chunks displayed.
-    static const int CellSize = ChunksPerWidth * ChunkGridWidth; // Columns/Rows of tiles displayed.
-    static const int MaxLevels = 16;
+//    static const int CellSize = ChunksPerWidth * ChunkGridWidth; // Columns/Rows of tiles displayed.
+//    static const int MaxLevels = 16;
 
     IsoCell *cell;
+    const IsoConstants isoConstants;
 
     int WorldCellX;
     int WorldCellY;
@@ -148,11 +199,6 @@ public:
     int WorldY;
 
     QVector<QVector<IsoChunk*> > Chunks;
-
-    int XMinTiles;
-    int XMaxTiles;
-    int YMinTiles;
-    int YMaxTiles;
 };
 
 class RoomRect
@@ -240,6 +286,10 @@ public:
 class LotHeader
 {
 public:
+    static const int VERSION0 = 0;
+    static const int VERSION1 = 1;
+    static const int VERSION_LATEST = VERSION1;
+
     IsoRoom *getRoom(int roomID);
     int getRoomAt(int x, int y, int z);
 
@@ -250,13 +300,18 @@ public:
 
     int width;
     int height;
-    int levels;
+    int minLevel;
+    int maxLevel;
     int version;
 };
 
 class IsoLot
 {
 public:
+    static const int VERSION0 = 0;
+    static const int VERSION1 = 1;
+    static const int VERSION_LATEST = VERSION1;
+
     IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch);
 
     static unsigned char readByte(QDataStream &in);
@@ -274,7 +329,7 @@ public:
 class IsoCell
 {
 public:
-    IsoCell(IsoWorld *world, /*IsoSpriteManager &spr, */int width, int height);
+    IsoCell(IsoWorld *world);
     ~IsoCell();
 
     void PlaceLot(IsoLot *lot, int sx, int sy, int sz, bool bClearExisting);
@@ -285,9 +340,9 @@ public:
     void setCacheGridSquareLocal(int x, int y, int z, IsoGridSquare *square);
     IsoGridSquare *getGridSquare(int x, int y, int z);
 
-    static int MaxHeight;
-    int width;
-    int height;
+    const IsoConstants isoConstants;
+    int minLevel;
+    int maxLevel;
     IsoChunkMap *ChunkMap;
     IsoWorld *World;
 
@@ -305,8 +360,16 @@ public:
     QBuffer *openLotPackFile(const QString &name);
     void reset();
 
+    IsoConstants isoConstants;
     QList<QBuffer*> OpenLotPackFiles;
     QMap<QString,QBuffer*> BufferByName;
+
+private:
+    CellLoader() :
+        isoConstants(false)
+    {
+
+    }
 
     static CellLoader *mInstance;
 };
@@ -314,18 +377,23 @@ public:
 class IsoMetaGrid
 {
 public:
-    IsoMetaGrid();
+    IsoMetaGrid(const IsoConstants &isoConstants);
 
     void Create(const QString &directory);
 
     QRect cellBounds() const
-    { return QRect(minx, miny, maxx - minx + 1, maxy - miny + 1); }
+    {
+        return QRect(minx, miny, maxx - minx + 1, maxy - miny + 1);
+    }
 
     QRect chunkBounds() const
-    { return QRect(minx * IsoChunkMap::ChunkGridWidth, miny * IsoChunkMap::ChunkGridWidth,
-                   (maxx - minx + 1) * IsoChunkMap::ChunkGridWidth,
-                   (maxy - miny + 1) * IsoChunkMap::ChunkGridWidth); }
+    {
+        return QRect(minx * isoConstants.CHUNKS_PER_CELL, miny * isoConstants.CHUNKS_PER_CELL,
+                   (maxx - minx + 1) * isoConstants.CHUNKS_PER_CELL,
+                   (maxy - miny + 1) * isoConstants.CHUNKS_PER_CELL);
+    }
 
+    const IsoConstants isoConstants;
     int minx;
     int miny;
     int maxx;
@@ -335,21 +403,22 @@ public:
 class IsoWorld
 {
 public:
-    IsoWorld(const QString &path);
+    IsoWorld(const QString &path, const IsoConstants &isoConstants);
     ~IsoWorld();
 
     void init();
 
-    int getWidthInTiles() const { return (MetaGrid->maxx - MetaGrid->minx + 1) * CurrentCell->width; }
-    int getHeightInTiles() const { return (MetaGrid->maxy - MetaGrid->miny + 1) * CurrentCell->height; }
+    int getWidthInTiles() const { return (MetaGrid->maxx - MetaGrid->minx + 1) * isoConstants.SQUARES_PER_CELL; }
+    int getHeightInTiles() const { return (MetaGrid->maxy - MetaGrid->miny + 1) * isoConstants.SQUARES_PER_CELL; }
 
     QRect tileBounds() const
     {
-        return QRect(MetaGrid->minx * IsoChunkMap::ChunksPerWidth * IsoChunkMap::ChunkGridWidth,
-                     MetaGrid->miny * IsoChunkMap::ChunksPerWidth * IsoChunkMap::ChunkGridWidth,
+        return QRect(MetaGrid->minx * isoConstants.SQUARES_PER_CELL,
+                     MetaGrid->miny * isoConstants.SQUARES_PER_CELL,
                      getWidthInTiles(), getHeightInTiles());
     }
 
+    IsoConstants isoConstants;
     IsoMetaGrid *MetaGrid;
     IsoCell *CurrentCell;
     QString Directory;

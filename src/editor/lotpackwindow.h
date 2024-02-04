@@ -194,7 +194,7 @@ public:
 private slots:
     void open();
     void openRecent();
-    void open(const QString &directory);
+    void open(const QString &directory, bool b256);
     void closeWorld();
     void zoomIn();
     void zoomOut();

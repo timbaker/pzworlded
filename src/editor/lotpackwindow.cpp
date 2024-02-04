@@ -22,6 +22,7 @@
 #include "preferences.h"
 #include "progress.h"
 #include "tilemetainfomgr.h"
+#include "worldconstants.h"
 #include "zoomable.h"
 
 #include "BuildingEditor/buildingtiles.h"
@@ -65,19 +66,37 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
 {
     cells.resize(0);
     opacities.resize(0);
+#if 1
+    static QVector<Tiled::Cell> staticCells; // NOTE: results of the previous call are invalidated by the next call!!!
+    staticCells.clear();
+    staticCells.reserve(20); // so QVector reallocations don't change addresses of Cells.
+    if (IsoGridSquare *sq = mWorld->CurrentCell->getGridSquare(point.x(), point.y(), level())) {
+        for (const QString &tileName : sq->tiles) {
+            if (!mScene->mTileByName.contains(tileName))
+                continue;
+            if (Tile *tile = mScene->mTileByName[tileName]) {
+                staticCells += Cell(tile);
+                const Cell *cell = &staticCells.last();
+                cells += cell;
+                opacities += 1.0;
+            }
+        }
+    }
+#else
     int x = point.x() - mWorld->CurrentCell->ChunkMap->getWorldXMinTiles();
     int y = point.y() - mWorld->CurrentCell->ChunkMap->getWorldYMinTiles();
     if (IsoGridSquare *sq = mWorld->CurrentCell->getGridSquare(point.x(), point.y(), level())) {
         foreach (QString tileName, sq->tiles) {
             if (!mScene->mTileByName.contains(tileName)) continue;
             if (Tile *tile = mScene->mTileByName[tileName]) {
-                mGrids[cells.size()]->replace(x, y, Cell(tile));
+                mGrids[cells.size()]->replace(x, y, Cell(tile)); // FIXME: could this affect the address of previously-stored Cells?
                 const Cell *cell = &mGrids[cells.size()]->at(x, y);
                 cells += cell;
                 opacities += 1.0;
             }
         }
     }
+#endif
     return !cells.isEmpty();
 }
 
@@ -204,15 +223,16 @@ void IsoWorldGridItem::paint(QPainter *painter,
     int startY = mScene->world()->MetaGrid->miny;
     int endY = mScene->world()->MetaGrid->maxy + 1;
 
+    const IsoConstants &isoConstants = mScene->world()->isoConstants;
 
     for (int y = startY; y <= endY; ++y) {
-        const QPointF start = mScene->renderer()->tileToPixelCoords(startX * IsoChunkMap::CellSize, y * IsoChunkMap::CellSize, 0);
-        const QPointF end = mScene->renderer()->tileToPixelCoords(endX * IsoChunkMap::CellSize, y * IsoChunkMap::CellSize, 0);
+        const QPointF start = mScene->renderer()->tileToPixelCoords(startX * isoConstants.SQUARES_PER_CELL, y * isoConstants.SQUARES_PER_CELL, 0);
+        const QPointF end = mScene->renderer()->tileToPixelCoords(endX * isoConstants.SQUARES_PER_CELL, y * isoConstants.SQUARES_PER_CELL, 0);
         painter->drawLine(start, end);
     }
     for (int x = startX; x <= endX; ++x) {
-        const QPointF start = mScene->renderer()->tileToPixelCoords(x * IsoChunkMap::CellSize, startY * IsoChunkMap::CellSize, 0);
-        const QPointF end = mScene->renderer()->tileToPixelCoords(x * IsoChunkMap::CellSize, endY * IsoChunkMap::CellSize, 0);
+        const QPointF start = mScene->renderer()->tileToPixelCoords(x * isoConstants.SQUARES_PER_CELL, startY * isoConstants.SQUARES_PER_CELL, 0);
+        const QPointF end = mScene->renderer()->tileToPixelCoords(x * isoConstants.SQUARES_PER_CELL, endY * isoConstants.SQUARES_PER_CELL, 0);
         painter->drawLine(start, end);
     }
 #else
@@ -308,7 +328,7 @@ void LotPackScene::setWorld(IsoWorld *world)
 
     mRenderer = new ZLevelRenderer(mMap);
 
-    for (int z = 0; z < IsoChunkMap::MaxLevels/*mWorld->CurrentCell->MaxHeight*/; z++) {
+    for (int z = MIN_WORLD_LEVEL; z <= MAX_WORLD_LEVEL; z++) {
         LotPackLayerGroup *lg = new LotPackLayerGroup(mWorld, mMap, z);
         lg->mScene = this;
         LotPackLayerGroupItem *item = new LotPackLayerGroupItem(lg, mRenderer);
@@ -318,7 +338,7 @@ void LotPackScene::setWorld(IsoWorld *world)
         mLayerGroupItems += item;
 
         QGraphicsRectItem *item2 = new QGraphicsRectItem();
-        item2->setZValue(IsoChunkMap::MaxLevels + z);
+        item2->setZValue(MAX_WORLD_LEVEL + z);
         mRoomDefGroups += item2;
     }
 
@@ -338,9 +358,9 @@ void LotPackScene::setWorld(IsoWorld *world)
                     p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y, rdef->level);
                     p += mRenderer->tileToPixelCoords(rr->x + rr->w, rr->y + rr->h, rdef->level);
                     p += mRenderer->tileToPixelCoords(rr->x, rr->y + rr->h, rdef->level);
-                    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(mRoomDefGroups[rdef->level]);
+                    QGraphicsPolygonItem *item = new QGraphicsPolygonItem(mRoomDefGroups[rdef->level + WORLD_GROUND_LEVEL]);
                     item->setPolygon(p);
-                    QColor color = roomDefColors[rdef->level % roomDefColors.size()];
+                    QColor color = roomDefColors[(rdef->level + WORLD_GROUND_LEVEL) % roomDefColors.size()];
                     if (rdef->name.isEmpty()
                             || rdef->name.contains(QLatin1String("newroom"))
                              || rdef->name.startsWith(QLatin1String("room")))
@@ -361,7 +381,7 @@ void LotPackScene::setWorld(IsoWorld *world)
     addItem(mDarkRectangle);
 
     IsoWorldGridItem *gridItem = new IsoWorldGridItem(this);
-    gridItem->setZValue(IsoChunkMap::MaxLevels * 2);
+    gridItem->setZValue(MAX_WORLD_LEVEL * 2);
     addItem(gridItem);
 
     mCurrentLevel = 0;
@@ -384,7 +404,7 @@ void LotPackScene::showRoomDefs(bool show)
 
 void LotPackScene::highlightCurrentLevel()
 {
-    int max = mWorld->CurrentCell->MaxHeight;
+    int max = mWorld->CurrentCell->maxLevel;
     bool hi = Preferences::instance()->highlightCurrentLevel();
     if (hi)
         max = qMin(max, mCurrentLevel);
@@ -392,16 +412,16 @@ void LotPackScene::highlightCurrentLevel()
     foreach (LotPackLayerGroupItem *item, mLayerGroupItems) {
         if (hi && item->level() == mCurrentLevel)
             mDarkRectangle->setZValue(item->zValue() - 0.1);
-        item->setVisible(item->level() <= max);
+        item->setVisible(item->level() >= 0 && item->level() <= max);
     }
     for (int z = 0; z < mRoomDefGroups.size(); z++)
         mRoomDefGroups[z]->setVisible(mShowRoomDefs &&
-                                      (!hi || (z == mCurrentLevel)));
+                                      (!hi || (z - WORLD_GROUND_LEVEL == mCurrentLevel)));
 }
 
 void LotPackScene::levelAbove()
 {
-    if (mCurrentLevel < mWorld->CurrentCell->MaxHeight) {
+    if (mCurrentLevel < mWorld->CurrentCell->maxLevel) {
         ++mCurrentLevel;
         highlightCurrentLevel();
     }
@@ -409,7 +429,7 @@ void LotPackScene::levelAbove()
 
 void LotPackScene::levelBelow()
 {
-    if (mCurrentLevel > 0) {
+    if (mCurrentLevel > mWorld->CurrentCell->minLevel) {
         --mCurrentLevel;
         highlightCurrentLevel();
     }
@@ -418,7 +438,7 @@ void LotPackScene::levelBelow()
 /////
 
 LotPackView::LotPackView(QWidget *parent) :
-    BaseGraphicsView(PreferenceGL, parent),
+    BaseGraphicsView(NeverGL, parent), // FIXME: corruption with hardware acceleration
     mScene(new LotPackScene(this)),
     mWorld(0),
     mMiniMapItem(0),
@@ -494,11 +514,11 @@ void LotPackView::recenter()
 {
     mRecenterScheduled = false;
     if (!mWorld) return;
-
+    const IsoConstants& isoConstants = mWorld->isoConstants;
     QPointF p = mapToScene(viewport()->rect().center());
     QPoint tilePos = mScene->renderer()->pixelToTileCoordsInt(p);
-    int wx = qFloor(qreal(tilePos.x()) / IsoChunkMap::ChunksPerWidth);
-    int wy = qFloor(qreal(tilePos.y()) / IsoChunkMap::ChunksPerWidth);
+    int wx = qFloor(qreal(tilePos.x()) / isoConstants.SQUARES_PER_CHUNK);
+    int wy = qFloor(qreal(tilePos.y()) / isoConstants.SQUARES_PER_CHUNK);
     IsoChunkMap *cm = mWorld->CurrentCell->ChunkMap;
     wx = qBound(mWorld->MetaGrid->chunkBounds().left() + cm->ChunkGridWidth / 2, wx,
                 mWorld->MetaGrid->chunkBounds().right() + 1 - cm->ChunkGridWidth / 2);
@@ -517,7 +537,7 @@ void LotPackView::recenter()
                 for (int y = r.top(); y <= r.bottom(); y++) {
                     if (IsoChunk *c = cm->getChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin())) {
                         c->Save(false);
-                        cm->setChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin(), 0);
+                        cm->setChunk(x - cm->getWorldXMin(), y - cm->getWorldYMin(), nullptr);
                         delete c;
                     }
                 }
@@ -541,7 +561,6 @@ void LotPackView::recenter()
 
         cm->WorldX = wx;
         cm->WorldY = wy;
-        cm->XMinTiles = cm->YMinTiles = -1;
 
         foreach (IsoChunk *c, preserved) {
             cm->setChunk(c->wx - cm->getWorldXMin(), c->wy - cm->getWorldYMin(), c);
@@ -560,9 +579,13 @@ void LotPackView::recenter()
 
         cm->UpdateCellCache();
 
+        int minLevel = std::numeric_limits<int>::max();
+        int maxLevel = std::numeric_limits<int>::min();
         for (int x = 0; x < cm->Chunks.size(); x++) {
             for (int y = 0; y < cm->Chunks[x].size(); y++) {
                 if (IsoChunk *chunk = cm->Chunks[x][y]) {
+                    minLevel = std::min(chunk->getMinLevel(), minLevel);
+                    maxLevel = std::max(chunk->getMaxLevel(), maxLevel);
                     if (chunk->lotheader && !mScene->mHeadersExamined.contains(chunk->lotheader)) {
                         mScene->mHeadersExamined += chunk->lotheader;
                         foreach (QString tileName, chunk->lotheader->tilesUsed) {
@@ -576,8 +599,14 @@ void LotPackView::recenter()
                 }
             }
         }
-
-        mScene->setMaxLevel(mWorld->CurrentCell->MaxHeight);
+        if (minLevel > maxLevel) {
+            minLevel = maxLevel = 0;
+        }
+        mWorld->CurrentCell->minLevel = minLevel;
+        mWorld->CurrentCell->maxLevel = maxLevel;
+        mScene->renderer()->setMinLevel(minLevel);
+        mScene->renderer()->setMaxLevel(maxLevel);
+        mScene->setMaxLevel(mWorld->CurrentCell->maxLevel);
     }
 }
 
@@ -709,17 +738,17 @@ void LotPackWindow::open()
 #else
     IsoWorld *world = new IsoWorld(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/Project Zomboid Latest/media/maps/Muldraugh, KY"));
 #endif
-    open(f);
+    open(f, true);
 }
 
 void LotPackWindow::openRecent()
 {
     QAction *sender = dynamic_cast<QAction*>(this->sender());
     if (sender)
-        open(sender->data().toString());
+        open(sender->data().toString(), true);
 }
 
-void LotPackWindow::open(const QString &directory)
+void LotPackWindow::open(const QString &directory, bool b256)
 {
     PROGRESS progress(tr("Loading %1").arg(QFileInfo(directory).fileName()), this);
 
@@ -728,7 +757,7 @@ void LotPackWindow::open(const QString &directory)
 
     CellLoader::instance()->reset();
 
-    IsoWorld *world = new IsoWorld(directory);
+    IsoWorld *world = new IsoWorld(directory, IsoConstants(b256));
     world->init();
     mView->setWorld(world);
     if (mWorld)
@@ -780,8 +809,9 @@ void LotPackWindow::updateZoom()
 void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
 {
     if (mWorld->tileBounds().contains(tilePos)) {
-        int x = qFloor(tilePos.x() / qreal(IsoChunkMap::CellSize));
-        int y = qFloor(tilePos.y() / qreal(IsoChunkMap::CellSize));
+        const IsoConstants &isoConstants = mWorld->isoConstants;
+        int x = qFloor(tilePos.x() / qreal(isoConstants.SQUARES_PER_CELL));
+        int y = qFloor(tilePos.y() / qreal(isoConstants.SQUARES_PER_CELL));
         ui->coords->setText(tr("Cell %1,%2 World %3,%4").arg(x).arg(y).arg(tilePos.x()).arg(tilePos.y()));
     } else
         ui->coords->setText(QString());
