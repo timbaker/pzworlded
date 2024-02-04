@@ -114,7 +114,7 @@ LotPackLayerGroupItem::LotPackLayerGroupItem(LotPackLayerGroup *lg, MapRenderer 
     mRenderer(renderer)
 {
     setFlag(ItemUsesExtendedStyleOption);
-    mBoundingRect = mRenderer->boundingRect(lg->bounds());
+    mBoundingRect = mRenderer->boundingRect(lg->bounds(), 0/*lg->level()*/);
 }
 
 QRectF LotPackLayerGroupItem::boundingRect() const
@@ -327,6 +327,10 @@ void LotPackScene::setWorld(IsoWorld *world)
                    64, 32);
 
     mRenderer = new ZLevelRenderer(mMap);
+
+    mRenderer->setMinLevel(mWorld->CurrentCell->minLevel);
+    mRenderer->setMaxLevel(mWorld->CurrentCell->maxLevel);
+//    setMaxLevel(mWorld->CurrentCell->maxLevel);
 
     for (int z = MIN_WORLD_LEVEL; z <= MAX_WORLD_LEVEL; z++) {
         LotPackLayerGroup *lg = new LotPackLayerGroup(mWorld, mMap, z);
@@ -579,13 +583,9 @@ void LotPackView::recenter()
 
         cm->UpdateCellCache();
 
-        int minLevel = std::numeric_limits<int>::max();
-        int maxLevel = std::numeric_limits<int>::min();
         for (int x = 0; x < cm->Chunks.size(); x++) {
             for (int y = 0; y < cm->Chunks[x].size(); y++) {
                 if (IsoChunk *chunk = cm->Chunks[x][y]) {
-                    minLevel = std::min(chunk->getMinLevel(), minLevel);
-                    maxLevel = std::max(chunk->getMaxLevel(), maxLevel);
                     if (chunk->lotheader && !mScene->mHeadersExamined.contains(chunk->lotheader)) {
                         mScene->mHeadersExamined += chunk->lotheader;
                         foreach (QString tileName, chunk->lotheader->tilesUsed) {
@@ -599,14 +599,8 @@ void LotPackView::recenter()
                 }
             }
         }
-        if (minLevel > maxLevel) {
-            minLevel = maxLevel = 0;
-        }
-        mWorld->CurrentCell->minLevel = minLevel;
-        mWorld->CurrentCell->maxLevel = maxLevel;
-        mScene->renderer()->setMinLevel(minLevel);
-        mScene->renderer()->setMaxLevel(maxLevel);
-        mScene->setMaxLevel(mWorld->CurrentCell->maxLevel);
+
+        mScene->update(mScene->sceneRect()); // Not needed when using OpenGL rendering
     }
 }
 
@@ -754,6 +748,7 @@ void LotPackWindow::open(const QString &directory, bool b256)
 
     qDeleteAll(IsoLot::InfoHeaders);
     IsoLot::InfoHeaders.clear();
+    IsoLot::CellCoordToLotHeader.clear();
 
     CellLoader::instance()->reset();
 
@@ -772,6 +767,7 @@ void LotPackWindow::closeWorld()
 {
     qDeleteAll(IsoLot::InfoHeaders);
     IsoLot::InfoHeaders.clear();
+    IsoLot::CellCoordToLotHeader.clear();
 
     CellLoader::instance()->reset();
 

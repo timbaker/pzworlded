@@ -444,6 +444,7 @@ int LotHeader::getRoomAt(int x, int y, int z)
 /////
 
 QMap<QString,LotHeader*> IsoLot::InfoHeaders;
+QMap<IsoLot::CellCoord,LotHeader*> IsoLot::CellCoordToLotHeader;
 
 IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
 {
@@ -1054,6 +1055,7 @@ void IsoMetaGrid::Create(const QString &directory)
                 }
             }
             IsoLot::InfoHeaders[filenameheader] = info;
+            IsoLot::CellCoordToLotHeader[IsoLot::CellCoord(wX, wY)] = info;
         }
     }
 }
@@ -1082,5 +1084,19 @@ void IsoWorld::init()
     CurrentCell = CellLoader::LoadCellBinaryChunk(this,
                                                   MetaGrid->cellBounds().center().x() * isoConstants.CHUNKS_PER_CELL,
                                                   MetaGrid->cellBounds().center().y() * isoConstants.CHUNKS_PER_CELL);
+    int minLevel = std::numeric_limits<int>::max();
+    int maxLevel = std::numeric_limits<int>::min();
+    for (int y = MetaGrid->miny; y <= MetaGrid->maxy; y++) {
+        for (int x = MetaGrid->minx; x <= MetaGrid->maxx; x++) {
+            auto it = IsoLot::CellCoordToLotHeader.find(IsoLot::CellCoord(x, y));
+            if (it == IsoLot::CellCoordToLotHeader.end()) {
+                continue;
+            }
+            minLevel = std::min(minLevel, it.value()->minLevel);
+            maxLevel = std::max(maxLevel, it.value()->maxLevel);
+        }
+    }
+    CurrentCell->minLevel = minLevel;
+    CurrentCell->maxLevel = maxLevel;
 }
 

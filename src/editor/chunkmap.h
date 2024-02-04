@@ -319,6 +319,31 @@ public:
     static QString readString(QDataStream &in);
 
     static QMap<QString,LotHeader*> InfoHeaders;
+    class CellCoord
+    {
+    public:
+        CellCoord(int x, int y) :
+            x(x),
+            y(y)
+        {
+
+        }
+
+        int key() const
+        {
+            return x | (y << 16);
+        }
+
+        bool operator<(const CellCoord &rhs) const
+        {
+            return key() < rhs.key();
+        }
+
+        int x;
+        int y;
+    };
+
+    static QMap<CellCoord,LotHeader*> CellCoordToLotHeader;
     QVector<QVector<QVector<int> > > roomIDs;
     QVector<QVector<QVector<QList<int> > > > data;
     LotHeader *info;

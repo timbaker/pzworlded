@@ -113,6 +113,7 @@ void InGameMapImageDialog::createImage()
 
     qDeleteAll(IsoLot::InfoHeaders);
     IsoLot::InfoHeaders.clear();
+    IsoLot::CellCoordToLotHeader.clear();
 
     bool b256 = ui->radioButton256->isChecked();
     IsoMetaGrid metaGrid((IsoConstants(b256)));
@@ -129,6 +130,7 @@ void InGameMapImageDialog::createImage()
             if (mStop) {
                 qDeleteAll(IsoLot::InfoHeaders);
                 IsoLot::InfoHeaders.clear();
+                IsoLot::CellCoordToLotHeader.clear();
                 mStop = false;
                 return;
             }

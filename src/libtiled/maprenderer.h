@@ -56,6 +56,7 @@ public:
     MapRenderer(const Map *map)
         : mAbortDrawing(0)
         , mMap(map)
+        , mMinLevel(0)
         , mMaxLevel(0)
         , m2x(false)
     {}
