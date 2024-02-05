@@ -426,3 +426,121 @@ objectgroup
     defaulttype = RoomTone
 }
 
+
+
+enum
+{
+    name = AnimalAction
+    values = [
+        Eat
+        Sleep
+        Follow
+    ]
+    multi = false
+}
+
+enum
+{
+    name = Animal
+    values = [
+        small
+        medium
+        large
+        predator
+        deer
+        rabbit
+    ]
+    multi = false
+}
+
+property
+{
+    name = Action
+    default =
+    enum = AnimalAction
+}
+
+property
+{
+    name = AnimalType
+    default =
+    enum = Animal
+}
+
+property
+{
+    name = SpawnAnimals
+    default = true
+}
+
+property
+{
+    name = Access
+    default = 
+    description = Name of basement access file.
+}
+
+objecttype
+{
+    name = Animal
+}
+
+objectgroup
+{
+    name = Animal
+    defaulttype = Animal
+}
+
+
+
+property
+{
+    name = StairDirection
+    default = N
+    enum = Direction
+}
+
+property
+{
+    name = StairX
+    default = 0
+}
+
+property
+{
+    name = StairY
+    default = 0
+}
+
+template
+{
+    name = Basement
+    property
+    {
+        name = StairDirection
+        value = N
+    }
+    property
+    {
+        name = StairX
+        value = 0
+    }
+    property
+    {
+        name = StairY
+        value = 0
+    }
+}
+
+objecttype
+{
+    name = Basement
+}
+
+objectgroup
+{
+    name = Basement
+    defaulttype = Basement
+}
+
+

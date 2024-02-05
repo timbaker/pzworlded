@@ -80,21 +80,19 @@ void DefaultsFile::oldWorld(World *world)
     }
 
     for (PropertyDef* propDef : file.mPropertyDefs) {
+        if (propDef->mEnum != nullptr) {
+            propDef->mEnum = world->propertyEnums().find(propDef->mEnum->name());
+        }
+    }
+
+    for (PropertyDef* propDef : file.mPropertyDefs) {
         PropertyDef* oldDef = world->propertyDefinition(propDef->mName);
         if (oldDef == nullptr) {
             world->addPropertyDefinition(world->propertyDefinitions().size(), propDef);
         } else {
             oldDef->mDefaultValue = propDef->mDefaultValue;
             oldDef->mDescription = propDef->mDescription;
-            if (oldDef->mEnum && propDef->mEnum) {
-                if (oldDef->mEnum->name() != propDef->mEnum->name()) {
-                    oldDef->mEnum = world->propertyEnums().find(propDef->mEnum->name());
-                }
-            } else if (propDef->mEnum) { // oldDef==nullptr
-                oldDef->mEnum = world->propertyEnums().find(propDef->mEnum->name());
-            } else {
-                oldDef->mEnum = nullptr;
-            }
+            oldDef->mEnum = propDef->mEnum;
         }
     }
 
