@@ -732,17 +732,17 @@ void LotPackWindow::open()
 #else
     IsoWorld *world = new IsoWorld(QLatin1String("C:/Users/Tim/Desktop/ProjectZomboid/Project Zomboid Latest/media/maps/Muldraugh, KY"));
 #endif
-    open(f, true);
+    open(f);
 }
 
 void LotPackWindow::openRecent()
 {
     QAction *sender = dynamic_cast<QAction*>(this->sender());
     if (sender)
-        open(sender->data().toString(), true);
+        open(sender->data().toString());
 }
 
-void LotPackWindow::open(const QString &directory, bool b256)
+void LotPackWindow::open(const QString &directory)
 {
     PROGRESS progress(tr("Loading %1").arg(QFileInfo(directory).fileName()), this);
 
@@ -752,6 +752,12 @@ void LotPackWindow::open(const QString &directory, bool b256)
 
     CellLoader::instance()->reset();
 
+    int chunkWidth = -1, chunkHeight = -1;
+    bool ok = IsoLot::getMapDirectoryChunkSize(directory, chunkWidth, chunkHeight);
+    if (ok == false) {
+        return;
+    }
+    bool b256 = chunkWidth == 8 && chunkHeight == 8;
     IsoWorld *world = new IsoWorld(directory, IsoConstants(b256));
     world->init();
     mView->setWorld(world);

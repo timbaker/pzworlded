@@ -558,6 +558,59 @@ IsoLot::IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch)
     }
 }
 
+bool IsoLot::getMapDirectoryChunkSize(const QString& directory, int &chunkWidth, int &chunkHeight)
+{
+    QDir dir(directory);
+    if (dir.exists() == false) {
+        return false;
+    }
+    QStringList filters(QString::fromLatin1("*.lotheader"));
+    QFileInfoList files = dir.entryInfoList(filters);
+    if (files.isEmpty()) {
+        return false;
+    }
+    QFileInfo fileInfo = files.first();
+    QFile fo(fileInfo.absoluteFilePath());
+    if (!fo.open(QIODevice::OpenModeFlag::ReadOnly)) {
+        return false;
+    }
+
+    QBuffer buffer;
+    buffer.open(QBuffer::ReadWrite);
+    buffer.write(fo.readAll());
+    fo.close();
+    buffer.seek(0);
+
+    QDataStream in(&buffer);
+    in.setByteOrder(QDataStream::LittleEndian);
+
+    char magic[4] = { 0 };
+    in.readRawData(magic, 4);
+    if (magic[0] == 'L' && magic[1] == 'O' && magic[2] == 'T' && magic[3] == 'H') {
+
+    } else {
+        buffer.seek(0);
+    }
+
+    int version = IsoLot::readInt(in);
+    if (version < IsoLot::VERSION0 || version > IsoLot::VERSION_LATEST) {
+        return false;
+    }
+    int tilecount = IsoLot::readInt(in);
+
+    for (int n = 0; n < tilecount; ++n) {
+        QString tileName = IsoLot::readString(in);
+    }
+
+    if (version == LotHeader::VERSION0) {
+        quint8 alwaysZero = IsoLot::readByte(in);
+    }
+
+    chunkWidth = IsoLot::readInt(in);
+    chunkHeight = IsoLot::readInt(in);
+    return true;
+}
+
 unsigned char IsoLot::readByte(QDataStream &in)
 {
     quint8 b;

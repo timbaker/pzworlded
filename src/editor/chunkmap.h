@@ -314,6 +314,7 @@ public:
 
     IsoLot(QString directory, int cX, int cY, int wX, int wY, IsoChunk *ch);
 
+    static bool getMapDirectoryChunkSize(const QString& directory, int &chunkWidth, int &chunkHeight);
     static unsigned char readByte(QDataStream &in);
     static int readInt(QDataStream &in);
     static QString readString(QDataStream &in);
