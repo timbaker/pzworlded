@@ -21,6 +21,8 @@
 #include "lotfilesmanager.h"
 #include "threads.h"
 
+#include <QTimer>
+
 #define CELL_SIZE_256 256
 #define CHUNKS_PER_CELL_256 32
 #define CHUNK_SIZE_256 8
@@ -144,13 +146,15 @@ public:
 
     bool generateWorld(WorldDocument *worldDoc, GenerateMode mode);
     bool generateCell(WorldCell* cell);
-    bool generateCell(WorldCell *cell, int cell256X, int cell256Y);
+    bool generateCell(LotFilesWorker256 *worker, WorldCell *cell, int cell256X, int cell256Y);
 
     QString errorString() const { return mError; }
 
 signals:
 
 private slots:
+    void workTimerTimeout();
+    void workerThreadFinished(int i);
     void cancel();
 
 private:
@@ -173,11 +177,22 @@ private:
     QList<const JumboZone*> mJumboZoneList;
     QRect mCellBounds256;
     QSet<QPair<int, int>> mDoneCells256;
+    struct CellJob
+    {
+        WorldCell *cell;
+        int cell256X;
+        int cell256Y;
+    };
+
+    QList<CellJob> mCell256Queue;
+    bool mThreadsStopped = false;
     QVector<InterruptibleThread*> mWorkerThreads;
     QVector<LotFilesWorker256*> mWorkers;
     LotFile::Stats mStats;
     ExportLotsProgressDialog *mProgressDialog;
     QVector<GenerateCellFailure> mFailures;
+    ExportLotsProgressDialog *mDialog = nullptr;
+    QTimer mTimer;
     QString mError;
     bool mCancel = false;
 

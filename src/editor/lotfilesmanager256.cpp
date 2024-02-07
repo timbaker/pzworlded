@@ -103,7 +103,7 @@ LotFilesManager256::LotFilesManager256(QObject *parent) :
 
 LotFilesManager256::~LotFilesManager256()
 {
-    stopThreads();
+//    stopThreads();
 }
 
 void LotFilesManager256::startThreads(int numberOfThreads)
@@ -115,16 +115,14 @@ void LotFilesManager256::startThreads(int numberOfThreads)
     for (int i = 0; i < numberOfThreads; i++) {
         mWorkerThreads[i] = new InterruptibleThread;
         connect(mWorkerThreads[i], &QThread::finished, [this, i]() {
-            qDebug() << "LotFilesManager256: worker thread finished #" << i;
-            mWorkers[i]->deleteLater();
-            mWorkerThreads[i]->deleteLater();
-            mWorkers[i] = nullptr;
-            mWorkerThreads[i] = nullptr;
+            this->workerThreadFinished(i);
         });
         mWorkers[i] = new LotFilesWorker256(this, mWorkerThreads[i]);
         mWorkers[i]->moveToThread(mWorkerThreads[i]);
         mWorkerThreads[i]->start();
     }
+
+    mThreadsStopped = false;
 }
 
 void LotFilesManager256::stopThreads()
@@ -134,7 +132,7 @@ void LotFilesManager256::stopThreads()
         mWorkerThreads[i]->interrupt();
         mWorkerThreads[i]->quit();
     }
-#if 1
+#if 0
     while (true) {
         bool bAnyAlive = false;
         for (int i = 0; i < mWorkerThreads.size(); i++) {
@@ -150,16 +148,9 @@ void LotFilesManager256::stopThreads()
         qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
         QThread::msleep(1000 / 30);
     }
-#else
-    for (int i = 0; i < mWorkerThreads.size(); i++) {
-        qDebug() << "LotFilesManager256: waiting on thread #" << i;
-        mWorkerThreads[i]->wait();
-        delete mWorkers[i];
-        delete mWorkerThreads[i];
-    }
-#endif
     mWorkerThreads.clear();
     mWorkers.clear();
+#endif
 }
 
 bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mode)
@@ -169,7 +160,8 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
 
     mCellBounds256 = CombinedCellMaps::toCellRect256(QRect(lotSettings.worldOrigin, QSize(mWorldDoc->world()->size())));
 
-    ExportLotsProgressDialog progress(MainWindow::instance());
+    mDialog = new ExportLotsProgressDialog(MainWindow::instance());
+    ExportLotsProgressDialog& progress = *mDialog;
     progress.setModal(true);
     mProgressDialog = &progress;
     connect(mProgressDialog, &ExportLotsProgressDialog::cancelled, this, &LotFilesManager256::cancel);
@@ -186,22 +178,30 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
     if (!QFileInfo(spawnMap).exists()) {
         mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
+        delete mDialog;
+        mDialog = nullptr;
         return false;
     }
     ZombieSpawnMap = QImage(spawnMap);
     if (ZombieSpawnMap.isNull()) {
         mError = tr("Couldn't read the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
+        delete mDialog;
+        mDialog = nullptr;
         return false;
     }
 
     if (!Navigate::IsoGridSquare256::loadTileDefFiles(lotSettings, mError)) {
+        delete mDialog;
+        mDialog = nullptr;
         return false;
     }
 
     QString tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
     if (tilesDirectory.isEmpty() || !QFileInfo(tilesDirectory).exists()) {
         mError = tr("The Tiles Directory could not be found.  Please set it in the Tilesets Dialog in TileZed.");
+        delete mDialog;
+        mDialog = nullptr;
         return false;
     }
 #if 0
@@ -221,6 +221,7 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
 
     // A single 300x300 cell may overlap 4, 6, or 9 256x256 cells.
     mDoneCells256.clear();
+    mCell256Queue.clear();
 
     mFailures.clear();
 
@@ -284,6 +285,12 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
             }
         }
     }
+#if 1
+    // The application should continue normally with the modal dialog box visible until everything finishes.
+    mTimer.setInterval(1000 / 30);
+    connect(&mTimer, &QTimer::timeout, this, &LotFilesManager256::workTimerTimeout);
+    mTimer.start();
+#else
     while (true) {
         qDebug() << "LotFilesManager256: Waiting for workers to finish";
         updateWorkers();
@@ -317,7 +324,7 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
             .arg(mStats.numRoomObjects);
     QMessageBox::information(MainWindow::instance(),
                              tr("Generate Lot Files"), stats);
-
+#endif
     return true;
 }
 
@@ -341,6 +348,17 @@ bool LotFilesManager256::generateCell(WorldCell *cell)
     int cell300X = lotSettings.worldOrigin.x() + cell->x();
     int cell300Y = lotSettings.worldOrigin.y() + cell->y();
     QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(cell300X, cell300Y, 1, 1));
+#if 1
+    for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+        for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+            CellJob cellJob;
+            cellJob.cell = cell;
+            cellJob.cell256X = cell256X;
+            cellJob.cell256Y = cell256Y;
+            mCell256Queue += cellJob;
+        }
+    }
+#else
     for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
         if (mCancel) {
             break;
@@ -360,13 +378,34 @@ bool LotFilesManager256::generateCell(WorldCell *cell)
             }
         }
     }
+#endif
     return true;
 }
 
 void LotFilesManager256::updateWorkers()
 {
+    if (mCancel) {
+        mCell256Queue.clear();
+    }
     for (int i = 0; i < mWorkers.size(); i++) {
         LotFilesWorker256 *worker = mWorkers[i];
+        if (worker == nullptr) {
+            continue; // thread exited
+        }
+        if (worker->mStatus == LotFilesWorker256::Status::Idle) {
+            if (mCell256Queue.isEmpty()) {
+                // if all workers are idle, we are finished
+            } else {
+                CellJob cellJob = mCell256Queue.front();
+                mCell256Queue.pop_front();
+                QPair<int, int> doneCell(cellJob.cell256X, cellJob.cell256Y);
+                if (mDoneCells256.contains(doneCell)) {
+                    continue;
+                }
+                mDoneCells256.insert(doneCell);
+                generateCell(worker, cellJob.cell, cellJob.cell256X, cellJob.cell256Y);
+            }
+        }
         if (worker->mStatus == LotFilesWorker256::Status::LoadingMaps) {
             int loadStatus = worker->mCombinedCellMaps->checkLoading(mWorldDoc);
             if (loadStatus == -1) {
@@ -410,12 +449,69 @@ void LotFilesManager256::updateWorkers()
             mStats.combine(worker->mStats);
         }
     }
+
+    if (mCell256Queue.isEmpty() == false) {
+        return;
+    }
+
+    if (getBusyWorker() != nullptr) {
+        return;
+    }
+
+    if (mThreadsStopped == false) {
+        qDebug() << "LotFilesManager256: Stopping threads";
+        stopThreads();
+        mThreadsStopped = true;
+        return;
+    }
+
+    bool bThreadsRunning = false;
+    for (int i = 0; i < mWorkers.size(); i++) {
+        LotFilesWorker256 *worker = mWorkers[i];
+        if (worker != nullptr) {
+            bThreadsRunning = true;
+            break;
+        }
+    }
+    if (bThreadsRunning) {
+        return;
+    }
+
+    mWorkers.clear();
+    mWorkerThreads.clear();
+
+    mTimer.stop();
+    mTimer.disconnect(this);
+
+    qDebug() << "LotFilesManager256: Stopped threads";
+    qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
+    mDialog->setVisible(false);
+
+    if (!mFailures.isEmpty()) {
+        QStringList errorList;
+        for (GenerateCellFailure failure : mFailures) {
+            errorList += QString(QStringLiteral("Cell %1,%2: %3")).arg(failure.cell->x()).arg(failure.cell->y()).arg(failure.error);
+        }
+        GenerateLotsFailureDialog dialog(errorList, MainWindow::instance());
+        dialog.exec();
+    }
+
+    QString stats = tr("Finished!\n\nBuildings: %1\nRooms: %2\nRoom rects: %3\nRoom objects: %4")
+            .arg(mStats.numBuildings)
+            .arg(mStats.numRooms)
+            .arg(mStats.numRoomRects)
+            .arg(mStats.numRoomObjects);
+    QMessageBox::information(MainWindow::instance(),
+                             tr("Generate Lot Files"), stats);
 }
 
 LotFilesWorker256 *LotFilesManager256::getFirstWorkerWithStatus(LotFilesWorker256::Status status)
 {
     for (int i = 0; i < mWorkers.size(); i++) {
         LotFilesWorker256 *worker = mWorkers[i];
+        if (worker == nullptr) {
+            continue; // thread exited
+        }
         if (worker->mStatus == status) {
             return worker;
         }
@@ -430,11 +526,22 @@ LotFilesWorker256 *LotFilesManager256::getIdleWorker()
 
 LotFilesWorker256 *LotFilesManager256::getBusyWorker()
 {
-    return getFirstWorkerWithStatus(LotFilesWorker256::Status::Working);
+    for (int i = 0; i < mWorkers.size(); i++) {
+        LotFilesWorker256 *worker = mWorkers[i];
+        if (worker == nullptr) {
+            continue; // thread exited
+        }
+        if (worker->mStatus != LotFilesWorker256::Status::Idle) {
+            return worker;
+        }
+    }
+    return nullptr;
 }
 
-bool LotFilesManager256::generateCell(WorldCell *cell, int cell256X, int cell256Y)
+bool LotFilesManager256::generateCell(LotFilesWorker256 *worker, WorldCell *cell, int cell256X, int cell256Y)
 {
+#if 1
+#else
     // Busy-wait until a worker is available.
     LotFilesWorker256 *worker = nullptr;
     while ((worker = getIdleWorker()) == nullptr) {
@@ -446,9 +553,11 @@ bool LotFilesManager256::generateCell(WorldCell *cell, int cell256X, int cell256
         mError.clear();
         return false;
     }
+#endif
     mProgressDialog->setPrompt(tr("Loading maps (%1,%2)").arg(cell256X).arg(cell256Y));
     CombinedCellMaps *combinedMaps = new CombinedCellMaps();
     bool ok = combinedMaps->startLoading(mWorldDoc, cell256X, cell256Y);
+    qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
     if ((ok == false) || (combinedMaps->mError.isEmpty() == false)) {
         mError = combinedMaps->mError;
         delete combinedMaps;
@@ -458,6 +567,20 @@ bool LotFilesManager256::generateCell(WorldCell *cell, int cell256X, int cell256
     worker->mCell = cell;
     worker->mStatus = LotFilesWorker256::Status::LoadingMaps;
     return true;
+}
+
+void LotFilesManager256::workTimerTimeout()
+{
+    updateWorkers();
+}
+
+void LotFilesManager256::workerThreadFinished(int i)
+{
+    qDebug() << "LotFilesManager256: worker thread finished #" << i;
+    mWorkers[i]->deleteLater();
+    mWorkerThreads[i]->deleteLater();
+    mWorkers[i] = nullptr;
+    mWorkerThreads[i] = nullptr;
 }
 
 void LotFilesManager256::cancel()
