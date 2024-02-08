@@ -1021,13 +1021,8 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
         }
     }
 
-    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
-
-    int minCell300X = lotSettings.worldOrigin.x();
-    int minCell300Y = lotSettings.worldOrigin.y();
-    int x1 = cell256X * CELL_SIZE_256 - minCell300X * CELL_WIDTH;
-    int y1 = cell256Y * CELL_SIZE_256 - minCell300Y * CELL_WIDTH;
-
+    int x1 = cell256X * CELL_SIZE_256;
+    int y1 = cell256Y * CELL_SIZE_256;
     for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
         for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
             qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256);
@@ -1516,8 +1511,9 @@ void LotFilesWorker256::resolveProperties(PropertyHolder *ph, PropertyList &resu
 qint8 LotFilesWorker256::calculateZombieDensity(int x, int y)
 {
     // TODO: Get the total depth of 8x8 squares, then divide by 64.
-    int chunk300X = std::floor(x / float(CHUNK_WIDTH));
-    int chunk300Y = std::floor(y / float(CHUNK_HEIGHT));
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+    int chunk300X = std::floor(x / float(CHUNK_WIDTH)) - lotSettings.worldOrigin.x() * CHUNKS_PER_CELL;
+    int chunk300Y = std::floor(y / float(CHUNK_HEIGHT)) - lotSettings.worldOrigin.y() * CHUNKS_PER_CELL;
     const QImage& ZombieSpawnMap = mManager->ZombieSpawnMap;
     if (chunk300X < 0 || chunk300Y < 0 || chunk300X >= ZombieSpawnMap.size().width() || chunk300Y >= ZombieSpawnMap.size().height()) {
         return 0;
