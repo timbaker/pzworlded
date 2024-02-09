@@ -78,6 +78,8 @@ public:
     void generateBuildingObjects(int mapWidth, int mapHeight);
     void generateBuildingObjects(int mapWidth, int mapHeight, LotFile::Room *room, LotFile::RoomRect *rr);
     void generateJumboTrees(CombinedCellMaps &combinedMaps);
+    void generateChunkData();
+    void clearRemovedBuildingsList();
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
     int getRoomID(int x, int y, int z);
     uint cellToGid(const Tiled::Cell *cell);
@@ -113,6 +115,7 @@ private:
     LotFile::RectLookup<LotFile::Room> mRoomLookup;
     QList<LotFile::Room*> roomList;
     QList<LotFile::Building*> buildingList;
+    QList<LotFile::Building*> mRemovedBuildingList; // building whose north-west corner isn't in the 256x256 cell
     LotFile::Stats mStats;
     QString mError;
 

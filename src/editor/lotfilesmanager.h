@@ -220,6 +220,7 @@ public:
     int floor;
     QString name;
     Room *room;
+    WorldCell *mCell;
 };
 
 class Room
@@ -270,6 +271,7 @@ public:
     QList<RoomRect*> rects;
     QList<RoomObject> objects;
     QRect mBounds;
+    WorldCell *mCell;
 };
 
 class Building
@@ -294,15 +296,15 @@ template <typename T>
 class RectLookup
 {
 public:
-    RectLookup(int squaresPerChunk) :
+    RectLookup() :
         mMinSquareX(-1),
         mMinSquareY(-1),
-        mSquaresPerChunk(squaresPerChunk)
+        mSquaresPerChunk(0)
     {
 
     }
 
-    void clear(int minSquareX, int minSquareY, int widthInChunks, int heightInChunks)
+    void clear(int minSquareX, int minSquareY, int widthInChunks, int heightInChunks, int squaresPerChunk)
     {
         for (int i = 0; i < mGrid.size(); i++) {
             mGrid[i].clear();
@@ -311,6 +313,7 @@ public:
         mMinSquareY = minSquareY;
         mWidthInChunks = widthInChunks;
         mHeightInChunks = heightInChunks;
+        mSquaresPerChunk = squaresPerChunk;
         mGrid.resize(mWidthInChunks * mHeightInChunks);
         mBoundsInSquares = QRect(mMinSquareX, mMinSquareY, mWidthInChunks * mSquaresPerChunk, mHeightInChunks * mSquaresPerChunk);
     }

@@ -626,15 +626,8 @@ bool LotFilesWorker256::generateCell()
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
             lg->prepareDrawing2();
         }
-        const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
-        mRoomRectLookup.clear(combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH,
-                              combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT,
-                              CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256);
-        for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
-            mRoomRectLookup.add(rr, rr->bounds());
-        }
-        Navigate::ChunkDataFile256 cdf;
-        cdf.fromMap(combinedMaps, mapComposite, mRoomRectLookup, lotSettings);
+        generateChunkData();
+        clearRemovedBuildingsList();
         mStatus = Status::Finished;
         mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
         return true;
@@ -752,14 +745,9 @@ bool LotFilesWorker256::generateCell()
 
     file.close();
 
-    mRoomRectLookup.clear(combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH,
-                          combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT,
-                          CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256);
-    for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
-        mRoomRectLookup.add(rr, rr->bounds());
-    }
-    Navigate::ChunkDataFile256 cdf;
-    cdf.fromMap(combinedMaps, mapComposite, mRoomRectLookup, lotSettings);
+    generateChunkData();
+
+    clearRemovedBuildingsList();
 
     mStatus = Status::Finished;
     mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
@@ -770,8 +758,8 @@ LotFilesWorker256::LotFilesWorker256(LotFilesManager256 *manager, InterruptibleT
     BaseWorker(thread),
     mManager(manager),
     mWorldDoc(manager->mWorldDoc),
-    mRoomRectLookup(CHUNK_SIZE_256),
-    mRoomLookup(CHUNK_SIZE_256)
+    mRoomRectLookup(),
+    mRoomLookup()
 {
 
 }
@@ -818,18 +806,26 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
             return false;
     }
 
+    const GenerateLotsSettings &lotSettings = combinedMaps.mCells[0]->world()->getGenerateLotsSettings();
+
     for (WorldCell *cell : combinedMaps.mCells) {
-        if (processObjectGroups(combinedMaps, cell, mapComposite) == false) {
-            return false;
+        for (MapComposite *subMap : mapComposite->maps()) {
+            if (subMap->origin() != (cell->pos() + lotSettings.worldOrigin - QPoint(combinedMaps.mMinCell300X,combinedMaps.mMinCell300Y)) * 300)
+                continue;
+            if (processObjectGroups(combinedMaps, cell, subMap) == false) {
+                return false;
+            }
         }
     }
 
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
+    QPoint relativeToCell256(-(combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH),
+                            -(combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT));
     for (int level : mRoomRectByLevel.keys()) {
         QList<LotFile::RoomRect*> rrList = mRoomRectByLevel[level];
         // Use spatial partitioning to speed up the code below.
-        mRoomRectLookup.clear(0, 0, combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
+        mRoomRectLookup.clear(relativeToCell256.x(), relativeToCell256.y(), combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL, CHUNK_WIDTH);
         for (LotFile::RoomRect *rr : rrList) {
             mRoomRectLookup.add(rr, rr->bounds());
         }
@@ -837,6 +833,7 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
             if (rr->room == nullptr) {
                 rr->room = new LotFile::Room(rr->nameWithoutSuffix(), rr->floor);
                 rr->room->rects += rr;
+                rr->room->mCell = rr->mCell;
                 roomList += rr->room;
             }
             if (!rr->name.contains(QLatin1Char('#')))
@@ -845,6 +842,9 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
             mRoomRectLookup.overlapping(QRect(rr->bounds().adjusted(-1, -1, 1, 1)), rrList2);
             for (LotFile::RoomRect *comp : rrList2) {
                 if (comp == rr)
+                    continue;
+                // Don't merge rects across 300x300 cell boundaries, like the south wall in the Studio map.
+                if (rr->mCell != comp->mCell)
                     continue;
                 if (comp->room == rr->room)
                     continue;
@@ -869,7 +869,7 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
         }
     }
 
-    mRoomLookup.clear(0, 0, combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL);
+    mRoomLookup.clear(relativeToCell256.x(), relativeToCell256.y(), combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL, CHUNK_WIDTH);
     for (LotFile::Room *r : roomList) {
         r->mBounds = r->calculateBounds();
         mRoomLookup.add(r, r->bounds());
@@ -889,9 +889,11 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
         for (LotFile::Room *comp : roomList2) {
             if (comp == r)
                 continue;
+            // Don't merge rooms across 300x300 cell boundaries, like the south wall in the Studio map.
+            if (r->mCell != comp->mCell)
+                continue;
             if (r->building == comp->building)
                 continue;
-
             if (r->inSameBuilding(comp)) {
                 if (comp->building != nullptr) {
                     LotFile::Building *b = comp->building;
@@ -928,13 +930,14 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
             for (LotFile::RoomRect *roomRect : room->rects) {
                 mRoomRects.removeOne(roomRect);
                 mRoomRectByLevel[roomRect->floor].removeOne(roomRect);
-                delete roomRect;
+//                delete roomRect;
             }
             roomList.removeOne(room);
-            delete room;
+//            delete room;
         }
         buildingList.removeAt(i);
-        delete building;
+//        delete building;
+        mRemovedBuildingList += building;
     }
 
     for (int i = 0; i < roomList.size(); i++) {
@@ -1021,12 +1024,50 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
         }
     }
 
-    int x1 = cell256X * CELL_SIZE_256;
-    int y1 = cell256Y * CELL_SIZE_256;
+    // Set the zombie intensity on each square using the spawn image.
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+    const int MAX_300x300_CELLS = 3;
+    quint8 ZombieIntensity[MAX_300x300_CELLS * CELL_WIDTH][MAX_300x300_CELLS * CELL_HEIGHT];
+    const QImage& ZombieSpawnMap = mManager->ZombieSpawnMap;
+    QRect zombieSpawnMapBounds(lotSettings.worldOrigin.x() * CHUNKS_PER_CELL, lotSettings.worldOrigin.y() * CHUNKS_PER_CELL, ZombieSpawnMap.width(), ZombieSpawnMap.height());
+    QRect combinedMapBounds(mCombinedCellMaps->mMinCell300X * CHUNKS_PER_CELL, mCombinedCellMaps->mMinCell300Y * CHUNKS_PER_CELL, mCombinedCellMaps->mCellsWidth * CHUNKS_PER_CELL, mCombinedCellMaps->mCellsHeight * CHUNKS_PER_CELL);
+    QRect bounds = zombieSpawnMapBounds & combinedMapBounds;
+    for (int chunkY = bounds.top(); chunkY <= bounds.bottom(); chunkY++) {
+        for (int chunkX = bounds.left(); chunkX <= bounds.right(); chunkX++) {
+            QRgb pixel = ZombieSpawnMap.pixel(chunkX - zombieSpawnMapBounds.left(), chunkY - zombieSpawnMapBounds.top());
+            quint8 chunkIntensity = qRed(pixel);
+            for (int squareY = 0; squareY < CHUNK_HEIGHT; squareY++) {
+                for (int squareX = 0; squareX < CHUNK_WIDTH; squareX++) {
+                    int gx = (chunkX - combinedMapBounds.left()) * CHUNK_WIDTH + squareX;
+                    int gy = (chunkY - combinedMapBounds.top()) * CHUNK_HEIGHT + squareY;
+                    ZombieIntensity[gx][gy] = chunkIntensity;
+                }
+            }
+        }
+    }
+
+    zombieSpawnMapBounds = QRect(lotSettings.worldOrigin.x() * CELL_WIDTH, lotSettings.worldOrigin.y() * CELL_HEIGHT, ZombieSpawnMap.width() * CHUNK_WIDTH, ZombieSpawnMap.height() * CHUNK_HEIGHT);
+    combinedMapBounds = QRect(mCombinedCellMaps->mMinCell300X * CELL_WIDTH, mCombinedCellMaps->mMinCell300Y * CELL_HEIGHT, mCombinedCellMaps->mCellsWidth * CELL_WIDTH, mCombinedCellMaps->mCellsHeight * CELL_HEIGHT);
+    QRect combinedMapBounds256(cell256X * CELL_SIZE_256, cell256Y * CELL_SIZE_256, CELL_SIZE_256, CELL_SIZE_256);
+    QRect validSquares = zombieSpawnMapBounds & combinedMapBounds256;
+    QPoint p1 = combinedMapBounds256.topLeft();
     for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
         for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
+#if 1
+            QRect chunkRect(p1.x() + x * CHUNK_SIZE_256, p1.y() + y * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
+            chunkRect &= validSquares;
+            int chunkIntensity = 0;
+            for (int y3 = chunkRect.top(); y3 <= chunkRect.bottom(); y3++) {
+                for (int x3 = chunkRect.left(); x3 <= chunkRect.right(); x3++) {
+                    chunkIntensity += ZombieIntensity[x3 - combinedMapBounds.left()][y3 - combinedMapBounds.top()];
+                }
+            }
+            float alpha = chunkIntensity / float(CHUNK_SIZE_256 * CHUNK_SIZE_256 * 255);
+            out << qint8(alpha * 255);
+#else
             qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256);
             out << density;
+#endif
         }
     }
 
@@ -1358,6 +1399,40 @@ void LotFilesWorker256::generateJumboTrees(CombinedCellMaps& combinedMaps)
     }
 }
 
+void LotFilesWorker256::generateChunkData()
+{
+    mRoomRectLookup.clear(0, 0, CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256, CHUNK_SIZE_256);
+    for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
+        mRoomRectLookup.add(rr, rr->bounds());
+    }
+    for (LotFile::Building *building : mRemovedBuildingList) {
+        for (LotFile::Room *room : building->RoomList) {
+            for (LotFile::RoomRect *rr : room->rects) {
+                if (rr->floor == 0) {
+                    mRoomRectLookup.add(rr, rr->bounds());
+                }
+            }
+        }
+    }
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+    Navigate::ChunkDataFile256 cdf;
+    cdf.fromMap(*mCombinedCellMaps, mCombinedCellMaps->mMapComposite, mRoomRectLookup, lotSettings);
+}
+
+void LotFilesWorker256::clearRemovedBuildingsList()
+{
+    for (LotFile::Building *building : mRemovedBuildingList) {
+        for (LotFile::Room *room : building->RoomList) {
+            for (LotFile::RoomRect *rr : room->rects) {
+                delete rr;
+            }
+            delete room;
+        }
+        delete building;
+    }
+    mRemovedBuildingList.clear();
+}
+
 bool LotFilesWorker256::handleTileset(const Tiled::Tileset *tileset, uint &firstGid)
 {
     if (!tileset->fileName().isEmpty()) {
@@ -1491,6 +1566,7 @@ bool LotFilesWorker256::processObjectGroup(CombinedCellMaps &combinedMaps, World
             x += offset1.x();
             y += offset1.y();
             LotFile::RoomRect *rr = new LotFile::RoomRect(name, x, y, level, w, h);
+            rr->mCell = cell;
             mRoomRects += rr;
             mRoomRectByLevel[level] += rr;
         }
@@ -1519,7 +1595,8 @@ qint8 LotFilesWorker256::calculateZombieDensity(int x, int y)
         return 0;
     }
     QRgb pixel = ZombieSpawnMap.pixel(chunk300X, chunk300Y);
-    return quint8(qRed(pixel));
+    int intensity = qRed(pixel);
+    return quint8(intensity);
 }
 
 void LotFilesWorker256::addJob()

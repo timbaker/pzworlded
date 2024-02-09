@@ -68,8 +68,8 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
         for (int xx = 0; xx < CHUNKS_PER_CELL_256; xx++) {
             QRect chunkRect(cellMinX256 + xx * CHUNK_SIZE_256, cellMinY256 + yy * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
             QList<LotFile::RoomRect*> roomRects;
-            roomRectLookup.overlapping(chunkRect, roomRects);
-            IsoChunk256 *chunk = new IsoChunk256(chunkRect.x(), chunkRect.y(), mapComposite, roomRects);
+            roomRectLookup.overlapping(QRect(xx * CHUNK_SIZE_256, yy * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256), roomRects);
+            IsoChunk256 *chunk = new IsoChunk256(xx, yy, chunkRect.x(), chunkRect.y(), mapComposite, roomRects);
             int empty = 0, solid = 0, water = 0, room = 0;
             for (int y = 0; y < CHUNK_SIZE_256; y++) {
                 for (int x = 0; x < CHUNK_SIZE_256; x++) {

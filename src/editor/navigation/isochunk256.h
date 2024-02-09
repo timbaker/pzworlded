@@ -33,7 +33,7 @@ class IsoGridSquare256;
 class IsoChunk256
 {
 public:
-    IsoChunk256(int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects);
+    IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects);
     ~IsoChunk256();
 
     IsoGridSquare256 *getGridSquare(int x, int y, int z);

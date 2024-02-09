@@ -23,7 +23,7 @@
 
 using namespace Navigate;
 
-IsoChunk256::IsoChunk256(int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects) :
+IsoChunk256::IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects) :
     mMinSquareX(minSquareX),
     mMinSquareY(minSquareY),
     mMapComposite(mapComposite)
@@ -35,15 +35,12 @@ IsoChunk256::IsoChunk256(int minSquareX, int minSquareY, MapComposite *mapCompos
         }
     }
 
-    QRect bounds(worldXMin(), worldYMin(), CHUNK_SIZE_256, CHUNK_SIZE_256);
+    QRect bounds(xInCell * CHUNK_SIZE_256, yInCell * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
     for (LotFile::RoomRect *rect : roomRects) {
-        if (rect->bounds().intersects(bounds)) {
-            for (int y = rect->y; y < rect->y + rect->h; y++) {
-                for (int x = rect->x; x < rect->x + rect->w; x++) {
-                    if (containsWorldPos(x, y, 0)) {
-                        squares[x - worldXMin()][y - worldYMin()]->mRoom = true;
-                    }
-                }
+        QRect rect1 = rect->bounds() & bounds;
+        for (int y = rect1.top(); y <= rect1.bottom(); y++) {
+            for (int x = rect1.left(); x <= rect1.right(); x++) {
+                squares[x - bounds.x()][y - bounds.y()]->mRoom = true;
             }
         }
     }

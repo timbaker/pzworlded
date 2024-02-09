@@ -1242,7 +1242,7 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
 
     checkMinMaxLevels(levelOffset + subMap->minLevel(), levelOffset + subMap->maxLevel());
 
-    foreach (CompositeLayerGroup *layerGroup, mLayerGroups) {
+    for (CompositeLayerGroup *layerGroup : mLayerGroups) {
         layerGroup->setNeedsSynch(true);
     }
 
@@ -1548,22 +1548,26 @@ void MapComposite::checkMinMaxLevels(int minLevel, int maxLevel)
 {
     minLevel = qMin(minLevel, mMinLevel);
     maxLevel = qMax(maxLevel, mMaxLevel);
-    if (mMinLevel == minLevel && maxLevel == mMaxLevel)
+    if ((mMinLevel == minLevel) && (maxLevel == mMaxLevel))
         return;
 
-    for (int level = minLevel; level <= maxLevel; level++) {
-        if (!mLayerGroups.contains(level)) {
+    for (int level = mMinLevel - 1; level >= minLevel; level--) {
+        if (!mLayerGroups.contains(level)) { // always true
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
-
-            if (mMinLevel > level)
-                mMinLevel = level;
-            if (level > mMaxLevel)
-                mMaxLevel = level;
-
+            mMinLevel = level;
             mSortedLayerGroups.clear();
             for (int i = mMinLevel; i <= mMaxLevel; ++i)
                 mSortedLayerGroups.append(mLayerGroups[i]);
-
+            emit layerGroupAdded(level);
+        }
+    }
+    for (int level = mMaxLevel + 1; level <= maxLevel; level++) {
+        if (!mLayerGroups.contains(level)) { // always true
+            mLayerGroups[level] = new CompositeLayerGroup(this, level);
+            mMaxLevel = level;
+            mSortedLayerGroups.clear();
+            for (int i = mMinLevel; i <= mMaxLevel; ++i)
+                mSortedLayerGroups.append(mLayerGroups[i]);
             emit layerGroupAdded(level);
         }
     }
