@@ -52,12 +52,14 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
     int BIT_WALLW = 1 << 2;
     int BIT_WATER = 1 << 3;
     int BIT_ROOM = 1 << 4;
+    int BIT_NULL = 1 << 5;
 
     int EMPTY_CHUNK = 0;
     int SOLID_CHUNK = 1;
     int REGULAR_CHUNK = 2;
     int WATER_CHUNK = 3;
     int ROOM_CHUNK = 4;
+    int NULL_CHUNK = 5;
 
     quint8 *bitsArray = new quint8[CHUNK_SIZE_256 * CHUNK_SIZE_256];
 
@@ -70,7 +72,7 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
             QList<LotFile::RoomRect*> roomRects;
             roomRectLookup.overlapping(QRect(xx * CHUNK_SIZE_256, yy * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256), roomRects);
             IsoChunk256 *chunk = new IsoChunk256(xx, yy, chunkRect.x(), chunkRect.y(), mapComposite, roomRects);
-            int empty = 0, solid = 0, water = 0, room = 0;
+            int empty = 0, solid = 0, water = 0, room = 0, null = 0;
             for (int y = 0; y < CHUNK_SIZE_256; y++) {
                 for (int x = 0; x < CHUNK_SIZE_256; x++) {
                     IsoGridSquare256 *sq = chunk->getGridSquare(x, y, 0);
@@ -85,6 +87,8 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
                         bits |= BIT_WATER;
                     if (sq->isRoom())
                         bits |= BIT_ROOM;
+                    if (isPositionNull(mapComposite, chunkRect.x() + x, chunkRect.y() + y))
+                        bits |= BIT_NULL;
                     bitsArray[x + y * CHUNK_SIZE_256] = bits;
                     if (bits == 0)
                         empty++;
@@ -94,6 +98,9 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
                         water++;
                     else if (bits == BIT_ROOM)
                         room++;
+                    else if (bits == BIT_NULL)
+                        null++;
+
                 }
             }
             delete chunk;
@@ -105,6 +112,8 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
                 out << quint8(WATER_CHUNK);
             else if (room == CHUNK_SIZE_256 * CHUNK_SIZE_256)
                 out << quint8(ROOM_CHUNK);
+            else if (null == CHUNK_SIZE_256 * CHUNK_SIZE_256)
+                out << quint8(NULL_CHUNK);
             else {
                 out << quint8(REGULAR_CHUNK);
                 for (int i = 0; i < CHUNK_SIZE_256 * CHUNK_SIZE_256; i++) {
@@ -117,4 +126,19 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
     delete[] bitsArray;
 
     file.close();
+}
+
+bool ChunkDataFile256::isPositionNull(MapComposite *mapComposite, int squareX, int squareY)
+{
+    QVector<const Tiled::Cell*> cells;
+    for (int z = mapComposite->minLevel(); z <= mapComposite->maxLevel(); z++) {
+        CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(z);
+        layerGroup->prepareDrawing2();
+        cells.resize(0);
+        layerGroup->orderedCellsAt2(QPoint(squareX, squareY), cells);
+        if (cells.isEmpty() == false) {
+            return false;
+        }
+    }
+    return true;
 }

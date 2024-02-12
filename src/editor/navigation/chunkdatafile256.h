@@ -31,6 +31,7 @@ class ChunkDataFile256
 public:
     ChunkDataFile256();
     void fromMap(CombinedCellMaps& combinedMaps, MapComposite *mapComposite, const LotFile::RectLookup<LotFile::RoomRect> &roomRectLookup, const GenerateLotsSettings &settings);
+    bool isPositionNull(MapComposite *mapComposite, int squareX, int squareY);
 };
 
 } // namespace Naviate
