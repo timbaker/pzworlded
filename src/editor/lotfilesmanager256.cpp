@@ -809,7 +809,7 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
     const GenerateLotsSettings &lotSettings = combinedMaps.mCells[0]->world()->getGenerateLotsSettings();
 
     for (WorldCell *cell : combinedMaps.mCells) {
-        for (MapComposite *subMap : mapComposite->maps()) {
+        for (MapComposite *subMap : mapComposite->subMaps()) {
             if (subMap->origin() != (cell->pos() + lotSettings.worldOrigin - QPoint(combinedMaps.mMinCell300X,combinedMaps.mMinCell300Y)) * 300)
                 continue;
             if (processObjectGroups(combinedMaps, cell, subMap) == false) {
