@@ -19,6 +19,7 @@
 
 #include "world.h"
 #include "worldcell.h"
+#include "worldconstants.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -384,8 +385,10 @@ private:
                 atts.value(QLatin1String("x")).toString().toInt();
         const int y =
                 atts.value(QLatin1String("y")).toString().toInt();
-        const int level =
+        int level =
                 atts.value(QLatin1String("level")).toString().toInt();
+        if (level < MIN_WORLD_LEVEL) level = MIN_WORLD_LEVEL;
+        if (level > MAX_WORLD_LEVEL) level = MAX_WORLD_LEVEL;
         const QString mapName = atts.value(QLatin1String("map")).toString();
         const int width =
                 atts.value(QLatin1String("width")).toString().toInt();
@@ -436,8 +439,8 @@ private:
             }
 
             int level = atts.value(QLatin1String("level")).toString().toInt();
-            if (level < 0) level = 0;
-            if (level > 500) level = 500; // MAX_WORLD_LEVELS
+            if (level < MIN_WORLD_LEVEL) level = MIN_WORLD_LEVEL;
+            if (level > MAX_WORLD_LEVEL) level = MAX_WORLD_LEVEL;
 
             WorldCellObjectPoints points;
             {
@@ -505,8 +508,8 @@ private:
                     atts.value(QLatin1String("y")).toString().toDouble();
             int level =
                     atts.value(QLatin1String("level")).toString().toInt();
-            if (level < 0) level = 0;
-            if (level > 500) level = 500;
+            if (level < MIN_WORLD_LEVEL) level = MIN_WORLD_LEVEL;
+            if (level > MAX_WORLD_LEVEL) level = MAX_WORLD_LEVEL;
             const qreal width =
                     atts.value(QLatin1String("width")).toString().toDouble();
             const qreal height =

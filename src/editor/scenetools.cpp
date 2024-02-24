@@ -2357,10 +2357,11 @@ void AbstractCreatePolygonObjectTool::finishItem()
 void AbstractCreatePolygonObjectTool::updatePathItem()
 {
     QPainterPath path;
+    int level = mScene->document()->currentLevel();
 
     if (mGeometryType == ObjectGeometryType::Polygon) {
         if (mPolygon.size() > 2) {
-            path.addPolygon(mScene->renderer()->tileToPixelCoords(mPolygon));
+            path.addPolygon(mScene->renderer()->tileToPixelCoords(mPolygon, level));
         }
     }
 #if 0
@@ -2376,16 +2377,16 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
     }
 #endif
     if (!mPolygon.isEmpty()) {
-        QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0]);
+        QPointF p1 = mScene->renderer()->tileToPixelCoords(mPolygon[0], level);
         path.moveTo(p1);
         for (int i = 1; i < mPolygon.size(); i++) {
-            QPointF p2 = mScene->renderer()->tileToPixelCoords(mPolygon[i]);
+            QPointF p2 = mScene->renderer()->tileToPixelCoords(mPolygon[i], level);
             path.lineTo(p2);
         }
 
         // Line to mouse pointer
-        QPointF p2 = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
-        p2 = mScene->renderer()->tileToPixelCoords(p2);
+        QPointF p2 = mScene->renderer()->pixelToTileCoordsNearest(mScenePos, level);
+        p2 = mScene->renderer()->tileToPixelCoords(p2, level);
         path.lineTo(p2);
     }
 
@@ -2397,6 +2398,7 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
         pen.setWidth(3);
         pen.setCosmetic(true);
         mPathItem->setPen(pen);
+        mPathItem->setZValue(mScene->ZVALUE_GRID + 1);
         mScene->addItem(mPathItem);
     }
 
@@ -2409,7 +2411,7 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
             QGraphicsRectItem *item = new QGraphicsRectItem(-5, -5, 10, 10, mPathItem);
             item->setBrush(Qt::blue);
             item->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
-            item->setPos(mScene->renderer()->tileToPixelCoords(point.x(), point.y()));
+            item->setPos(mScene->renderer()->tileToPixelCoords(point.x(), point.y(), level));
             mPointItems += item;
         }
     }
@@ -2426,22 +2428,23 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
         item->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
         mPointItems += item;
     }
-    QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos);
-    QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
+    QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mScenePos, level);
+    QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos, level);
     mPointItems.last()->setPos(scenePos);
 }
 
 void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
 {
+    int level = mScene->document()->currentLevel();
     if (mGeometryType == ObjectGeometryType::Point) {
         WorldObjectGroup *og = mScene->document()->currentObjectGroup();
-        QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
+        QPointF cellPos = mScene->renderer()->pixelToTileCoordsNearest(scenePos, level);
         WorldCellObjectPoints points;
         points += WorldCellObjectPoint(cellPos.x(), cellPos.y());
         WorldCellObject* object = new WorldCellObject(mScene->cell(),
                                                       QString(), og->type(), og,
                                                       points[0].x, points[0].y,
-                                                      mScene->document()->currentLevel(),
+                                                      level,
                                                       MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
         object->setGeometryType(mGeometryType);
         object->setPoints(points);
@@ -2450,7 +2453,7 @@ void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
         return;
     }
 
-    QPoint tilePos = mScene->renderer()->pixelToTileCoordsNearest(scenePos);
+    QPoint tilePos = mScene->renderer()->pixelToTileCoordsNearest(scenePos, level);
     if ((mPolygon.isEmpty() == false) && (mPolygon[0] == tilePos)) {
         // TODO: Allow Polyline to end where it starts?
         finishItem();
@@ -2460,7 +2463,7 @@ void AbstractCreatePolygonObjectTool::addPoint(const QPointF &scenePos)
         return;
     }
 
-    mPolygon += mScene->renderer()->pixelToTileCoordsNearest(scenePos);
+    mPolygon += mScene->renderer()->pixelToTileCoordsNearest(scenePos, level);
 }
 
 /////
@@ -2560,7 +2563,7 @@ void EditPolygonObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
         }
         if ((clickedItem != nullptr) && (clickedItem == mSelectedObjectItem)) {
             if (mSelectedObjectItem->mAddPointIndex != -1) {
-                QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedObjectItem->mAddPointPos);
+                QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedObjectItem->mAddPointPos, mSelectedObjectItem->mObject->level());
                 WorldCellObjectPoint point(tilePos.x(), tilePos.y());
                 if (mSelectedObject->points().contains(point)) {
                     return;
@@ -2590,10 +2593,11 @@ void EditPolygonObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
             mRectItem->setBrush(Qt::red);
             mRectItem->setRect(0 - 5, 0 - 5, 10, 10);
             mRectItem->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            mRectItem->setZValue(CellScene::ZVALUE_GRID + 1);
             scene()->addItem(mRectItem);
         }
-        QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedObjectItem->mAddPointPos);
-        QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
+        QPointF tilePos = mScene->renderer()->pixelToTileCoordsNearest(mSelectedObjectItem->mAddPointPos, mSelectedObjectItem->mObject->level());
+        QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos, mSelectedObjectItem->mObject->level());
         mRectItem->setPos(scenePos);
     } else {
         if (mRectItem) {
@@ -2687,7 +2691,7 @@ void EditPolygonObjectTool::setSelectedItem(ObjectItem *objectItem)
         auto createHandle = [&](int pointIndex) {
             ObjectPointHandle* handle = new ObjectPointHandle(objectItem, pointIndex);
             WorldCellObjectPoint point = handle->geometryPoint();
-            handle->setPos(mScene->renderer()->tileToPixelCoords(point.x, point.y));
+            handle->setPos(mScene->renderer()->tileToPixelCoords(point.x, point.y, objectItem->mObject->level()));
 //            mScene->addItem(handle);
             mHandles += handle;
         };
@@ -4432,7 +4436,7 @@ CellObjectEdgeResizeHandle::Edge CellObjectEdgeResizeHandle::pickEdge(ObjectItem
         return Edge::NONE;
     }
     Tiled::MapRenderer *renderer = objectItem->cellScene()->renderer();
-    QPointF worldPos = renderer->pixelToTileCoords(scenePos);
+    QPointF worldPos = renderer->pixelToTileCoords(scenePos, objectItem->object()->level());
     WorldCellObject *object = objectItem->object();
     qreal T = edgeThickness(objectItem->cellScene());
     qreal x = object->x(), y = object->y(), w = object->width(), h = object->height();

@@ -2762,7 +2762,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
         painter->setPen(pen);
         painter->setRenderHint(QPainter::Antialiasing);
 
-        QPolygonF screenPolygon = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset));
+        QPolygonF screenPolygon = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset), mObject->level());
 
         switch (mObject->geometryType()) {
         case ObjectGeometryType::INVALID:
@@ -2832,7 +2832,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
             if (mPolylineOutline.isEmpty())
                 break;
             for (const QPointF& op : mPolylineOutline) {
-                screenPolygon2 += mRenderer->tileToPixelCoords(op + mDragOffset);
+                screenPolygon2 += mRenderer->tileToPixelCoords(op + mDragOffset, mObject->level());
             }
             screenPolygon2 += screenPolygon2[0];
             painter->drawPolyline(screenPolygon2);
@@ -3123,7 +3123,7 @@ void ObjectItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
     qreal zoom = view->zoomable()->scale();
     zoom = qMin(zoom, 1.0);
 
-    QPolygonF scenePoly = mRenderer->tileToPixelCoords(mPolygon, 0);
+    QPolygonF scenePoly = mRenderer->tileToPixelCoords(mPolygon, mObject->level());
 
     // Don't add points near other points
     for (int i = 0; i < scenePoly.size(); i++) {
@@ -3181,7 +3181,7 @@ void ObjectItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 QPainterPath ObjectItem::shape() const
 {
     if (mObject->points().isEmpty() == false) {
-        QPolygonF polygon = mRenderer->tileToPixelCoords(mPolygon, 0);
+        QPolygonF polygon = mRenderer->tileToPixelCoords(mPolygon, mObject->level());
 
         if (isPolygon())
             polygon += polygon[0];
@@ -3294,7 +3294,7 @@ void ObjectItem::synchWithObject()
             mPolylineOutline = createPolylineOutline();
             if (mPolylineOutline.empty())
                 break;
-            QRectF bounds = mRenderer->tileToPixelCoords(mPolylineOutline.translated(mDragOffset)).boundingRect().adjusted(-20, -20, 20, 20);
+            QRectF bounds = mRenderer->tileToPixelCoords(mPolylineOutline.translated(mDragOffset), mObject->level()).boundingRect().adjusted(-20, -20, 20, 20);
             if (bounds != mBoundingRect) {
                 prepareGeometryChange();
                 mBoundingRect = bounds;
@@ -3304,7 +3304,7 @@ void ObjectItem::synchWithObject()
         break;
     }
 
-    QRectF bounds = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset)).boundingRect().adjusted(-20, -20, 20, 20);
+    QRectF bounds = mRenderer->tileToPixelCoords(mPolygon.translated(mDragOffset), mObject->level()).boundingRect().adjusted(-20, -20, 20, 20);
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
@@ -3366,7 +3366,7 @@ int ObjectItem::pointAt(qreal sceneX, qreal sceneY)
     qreal zoom = view->zoomable()->scale();
     zoom = qMin(zoom, 1.0);
 
-    QPolygonF scenePoly = mRenderer->tileToPixelCoords(mPolygon, 0);
+    QPolygonF scenePoly = mRenderer->tileToPixelCoords(mPolygon, mObject->level());
     for (int i = 0; i < scenePoly.size(); i++) {
         float d = QVector2D(QPointF(sceneX, sceneY)).distanceToPoint(QVector2D(scenePoly[i]));
         if (d < 10 / (float) zoom) {
@@ -3488,7 +3488,7 @@ void ObjectPointHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
         if (event->buttons() & Qt::LeftButton) {
             if (mOldPos != geometryPoint()) {
                 mObjectItem->movePoint(mPointIndex, mOldPos);
-                setPos(mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y));
+                setPos(mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y, mObjectItem->mObject->level()));
                 mCancelMove = true;
             }
         }
@@ -3517,7 +3517,7 @@ void ObjectPointHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
         int objectIndex = mObjectItem->object()->index();
         WorldCellObjectPoint newPos = geometryPoint();
         mObjectItem->movePoint(mPointIndex, mOldPos);
-        setPos(mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y));
+        setPos(mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y, mObjectItem->mObject->level()));
 
         WorldCellObjectPoints coords = mObjectItem->object()->points();
         int pointIndex = coords.indexOf(newPos);
@@ -3566,7 +3566,7 @@ QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant
 
         if (change == ItemPositionChange) {
             if (mCancelMove) {
-                return mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y);
+                return mObjectItem->mRenderer->tileToPixelCoords(mOldPos.x, mOldPos.y, mObjectItem->mObject->level());
             }
             bool snapToGrid = true;
 
@@ -3575,7 +3575,7 @@ QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant
             QPointF pixelPos = value.toPointF() + itemPos;
 
             // Calculate the new coordinates in tiles
-            QPointF tileCoords = renderer->pixelToTileCoords(pixelPos, 0);
+            QPointF tileCoords = renderer->pixelToTileCoords(pixelPos, mObjectItem->mObject->level());
 
             const QPointF objectPos = { 0, 0 };
             tileCoords -= objectPos;
@@ -3587,11 +3587,11 @@ QVariant ObjectPointHandle::itemChange(GraphicsItemChange change, const QVariant
                 tileCoords = tileCoords.toPoint();
             tileCoords += objectPos;
 
-            return renderer->tileToPixelCoords(tileCoords, 0) - itemPos;
+            return renderer->tileToPixelCoords(tileCoords, mObjectItem->mObject->level()) - itemPos;
         }
         else if (change == ItemPositionHasChanged) {
             const QPointF newPos = value.toPointF();
-            QPointF tileCoords = renderer->pixelToTileCoords(newPos, 0);
+            QPointF tileCoords = renderer->pixelToTileCoords(newPos, mObjectItem->mObject->level());
             WorldCellObjectPoint point(tileCoords.x(), tileCoords.y());
             mObjectItem->movePoint(mPointIndex, point);
             if (isSelected() && EditPolygonObjectTool::instance().isCurrent()) {
@@ -4710,7 +4710,7 @@ void CellScene::setGraphicsSceneZOrder()
     // and arranged from bottom to top by level (and object-group).
     // When the active tool affects SubMapItems, stack them above
     // ObjectItems and vice versa.
-    int numLevels = mMapComposite->maxLevel() + 1;
+    int numLevels = mMapComposite->maxLevel() - mMapComposite->minLevel() + 1;
     int lotSpaces = mSubMapItems.size() * numLevels;
     const ObjectGroupList &groups = world()->objectGroups();
     int objSpaces = mObjectItems.size() * groups.size() * numLevels;
@@ -4718,10 +4718,12 @@ void CellScene::setGraphicsSceneZOrder()
     if (mActiveTool && mActiveTool->affectsLots())
         z2 += objSpaces;
     int lotIndex = 0;
-    foreach (SubMapItem *item, mSubMapItems)
+    foreach (SubMapItem *item, mSubMapItems) {
         item->setZValue(z2
-                        + item->subMap()->levelOffset() * mSubMapItems.size()
-                        + lotIndex++);
+                        + (WORLD_GROUND_LEVEL + item->subMap()->levelOffset()) * mSubMapItems.size()
+                        + lotIndex);
+        lotIndex++;
+    }
 
     z2 = z;
     if (mActiveTool && mActiveTool->affectsObjects())
@@ -4734,9 +4736,10 @@ void CellScene::setGraphicsSceneZOrder()
             groupIndex = groups.size();
         }
         item->setZValue(z2
-                        + groups.size() * mObjectItems.size() * obj->level()
+                        + groups.size() * mObjectItems.size() * (WORLD_GROUND_LEVEL + obj->level())
                         + groupIndex * mObjectItems.size()
-                        + objectIndex++);
+                        + objectIndex);
+        objectIndex++;
     }
 
     mGridItem->setZValue(ZVALUE_GRID);
@@ -6348,7 +6351,7 @@ void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
 
         // Make sure there are enough layer-groups to display the submap
         int minLevel = lot->level() + mLotToMC[lot]->minLevel();
-        int maxLevel = lot->level() +  mLotToMC[lot]->maxLevel();
+        int maxLevel = lot->level() + mLotToMC[lot]->maxLevel();
         mMapComposite->checkMinMaxLevels(minLevel, maxLevel);
 
         scene()->mapCompositeNeedsSynch();

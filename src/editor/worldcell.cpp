@@ -19,6 +19,8 @@
 
 #include "world.h"
 
+#include <limits>
+
 WorldCellLot::WorldCellLot(WorldCell *cell, const QString &name, int x, int y,
                            int z, int width, int height)
     : mName(name)
