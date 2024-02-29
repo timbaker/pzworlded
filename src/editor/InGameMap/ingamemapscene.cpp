@@ -801,6 +801,7 @@ void CreateInGameMapFeatureTool::updatePathItem()
         pen.setWidth(2);
         pen.setCosmetic(true);
         mPathItem->setPen(pen);
+        mPathItem->setZValue(CellScene::ZVALUE_GRID + 1);
         mScene->addItem(mPathItem);
     }
 
