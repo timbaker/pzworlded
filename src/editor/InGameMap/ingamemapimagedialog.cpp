@@ -190,7 +190,7 @@ void InGameMapImageDialog::cellToImage(QImage &image, const QString &mapDirector
             in >> pos;
             buffer.seek(pos);
             int skip = 0;
-            for (int z = header->minLevel; z <= header->maxLevel; ++z) {
+            for (int z = header->minLevel; z <= 0; ++z) { // z=0 only
                 for (int x = 0; x < SQUARES_PER_CHUNK; ++x) {
                     for (int y = 0; y < SQUARES_PER_CHUNK; ++y) {
                         if (skip > 0) {
@@ -210,6 +210,8 @@ void InGameMapImageDialog::cellToImage(QImage &image, const QString &mapDirector
                         Q_ASSERT(count > 1 && count < 30);
                         for (int n = 1; n < count; ++n) {
                             int tileNameIndex = IsoLot::readInt(in);
+                            if (z != 0)
+                                continue;
 //                            this->data[x][y][z] += d;
                             QString tileName = header->tilesUsed[tileNameIndex];
                             BuildingEditor::BuildingTile buildingTile = header->buildingTiles[tileNameIndex];
@@ -219,7 +221,6 @@ void InGameMapImageDialog::cellToImage(QImage &image, const QString &mapDirector
                         }
                     }
                 }
-                break; // z=0 only
             }
         }
     }
