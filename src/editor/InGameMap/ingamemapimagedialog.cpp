@@ -260,6 +260,9 @@ void InGameMapImageDialog::tileToImage(QImage &image, const BuildingEditor::Buil
         if (tileIndex >= 64 && tileIndex <= 79) {
             image.setPixel(pixelX, pixelY, qRgb(91, 63, 21)); // dirt
         }
+        if (tileIndex >= 80 && tileIndex <= 95) {
+            image.setPixel(pixelX, pixelY, qRgb(91, 63, 21)); // dirt + grass
+        }
     }
     if (buildingTile.mTilesetName.startsWith(QStringLiteral("blends_natural_02"))) {
         image.setPixel(pixelX, pixelY, qRgb(108, 127, 131)); // water
