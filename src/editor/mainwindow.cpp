@@ -1554,6 +1554,14 @@ void MainWindow::ReadWorldObjects()
             delete table;
         }
         lua_pop(L, 1); // Pop "regions" from the stack
+
+        lua_getglobal(L, "objects");
+        if (lua_istable(L, -1)) {
+            Lua::LuaTable *table = Lua::parseTable(L);
+            addWorldObjectsFromLuaTable(table);
+            delete table;
+        }
+        lua_pop(L, 1); // Pop "objects" from the stack
     }
 
     lua_close(L);
@@ -1659,7 +1667,7 @@ void MainWindow::addWorldObjectsFromLuaTable(Lua::LuaTable *regionsTable)
             continue;
         }
         WorldCellObject* object = new WorldCellObject(cell, name, objectType, objectGroup,
-                                                      qreal(x - cell->x() * 300), qreal(y - cell->y() * 300), qreal(z),
+                                                      qreal(x - (gls.worldOrigin.x() + cell->x()) * 300), qreal(y - (gls.worldOrigin.y() + cell->y()) * 300), qreal(z),
                                                       qreal(width), qreal(height));
         if (geometryType != ObjectGeometryType::INVALID) {
             object->setGeometryType(geometryType);
