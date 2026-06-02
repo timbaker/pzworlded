@@ -5,6 +5,15 @@ layers
     tile = 0_FloorOverlay2
     tile = 0_FloorOverlay3
     tile = 0_FloorOverlay4
+    tile = 0_FloorOverlay5
+    tile = 0_FloorOverlay6
+    tile = 0_Curbs
+    tile = 0_Walls
+    tile = 0_Walls2
+    tile = 0_Furniture
+    tile = 0_Furniture2
+    tile = 0_Furniture3
+    tile = 0_Furniture4
     tile = 0_Vegetation
     object = 0_Lots
 }
