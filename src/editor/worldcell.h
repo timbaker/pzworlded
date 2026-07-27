@@ -29,6 +29,8 @@
 #include <QSize>
 #include <QString>
 
+#include <limits>
+
 class World;
 class WorldCell;
 class WorldCellContents;

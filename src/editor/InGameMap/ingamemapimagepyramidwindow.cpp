@@ -102,7 +102,7 @@ void InGameMapImagePyramidWindow::createZip()
         return;
     }
 
-    QSize size(std::ceilf(image.width() / 16.0f) * 16, std::ceilf(image.height() / 16.0f) * 16);
+    QSize size(std::ceil(image.width() / 16.0f) * 16, std::ceil(image.height() / 16.0f) * 16);
     QImage image1(size, image.format());
     image1.fill(Qt::transparent);
     QPainter painter(&image1);

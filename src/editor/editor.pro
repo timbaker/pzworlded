@@ -13,7 +13,9 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 }
 
 # For 'breeze' style using SVG icons
-QT += svg
+win32 {
+    QT += svg
+}
 
 # MSVC
 win32 {
