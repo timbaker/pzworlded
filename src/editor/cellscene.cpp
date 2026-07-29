@@ -149,7 +149,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     Q_UNUSED(option)
 
     QVector<const LotImage*> lotImages;
-    for (const LotImage &lotImage : qAsConst(mLotImages)) {
+    for (const LotImage &lotImage : std::as_const(mLotImages)) {
         if (!lotImage.mMapImage || lotImage.mLevel >= 0)
             continue;
         lotImages += &lotImage;
@@ -157,7 +157,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     std::sort(lotImages.begin(), lotImages.end(), [](const LotImage *lotImage1, const LotImage *lotImage2) {
         return lotImage1->mBounds.bottom() > lotImage2->mBounds.bottom();
     });
-    for (const LotImage *lotImage : qAsConst(lotImages)) {
+    for (const LotImage *lotImage : std::as_const(lotImages)) {
         paintLotImage(painter, *lotImage);
     }
 
@@ -168,7 +168,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     }
 
     lotImages.clear();
-    for (const LotImage &lotImage : qAsConst(mLotImages)) {
+    for (const LotImage &lotImage : std::as_const(mLotImages)) {
         if (!lotImage.mMapImage || lotImage.mLevel < 0)
             continue;
         lotImages += &lotImage;
@@ -176,7 +176,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     std::sort(lotImages.begin(), lotImages.end(), [](const LotImage *lotImage1, const LotImage *lotImage2) {
         return lotImage1->mBounds.bottom() > lotImage2->mBounds.bottom();
     });
-    for (const LotImage *lotImage : qAsConst(lotImages)) {
+    for (const LotImage *lotImage : std::as_const(lotImages)) {
         paintLotImage(painter, *lotImage);
     }
 
@@ -679,7 +679,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 #endif
     }
 
-    for (VBOTiles *vboTiles : qAsConst(exposedTiles)) {
+    for (VBOTiles *vboTiles : std::as_const(exposedTiles)) {
 //        VBOTiles *vboTiles = mTiles[vxy.x() + vxy.y() * VBO_PER_CELL];
 //        if (vboTiles == nullptr)
 //            continue;
@@ -1468,7 +1468,7 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
         rasterize.scanTriangle({TL.x(), TL.y()}, {TR.x(), TR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
         rasterize.scanTriangle({TR.x(), TR.y()}, {BR.x(), BR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
         exposed = QRect();
-        for (const QPoint &tileXY : qAsConst(rasterize.mPoints)) {
+        for (const QPoint &tileXY : std::as_const(rasterize.mPoints)) {
             QRect tileRect(tileXY * tileSize, QSize(tileSize, tileSize));
             if (exposed.isNull()) {
                 exposed = tileRect;
@@ -2993,7 +2993,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
 #if 1
             if (mPolylineOutline.isEmpty())
                 break;
-            for (const QPointF& op : qAsConst(mPolylineOutline)) {
+            for (const QPointF& op : std::as_const(mPolylineOutline)) {
                 screenPolygon2 += mRenderer->tileToPixelCoords(op + mDragOffset, mObject->level());
             }
             screenPolygon2 += screenPolygon2[0];
@@ -4655,7 +4655,7 @@ void CellScene::setTool(AbstractTool *tool)
         worldDocument()->setSelectedRoads(QList<Road*>());
 
     if (mActiveTool != EditPolygonObjectTool::instancePtr()) {
-        for (ObjectItem* item : qAsConst(mObjectItems)){
+        for (ObjectItem* item : std::as_const(mObjectItems)){
             item->setEditable(false);
         }
     }
@@ -4673,7 +4673,7 @@ void CellScene::setTool(AbstractTool *tool)
         }
     }
 
-    for (SubMapItem *item : qAsConst(mSubMapItems)) {
+    for (SubMapItem *item : std::as_const(mSubMapItems)) {
         int currentLevel = mDocument->currentLevel();
         bool visible = item->subMap()->isVisible()
                 && mDocument->isLotLevelVisible(currentLevel)
@@ -5210,7 +5210,7 @@ void CellScene::loadMap()
         mRoadItems += item;
     }
 
-    for (auto* feature : qAsConst(cell()->inGameMap().mFeatures)) {
+    for (auto* feature : std::as_const(cell()->inGameMap().mFeatures)) {
         InGameMapFeatureItem* item = new InGameMapFeatureItem(feature, this);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
@@ -5573,7 +5573,7 @@ void CellScene::selectedInGameMapFeaturesChanged()
 
 void CellScene::selectedInGameMapPointsChanged()
 {
-    for (auto featureItem : qAsConst(mSelectedFeatureItems)) {
+    for (auto featureItem : std::as_const(mSelectedFeatureItems)) {
         featureItem->update();
     }
 }
@@ -5652,7 +5652,7 @@ void CellScene::selectedObjectsChanged()
 
 void CellScene::selectedObjectPointsChanged()
 {
-    for (auto objectItem : qAsConst(mSelectedObjectItems)) {
+    for (auto objectItem : std::as_const(mSelectedObjectItems)) {
         objectItem->update();
     }
 }
@@ -5808,7 +5808,7 @@ void CellScene::showLotFloorsOnlyChanged(bool show)
         layerGroup->setNeedsSynch(true);
     }
 
-    for (AdjacentMap *am : qAsConst(mAdjacentMaps)) {
+    for (AdjacentMap *am : std::as_const(mAdjacentMaps)) {
         for (CompositeLayerGroup *layerGroup : am->mapComposite()->layerGroups()) {
             layerGroup->setNeedsSynch(true);
         }
@@ -6177,14 +6177,14 @@ void CellScene::synchAdjacentMapObjectItemVisibility()
 void CellScene::sortSubMaps()
 {
     QMap<int,SubMapItem*> zzz;
-    for (SubMapItem *item : qAsConst(mSubMapItems)) {
+    for (SubMapItem *item : std::as_const(mSubMapItems)) {
         int index = cell()->indexOf(item->lot());
         zzz[index] = item;
     }
     mSubMapItems = zzz.values();
 
     QVector<MapComposite*> orderedMaps;
-    for (SubMapItem *item : qAsConst(mSubMapItems)) {
+    for (SubMapItem *item : std::as_const(mSubMapItems)) {
         orderedMaps += item->subMap();
     }
     mOverlappingLots.sortSubMaps(orderedMaps);
@@ -6232,7 +6232,7 @@ void CellScene::lotFileChanged(WorldCellLot *lot)
     if (lot->cell() != cell() && lot->overlapsCell(cell())) {
         mapComposite()->incrChangeCount(); // update VBOs
     }
-    for (AdjacentMap *am : qAsConst(mAdjacentMaps)) {
+    for (AdjacentMap *am : std::as_const(mAdjacentMaps)) {
         if (lot->cell() == am->cell()) {
             continue;
         }
@@ -6533,7 +6533,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
             // Don't just call mSubMapItems.insert(), due to asynchronous loading.
             QMap<int,SubMapItem*> zzz;
-            for (SubMapItem *item : qAsConst(mSubMapItems)) {
+            for (SubMapItem *item : std::as_const(mSubMapItems)) {
                 int index = cell()->indexOf(item->lot());
                 zzz[index] = item;
             }
@@ -6541,7 +6541,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
             mSubMapItems = zzz.values();
 
             QVector<MapComposite*> orderedMaps;
-            for (SubMapItem *item : qAsConst(mSubMapItems)) {
+            for (SubMapItem *item : std::as_const(mSubMapItems)) {
                 orderedMaps += item->subMap();
             }
             mMapComposite->sortSubMaps(orderedMaps);
@@ -6991,7 +6991,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
 
         qDeleteAll(mObjectItems);
         mObjectItems.clear();
-        for (WorldCellObject *obj : qAsConst(cell()->objects())) {
+        for (WorldCellObject *obj : std::as_const(cell()->objects())) {
             ObjectItem *item = scene()->newObjectItem(obj, mObjectItemParent);
             item->setAdjacent(true);
 //            scene()->addItem(item);
@@ -7088,7 +7088,7 @@ void AdjacentMap::synchObjectItemVisibility()
 void AdjacentMap::setTool(AbstractTool *tool)
 {
     bool bFeatureToolActive = dynamic_cast<BaseInGameMapFeatureTool*>(tool) != nullptr;
-    for (InGameMapFeatureItem *item : qAsConst(mInGameMapFeatureItems)) {
+    for (InGameMapFeatureItem *item : std::as_const(mInGameMapFeatureItems)) {
         item->setVisible(bFeatureToolActive);
     }
 }
@@ -7105,7 +7105,7 @@ void AdjacentMap::sceneRectChanged()
         item->synchWithObject();
 
     mInGameMapFeatureParent->setPos(offset);
-    for (InGameMapFeatureItem *item : qAsConst(mInGameMapFeatureItems)) {
+    for (InGameMapFeatureItem *item : std::as_const(mInGameMapFeatureItems)) {
         item->synchWithFeature();
 }
 }
@@ -7211,14 +7211,14 @@ void OverlappingLots::init()
         ignoreCells = QRect(cell()->x() - 1, cell()->y() - 1, 3, 3);
     }
     mLots = world()->getLotsOverlappingCellBounds(cell()->x(), cell()->y(), ignoreCells);
-    for (WorldCellLot *lot : qAsConst(mLots)) {
+    for (WorldCellLot *lot : std::as_const(mLots)) {
         cellLotAdded(lot->cell(), lot->cell()->indexOf(lot));
     }
 }
 
 void OverlappingLots::sortSubMaps(QVector<MapComposite *> &ordered)
 {
-    for (WorldCellLot *lot : qAsConst(mLots)) {
+    for (WorldCellLot *lot : std::as_const(mLots)) {
         if (MapComposite *subMap = mLotToMC[lot]) {
             ordered += subMap;
         }

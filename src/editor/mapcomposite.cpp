@@ -231,7 +231,7 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
             rootGroup->mPreparedSubMapLayers3.append(SubMapLayers(mOwner, this));
         }
     }
-    for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
+    for (const SubMapLayers &subMapLayer : std::as_const(mVisibleSubMapLayers)) {
         CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
         if (subMapLayer.mSubMap->isHiddenDuringDrag())
             continue;
@@ -268,7 +268,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     QVector<OrderedCell> aboveLotCells;
 
     // Get tiles from cell maps at this location
-    for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers)) {
+    for (const SubMapLayers& subMapLayer : std::as_const(mPreparedSubMapLayers)) {
         if (!subMapLayer.mBounds.contains(pos)) {
             continue;
         }
@@ -282,7 +282,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
             cellsToKeep.clear();
             aboveLotCells.clear();
         }
-        for (const OrderedCell &oc : qAsConst(orderedCells)) {
+        for (const OrderedCell &oc : std::as_const(orderedCells)) {
             if (oc.layer->name().contains(sAboveLot)) {
                 aboveLotCells.append(oc);
                 continue;
@@ -332,7 +332,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
     cellsToKeep.append(aboveLotCells);
 
     // Overwrite the above tiles with basement-access tiles.
-    for (const SubMapLayers &subMapLayer : qAsConst(mPreparedSubMapLayers3)) {
+    for (const SubMapLayers &subMapLayer : std::as_const(mPreparedSubMapLayers3)) {
         if (!subMapLayer.mBounds.contains(pos))
             continue;
         orderedCells.clear();
@@ -396,7 +396,7 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
 
     cells.clear();
     opacities.clear();
-    for (const OrderedCell &oc : qAsConst(cellsToKeep)) {
+    for (const OrderedCell &oc : std::as_const(cellsToKeep)) {
         const Tiled::Cell *cell = oc.cell;
         cells += cell;
         opacities += oc.opacity;
@@ -523,7 +523,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTempora
     aboveLotCells.clear();
 
     // Get tiles from cell maps at this location
-    for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers)) {
+    for (const SubMapLayers& subMapLayer : std::as_const(mPreparedSubMapLayers)) {
         if (!subMapLayer.mBounds.contains(pos)) {
             continue;
         }
@@ -537,7 +537,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTempora
             cellsToKeep.clear();
             aboveLotCells.clear();
         }
-        for (const OrderedCell &oc : qAsConst(orderedCells)) {
+        for (const OrderedCell &oc : std::as_const(orderedCells)) {
             if (oc.layer->name().contains(sAboveLot)) {
                 aboveLotCells.append(oc);
                 continue;
@@ -587,7 +587,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTempora
     cellsToKeep.append(aboveLotCells);
 
     // Overwrite the above tiles with basement-access tiles.
-    for (const SubMapLayers &subMapLayer : qAsConst(mPreparedSubMapLayers3)) {
+    for (const SubMapLayers &subMapLayer : std::as_const(mPreparedSubMapLayers3)) {
         if (!subMapLayer.mBounds.contains(pos))
             continue;
         orderedCells.clear();
@@ -650,7 +650,7 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTempora
     }
 
     cells.clear();
-    for (const OrderedCell &oc : qAsConst(cellsToKeep)) {
+    for (const OrderedCell &oc : std::as_const(cellsToKeep)) {
         const Tiled::Cell *cell = oc.cell;
         cells += cell;
     }
@@ -751,7 +751,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
     aboveLotCells.clear();
 
     // Get tiles from cell maps at this location
-    for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers)) {
+    for (const SubMapLayers& subMapLayer : std::as_const(mPreparedSubMapLayers)) {
         if (!subMapLayer.mBounds.contains(pos)) {
             continue;
         }
@@ -766,7 +766,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
             cellMapCells.clear();
             aboveLotCells.clear();
         }
-        for (const OrderedCell &oc : qAsConst(orderedCells)) {
+        for (const OrderedCell &oc : std::as_const(orderedCells)) {
             TilePlusLayer cellMapCell(oc.layer->nameWithPrefix(), oc.cell->tile, oc.layerGroup->mVisibleLayers[oc.layerIndex], oc.opacity);
             if (oc.layer->name().contains(sAboveLot)) {
                 aboveLotCells.append(cellMapCell);
@@ -780,7 +780,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
     buildingCells.clear();
 
     // Get tiles from buildings at this location
-    for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers2)) {
+    for (const SubMapLayers& subMapLayer : std::as_const(mPreparedSubMapLayers2)) {
         if (!subMapLayer.mBounds.contains(pos))
             continue;
         orderedCells.clear();
@@ -802,14 +802,14 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
             for (int i = 0; i < buildingCells.size(); i++) {
                 TilePlusLayer& cell = buildingCells[i];
                 int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
-                QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
+                QString layerNameWithoutPrefix = cell.mLayerName.mid(p);
                 if (suppress || !layerNameWithoutPrefix.startsWith(sFloor)) {
                     cell.mHideIfVisible = subMapLayer.mSubMap;
                     suppress = true;
                 }
             }
         }
-        for (const OrderedCell &oc : qAsConst(orderedCells)) {
+        for (const OrderedCell &oc : std::as_const(orderedCells)) {
             TilePlusLayer buildingCell(oc.layer->nameWithPrefix(), oc.cell->tile, oc.layerGroup->mVisibleLayers[oc.layerIndex], oc.opacity);
             buildingCell.mSubMap = oc.layerGroup->owner();
             buildingCells.append(buildingCell);
@@ -830,7 +830,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
             bool bKeepFloors = true;
             for (TilePlusLayer &cell : cellMapCells) {
                 int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
-                QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
+                QString layerNameWithoutPrefix = cell.mLayerName.mid(p);
                 if (!bKeepFloors || !layerNameWithoutPrefix.startsWith(sFloor)) {
                     cell.mHideIfVisible = buildingCells.first().mSubMap;
                     bKeepFloors = false;
@@ -845,7 +845,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
     cells += aboveLotCells;
 
     // Overwrite the above tiles with basement-access tiles.
-    for (const SubMapLayers &subMapLayer : qAsConst(mPreparedSubMapLayers3)) {
+    for (const SubMapLayers &subMapLayer : std::as_const(mPreparedSubMapLayers3)) {
         if (!subMapLayer.mBounds.contains(pos))
             continue;
         orderedCells.clear();
@@ -889,7 +889,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
             } else {
                 // This is NOT correct, but better than nothing when .tiles files aren't available.
                 int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
-                QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
+                QString layerNameWithoutPrefix = cell.mLayerName.mid(p);
                 isFloor = layerNameWithoutPrefix == sFloor;
                 isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Walls"));
                 isOther = (isFloor || isWall) == false;
@@ -905,7 +905,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
             }
             cell.mHideIfVisible = subMap;
         }
-        for (const OrderedCell &oc : qAsConst(orderedCells)) {
+        for (const OrderedCell &oc : std::as_const(orderedCells)) {
             TilePlusLayer cell(oc.layer->nameWithPrefix(), oc.cell->tile, oc.layerGroup->mVisibleLayers[oc.layerIndex], oc.opacity);
             cell.mSubMap = oc.layerGroup->owner();
             cells.append(cell);
@@ -1076,7 +1076,7 @@ void CompositeLayerGroup::synch()
                 const QString name = MapComposite::layerNameWithoutPrefix(layerName);
                 if (!mLayersByName.contains(name))
                     continue;
-                for (Layer *layer : qAsConst(mLayersByName[name])) {
+                for (Layer *layer : std::as_const(mLayersByName[name])) {
                     int index = mLayers.indexOf(layer->asTileLayer());
                     Q_ASSERT(index != -1);
                     mVisibleLayers[index] = rootGroup->mVisibleLayers[rootIndex];
@@ -1087,7 +1087,7 @@ void CompositeLayerGroup::synch()
     }
 
     int index = 0;
-    for (TileLayer *tl : qAsConst(mLayers)) {
+    for (TileLayer *tl : std::as_const(mLayers)) {
         if (!isLayerEmpty(index)) {
             unionTileRects(r, tl->bounds().translated(mOwner->orientAdjustTiles() * mLevel), r);
             maxMargins(m, tl->drawMargins(), m);
@@ -1106,7 +1106,7 @@ void CompositeLayerGroup::synch()
     r = QRect();
     mVisibleSubMapLayers.resize(0);
 
-    for (MapComposite *subMap : qAsConst(mOwner->subMaps())) {
+    for (MapComposite *subMap : std::as_const(mOwner->subMaps())) {
         if (!subMap->isGroupVisible() || !subMap->isVisible())
             continue;
         int levelOffset = subMap->levelOffset();
@@ -1201,7 +1201,7 @@ void CompositeLayerGroup::calculateUnlitRoomMask(BuildingEditor::Building *build
     for (BuildingEditor::Room *room : building->rooms()) {
         BuildingEditor::BuildingRoomDefecator rd(floor, room);
         rd.defecate();
-        for (const QRegion& roomRgn : qAsConst(rd.mRegions)) {
+        for (const QRegion& roomRgn : std::as_const(rd.mRegions)) {
             if (roomHasLightSwitch(floor, roomRgn)) {
                 continue;
             }
@@ -1228,7 +1228,7 @@ bool CompositeLayerGroup::roomHasLightSwitch(BuildingEditor::BuildingFloor *floo
                 if (orderedCellsAt2(QPoint(x, y), vars, cells) == false) {
                     continue;
                 }
-                for (const Cell *cell : qAsConst(cells)) {
+                for (const Cell *cell : std::as_const(cells)) {
                     if (cell->isEmpty()) {
                         continue;
                     }
@@ -1430,7 +1430,7 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer) const
                 qMax(0, mDrawMargins.right() - owner()->map()->tileWidth()),
                 mDrawMargins.bottom());
 
-    for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
+    for (const SubMapLayers &subMapLayer : std::as_const(mVisibleSubMapLayers)) {
         QRectF bounds = subMapLayer.mLayerGroup->boundingRect(renderer);
         unionSceneRects(boundingRect, bounds, boundingRect);
     }
@@ -1651,7 +1651,7 @@ MapComposite *MapComposite::addMap(MapInfo *mapInfo, const QPoint &pos,
 
     checkMinMaxLevels(levelOffset + subMap->minLevel(), levelOffset + subMap->maxLevel());
 
-    for (CompositeLayerGroup *layerGroup : qAsConst(mLayerGroups)) {
+    for (CompositeLayerGroup *layerGroup : std::as_const(mLayerGroups)) {
         layerGroup->setNeedsSynch(true);
     }
 
@@ -1702,7 +1702,7 @@ void MapComposite::sortSubMaps(const QVector<MapComposite *> &order)
         return indexA < indexB;
     });
 
-    for (CompositeLayerGroup *layerGroup : qAsConst(mLayerGroups)) {
+    for (CompositeLayerGroup *layerGroup : std::as_const(mLayerGroups)) {
         layerGroup->setNeedsSynch(true);
     }
 }
@@ -1974,7 +1974,7 @@ void MapComposite::checkMinMaxLevels(int minLevel, int maxLevel)
     for (int i = mMinLevel; i <= mMaxLevel; ++i) {
         mSortedLayerGroups.append(mLayerGroups[i]);
     }
-    for (int level : qAsConst(added)) {
+    for (int level : std::as_const(added)) {
         emit layerGroupAdded(level);
     }
 }
@@ -2446,7 +2446,7 @@ static Tile *parseTileDescription(const QString &tileName,
     if (n < 0)
         return 0;
     QString tilesetName = tileName.mid(0, n);
-    int tileID = tileName.midRef(n + 1).toInt();
+    int tileID = tileName.mid(n + 1).toInt();
     foreach (Tileset *ts, tilesets) {
         if (ts->name() == tilesetName) { // FIXME: file-name not tileset-name!!!
             if (tileID < ts->tileCount())

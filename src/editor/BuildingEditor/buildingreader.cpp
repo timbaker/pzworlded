@@ -1105,7 +1105,7 @@ void BuildingReaderPrivate::decodeCSVFloorData(BuildingFloor *floor,
             floor->SetRoomAt(x, y, 0);
         } else {
             bool conversionOk;
-            uint index = text.midRef(start, end - start).toUInt(&conversionOk);
+            uint index = text.mid(start, end - start).toUInt(&conversionOk);
             if (!conversionOk) {
                 xml.raiseError(
                         tr("Unable to parse room at (%1,%2) on floor %3")
@@ -1132,7 +1132,7 @@ void BuildingReaderPrivate::decodeCSVFloorData(BuildingFloor *floor,
         floor->SetRoomAt(x, y, 0);
     } else {
         bool conversionOk;
-        uint index = text.midRef(start, end - start).toUInt(&conversionOk);
+        uint index = text.mid(start, end - start).toUInt(&conversionOk);
         if (!conversionOk) {
             xml.raiseError(
                     tr("Unable to parse room at (%1,%2) on floor %3")
@@ -1162,7 +1162,7 @@ void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, cons
             propertiesGrid->replace(x, y, emptyProperties);
         } else {
             bool conversionOk;
-            uint bits = text.midRef(start, end - start).toUInt(&conversionOk, 16);
+            uint bits = text.mid(start, end - start).toUInt(&conversionOk, 16);
             if (!conversionOk) {
                 xml.raiseError(
                         tr("Unable to parse <attributes> at (%1,%2) on floor %3")
@@ -1196,7 +1196,7 @@ void BuildingReaderPrivate::decodeCSVSquareProperties(BuildingFloor *floor, cons
         propertiesGrid->replace(x, y, emptyProperties);
     } else {
         bool conversionOk;
-        uint bits = text.midRef(start, end - start).toUInt(&conversionOk, 16);
+        uint bits = text.mid(start, end - start).toUInt(&conversionOk, 16);
         if (!conversionOk) {
             xml.raiseError(
                     tr("Unable to parse <attributes> at (%1,%2) on floor %3")
@@ -1240,7 +1240,7 @@ void BuildingReaderPrivate::decodeCSVTileData(BuildingFloor *floor,
             ; //floor->setGrime(layerName, x, y, QString());
         } else {
             bool conversionOk;
-            uint index = text.midRef(start, end - start).toUInt(&conversionOk);
+            uint index = text.mid(start, end - start).toUInt(&conversionOk);
             if (!conversionOk) {
                 xml.raiseError(
                         tr("Unable to parse user-tile at (%1,%2) on floor %3")
@@ -1267,7 +1267,7 @@ void BuildingReaderPrivate::decodeCSVTileData(BuildingFloor *floor,
         ; //floor->setGrime(layerName, x, y, QString());
     } else {
         bool conversionOk;
-        uint index = text.midRef(start, end - start).toUInt(&conversionOk);
+        uint index = text.mid(start, end - start).toUInt(&conversionOk);
         if (!conversionOk) {
             xml.raiseError(
                     tr("Unable to parse user-tile at (%1,%2) on floor %3")
