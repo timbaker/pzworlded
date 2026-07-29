@@ -114,9 +114,9 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
     Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher();
     tileDefWatcher->check();
     QString lightswitch(QLatin1String("lightswitch"));
-    for (Internal::TileDefWatcherFile *watcherFile : qAsConst(tileDefWatcher->mFiles)) {
+    for (Internal::TileDefWatcherFile *watcherFile : std::as_const(tileDefWatcher->mFiles)) {
         for (TileDefTileset *ts : watcherFile->mTileDefFile->tilesets()) {
-            for (TileDefTile *tdt : qAsConst(ts->mTiles)) {
+            for (TileDefTile *tdt : std::as_const(ts->mTiles)) {
                 for (const QString &key : tdt->mProperties.keys()) {
                     if (key == lightswitch) {
                         mTileDefTiles += tdt;

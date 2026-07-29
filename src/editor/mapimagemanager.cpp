@@ -203,7 +203,7 @@ MapImage *MapImageManager::getMapImage(const QString &mapName, const QString &re
     // Set up file modification tracking on each TMX that makes
     // up this image.
     QList<MapInfo*> sources;
-    for (const QString& source : qAsConst(data.sources)) {
+    for (const QString& source : std::as_const(data.sources)) {
         if (MapInfo *sourceInfo = MapManager::instance()->mapInfo(source)) {
             sources += sourceInfo;
         } else {

@@ -1783,14 +1783,14 @@ TileDefWatcher::TileDefWatcher() :
 
 void TileDefWatcher::check()
 {
-    for (TileDefWatcherFile *watcherFile : qAsConst(mFiles)) {
+    for (TileDefWatcherFile *watcherFile : std::as_const(mFiles)) {
         watcherFile->check(*mWatcher);
     }
 }
 
 TileDefTileset *TileDefWatcher::tileset(const QString &tilesetName)
 {
-    for (TileDefWatcherFile *watcherFile : qAsConst(mFiles)) {
+    for (TileDefWatcherFile *watcherFile : std::as_const(mFiles)) {
         if (TileDefTileset *tileset = watcherFile->mTileDefFile->tileset(tilesetName)) {
             return tileset;
         }
@@ -1840,7 +1840,7 @@ void TileDefWatcher::preferencesChanged(const QStringList &tilePropertiesFiles)
         mFiles += watcherFile;
         files += watcherFile;
     }
-    for (TileDefWatcherFile *file : qAsConst(files)) {
+    for (TileDefWatcherFile *file : std::as_const(files)) {
         if (!mFiles.contains(file)) {
             delete file;
         }

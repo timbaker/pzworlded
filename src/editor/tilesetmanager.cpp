@@ -289,7 +289,7 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
     }
 
     QFileInfoList infoList = dir2x.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo &dirInfo : qAsConst(infoList)) {
+    for (const QFileInfo &dirInfo : std::as_const(infoList)) {
         QDir dir = QDir(dirInfo.filePath());
         QString try2x = dir.filePath(fileName);
         if (QImageReader(try2x).size().isValid()) {
@@ -304,7 +304,7 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
     }
 
     infoList = dir1x.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo &dirInfo : qAsConst(infoList)) {
+    for (const QFileInfo &dirInfo : std::as_const(infoList)) {
         QDir dir = QDir(dirInfo.filePath());
         QString try1x = dir.filePath(fileName);
         if (QImageReader(try1x).size().isValid()) {
@@ -453,7 +453,7 @@ void TilesetManager::imageLoaded(Tileset *fromThread, Tileset *tileset)
 
 void TilesetManager::tilePropertiesChanged()
 {
-    for (Tileset *cached : qAsConst(mTilesetImageCache->mTilesets)) {
+    for (Tileset *cached : std::as_const(mTilesetImageCache->mTilesets)) {
         cachePZProperties(cached);
     }
     for (Tileset *tileset : tilesets()) {

@@ -745,7 +745,7 @@ static MapComposite *mapUnderPoint(CellScene *scene, MapComposite *mc, MapRender
 
         bool ignore = false;
         QList<SubMapItem*> items = scene->subMapItemsUsingMapInfo(subMap->mapInfo());
-        for (SubMapItem *item : qAsConst(items)) {
+        for (SubMapItem *item : std::as_const(items)) {
             if (item->subMap() == subMap) {
                 ignore = true;
                 break;

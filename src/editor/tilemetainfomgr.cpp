@@ -169,12 +169,12 @@ bool TileMetaInfoMgr::readTxt()
     mRevision = reader.mRevision;
     mSourceRevision = reader.mSourceRevision;
 
-    for (const TilesetsTxtFile::MetaEnum& metaEnum : qAsConst(reader.mEnums)) {
+    for (const TilesetsTxtFile::MetaEnum& metaEnum : std::as_const(reader.mEnums)) {
         mEnumNames += metaEnum.mName;
         mEnums.insert(metaEnum.mName, metaEnum.mValue);
     }
 
-    for (const TilesetsTxtFile::Tileset* fileTileset : qAsConst(reader.mTilesets)) {
+    for (const TilesetsTxtFile::Tileset* fileTileset : std::as_const(reader.mTilesets)) {
         QSize tilesetSize = Tiled::getZomboidTilesetSize1x(fileTileset->mName);
         int tileWidth = tilesetSize.width();
         int tileHeight = tilesetSize.height();
@@ -203,7 +203,7 @@ bool TileMetaInfoMgr::readTxt()
         mTilesetInfo[fileTileset->mName] = info;
     }
 
-    for (const QString& enumName : qAsConst(mEnumNames)) {
+    for (const QString& enumName : std::as_const(mEnumNames)) {
         if (isEnumWest(enumName) || isEnumNorth(enumName)) {
             if (mEnums.values().contains(mEnums[enumName] + 1)) {
                 QString enumImplicit = enumName;
@@ -229,7 +229,7 @@ bool TileMetaInfoMgr::writeTxt()
     QList<TilesetsTxtFile::Tileset*> fileTilesets;
     QList<TilesetsTxtFile::MetaEnum> fileMetaEnums;
 
-    for (const QString& name : qAsConst(mEnumNames)) {
+    for (const QString& name : std::as_const(mEnumNames)) {
         fileMetaEnums += TilesetsTxtFile::MetaEnum(name, mEnums[name]);
     }
 
