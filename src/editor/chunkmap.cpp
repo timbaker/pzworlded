@@ -830,7 +830,7 @@ void IsoCell::PlaceLot(IsoLot *lot, int sx, int sy, int sz, IsoChunk *ch, int WX
                         square->setZ(z);
 
 #if 1
-                        int roomID = lot->roomIDs[(x - (WX + sx))][(y - (WY + sy))][(z - sz) - lot->info->minLevel];
+                        int roomID = lot->roomIDs[(x - (WX + sx))][(y - (WY + sy))][z - sz];
 #else
                         int roomID = ch->lotheader->getRoomAt(x, y, z);
 #endif
