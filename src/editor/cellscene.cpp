@@ -59,9 +59,11 @@
 #include <QGraphicsItem>
 #include <QGraphicsSceneEvent>
 #include <QKeyEvent>
+#include <QMatrix4x4>>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QOpenGLFunctions>
+#include <QOpenGLWidget>
 #include <QStyleOptionGraphicsItem>
 #include <QUrl>
 #include <QUndoStack>
@@ -576,7 +578,7 @@ LayerGroupVBO::~LayerGroupVBO()
     Q_ASSERT(false);
 }
 
-void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect)
+void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect, QWidget* view)
 {
     if (mDestroying) {
         return;
@@ -596,40 +598,57 @@ void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const
         connect(mContext, &QOpenGLContext::aboutToBeDestroyed, this, &LayerGroupVBO::aboutToBeDestroyed);
     }
 
-    bool pushPop = true;
-    if (pushPop) {
-        glPushAttrib(GL_ALL_ATTRIB_BITS);
-        glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+    QOpenGLShaderProgram& mShaderProgram = mMapCompositeVBO->mShaderProgram;
+    if (!mShaderProgram.isLinked()) {
+        bool compiled = mShaderProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                               "#version 330 core\n\
+                                               layout(location = 0) in vec2 vertexPosition;\n\
+                                               layout(location = 1) in vec2 vertexTexCoord;\n\
+                                               \n\
+                                               out vec2 texCoord;\n\
+                                               \n\
+                                               uniform mat4 mvpMatrix;\n\
+                                               \n\
+                                               void main() {\n\
+                                                   gl_Position = mvpMatrix * vec4(vertexPosition, 0.0, 1.0);\n\
+                                                   texCoord = vertexTexCoord;\n\
+                                               }");
+        if (!compiled) {
+            painter->endNativePainting();
+            qDebug() << mShaderProgram.log();
+            return;
+        }
+        compiled = mShaderProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                               "#version 330 core\n\
+                                               in vec2 texCoord;\n\
+                                               out vec4 fragColor;\n\
+                                               \n\
+                                               uniform sampler2D textureSampler;\n\
+                                               uniform vec4 color;\n\
+                                               \n\
+                                               void main() {\n\
+                                                   fragColor = texture(textureSampler, texCoord) * color;\n\
+                                               }");
+        if (!compiled) {
+            painter->endNativePainting();
+            qDebug() << mShaderProgram.log();
+            return;
+        }
+        bool linked = mShaderProgram.link();
+        if (!linked) {
+            painter->endNativePainting();
+            qDebug() << mShaderProgram.log();
+            return;
+        }
+        // if (!mShaderProgram.create()) {
+        //     painter->endNativePainting();
+        //     return;
+        // }
     }
 
-#define PZ_OPENGL_WIDGET 1
-#if PZ_OPENGL_WIDGET
-    // Set the model-view-projection matrices for QGraphicsScene.
-    // This isn't needed when using QGLWidget, but is with QOpenGLWidget.
-    QRect viewport = painter->viewport();
-//    glViewport(viewport.x(), viewport.y(), viewport.width(), viewport.height());
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-//    glOrtho(-viewport.width() / 2, viewport.width() / 2, -viewport.height() / 2, viewport.height() / 2, -1.f, 1.f);
-    glOrtho(0.f, viewport.width(), viewport.height(), 0, -1.f, 1.f);
+    paint2(painter, renderer, exposedRect, view);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    QTransform xfrm = painter->transform();
-    float scaleX = xfrm.m11();
-    float scaleY = xfrm.m22();
-    float translateX = xfrm.m31();
-    float translateY = xfrm.m32();
-    glTranslatef(translateX, translateY, 0.0f);
-    glScalef(scaleX, scaleY, 1.0f);
-#endif
-
-    paint2(painter, renderer, exposedRect);
-
-    if (pushPop) {
-        glPopAttrib();
-        glPopClientAttrib();
-    }
+    mShaderProgram.release();
 
     painter->endNativePainting();
 //    painter->restore();
@@ -640,7 +659,7 @@ static inline bool isLotVisible(MapComposite *lot)
     return lot->isGroupVisible() && lot->isVisible() && (lot->isHiddenDuringDrag() == false);
 };
 
-void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect)
+void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect, QWidget* view)
 {
     Q_UNUSED(painter)
 
@@ -692,6 +711,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         if (tiles.isEmpty()) {
             continue;
         }
+
         if (vboTiles->mIndexBuffer.isCreated() == false) {
             if (vboTiles->mIndexBuffer.create() == false) Q_ASSERT(false);
             vboTiles->mIndexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
@@ -744,12 +764,50 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         vboTiles->mVertexBuffer.allocate(vertices, tiles.size() * 4 * 4 * sizeof(GL_FLOAT));
         delete[] vertices;
 
+        vboTiles->mVertexBuffer.release();
+        vboTiles->mIndexBuffer.release();
+
 //            qDebug() << "mTiles.size() == " << tiles.size();
     }
 
     if (isEmpty()) {
         return;
     }
+
+#define PZ_OPENGL_WIDGET 1
+#if PZ_OPENGL_WIDGET
+    // Set the model-view-projection matrices for QGraphicsScene.
+    // This isn't needed when using QGLWidget, but is with QOpenGLWidget.
+    QRect viewport = painter->viewport(); // devicePixelRatioF is applied
+    QMatrix4x4 projection;
+    projection.setToIdentity();
+    QOpenGLWidget& openGLWidget = *static_cast<QOpenGLWidget*>(view);
+    const qreal devicePixelRatio = openGLWidget.devicePixelRatioF();
+    projection.ortho(0.f, viewport.width(), viewport.height(), 0, -1.f, 1.f);
+
+    QMatrix4x4 modelView;
+    modelView.setToIdentity();
+    QTransform xfrm = painter->transform();
+    float scaleX = xfrm.m11(); // devicePixelRatioF is not applied, only zoom factor
+    float scaleY = xfrm.m22(); // devicePixelRatioF is not applied, only zoom factor
+    float translateX = xfrm.m31();
+    float translateY = xfrm.m32();
+    modelView.translate(translateX * devicePixelRatio, translateY * devicePixelRatio, 0.0f);
+    modelView.scale(scaleX, scaleY, 1.0f);
+
+    QOpenGLShaderProgram& mShaderProgram = mMapCompositeVBO->mShaderProgram;
+    mShaderProgram.bind();
+    mShaderProgram.setUniformValue("mvpMatrix", projection * modelView);
+
+    int posAttr = mShaderProgram.attributeLocation("vertexPosition");
+    mShaderProgram.enableAttributeArray(posAttr);
+    int texAttr = mShaderProgram.attributeLocation("vertexTexCoord");
+    mShaderProgram.enableAttributeArray(texAttr);
+
+    int strideBytes = 4 * sizeof(float); // Total size of 1 vertex (X + Y + U + V)
+    int posOffsetBytes = 0;              // Position starts at byte 0
+    int texOffsetBytes = 2 * sizeof(float); // Texture starts after X and Y (8 bytes)
+#endif
 
     glActiveTexture(GL_TEXTURE2);
     glDisable(GL_TEXTURE_2D);
@@ -759,7 +817,6 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 
     glActiveTexture(GL_TEXTURE0);
     glEnable(GL_TEXTURE_2D);
-
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -774,10 +831,6 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
     GLuint textureID = 0;
 
@@ -802,10 +855,13 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                 QList<VBOTile>& tiles = vboTiles->mTiles;
                 if (tiles.isEmpty())
                     continue;
-                if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
-                if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
-                glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
-                glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), (void*)(2 * sizeof(GL_FLOAT)));
+               if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
+               if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
+
+                {
+                    mShaderProgram.setAttributeBuffer(posAttr, GL_FLOAT, posOffsetBytes, 2, strideBytes);
+                    mShaderProgram.setAttributeBuffer(texAttr, GL_FLOAT, texOffsetBytes, 2, strideBytes);
+                }
 
                 for (int i = 0; i < tiles.size(); i++) {
                     GLuint start = i * 4;
@@ -829,11 +885,14 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                     glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
 #endif
                 }
+
+                vboTiles->mVertexBuffer.release();
+                vboTiles->mIndexBuffer.release();
             }
         }
     } else {
         qreal opacity = 1.0f;
-        glColor4f(1.f, 1.f, 1.f, opacity);
+        mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity));
 
         MapComposite *mapComposite = mLayerGroup->owner();
         QRegion suppressRgn;
@@ -855,21 +914,30 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                 if (tiles.isEmpty())
                     continue;
                 if (currentTiles != vboTiles) {
-                    if (currentTiles != nullptr) {
-                        QPointF screenOrigin = renderer->tileToPixelCoords(currentTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), mLayerGroup->level());
-                        glMatrixMode(GL_MODELVIEW);
-                        glTranslatef(-screenOrigin.x(), -screenOrigin.y(), 0.0f);
-                    }
+                    // if (currentTiles != nullptr) {
+                    //     QPointF screenOrigin = renderer->tileToPixelCoords(currentTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), mLayerGroup->level());
+                    //     QMatrix4x4 mtx;
+                    //     mtx.setToIdentity();
+                    //     mtx.translate(-screenOrigin.x(), -screenOrigin.y(), 0.0f);
+                    //     mShaderProgram.setUniformValue("mvpMatrix", projection * modelView * mtx);
+                    // }
                     currentTiles = vboTiles;
                     if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
                     if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
+                    {
+                        // 2. Define geometry layout sizes
+                        mShaderProgram.setAttributeBuffer(posAttr, GL_FLOAT, posOffsetBytes, 2, strideBytes);
+                        mShaderProgram.setAttributeBuffer(texAttr, GL_FLOAT, texOffsetBytes, 2, strideBytes);
+                    }
+
                     if (true) {
                         QPointF screenOrigin = renderer->tileToPixelCoords(vboTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), mLayerGroup->level());
-                        glMatrixMode(GL_MODELVIEW);
-                        glTranslatef(screenOrigin.x(), screenOrigin.y(), 0.0f);
+                        QMatrix4x4 mtx;
+                        mtx.setToIdentity();
+                        mtx.translate(screenOrigin.x() * devicePixelRatio, screenOrigin.y() * devicePixelRatio, 0.0f);
+                        mtx.scale(devicePixelRatio);
+                        mShaderProgram.setUniformValue("mvpMatrix", projection * modelView * mtx);
                     }
-                    glVertexPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), 0);
-                    glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(GL_FLOAT), (void*)(2 * sizeof(GL_FLOAT)));
                 }
                 auto& tileFirst = vboTiles->mTileFirst;
                 auto& tileCount = vboTiles->mTileCount;
@@ -908,11 +976,11 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                                 }
                             }
                             if (opacity != layerOpacity[tile.mLayerIndex]) {
-                                glColor4f(1.f, 1.f, 1.f, opacity = layerOpacity[tile.mLayerIndex]);
+                                mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity = layerOpacity[tile.mLayerIndex]));
                             }
                         } else {
                             if (opacity != 1.0) {
-                                glColor4f(1.f, 1.f, 1.f, opacity = 1.0);
+                                mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity = 1.0));
                             }
                         }
                         if (tile.mTexture == nullptr) {
@@ -953,28 +1021,6 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 
     if (wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
-
-    if (false) {
-        glDisable(GL_TEXTURE_2D);
-
-        glLineWidth(10.0f);
-
-        glBegin(GL_LINES);
-        glColor3f(1.0f, 0.0f, 0.0f);
-        glVertex3f(0.f, 0.f, 0.f);
-        glVertex3f(10000.f, 0.f, 0.f);
-
-        glColor3f(0.0f, 1.0f, 0.0f);
-        glVertex3f(0.f, 0.f, 0.f);
-        glVertex3f(0.f, 10000.f, 0.f);
-
-        glColor3f(0.0f, 0.0f, 1.0f);
-        glVertex3f(0.f, 0.f, 0.f);
-        glVertex3f(0.f, 0.f, 10000.f);
-        glEnd();
-
-        glColor3f(1.0f, 1.0f, 1.0f);
     }
 }
 
@@ -1439,7 +1485,7 @@ QRectF CompositeLayerGroupItem::boundingRect() const
     return mBoundingRect;
 }
 
-void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *)
+void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *view)
 {
     if (mScene->isDestroying()) {
         return;
@@ -1513,7 +1559,7 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
                     }
                 }
 
-                mVBO[x + y * 3]->paint(p, mRenderer, option->exposedRect);
+                mVBO[x + y * 3]->paint(p, mRenderer, option->exposedRect, view);
             }
         }
     } else {

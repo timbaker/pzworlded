@@ -29,7 +29,8 @@
 
 #include <QGraphicsItem>
 #include <QOpenGLBuffer>
-#include <QOpenGLFunctions_3_0>
+#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QPoint>
 #include <QSet>
@@ -529,7 +530,7 @@ public:
     void synchWithTileLayers();
 
     QRectF boundingRect() const override;
-    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *) override;
+    void paint(QPainter *p, const QStyleOptionGraphicsItem *option, QWidget *view) override;
 
     CompositeLayerGroup *layerGroup() const { return mLayerGroup; }
 
@@ -759,15 +760,15 @@ struct VBOTiles
 
 class MapCompositeVBO;
 
-class LayerGroupVBO : public QObject, QOpenGLFunctions_3_0
+class LayerGroupVBO : public QObject, QOpenGLFunctions_3_3_Core
 {
     Q_OBJECT
 public:
     LayerGroupVBO();
     ~LayerGroupVBO();
 
-    void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
-    void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
+    void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect, QWidget *view);
+    void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect, QWidget *view);
     void gatherTiles(Tiled::MapRenderer *renderer, const QRectF& exposedRect, QList<VBOTiles *> &exposedTiles);
     int tryAddExtraJumbo_Trunk(const Tiled::Tile *tile, const QPointF &screenPos, int tileWidth, QList<VBOTile> &tiles);
     int tryAddExtraJumbo_Leaves(const Tiled::Tile *tile, const QPointF &screenPos, int tileWidth, QList<VBOTile> &tiles);
@@ -800,6 +801,7 @@ public:
     CellScene *mScene = nullptr;
     MapComposite *mMapComposite = nullptr;
     QRect mBounds;
+    QOpenGLShaderProgram mShaderProgram;
     std::array<LayerGroupVBO*,MAX_WORLD_LEVELS> mLayerVBOs;
     QList<Tiled::Tileset*> mUsedTilesets;
     QMap<QString,int> mLayerNameToIndex;
