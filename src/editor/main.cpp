@@ -35,6 +35,23 @@ using namespace Tiled::Internal;
 #include <QImageReader>
 #endif
 
+static void runStartupTasks()
+{
+    MainWindow& w = *MainWindow::instance();
+
+    if (!w.InitConfigFiles()) {
+        qApp->quit();
+        return;
+    }
+
+    PROGRESS progress(QStringLiteral("Loading Tilesets %1 / %2").arg(0).arg(TileMetaInfoMgr::instance()->tilesets().size()), &w);
+    TileMetaInfoMgr::instance()->loadTilesets(true);
+    TilesetManager::instance()->waitForTilesets(TilesetManager::instance()->tilesets(), &w);
+    progress.release();
+
+    w.openLastFiles();
+}
+
 int main(int argc, char *argv[])
 {
 #if ZOMBOID
@@ -63,20 +80,12 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.show();
 
-    if (!w.InitConfigFiles())
-        return 0;
-
 #if 0
     QObject::connect(&a, SIGNAL(fileOpenRequest(QString)),
                      &w, SLOT(openFile(QString)));
 #endif
 
-    PROGRESS progress(QStringLiteral("Loading Tilesets %1 / %2").arg(0).arg(TileMetaInfoMgr::instance()->tilesets().size()), &w);
-    TileMetaInfoMgr::instance()->loadTilesets(true);
-    TilesetManager::instance()->waitForTilesets(TilesetManager::instance()->tilesets(), &w);
-    progress.release();
-
-    w.openLastFiles();
+    QTimer::singleShot(10, &runStartupTasks);
 
 #if 1
     int ret = a.exec();

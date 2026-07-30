@@ -935,6 +935,8 @@ bool MainWindow::InitConfigFiles()
             return false;
     }
 
+    PROGRESS progress(tr("Reading Tilesets.txt"));
+
     if (!TileMetaInfoMgr::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
                               tr("%1\n(while reading %2)")
@@ -943,11 +945,15 @@ bool MainWindow::InitConfigFiles()
         return false;
     }
 
+    progress.update(tr("Checking for new tilesets"));
+
     if (!TileMetaInfoMgr::instance()->addNewTilesets()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
                               tr("%1\n(while adding new tilesets)"));
         return false;
     }
+
+    progress.update(tr("Reading BuildingTMX.txt"));
 
     if (!BuildingTMX::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
@@ -957,6 +963,8 @@ bool MainWindow::InitConfigFiles()
         return false;
     }
 
+    progress.update(tr("Reading BuildingTiles.txt"));
+
     if (!BuildingTilesMgr::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
                               tr("Error while reading %1\n%2")
@@ -964,6 +972,8 @@ bool MainWindow::InitConfigFiles()
                               .arg(BuildingTilesMgr::instance()->errorString()));
         return false;
     }
+
+    progress.update(tr("Reading FurnitureGroups.txt"));
 
     if (!FurnitureGroups::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
@@ -973,6 +983,8 @@ bool MainWindow::InitConfigFiles()
         return false;
     }
 
+    progress.update(tr("Reading BuildingTemplates.txt"));
+
     if (!BuildingTemplates::instance()->readTxt()) {
         QMessageBox::critical(this, tr("It's no good, Jim!"),
                               tr("Error while reading %1\n%2")
@@ -980,6 +992,8 @@ bool MainWindow::InitConfigFiles()
                               .arg(BuildingTemplates::instance()->errorString()));
         return false;
     }
+
+    progress.update(tr("Reading thumbnails.txt"));
 
     new ThumbnailSettingsMgr();
     ThumbnailSettingsMgr::instance().readTxt();
