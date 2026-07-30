@@ -7,6 +7,8 @@ set BIN C:/Programming/PZWorldEd/dist6.11.1
 set SRC C:/Programming/PZWorldEd/pzworlded
 set QT_DIR C:/Programming/QtSDK2015/6.11.1/msvc2022_64
 set DEST {C:\Programming\ProjectZomboid\Tools\WorldEd}
+# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\v143
+set REDIST vc_redist.x64.2015-2022.exe
 
 if {$argc > 0} {
     switch -- [lindex $argv 0] {
@@ -58,6 +60,7 @@ proc copyFile {SOURCE DEST name {name2 ""}} {
 
 #copyFile {C:\Programming\Tiled} $DEST vcredist_x86.exe
 
+copyFile {C:\Programming\TileZed} $DEST $REDIST vc_redist.x64.exe
 copyFile $BIN $DEST PZWorldEd.exe
 copyFile $BIN $DEST tiled.dll
 copyFile $BIN $DEST zlib1.dll
