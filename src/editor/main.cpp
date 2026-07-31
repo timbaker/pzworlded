@@ -29,6 +29,12 @@
 #include "tilesetmanager.h"
 using namespace Tiled;
 using namespace Tiled::Internal;
+
+#ifdef TARGET_OS_MAC
+#include <QOpenGLDebugLogger>
+#include <QSurfaceFormat>
+#endif
+
 #endif
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -54,6 +60,17 @@ static void runStartupTasks()
 
 int main(int argc, char *argv[])
 {
+#ifdef TARGET_OS_MAC
+    QSurfaceFormat fmt;
+    fmt.setVersion(3, 3);
+#ifdef QT_DEBUG
+    fmt.setOption(QSurfaceFormat::DebugContext);
+#endif
+    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    fmt.setOptions(QSurfaceFormat::DeprecatedFunctions);
+    QSurfaceFormat::setDefaultFormat(fmt);
+#endif
+
 #if ZOMBOID
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif

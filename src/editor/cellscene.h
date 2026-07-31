@@ -32,6 +32,7 @@
 #include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
+#include <QOpenGLVertexArrayObject>
 #include <QPoint>
 #include <QSet>
 #include <QSizeF>
@@ -747,6 +748,7 @@ struct VBOTiles
         mTileCount.fill(0);
     }
 
+    QOpenGLVertexArrayObject mVAO;
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mVertexBuffer;
 
