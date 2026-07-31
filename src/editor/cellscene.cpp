@@ -376,8 +376,10 @@ TilesetTexture *TilesetTextures::get(const QString& tilesetName, const QList<Til
     }
 
     QOpenGLContext *context = QOpenGLContext::currentContext();
-    if (context->shareContext() != nullptr)
+    if (context->shareContext() != nullptr) {
         context = context->shareContext();
+    }
+    mContext = context;
 
     TilesetTexturesPerContext *contextTextures = mContextToTextures[context];
     if (contextTextures == nullptr) {
@@ -551,6 +553,10 @@ void TilesetTextures::tilesetChanged(Tileset *tileset)
 #endif
 }
 
+GLenum TilesetTextures::glGetError() {
+    return mContext->functions()->glGetError();
+}
+
 static TilesetTextures TILESET_TEXTURES;
 
 LayerGroupVBO::LayerGroupVBO()
@@ -611,7 +617,7 @@ void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const
         connect(mContext, &QOpenGLContext::aboutToBeDestroyed, this, &LayerGroupVBO::aboutToBeDestroyed);
     }
 
-    GL_CHECK();
+    GL_CHECK({});
 
 #if PZ_OPENGL_LOGGER
     if (gOpenGLLogger == nullptr) {
@@ -744,7 +750,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         if (tiles.isEmpty()) {
             continue;
         }
-        GL_CHECK();
+        GL_CHECK({});
         if (vboTiles->mVAO.isCreated() == false) {
             GL_CHECK(vboTiles->mVAO.create());
         }
@@ -767,7 +773,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         }
         GL_CHECK(vboTiles->mIndexBuffer.allocate(indices, tiles.size() * 6 * sizeof(GLuint)));
         delete[] indices;
-        GL_CHECK();
+        GL_CHECK({});
 
         if (vboTiles->mVertexBuffer.isCreated() == false) {
             if (vboTiles->mVertexBuffer.create() == false) Q_ASSERT(false);

@@ -719,7 +719,9 @@ public slots:
     void tilesetChanged(Tiled::Tileset *tileset);
 
 private:
+    GLenum glGetError();
     QMap<QOpenGLContext*,TilesetTexturesPerContext*> mContextToTextures;
+    QOpenGLContext* mContext = nullptr;
     bool mConnected = false;
 };
 
