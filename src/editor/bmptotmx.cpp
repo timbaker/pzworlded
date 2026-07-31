@@ -342,20 +342,17 @@ void BMPToTMX::assignMapsToCells(WorldDocument *worldDoc, BMPToTMX::GenerateMode
 
 QString BMPToTMX::defaultRulesFile() const
 {
-    return QCoreApplication::applicationDirPath() + QLatin1Char('/')
-            + QLatin1String("Rules.txt");
+    return Preferences::instance()->appConfigPath(QLatin1String("Rules.txt"));
 }
 
 QString BMPToTMX::defaultBlendsFile() const
 {
-    return QCoreApplication::applicationDirPath() + QLatin1Char('/')
-            + QLatin1String("Blends.txt");
+    return Preferences::instance()->appConfigPath(QLatin1String("Blends.txt"));
 }
 
 QString BMPToTMX::defaultMapBaseXMLFile() const
 {
-    return QCoreApplication::applicationDirPath() + QLatin1Char('/')
-            + QLatin1String("MapBaseXML.txt");
+    return Preferences::instance()->appConfigPath(QLatin1String("MapBaseXML.txt"));
 }
 
 bool BMPToTMX::shouldGenerateCell(WorldCell *cell, int &bmpIndex)

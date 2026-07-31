@@ -1368,7 +1368,7 @@ void MainWindow::enableDeveloperFeatures()
 {
     // TOP SECRET: PLEASE DON'T LET PEOPLE KNOW ABOUT THIS BECAUSE THE DEVS
     // DO NOT WANT MASSIVE SPOILERS FOR FANS OF THE GAME.
-    QString sourcePath = QCoreApplication::applicationDirPath()
+    QString sourcePath = Preferences::instance()->appDirPath()
             + QLatin1Char('/') + QLatin1String("EnableDeveloperFeatures.txt");
     if (QFileInfo(sourcePath).exists()) {
 

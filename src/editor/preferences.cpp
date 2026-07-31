@@ -19,6 +19,7 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QProcessEnvironment>
 #include <QSettings>
 #include <QTextStream>
 
@@ -35,6 +36,50 @@ void Preferences::deleteInstance()
 {
     delete mInstance;
     mInstance = 0;
+}
+
+QString Preferences::appDirPath() const
+{
+    return mAppDirPath;
+}
+
+QString Preferences::initAppDirPath() {
+#ifdef Q_OS_WIN
+    return QCoreApplication::applicationDirPath();
+#elif defined(Q_OS_MAC)
+    return QCoreApplication::applicationDirPath();
+#elif defined(Q_OS_UNIX)
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    if (env.contains(QStringLiteral("APPIMAGE"))) {
+        qDebug() << "Running as a compressed AppImage file!";
+        qDebug() << "Original AppImage location:" << env.value(QStringLiteral("APPIMAGE"));
+        qDebug() << "Virtual Mount folder:" << env.value(QStringLiteral("APPDIR"));
+        mLinuxAppImage = true;
+        const QString appImage = env.value(QStringLiteral("APPIMAGE"));
+        return QFileInfo(appImage).absolutePath();
+    }
+    qDebug() << "Running as a standard unpacked binary or local AppDir.";
+    // ../src is where the .o files etc are built, not the source-code directory
+    mInBuildDirectory = QFileInfo::exists(QCoreApplication::applicationDirPath() + QStringLiteral("/../src"));
+    return QCoreApplication::applicationDirPath();
+#else
+#error "wtf system is this???"
+#endif
+}
+
+QString Preferences::initShareDirPath()
+{
+#if defined(Q_OS_UNIX)
+    if (mLinuxAppImage) {
+        return appDirPath() + QStringLiteral("/../TileZed/share/tilezed");
+    }
+    if (mInBuildDirectory) {
+        return appDirPath() + QStringLiteral("/../share/tilezed");
+    }
+    return appDirPath() + QStringLiteral("/../../TileZed/share/tilezed");
+#else
+    return QString();
+#endif
 }
 
 bool Preferences::snapToGrid() const
@@ -81,6 +126,9 @@ Preferences::Preferences()
     : QObject()
     , mSettings(new QSettings)
 {
+    mAppDirPath = initAppDirPath();
+    mShareDirPath = initShareDirPath();
+
     // Retrieve interface settings
     mSettings->beginGroup(QLatin1String("Interface"));
     mSnapToGrid = mSettings->value(QLatin1String("SnapToGrid"), true).toBool();
@@ -123,11 +171,9 @@ Preferences::Preferences()
     QString tilesDirectory = settings.value(KEY_TILES_DIR).toString();
 
     if (tilesDirectory.isEmpty() || !QDir(tilesDirectory).exists()) {
-        tilesDirectory = QCoreApplication::applicationDirPath() +
-                QLatin1Char('/') + QLatin1String("../Tiles");
+        tilesDirectory = appDirPath() + QLatin1String("/../Tiles");
         if (!QDir(tilesDirectory).exists())
-            tilesDirectory = QCoreApplication::applicationDirPath() +
-                    QLatin1Char('/') + QLatin1String("../../Tiles");
+            tilesDirectory = appDirPath() + QLatin1String("/../../Tiles");
     }
     if (tilesDirectory.length())
         tilesDirectory = QDir::cleanPath(tilesDirectory);
@@ -182,11 +228,11 @@ QString Preferences::configPath(const QString &fileName) const
 QString Preferences::appConfigPath() const
 {
 #ifdef Q_OS_WIN
-    return QCoreApplication::applicationDirPath();
+    return appDirPath();
 #elif defined(Q_OS_MAC)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../Config");
+    return appDirPath() + QLatin1String("/../Config");
 #elif defined(Q_OS_UNIX)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../../TileZed/share/tilezed/config");
+    return mShareDirPath + QStringLiteral("/config");
 #else
 #error "wtf system is this???"
 #endif
@@ -200,11 +246,11 @@ QString Preferences::appConfigPath(const QString &fileName) const
 QString Preferences::docsPath() const
 {
 #ifdef Q_OS_WIN
-    return QCoreApplication::applicationDirPath() + QLatin1String("/docs");
+    return appDirPath() + QLatin1String("/docs");
 #elif defined(Q_OS_MAC)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../Docs");
+    return appDirPath() + QLatin1String("/../Docs");
 #elif defined(Q_OS_UNIX)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../share/tilezed/docs");
+    return mShareDirPath + QLatin1String("/docs");
 #else
 #error "wtf system is this???"
 #endif
@@ -218,11 +264,11 @@ QString Preferences::docsPath(const QString &fileName) const
 QString Preferences::luaPath() const
 {
 #ifdef Q_OS_WIN
-    return QCoreApplication::applicationDirPath() + QLatin1String("/lua");
+    return appDirPath() + QLatin1String("/lua");
 #elif defined(Q_OS_MAC)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../Lua");
+    return appDirPath() + QLatin1String("/../Lua");
 #elif defined(Q_OS_UNIX)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../share/tilezed/lua");
+    return mShareDirPath + QLatin1String("/lua");
 #else
 #error "wtf system is this???"
 #endif

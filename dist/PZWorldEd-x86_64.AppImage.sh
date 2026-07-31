@@ -8,7 +8,7 @@ if [ "${dirname%$tmp}" != "/" ]; then
 dirname=$PWD/$dirname
 fi
 export LD_LIBRARY_PATH=$dirname/lib
-export QT_QPA_PLATFORM=wayland;xcb
-$dirname/bin/$appname "$@"
+export QT_QPA_PLATFORM=xcb;wayland
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=0
+$dirname/$appname "$@"
 
-# ldd $dirname/bin/$appname

@@ -31,6 +31,8 @@ public:
     static Preferences *instance();
     static void deleteInstance();
 
+    QString appDirPath() const;
+
     QString userPath() const;
     QString userPath(const QString &fileName) const;
 
@@ -166,8 +168,15 @@ private:
     Preferences();
     ~Preferences();
 
+    QString initAppDirPath();
+    QString initShareDirPath();
+
     QSettings *mSettings;
 
+    QString mAppDirPath;
+    QString mShareDirPath;
+    bool mInBuildDirectory = false;
+    bool mLinuxAppImage = false;
     bool mSnapToGrid;
     bool mShowCellBorder;
     bool mShowCoordinates;

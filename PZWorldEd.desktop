@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PZWorldEd
+Comment=Official world editor for Project Zomboid
+Exec=PZWorldEd
+Icon=worlded-icon-32
+Terminal=false
+Categories=Utility;Development;
+Keywords=Qt;Wayland;App;
+StartupWMClass=PZWorldEd
+
