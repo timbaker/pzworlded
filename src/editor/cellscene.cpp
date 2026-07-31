@@ -591,8 +591,6 @@ LayerGroupVBO::~LayerGroupVBO()
 }
 
 
-#define REORDER 1
-
 void LayerGroupVBO::paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect, QWidget* view)
 {
     if (mDestroying) {
@@ -727,21 +725,16 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 #endif
     }
 
-#if REORDER
     QOpenGLShaderProgram& mShaderProgram = mMapCompositeVBO->mShaderProgram;
     mShaderProgram.bind();
     int posAttr = mShaderProgram.attributeLocation("vertexPosition");
     int texAttr = mShaderProgram.attributeLocation("vertexTexCoord");
 
-    int strideBytes = 4 * sizeof(float); // Total size of 1 vertex (X + Y + U + V)
-    int posOffsetBytes = 0;              // Position starts at byte 0
-    int texOffsetBytes = 2 * sizeof(float); // Texture starts after X and Y (8 bytes)
-#endif
+    int strideBytes = 4 * sizeof(float);
+    int posOffsetBytes = 0;
+    int texOffsetBytes = 2 * sizeof(float);
 
     for (VBOTiles *vboTiles : std::as_const(exposedTiles)) {
-//        VBOTiles *vboTiles = mTiles[vxy.x() + vxy.y() * VBO_PER_CELL];
-//        if (vboTiles == nullptr)
-//            continue;
         if (vboTiles->mGathered == false)
             continue;
         if (vboTiles->mCreated)
@@ -816,22 +809,18 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         GL_CHECK(vboTiles->mVertexBuffer.allocate(vertices, tiles.size() * 4 * 4 * sizeof(GL_FLOAT)));
         delete[] vertices;
 
-#if REORDER
         GL_CHECK(mShaderProgram.enableAttributeArray(posAttr));
         GL_CHECK(mShaderProgram.setAttributeBuffer(posAttr, GL_FLOAT, posOffsetBytes, 2, strideBytes));
 
         GL_CHECK(mShaderProgram.enableAttributeArray(texAttr));
         GL_CHECK(mShaderProgram.setAttributeBuffer(texAttr, GL_FLOAT, texOffsetBytes, 2, strideBytes));
-#endif
 
         GL_CHECK(vboTiles->mVAO.release());
         GL_CHECK(vboTiles->mVertexBuffer.release());
         GL_CHECK(vboTiles->mIndexBuffer.release());
-
-//            qDebug() << "mTiles.size() == " << tiles.size();
     }
-    mShaderProgram.release();
-    GL_CHECK();
+
+    GL_CHECK(mShaderProgram.release());
 
     if (isEmpty()) {
         return;
@@ -858,20 +847,8 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
     modelView.translate(translateX * devicePixelRatio, translateY * devicePixelRatio, 0.0f);
     modelView.scale(scaleX, scaleY, 1.0f);
 
-#if REORDER == 0
-    QOpenGLShaderProgram& mShaderProgram = mMapCompositeVBO->mShaderProgram;
-#endif
     GL_CHECK(mShaderProgram.bind());
     GL_CHECK(mShaderProgram.setUniformValue("mvpMatrix", projection * modelView));
-
-#if REORDER == 0
-    int posAttr = mShaderProgram.attributeLocation("vertexPosition");
-    int texAttr = mShaderProgram.attributeLocation("vertexTexCoord");
-
-    int strideBytes = 4 * sizeof(float); // Total size of 1 vertex (X + Y + U + V)
-    int posOffsetBytes = 0;              // Position starts at byte 0
-    int texOffsetBytes = 2 * sizeof(float); // Texture starts after X and Y (8 bytes)
-#endif
 #endif
 
     GL_CHECK(glActiveTexture(GL_TEXTURE0));
@@ -900,62 +877,15 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         layerOpacity[i] = mLayerGroup->layerOpacity(tl);
     }
 
-    bool drawAll = false;
-    if (drawAll) {
-        {
-            for (VBOTiles *vboTiles : mTiles) {
-                if (vboTiles == nullptr)
-                    continue;
-                if (vboTiles->mCreated == false)
-                    continue;
-                QList<VBOTile>& tiles = vboTiles->mTiles;
-                if (tiles.isEmpty())
-                    continue;
-                GL_CHECK(vboTiles->mVAO.bind());
-                if (vboTiles->mIndexBuffer.bind() == false) Q_ASSERT(false);
-                if (vboTiles->mVertexBuffer.bind() == false) Q_ASSERT(false);
-
-                {
-                    mShaderProgram.setAttributeBuffer(posAttr, GL_FLOAT, posOffsetBytes, 2, strideBytes);
-                    mShaderProgram.setAttributeBuffer(texAttr, GL_FLOAT, texOffsetBytes, 2, strideBytes);
-                }
-
-                for (int i = 0; i < tiles.size(); i++) {
-                    GLuint start = i * 4;
-                    GLuint end = start + 4 - 1;
-                    GLuint count = 4;
-                    if (tiles[i].mTexture == nullptr) {
-                        tiles[i].mTexture = TILESET_TEXTURES.get(tiles[i].mTilesetName, mMapCompositeVBO->mUsedTilesets);
-                    }
-#if TILESET_TEXTURE_GL == 0
-                    if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mID == -1)
-                        continue;
-                    if (textureID != tiles[i].mTexture->mID) {
-                        GL_CHECK(glBindTexture(GL_TEXTURE_2D, tiles[i].mTexture->mID));
-                        textureID = tiles[i].mTexture->mID;
-                    }
-                    GL_CHECK(glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint))));
-#else
-                    if (tiles[i].mTexture == nullptr || tiles[i].mTexture->mTexture->isCreated() == false)
-                        continue;
-                    tiles[i].mTexture->mTexture->bind();
-                    glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_INT, (void*)(start * sizeof(GLuint)));
-#endif
-                }
-
-                GL_CHECK(vboTiles->mVAO.release());
-                vboTiles->mVertexBuffer.release();
-                vboTiles->mIndexBuffer.release();
-            }
-        }
-    } else {
+    {
         qreal opacity = 1.0f;
         mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity));
 
         MapComposite *mapComposite = mLayerGroup->owner();
         QRegion suppressRgn;
-        if (mapComposite->levelRecursive() + mLayerGroup->level() == mapComposite->root()->suppressLevel())
+        if (mapComposite->levelRecursive() + mLayerGroup->level() == mapComposite->root()->suppressLevel()) {
             suppressRgn = mapComposite->root()->suppressRegion();
+        }
 
         QList<QPoint> squares;
         getSquaresInRect(renderer, exposedRect, squares);
@@ -977,16 +907,6 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                     }
                     currentTiles = vboTiles;
                     GL_CHECK(vboTiles->mVAO.bind());
-#if REORDER == 0
-                    GL_CHECK(vboTiles->mIndexBuffer.bind());
-                    GL_CHECK(vboTiles->mVertexBuffer.bind());
-
-                    GL_CHECK(mShaderProgram.enableAttributeArray(posAttr));
-                    GL_CHECK(mShaderProgram.setAttributeBuffer(posAttr, GL_FLOAT, posOffsetBytes, 2, strideBytes));
-
-                    GL_CHECK(mShaderProgram.enableAttributeArray(texAttr));
-                    GL_CHECK(mShaderProgram.setAttributeBuffer(texAttr, GL_FLOAT, texOffsetBytes, 2, strideBytes));
-#endif
 
                     QPointF screenOrigin = renderer->tileToPixelCoords(vboTiles->mBounds.topLeft() + QPointF(0.5f, 1.5f), mLayerGroup->level());
                     QMatrix4x4 mtx;
@@ -1061,17 +981,9 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
             }
             if (currentTiles != nullptr) {
                 currentTiles->mVAO.release();
-                //currentTiles->mIndexBuffer.release();
-                //currentTiles->mVertexBuffer.release();
             }
         }
     }
-#if 0
-    GLuint start = 0;
-    GLuint end = mTiles.size() * 4 - 1;
-    GLuint count = mTiles.size() * 4;
-    glDrawRangeElements(GL_QUADS, start, end, count, GL_UNSIGNED_SHORT, (void*)(0));
-#endif
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
