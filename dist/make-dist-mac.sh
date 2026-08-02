@@ -1,14 +1,14 @@
 SRC=$(pwd)/..
-BUILD=$SRC/../Qt_6_11_1_for_macOS-Release/bin/
+BUILD=$SRC/../Qt_6_11_1_for_macOS_Release/bin/
 DESTROOT=$SRC/../../ProjectZomboid
 DEST=$DESTROOT/WorldEd
 
-mkdir $DESTROOT
-mkdir $DEST
+mkdir -p $DESTROOT
+mkdir -p $DEST
 
-cp -ra $BUILD/PZWorldEd.app $DEST
+cp -a $BUILD/PZWorldEd.app $DEST
 
-cp -a $SRC/LICENSE.BSD.txt $DEST
-cp -a $SRC/LICENSE.GPL.txt $DEST
+cp -a $SRC/LICENSE.BSD $DEST
+cp -a $SRC/LICENSE.GPL $DEST
 cp -a $SRC/LICENSE.QT6 $DEST
 
