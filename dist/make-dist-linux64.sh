@@ -15,3 +15,7 @@ cp -a $SRC/WorldDefaults.txt $DESTROOT/TileZed/share/tilezed/config
 cp -a $SRC/dist/PZWorldEd-x86_64.AppImage.sh $DEST
 chmod +x $DEST/PZWorldEd-x86_64.AppImage.sh
 
+cp -a $SRC/LICENSE.BSD.txt $DEST
+cp -a $SRC/LICENSE.GPL.txt $DEST
+cp -a $SRC/LICENSE.QT6 $DEST
+
