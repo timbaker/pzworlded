@@ -8,12 +8,7 @@ CONFIG -= qt
 #target.path = $${LIBDIR}
 #INSTALLS += target
 
-macx {
-    DESTDIR = ../../bin/PZWorldEd.app/Contents/Frameworks
-    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
-} else {
-    DESTDIR = ../../lib
-}
+DESTDIR = ../../lib
 
 DLLDESTDIR = ../..
 
