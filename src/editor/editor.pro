@@ -368,6 +368,11 @@ RESOURCES += \
 win32 {
     RC_FILE = worlded.rc
 }
+macx {
+    TARGET = PZWorldEd
+    QMAKE_INFO_PLIST = Info.plist
+    ICON = images/worlded-icon-mac.icns
+}
 
 win32:INCLUDEPATH += .
 
