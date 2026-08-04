@@ -56,6 +56,7 @@ private slots:
     void removeTile();
     void search();
     void openCell();
+    void currentResultChanged(int row);
     void synchUI();
 
 private:

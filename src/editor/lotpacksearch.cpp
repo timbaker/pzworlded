@@ -32,6 +32,8 @@
 
 #include <QBuffer>
 
+#include <cmath>
+
 LotPackSearch::LotPackSearch(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::LotPackSearch)
@@ -45,7 +47,7 @@ LotPackSearch::LotPackSearch(QWidget *parent)
     connect(ui->buttonClose, &QPushButton::clicked, this, &QMainWindow::close);
 
     connect(ui->tileList, &QListWidget::currentItemChanged, this, &LotPackSearch::synchUI);
-    connect(ui->resultList, &QListWidget::currentItemChanged, this, &LotPackSearch::synchUI);
+    connect(ui->resultList, &QListWidget::currentRowChanged, this, &LotPackSearch::currentResultChanged);
 
     synchUI();
 }
@@ -146,7 +148,7 @@ void LotPackSearch::addResult(const QString &tileName, int cellX, int cellY, int
     mResults += { tileName, squareX, squareY, z };
     int cell300X = std::floor(squareX / 300.0);
     int cell300Y = std::floor(squareY / 300.0);
-    const QString s = QStringLiteral("FOUND %1 in cell %2,%3 at %4,%5,%6").arg(tileName).arg(cell300X).arg(cell300Y).arg(squareX - cell300X * 300).arg(squareY - cell300Y * 300).arg(z);
+    const QString s = QStringLiteral("%1 in cell %2,%3 at %4,%5,%6").arg(tileName).arg(cell300X).arg(cell300Y).arg(squareX - cell300X * 300).arg(squareY - cell300Y * 300).arg(z);
     ui->resultList->addItem(s);
 }
 
@@ -228,4 +230,14 @@ void LotPackSearch::openCell()
             cellDoc->view()->centerOn(cellDoc->scene()->renderer()->tileToPixelCoords(tilePos));
         }
     }
+}
+
+void LotPackSearch::currentResultChanged(int row)
+{
+    if (row == -1) {
+        return;
+    }
+    const SearchResult &result = mResults.at(row);
+    mLotPackWindow->focusOn(result.x, result.y, result.z);
+    synchUI();
 }

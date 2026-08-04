@@ -407,36 +407,52 @@ void LotPackScene::showRoomDefs(bool show)
     highlightCurrentLevel();
 }
 
+int LotPackScene::currentLevel() const
+{
+    return mCurrentLevel;
+}
+
+void LotPackScene::setCurrentLevel(int level)
+{
+    if (level == mCurrentLevel) {
+        return;
+    }
+    mCurrentLevel = level;
+    highlightCurrentLevel();
+    emit currentLevelChanged(mCurrentLevel);
+}
+
 void LotPackScene::highlightCurrentLevel()
 {
     int max = mWorld->CurrentCell->maxLevel;
     bool hi = Preferences::instance()->highlightCurrentLevel();
-    if (hi)
+    if (hi) {
         max = qMin(max, mCurrentLevel);
+    }
     mDarkRectangle->setVisible(hi);
     foreach (LotPackLayerGroupItem *item, mLayerGroupItems) {
-        if (hi && item->level() == mCurrentLevel)
+        if (hi && item->level() == mCurrentLevel) {
             mDarkRectangle->setZValue(item->zValue() - 0.1);
-        item->setVisible(item->level() >= 0 && item->level() <= max);
+        }
+        item->setVisible(item->level() >= mWorld->CurrentCell->minLevel && item->level() <= max);
     }
-    for (int z = 0; z < mRoomDefGroups.size(); z++)
+    for (int z = 0; z < mRoomDefGroups.size(); z++) {
         mRoomDefGroups[z]->setVisible(mShowRoomDefs &&
                                       (!hi || (z - WORLD_GROUND_LEVEL == mCurrentLevel)));
+    }
 }
 
 void LotPackScene::levelAbove()
 {
-    if (mCurrentLevel < mWorld->CurrentCell->maxLevel) {
-        ++mCurrentLevel;
-        highlightCurrentLevel();
+    if (currentLevel() < mWorld->CurrentCell->maxLevel) {
+        setCurrentLevel(currentLevel() + 1);
     }
 }
 
 void LotPackScene::levelBelow()
 {
-    if (mCurrentLevel > mWorld->CurrentCell->minLevel) {
-        --mCurrentLevel;
-        highlightCurrentLevel();
+    if (currentLevel() > mWorld->CurrentCell->minLevel) {
+        setCurrentLevel(currentLevel() - 1);
     }
 }
 
@@ -661,6 +677,8 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     ui->actionRecent->setVisible(false);
     setRecentMenu();
 
+    connect(mView->scene(), &LotPackScene::currentLevelChanged, this, &LotPackWindow::currentLevelChanged);
+
     TileMetaInfoMgr::instance()->loadTilesets();
 }
 
@@ -714,6 +732,14 @@ void LotPackWindow::setRecentMenu()
             action->setEnabled(false);
         ui->menuFile->insertAction(separatorAfterRecent, action);
     }
+}
+
+void LotPackWindow::focusOn(int squareX, int squareY, int squareZ)
+{
+    QPointF scenePos = ui->view->scene()->renderer()->tileToPixelCoords(squareX, squareY, squareZ);
+    ui->view->centerOn(scenePos);
+    Preferences::instance()->setHighlightCurrentLevel(true);
+    ui->view->scene()->setCurrentLevel(squareZ);
 }
 
 void LotPackWindow::closeEvent(QCloseEvent *e)
@@ -833,7 +859,14 @@ void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
         const IsoConstants &isoConstants = mWorld->isoConstants;
         int x = qFloor(tilePos.x() / qreal(isoConstants.SQUARES_PER_CELL));
         int y = qFloor(tilePos.y() / qreal(isoConstants.SQUARES_PER_CELL));
-        ui->coords->setText(tr("Cell %1,%2 World %3,%4").arg(x).arg(y).arg(tilePos.x()).arg(tilePos.y()));
-    } else
+        ui->coords->setText(tr("Cell %1,%2   World %3,%4  Level %5").arg(x).arg(y).arg(tilePos.x()).arg(tilePos.y()).arg(ui->view->scene()->currentLevel()));
+    } else {
         ui->coords->setText(QString());
+    }
 }
+
+void LotPackWindow::currentLevelChanged(int level)
+{
+    tilePositionChanged(mView->tilePosition());
+}
+

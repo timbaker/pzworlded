@@ -126,10 +126,16 @@ public:
 
     Tiled::MapRenderer *renderer() const { return mRenderer; }
 
+    int currentLevel() const;
+    void setCurrentLevel(int level);
+
     void setMaxLevel(int max);
 
     QMap<QString,Tiled::Tile*> mTileByName;
     QSet<LotHeader*> mHeadersExamined;
+
+signals:
+    void currentLevelChanged(int level);
 
 public slots:
     void showRoomDefs(bool show);
@@ -165,6 +171,8 @@ public:
 
     bool viewportEvent(QEvent *event);
 
+    QPoint tilePosition() const { return mTilePos; }
+
 signals:
     void tilePositionChanged(const QPoint &tilePos);
 
@@ -191,6 +199,8 @@ public:
     void setRecentMenu();
 
     IsoWorld *world() const { return mWorld; }
+
+    void focusOn(int squareX, int squareY, int squareZ);
     
     void closeEvent(QCloseEvent *e);
 
@@ -206,6 +216,7 @@ private slots:
     void findTiles();
 
     void tilePositionChanged(const QPoint &tilePos);
+    void currentLevelChanged(int level);
 
 private:
     Ui::LotPackWindow *ui;
