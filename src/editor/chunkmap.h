@@ -283,6 +283,25 @@ public:
     QList<RoomDef*> rooms;
 };
 
+struct TileLocation
+{
+    QString tileset;
+    int tileIndex;
+    uint16_t x;
+    uint16_t y;
+    uint8_t z;
+
+    TileLocation(const QString& tileset, int tileIndex, int x, int y, int z) :
+        tileset(tileset),
+        tileIndex(tileIndex),
+        x(uint16_t(x)),
+        y(uint16_t(y)),
+        z(uint8_t(x))
+    {
+
+    }
+};
+
 class LotHeader
 {
 public:

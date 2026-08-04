@@ -67,10 +67,12 @@ OBJECTS_DIR = .obj
 SOURCES += main.cpp\
     BuildingEditor/buildingfurniturefile.cpp \
     BuildingEditor/buildingtilesfile.cpp \
+    choosetiledialog.cpp \
     exportlotsprogressdialog.cpp \
     generatelotsfailuredialog.cpp \
     loadthumbnailsdialog.cpp \
     lotfilesmanager256.cpp \
+    lotpacksearch.cpp \
     luatable.cpp \
         mainwindow.cpp \
     InGameMap/clipper.cpp \
@@ -99,7 +101,9 @@ SOURCES += main.cpp\
     thumbnailsettingsfile.cpp \
     thumbnailsettingsmgr.cpp \
     tiledeftextfile.cpp \
+    tilesetmodel.cpp \
     tilesetstxtfile.cpp \
+    tilesetview.cpp \
     worldview.cpp \
     worldscene.cpp \
     world.cpp \
@@ -196,6 +200,7 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     BuildingEditor/buildingfurniturefile.h \
     BuildingEditor/buildingtilesfile.h \
+    choosetiledialog.h \
     exportlotsprogressdialog.h \
     generatelotsfailuredialog.h \
     InGameMap/clipper.hpp \
@@ -213,6 +218,7 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapwriterbinary.h \
     loadthumbnailsdialog.h \
     lotfilesmanager256.h \
+    lotpacksearch.h \
     luatable.h \
     navigation/chunkdatafile256.h \
     navigation/isochunk256.h \
@@ -227,7 +233,9 @@ HEADERS  += mainwindow.h \
     thumbnailsettingsfile.h \
     thumbnailsettingsmgr.h \
     tiledeftextfile.h \
+    tilesetmodel.h \
     tilesetstxtfile.h \
+    tilesetview.h \
     worldconstants.h \
     worldview.h \
     worldscene.h \
@@ -322,6 +330,7 @@ HEADERS  += mainwindow.h \
     waterflow.h
 
 FORMS    += mainwindow.ui \
+    choosetiledialog.ui \
     exportlotsprogressdialog.ui \
     generatelotsfailuredialog.ui \
     InGameMap/ingamemapimagedialog.ui \
@@ -329,6 +338,7 @@ FORMS    += mainwindow.ui \
     InGameMap/ingamemappropertiesform.ui \
     InGameMap/ingamemappropertydialog.ui \
     loadthumbnailsdialog.ui \
+    lotpacksearch.ui \
     pngzonesdialog.ui \
     propertiesview.ui \
     propertiesdialog.ui \

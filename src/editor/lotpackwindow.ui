@@ -15,7 +15,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <property name="margin">
+    <property name="margin" stdset="0">
      <number>2</number>
     </property>
     <item row="0" column="0">
@@ -33,7 +33,7 @@
       <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -60,7 +60,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>17</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -90,8 +90,15 @@
     <addaction name="actionZoomOut"/>
     <addaction name="actionZoomNormal"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionFindTiles"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
+   <addaction name="menuTools"/>
   </widget>
   <action name="actionOpen_World">
    <property name="icon">
@@ -194,6 +201,14 @@
    </property>
    <property name="shortcut">
     <string>M</string>
+   </property>
+  </action>
+  <action name="actionFindTiles">
+   <property name="text">
+    <string>Find Tiles...</string>
+   </property>
+   <property name="toolTip">
+    <string>Search world for used tiles</string>
    </property>
   </action>
  </widget>

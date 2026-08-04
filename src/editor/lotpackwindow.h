@@ -42,6 +42,7 @@ class LotPackWindow;
 }
 
 class LotPackScene;
+class LotPackSearch;
 class LotPackLayerGroup : public Tiled::ZTileLayerGroup
 {
 public:
@@ -188,6 +189,8 @@ public:
 
     void addRecentDirectory(const QString &f);
     void setRecentMenu();
+
+    IsoWorld *world() const { return mWorld; }
     
     void closeEvent(QCloseEvent *e);
 
@@ -200,6 +203,7 @@ private slots:
     void zoomOut();
     void zoomNormal();
     void updateZoom();
+    void findTiles();
 
     void tilePositionChanged(const QPoint &tilePos);
 
@@ -207,6 +211,7 @@ private:
     Ui::LotPackWindow *ui;
     LotPackView *mView;
     IsoWorld *mWorld;
+    LotPackSearch *mSearchWindow = nullptr;
 };
 
 #endif // LOTPACKWINDOW_H

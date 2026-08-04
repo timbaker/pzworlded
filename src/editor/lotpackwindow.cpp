@@ -19,6 +19,7 @@
 #include "ui_lotpackwindow.h"
 
 #include "chunkmap.h"
+#include "lotpacksearch.h"
 #include "preferences.h"
 #include "progress.h"
 #include "tilemetainfomgr.h"
@@ -652,6 +653,9 @@ LotPackWindow::LotPackWindow(QWidget *parent) :
     connect(ui->actionLevelUp, &QAction::triggered, mView->scene(), &LotPackScene::levelAbove);
     connect(ui->actionLevelDown, &QAction::triggered, mView->scene(), &LotPackScene::levelBelow);
 
+    connect(ui->actionFindTiles, &QAction::triggered, this, &LotPackWindow::findTiles);
+    ui->actionFindTiles->setEnabled(false);
+
     connect(mView, &LotPackView::tilePositionChanged, this, &LotPackWindow::tilePositionChanged);
 
     ui->actionRecent->setVisible(false);
@@ -767,6 +771,8 @@ void LotPackWindow::open(const QString &directory)
 
     addRecentDirectory(directory);
     setRecentMenu();
+
+    ui->actionFindTiles->setEnabled(true);
 }
 
 void LotPackWindow::closeWorld()
@@ -782,6 +788,8 @@ void LotPackWindow::closeWorld()
         delete mWorld;
         mWorld = 0;
     }
+
+    ui->actionFindTiles->setEnabled(false);
 }
 
 void LotPackWindow::zoomIn()
@@ -806,6 +814,17 @@ void LotPackWindow::updateZoom()
     ui->actionZoomIn->setEnabled(mView->zoomable()->canZoomIn());
     ui->actionZoomOut->setEnabled(mView->zoomable()->canZoomOut());
     ui->actionZoomNormal->setEnabled(scale != 1);
+}
+
+void LotPackWindow::findTiles()
+{
+    if (mSearchWindow == nullptr) {
+        mSearchWindow = new LotPackSearch(this);
+        mSearchWindow->setLotPackWindow(this);
+    }
+    mSearchWindow->show();
+    mSearchWindow->activateWindow();
+    mSearchWindow->raise();
 }
 
 void LotPackWindow::tilePositionChanged(const QPoint &tilePos)
