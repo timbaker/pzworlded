@@ -811,7 +811,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
         }
         for (const OrderedCell &oc : std::as_const(orderedCells)) {
             //TilePlusLayer buildingCell(oc.layer->nameWithPrefix(), oc.cell->tile, oc.layerGroup->mVisibleLayers[oc.layerIndex], oc.opacity);
-            const QString layerNameWithPrefix = QStringLiteral("%1_%2").arg(subMapLayer.mSubMap->levelRecursive()).arg(oc.layer->name());
+            const QString layerNameWithPrefix = QStringLiteral("%1_%2").arg(subMapLayer.mSubMap->levelRecursive() + oc.layer->level()).arg(oc.layer->name());
             TilePlusLayer buildingCell(layerNameWithPrefix, oc.cell->tile, oc.layerGroup->mVisibleLayers[oc.layerIndex], oc.opacity);
             buildingCell.mSubMap = oc.layerGroup->owner();
             buildingCells.append(buildingCell);
