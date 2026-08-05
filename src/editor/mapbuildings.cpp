@@ -131,7 +131,10 @@ void MapBuildings::calculate(MapComposite *mc)
                 continue;
             if (r->building == comp->building)
                 continue;
-
+            if ((r->floor < 0) != (comp->floor < 0)) {
+                // Don't merge below-ground buildings with above-ground buildings.
+                continue;
+            }
             if (r->inSameBuilding(comp)) {
                 if (comp->building != nullptr) {
                     MapBuildingsNS::Building *b = comp->building;
@@ -180,7 +183,7 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
         int ox = mc->originRecursive().x();
         int oy = mc->originRecursive().y();
         int rootLevel = mc->levelRecursive();
-        for (int level = 0; level <= mc->maxLevel(); level++) {
+        for (int level = mc->minLevel(); level <= mc->maxLevel(); level++) {
             QString layerName = QString::fromLatin1("%1_RoomDefs").arg(level);
             int index = mc->map()->indexOfLayer(layerName, Layer::ObjectGroupType);
             if (index >= 0) {
