@@ -44,6 +44,7 @@ LotPackSearch::LotPackSearch(QWidget *parent)
 
     connect(ui->buttonAddTile, &QPushButton::clicked, this, &LotPackSearch::addTile);
     connect(ui->buttonRemoveTile, &QPushButton::clicked, this, &LotPackSearch::removeTile);
+    connect(ui->buttonClearTiles, &QPushButton::clicked, this, &LotPackSearch::clearTiles);
     connect(ui->buttonSearch, &QPushButton::clicked, this, &LotPackSearch::search);
     connect(ui->buttonOpenCell, &QPushButton::clicked, this, &LotPackSearch::openCell);
     connect(ui->buttonClose, &QPushButton::clicked, this, &QMainWindow::close);
@@ -168,6 +169,7 @@ void LotPackSearch::addResult(const QString &tileName, int cellX, int cellY, int
 void LotPackSearch::synchUI()
 {
     ui->buttonRemoveTile->setEnabled(ui->tileList->currentItem() != nullptr);
+    ui->buttonClearTiles->setEnabled(ui->tileList->count() > 0);
     ui->buttonSearch->setEnabled(ui->tileList->count() > 0);
     ui->buttonOpenCell->setEnabled(ui->resultList->currentItem() != nullptr);
 }
@@ -199,6 +201,12 @@ void LotPackSearch::removeTile()
         return;
     }
     delete ui->tileList->takeItem(row);
+    synchUI();
+}
+
+void LotPackSearch::clearTiles()
+{
+    ui->tileList->clear();
     synchUI();
 }
 

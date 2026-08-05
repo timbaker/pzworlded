@@ -59,6 +59,7 @@ private:
 private slots:
     void addTile();
     void removeTile();
+    void clearTiles();
     void search();
     void openCell();
     void currentResultChanged(int row);
