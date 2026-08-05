@@ -72,7 +72,7 @@ bool LotPackLayerGroup::orderedCellsAt(const QPoint &point,
     staticCells.clear();
     staticCells.reserve(20); // so QVector reallocations don't change addresses of Cells.
     if (IsoGridSquare *sq = mWorld->CurrentCell->getGridSquare(point.x(), point.y(), level())) {
-        for (const QString &tileName : sq->tiles) {
+        for (const QString &tileName : std::as_const(sq->tiles)) {
             if (!mScene->mTileByName.contains(tileName))
                 continue;
             if (Tile *tile = mScene->mTileByName[tileName]) {

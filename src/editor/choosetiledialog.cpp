@@ -50,13 +50,14 @@ ChooseTileDialog::~ChooseTileDialog()
     delete ui;
 }
 
-Tiled::Tile *ChooseTileDialog::chosenTile() const
+QList<Tiled::Tile*> ChooseTileDialog::chosenTiles() const
 {
     QModelIndexList selection = ui->tilesetView->selectionModel()->selectedIndexes();
-    if (selection.size() != 1) {
-        return nullptr;
+    QList<Tiled::Tile*> tiles;
+    for (const QModelIndex &index : selection) {
+        tiles += ui->tilesetView->tilesetModel()->tileAt(index);
     }
-    return ui->tilesetView->tilesetModel()->tileAt(selection.first());
+    return tiles;
 }
 
 void ChooseTileDialog::tilesetRowChanged(int row)

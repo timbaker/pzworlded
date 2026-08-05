@@ -59,6 +59,17 @@ LotPackSearch::~LotPackSearch()
     delete ui;
 }
 
+bool LotPackSearch::isTileAddedAlready(const QString& tileName) const
+{
+    for (int i = 0; i < ui->tileList->count(); i++) {
+        QListWidgetItem *item = ui->tileList->item(i);
+        if (item->text() == tileName) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool LotPackSearch::containsAny(const QStringList &haystack, const QStringList &needles, QSet<QString> &contains)
 {
     contains.clear();
@@ -167,11 +178,17 @@ void LotPackSearch::addTile()
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
-    Tiled::Tile *tile = dialog.chosenTile();
-    if (tile == nullptr) {
+    const QList<Tiled::Tile*> tiles = dialog.chosenTiles();
+    if (tiles.isEmpty()) {
         return;
     }
-    ui->tileList->addItem(QStringLiteral("%1_%2").arg(tile->tileset()->name()).arg(tile->id()));
+    for (Tiled::Tile *tile : tiles) {
+        const QString tileName = QStringLiteral("%1_%2").arg(tile->tileset()->name()).arg(tile->id());
+        if (isTileAddedAlready(tileName)) {
+            continue;
+        }
+        ui->tileList->addItem(tileName);
+    }
     synchUI();
 }
 

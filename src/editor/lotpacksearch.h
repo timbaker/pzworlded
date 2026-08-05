@@ -27,6 +27,10 @@ class LotPackSearch;
 class LotHeader;
 class LotPackWindow;
 
+namespace Tiled {
+class Tile;
+}
+
 class LotPackSearch : public QMainWindow
 {
     Q_OBJECT
@@ -47,6 +51,7 @@ private:
         int z;
     };
 
+    bool isTileAddedAlready(const QString &tileName) const;
     bool containsAny(const QStringList &haystack, const QStringList &needles, QSet<QString> &contains);
     void searchCell(int cellX, int cellY, LotHeader *lotHeader, const QSet<QString> &tilesToFind);
     void addResult(const QString &tileName, int cellX, int cellY, int x, int y, int z);

@@ -39,7 +39,7 @@ public:
     explicit ChooseTileDialog(QWidget *parent = nullptr);
     ~ChooseTileDialog();
 
-    Tiled::Tile *chosenTile() const;
+    QList<Tiled::Tile*> chosenTiles() const;
 
 private slots:
     void tilesetRowChanged(int row);
