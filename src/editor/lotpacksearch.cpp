@@ -24,8 +24,10 @@
 #include "choosetiledialog.h"
 #include "documentmanager.h"
 #include "lotpackwindow.h"
+#include "preferences.h"
 #include "world.h"
 #include "worlddocument.h"
+#include "zoomable.h"
 
 #include "maprenderer.h"
 #include "tileset.h"
@@ -221,15 +223,23 @@ void LotPackSearch::openCell()
     WorldDocument *worldDoc = doc->isWorldDocument() ? doc->asWorldDocument() : doc->asCellDocument()->worldDocument();
     int cell300X = std::floor(result.x / 300.0);
     int cell300Y = std::floor(result.y / 300.0);
-    if (WorldCell *cell = worldDoc->world()->cellAt(cell300X, cell300Y)) {
-        worldDoc->editCell(cell);
-        if (CellDocument *cellDoc = DocumentManager::instance()->findDocument(cell)) {
-            DocumentManager::instance()->setCurrentDocument(cellDoc);
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-            QPointF tilePos(result.x - cell300X * 300, result.y - cell300Y * 300);
-            cellDoc->view()->centerOn(cellDoc->scene()->renderer()->tileToPixelCoords(tilePos));
-        }
+    WorldCell *cell = worldDoc->world()->cellAt(cell300X, cell300Y);
+    if (cell == nullptr) {
+        return;
     }
+    worldDoc->editCell(cell);
+    CellDocument *cellDoc = DocumentManager::instance()->findDocument(cell);
+    if (cellDoc == nullptr) {
+        return;
+    }
+    DocumentManager::instance()->setCurrentDocument(cellDoc);
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    QPointF tilePos(result.x - cell300X * 300, result.y - cell300Y * 300);
+    cellDoc->view()->centerOn(cellDoc->scene()->renderer()->tileToPixelCoords(tilePos, result.z));
+    Preferences::instance()->setHighlightCurrentLevel(true);
+    cellDoc->setCurrentLevel(result.z);
+    cellDoc->scene()->setHighlightRoomPosition({result.x - cell300X * 300, result.y - cell300Y * 300});
+    cellDoc->view()->zoomable()->setScale(1.0);
 }
 
 void LotPackSearch::currentResultChanged(int row)
