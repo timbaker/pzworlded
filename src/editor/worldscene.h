@@ -136,7 +136,7 @@ public:
     virtual const QList<WorldCellLot*> &lots() const = 0;
 
     void updateCellImage();
-    void updateLotImage(int index);
+    void insertLotImage(int index);
     void updateBoundingRect();
 
     void mapImageChanged(MapImage *mapImage);
@@ -151,21 +151,25 @@ protected:
     void calcMapImageBounds();
     void calcLotImageBounds(int index);
     QPointF calcLotImagePosition(WorldCellLot *lot, int scaledImageWidth, MapImage *mapImage);
+    void sortLotImages();
 
     struct LotImage {
-        LotImage()
-            : mMapImage(0)
+        LotImage(int level)
+            : mMapImage(nullptr)
+            , level(level)
         {
         }
 
-        LotImage(const QRectF &bounds, MapImage *mapImage)
+        LotImage(const QRectF &bounds, MapImage *mapImage, int level)
             : mBounds(bounds)
             , mMapImage(mapImage)
+            , level(level)
         {
         }
 
         QRectF mBounds;
         MapImage *mMapImage;
+        int level;
     };
 
     WorldScene *mScene;
@@ -173,6 +177,7 @@ protected:
     MapImage *mMapImage;
     QRectF mMapImageBounds;
     QVector<LotImage> mLotImages;
+    QVector<int> mLotImagesRenderOrder;
     QPointF mDrawOffset;
     bool mWantsImages;
 #ifndef QT_NO_DEBUG
