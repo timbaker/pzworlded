@@ -36,7 +36,7 @@ public:
     CombinedCellMaps();
     ~CombinedCellMaps();
 
-    bool startLoading(WorldDocument *worldDoc, int cell256X, int cell256Y, WorldCellLotList &lotsOverlappingCellBounds);
+    bool startLoading(WorldDocument *worldDoc, int cell256X, int cell256Y);
     int checkLoading(WorldDocument *worldDoc);
     MapInfo* getCombinedMap();
     void moveToThread(MapComposite *mapComposite, QThread *thread);
@@ -77,6 +77,7 @@ public:
     LotFilesWorker256(LotFilesManager256 *manager, InterruptibleThread *thread);
     void work() override;
     bool generateHeader(CombinedCellMaps &combinedMaps, MapComposite *mapComposite);
+    void createRoomsAndBuildings(CombinedCellMaps& combinedMaps);
     bool generateHeaderAux(int cell256X, int cell256Y);
     bool generateChunk(QDataStream &out, int chunkX, int chunkY);
     void generateBuildingObjects(int mapWidth, int mapHeight);
@@ -175,8 +176,6 @@ private:
     explicit LotFilesManager256(QObject *parent = nullptr);
     ~LotFilesManager256();
 
-    void collectLotsOverlappingCellBounds();
-
     void startThreads(int numberOfThreads);
     void stopThreads();
     void updateWorkers();
@@ -190,7 +189,6 @@ private:
     QImage ZombieSpawnMap;
     QList<const JumboZone*> mJumboZoneList;
     QRect mCellBounds256;
-    WorldCellLotList mLotsOverlappingCellBounds;
     QSet<QPair<int, int>> mDoneCells256;
     struct CellJob
     {
