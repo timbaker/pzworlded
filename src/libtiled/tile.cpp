@@ -64,6 +64,8 @@ void Tile::setImage(const QImage &image)
         right--;
 
     mImage = image.copy(left, top, right - left + 1, bottom - top + 1);
+
+    mImageBlackValid = false;
 }
 
 void Tile::setEmptyImage(int width, int height)
@@ -71,6 +73,8 @@ void Tile::setEmptyImage(int width, int height)
     mImage = QImage();
     mImageOffset = QPoint(0, 0);
     mImageSize = QSize(width, height);
+
+    mImageBlackValid = false;
 }
 
 QMargins Tile::drawMargins(float scale)
@@ -93,11 +97,22 @@ QImage Tile::finalImage(int width, int height)
     return image;
 }
 
+const QImage &Tile::imageBlack()
+{
+    if (mImageBlackValid == false) {
+        mImageBlackValid = true;
+        createImageBlack();
+    }
+    return mImageBlack;
+}
+
 void Tile::setImage(const Tile *tile)
 {
     mImage = tile->mImage;
     mImageOffset = tile->mImageOffset;
     mImageSize = tile->mImageSize;
+
+    mImageBlackValid = false;
 }
 
 bool Tile::isRowTransparent(const QImage &image, int row)
@@ -118,4 +133,26 @@ bool Tile::isColumnTransparent(const QImage &image, int col)
             return false;
     }
     return true;
+}
+
+void Tile::createImageBlack()
+{
+    mImageBlack = mImage;
+#if 1
+    for (int y = 0; y < mImageBlack.height(); y++) {
+        for (int x = 0; x < mImageBlack.width(); x++) {
+            QRgb pixel = mImageBlack.pixel(x, y);
+            if (qAlpha(pixel) == 0) {
+                continue;
+            }
+            pixel = qRgba(qRed(pixel) * 0.33, qGreen(pixel) * 0.33, qBlue(pixel) * 0.33, qAlpha(pixel));
+            mImageBlack.setPixel(x, y, pixel);
+        }
+    }
+#else
+    QPainter painter(&mImageBlack);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(mImageBlack.rect(), QColor(0, 0, 0, 255));
+    painter.end();
+#endif
 }

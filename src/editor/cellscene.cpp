@@ -884,8 +884,8 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
     }
 
     {
-        qreal opacity = 1.0f;
-        mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity));
+        QVector4D currentColor(1.0, 1.0, 1.0, 1.0);
+        mShaderProgram.setUniformValue("color", currentColor);
 
         MapComposite *mapComposite = mLayerGroup->owner();
         QRegion suppressRgn;
@@ -948,6 +948,16 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                             continue;
                         if (tile.mInvisible && (bShowInvisibleTiles == false))
                             continue;
+                        QVector4D color = currentColor;
+                        if (tile.mUnlit) {
+                            color.setX(0.3);
+                            color.setY(0.3);
+                            color.setZ(0.3);
+                        } else {
+                            color.setX(1.0);
+                            color.setY(1.0);
+                            color.setZ(1.0);
+                        }
                         if ((tile.mLayerIndex >= 0) && (tile.mLayerIndex < layerCount)) {
                             if (visibleLayers[tile.mLayerIndex] == false)
                                 continue;
@@ -957,20 +967,21 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                                     continue;
                                 }
                             }
-                            if (opacity != layerOpacity[tile.mLayerIndex]) {
-                                GL_CHECK(mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity = layerOpacity[tile.mLayerIndex])));
-                            }
+                            color.setW(layerOpacity[tile.mLayerIndex]);
                         } else {
-                            if (opacity != 1.0) {
-                                GL_CHECK(mShaderProgram.setUniformValue("color", QVector4D(1.f, 1.f, 1.f, opacity = 1.0)));
-                            }
+                            color.setW(1.0);
+                        }
+                        if (color != currentColor) {
+                            currentColor = color;
+                            GL_CHECK(mShaderProgram.setUniformValue("color", currentColor));
                         }
                         if (tile.mTexture == nullptr) {
                             tile.mTexture = TILESET_TEXTURES.get(tile.mTilesetName, mMapCompositeVBO->mUsedTilesets);
                         }
 #if TILESET_TEXTURE_GL == 0
-                        if (tile.mTexture == nullptr || tile.mTexture->mID == -1)
+                        if (tile.mTexture == nullptr || tile.mTexture->mID == -1) {
                             continue;
+                        }
                         if (textureID != GLuint(tile.mTexture->mID)) {
                             GL_CHECK(glBindTexture(GL_TEXTURE_2D, tile.mTexture->mID));
                             textureID = tile.mTexture->mID;
@@ -1154,6 +1165,7 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                     vboTile.mTilesetName = tileset->name();
                     vboTile.mAtlasUVST = tile->atlasUVST();
                     vboTile.mInvisible = tile == invisibleTile;
+                    vboTile.mUnlit = layerGroup->useImageBlack(square.x(), square.y());
 
                     if (bJUMBO) {
                         vboTile.mRect.translate(-(customSize.width() - 64) / 2, 0); // FIXME: Shouldn't Tiled::setZomboidTileOffset() take care of this? Possibly a TileScale=2 issue.
@@ -4616,6 +4628,9 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, &Preferences::showLotFloorsOnlyChanged, this, &CellScene::showLotFloorsOnlyChanged);
     connect(prefs, &Preferences::showInvisibleTilesChanged, this, &CellScene::showInvisibleTilesChanged);
 
+    mUnlitRoomsTimer.setSingleShot(true);
+    connect(&mUnlitRoomsTimer, &QTimer::timeout, this, &CellScene::unlitRoomsTimeout);
+
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
 
     QPen pen(QColor(128, 128, 128, 128));
@@ -4631,6 +4646,7 @@ CellScene::CellScene(QObject *parent)
 CellScene::~CellScene()
 {
     mDestroying = true;
+    mUnlitRoomsTimer.stop();
     // mMap, mMapInfo are shared, don't destroy
     delete mMapComposite;
     delete mRenderer;
@@ -4811,6 +4827,8 @@ void CellScene::setDocument(CellDocument *doc)
 
     connect(Preferences::instance(), &Preferences::highlightRoomUnderPointerChanged,
             this, &CellScene::highlightRoomUnderPointerChanged);
+    connect(Preferences::instance(), &Preferences::highlightUnlitRoomsChanged,
+            this, &CellScene::highlightUnlitRoomsChanged);
 }
 
 WorldDocument *CellScene::worldDocument() const
@@ -5013,11 +5031,25 @@ void CellScene::highlightRoomUnderPointerChanged(bool highlight)
     setHighlightRoomPosition(mHighlightRoomPosition);
 }
 
+void CellScene::highlightUnlitRoomsChanged(bool highlight)
+{
+    Q_UNUSED(highlight)
+    if (mMapBuildingsInvalid) {
+        recalculateBuildingRegions();
+    }
+    recalculateUnlitRooms();
+    if (Preferences::instance()->useOpenGL() && mMapComposite != nullptr) {
+        mMapComposite->incrChangeCount();
+    }
+    update();
+}
+
 void CellScene::setHighlightRoomPosition(const QPoint &tilePos)
 {
     QRegion buildingRgn, roomRgn;
-    if (Preferences::instance()->highlightRoomUnderPointer())
+    if (Preferences::instance()->highlightRoomUnderPointer()) {
         buildingRgn = getBuildingRegion(tilePos, roomRgn);
+    }
     if (buildingRgn - roomRgn != mMapComposite->suppressRegion() ||
             document()->currentLevel() != mMapComposite->suppressLevel()) {
         mMapComposite->setSuppressRegion(buildingRgn - roomRgn, document()->currentLevel());
@@ -5028,12 +5060,11 @@ void CellScene::setHighlightRoomPosition(const QPoint &tilePos)
 
 QRegion CellScene::getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn)
 {
-    if (!mMapComposite)
+    if (mMapComposite == nullptr) {
         return QRegion();
+    }
     if (mMapBuildingsInvalid) {
-        mMapBuildings->calculate(mMapComposite);
-        mMapBuildingsInvalid = false;
-        mLightSwitchOverlays.update();
+        recalculateBuildingRegions();
     }
     if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel())) {
         roomRgn = room->region();
@@ -5042,16 +5073,27 @@ QRegion CellScene::getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn)
     return QRegion();
 }
 
+QString CellScene::buildingNameAt(const QPointF &scenePos)
+{
+    if (mMapBuildingsInvalid) {
+        recalculateBuildingRegions();
+    }
+    QPoint tilePos = mRenderer->pixelToTileCoordsInt(scenePos, document()->currentLevel());
+    if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel())) {
+        return room->rects.first()->buildingName;
+    }
+    return QString();
+}
+
 QString CellScene::roomNameAt(const QPointF &scenePos)
 {
     if (mMapBuildingsInvalid) {
-        mMapBuildings->calculate(mMapComposite);
-        mMapBuildingsInvalid = false;
-        mLightSwitchOverlays.update();
+        recalculateBuildingRegions();
     }
     QPoint tilePos = mRenderer->pixelToTileCoordsInt(scenePos, document()->currentLevel());
-    if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel()))
+    if (MapBuildingsNS::Room *room = mMapBuildings->roomAt(tilePos, document()->currentLevel())) {
         return room->name;
+    }
     return QString();
 }
 
@@ -6010,6 +6052,9 @@ void CellScene::handlePendingUpdates()
             item->setVisible(visible);
         }
     }
+    if (mPendingFlags & Synch) {
+        mUnlitRoomsTimer.start(10);
+    }
     if (mPendingFlags & Paint) {
         foreach (CompositeLayerGroupItem *item, mPendingGroupItems)
             item->update();
@@ -6109,6 +6154,17 @@ void CellScene::mapCompositeNeedsSynch()
 {
     mMapBuildingsInvalid = true;
     doLater(AllGroups | Bounds | Synch | ZOrder);
+}
+
+void CellScene::unlitRoomsTimeout()
+{
+    if (mMapComposite == nullptr) {
+        return;
+    }
+    recalculateBuildingRegions();
+    if (Preferences::instance()->useOpenGL()) {
+        mMapComposite->incrChangeCount();
+    }
 }
 
 void CellScene::updateCurrentLevelHighlight()
@@ -6232,6 +6288,35 @@ bool CellScene::lotOverlapsCellOrAdjacent(WorldCellLot *lot) const
         }
     }
     return false;
+}
+
+void CellScene::recalculateBuildingRegions()
+{
+    mMapBuildingsInvalid = false;
+    mMapBuildings->calculate(mMapComposite);
+    mLightSwitchOverlays.update();
+    recalculateUnlitRooms();
+}
+
+void CellScene::recalculateUnlitRooms()
+{
+    for (CompositeLayerGroup *lg : mMapComposite->layerGroups()) {
+        lg->clearUseImageBlack();
+    }
+    if (!Preferences::instance()->highlightUnlitRooms()) {
+        return;
+    }
+    for (MapBuildingsNS::Building *building : mMapBuildings->buildings()) {
+        for (MapBuildingsNS::Room *room : std::as_const(building->RoomList)) {
+            if (!mLightSwitchOverlays.roomHasLightSwitch(room)) {
+                CompositeLayerGroup *lg = mMapComposite->layerGroupForLevel(room->floor);
+                if (lg->needsSynch()) {
+                    lg->synch();
+                }
+                lg->setUseImageBlack(room->region(), true);
+            }
+        }
+    }
 }
 
 ObjectItem *CellScene::newObjectItem(WorldCellObject *obj, QGraphicsItem *parent)

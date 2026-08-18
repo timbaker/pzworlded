@@ -116,6 +116,8 @@ public:
     QMargins drawMargins(float scale);
     QImage finalImage(int width, int height);
 
+    const QImage &imageBlack();
+
     struct UVST
     {
         float u, v, s, t;
@@ -138,6 +140,7 @@ public:
 private:
     bool isRowTransparent(const QImage &image, int row);
     bool isColumnTransparent(const QImage &image, int col);
+    void createImageBlack();
 #else
     /**
      * Returns the image of this tile.
@@ -172,6 +175,8 @@ private:
     QImage mImage;
     QPoint mImageOffset;
     QSize mImageSize;
+    QImage mImageBlack;
+    bool mImageBlackValid = false;
     UVST mAtlasUVST;
     QSize mAtlasSize;
 #else

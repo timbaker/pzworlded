@@ -735,6 +735,7 @@ struct VBOTile
     Tiled::Tile::UVST mAtlasUVST;
     TilesetTexture *mTexture = nullptr;
     bool mInvisible = false;
+    bool mUnlit = false;
 };
 
 const int VBO_SQUARES = 10 * 3;
@@ -866,6 +867,7 @@ public:
 
     void setHighlightRoomPosition(const QPoint &tilePos);
     QRegion getBuildingRegion(const QPoint &tilePos, QRegion &roomRgn);
+    QString buildingNameAt(const QPointF &scenePos);
     QString roomNameAt(const QPointF &scenePos);
 
     void keyPressEvent(QKeyEvent *event);
@@ -923,6 +925,8 @@ protected:
     bool shouldObjectItemBeVisible(ObjectItem *item);
     void synchAdjacentMapObjectItemVisibility();
     bool lotOverlapsCellOrAdjacent(WorldCellLot *lot) const;
+    void recalculateBuildingRegions();
+    void recalculateUnlitRooms();
 
     typedef Tiled::Tileset Tileset;
 signals:
@@ -982,6 +986,7 @@ public slots:
     void showInvisibleTilesChanged(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void highlightRoomUnderPointerChanged(bool highlight);
+    void highlightUnlitRoomsChanged(bool highlight);
     void handlePendingUpdates();
 
     void propertiesChanged(PropertyHolder* ph);
@@ -1004,6 +1009,9 @@ public slots:
 
     void mapCompositeNeedsSynch();
 
+    void unlitRoomsTimeout();
+
+public:
     MapCompositeVBO *mapCompositeVBO()
     {
         return &mMapCompositeVBO[4];
@@ -1014,7 +1022,6 @@ public slots:
         return &mMapCompositeVBO[adjacent];
     }
 
-public:
     enum Pending {
         None = 0,
         AllGroups = 0x01,
@@ -1088,6 +1095,7 @@ private:
     OverlappingLots mOverlappingLots;
 
     QVector<QPoint> mHoleInFloor;
+    QTimer mUnlitRoomsTimer;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

@@ -179,6 +179,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowZonesInWorldView->setChecked(prefs->showZonesInWorldView());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
     ui->actionHighlightRoomUnderPointer->setChecked(prefs->highlightRoomUnderPointer());
+    ui->actionHighlightUnlitRooms->setChecked(prefs->highlightUnlitRooms());
     ui->actionShowLotFloorsOnly->setChecked(prefs->showLotFloorsOnly());
 
     // Make sure Ctrl+= also works for zooming in
@@ -353,6 +354,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowZonesInWorldView, &QAction::toggled, prefs, &Preferences::setShowZonesInWorldView);
     connect(ui->actionHighlightCurrentLevel, &QAction::toggled, prefs, &Preferences::setHighlightCurrentLevel);
     connect(ui->actionHighlightRoomUnderPointer, &QAction::toggled, prefs, &Preferences::setHighlightRoomUnderPointer);
+    connect(ui->actionHighlightUnlitRooms, &QAction::toggled, prefs, &Preferences::setHighlightUnlitRooms);
     connect(ui->actionShowLotFloorsOnly, &QAction::toggled, prefs, &Preferences::setShowLotFloorsOnly);
     connect(ui->actionLevelAbove, &QAction::triggered, this, &MainWindow::selectLevelAbove);
     connect(ui->actionLevelBelow, &QAction::triggered, this, &MainWindow::selectLevelBelow);
@@ -1980,6 +1982,7 @@ void MainWindow::initActionManager()
     actionManager->registerAction(ui->actionShowZombieSpawnImage, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowZombieSpawnImage"));
     actionManager->registerAction(ui->actionShowZonesInWorldView, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowZonesInWorldView"));
     actionManager->registerAction(ui->actionHighlightCurrentLevel, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.HighlightCurrentLevel"));
+    actionManager->registerAction(ui->actionHighlightUnlitRooms, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.HighlightUnlitRooms"));
     actionManager->registerAction(ui->actionHighlightRoomUnderPointer, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.HighlightRoomUnderPointer"));
     actionManager->registerAction(ui->actionLevelAbove, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.LevelAbove"));
     actionManager->registerAction(ui->actionLevelBelow, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.LevelBelow"));

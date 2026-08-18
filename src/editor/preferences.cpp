@@ -130,73 +130,74 @@ Preferences::Preferences()
     mShareDirPath = initShareDirPath();
 
     // Retrieve interface settings
-    mSettings->beginGroup(QLatin1String("Interface"));
-    mSnapToGrid = mSettings->value(QLatin1String("SnapToGrid"), true).toBool();
-    mShowCellBorder = mSettings->value(QLatin1String("ShowCellBorder"), true).toBool();
-    mShowCoordinates = mSettings->value(QLatin1String("ShowCoordinates"), true).toBool();
-    mShowWorldGrid = mSettings->value(QLatin1String("ShowWorldGrid"), true).toBool();
-    mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
-    mGridColor = QColor(mSettings->value(QLatin1String("GridColor"),
+    mSettings->beginGroup(QStringLiteral("Interface"));
+    mSnapToGrid = mSettings->value(QStringLiteral("SnapToGrid"), true).toBool();
+    mShowCellBorder = mSettings->value(QStringLiteral("ShowCellBorder"), true).toBool();
+    mShowCoordinates = mSettings->value(QStringLiteral("ShowCoordinates"), true).toBool();
+    mShowWorldGrid = mSettings->value(QStringLiteral("ShowWorldGrid"), true).toBool();
+    mShowCellGrid = mSettings->value(QStringLiteral("ShowCellGrid"), false).toBool();
+    mGridColor = QColor(mSettings->value(QStringLiteral("GridColor"),
                                          QColor(Qt::black).name()).toString());
-    mShowObjects = mSettings->value(QLatin1String("ShowObjects"), true).toBool();
-    mShowObjectNames = mSettings->value(QLatin1String("ShowObjectNames"), true).toBool();
-    mShowBMPs = mSettings->value(QLatin1String("ShowBMPs"), true).toBool();
-    mShowMiniMap = mSettings->value(QLatin1String("ShowMiniMap"), true).toBool();
-    mShowZombieSpawnImage = mSettings->value(QLatin1String("ShowZombieSpawnImage"), false).toBool();
-    mZombieSpawnImageOpacity = mSettings->value(QLatin1String("ZombieSpawnImageOpacity"), 0.8).toReal();
-    mShowZonesInWorldView = mSettings->value(QLatin1String("ShowZonesInWorldView"), false).toBool();
-    mMiniMapWidth = mSettings->value(QLatin1String("MiniMapWidth"), 256).toInt();
-    mHighlightCurrentLevel = mSettings->value(QLatin1String("HighlightCurrentLevel"),
+    mShowObjects = mSettings->value(QStringLiteral("ShowObjects"), true).toBool();
+    mShowObjectNames = mSettings->value(QStringLiteral("ShowObjectNames"), true).toBool();
+    mShowBMPs = mSettings->value(QStringLiteral("ShowBMPs"), true).toBool();
+    mShowMiniMap = mSettings->value(QStringLiteral("ShowMiniMap"), true).toBool();
+    mShowZombieSpawnImage = mSettings->value(QStringLiteral("ShowZombieSpawnImage"), false).toBool();
+    mZombieSpawnImageOpacity = mSettings->value(QStringLiteral("ZombieSpawnImageOpacity"), 0.8).toReal();
+    mShowZonesInWorldView = mSettings->value(QStringLiteral("ShowZonesInWorldView"), false).toBool();
+    mMiniMapWidth = mSettings->value(QStringLiteral("MiniMapWidth"), 256).toInt();
+    mHighlightCurrentLevel = mSettings->value(QStringLiteral("HighlightCurrentLevel"),
                                               false).toBool();
-    mHighlightRoomUnderPointer = mSettings->value(QLatin1String("HighlightRoomUnderPointer"),
+    mHighlightRoomUnderPointer = mSettings->value(QStringLiteral("HighlightRoomUnderPointer"),
                                                   false).toBool();
-    mShowLotFloorsOnly = mSettings->value(QLatin1String("ShowLotFloorsOnly"), false).toBool();
-    mShowOtherWorlds = mSettings->value(QLatin1String("ShowOtherWorlds"), true).toBool();
-    mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
-    mLoadAllWorldThumbnails = mSettings->value(QLatin1String("LoadAllWorldThumbnails"), false).toBool();
-    mShowWorldThumbnails = mSettings->value(QLatin1String("ShowWorldThumbnails"), true).toBool();
-    mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
-    mShowInvisibleTiles = mSettings->value(QLatin1String("ShowInvisibleTiles"), true).toBool();
-    mTheme = mSettings->value(QLatin1String("Theme"), QLatin1String("Default")).toString();
+    mHighlightUnlitRooms = mSettings->value(QStringLiteral("HighlightUnlitRooms"), false).toBool();
+    mShowLotFloorsOnly = mSettings->value(QStringLiteral("ShowLotFloorsOnly"), false).toBool();
+    mShowOtherWorlds = mSettings->value(QStringLiteral("ShowOtherWorlds"), true).toBool();
+    mUseOpenGL = mSettings->value(QStringLiteral("OpenGL"), false).toBool();
+    mLoadAllWorldThumbnails = mSettings->value(QStringLiteral("LoadAllWorldThumbnails"), false).toBool();
+    mShowWorldThumbnails = mSettings->value(QStringLiteral("ShowWorldThumbnails"), true).toBool();
+    mShowAdjacentMaps = mSettings->value(QStringLiteral("ShowAdjacentMaps"), true).toBool();
+    mShowInvisibleTiles = mSettings->value(QStringLiteral("ShowInvisibleTiles"), true).toBool();
+    mTheme = mSettings->value(QStringLiteral("Theme"), QStringLiteral("Default")).toString();
     mSettings->endGroup();
 
-    mSettings->beginGroup(QLatin1String("MapsDirectory"));
-    mMapsDirectory = mSettings->value(QLatin1String("Current"), QString()).toString();
+    mSettings->beginGroup(QStringLiteral("MapsDirectory"));
+    mMapsDirectory = mSettings->value(QStringLiteral("Current"), QString()).toString();
     mSettings->endGroup();
 
     // Set the default location of the Tiles Directory to the same value set
     // in TileZed's Tilesets Dialog.
-    QSettings settings(QLatin1String("TheIndieStone"), QLatin1String("TileZed"));
-    QString KEY_TILES_DIR = QLatin1String("Tilesets/TilesDirectory");
+    QSettings settings(QStringLiteral("TheIndieStone"), QStringLiteral("TileZed"));
+    QString KEY_TILES_DIR = QStringLiteral("Tilesets/TilesDirectory");
     QString tilesDirectory = settings.value(KEY_TILES_DIR).toString();
 
     if (tilesDirectory.isEmpty() || !QDir(tilesDirectory).exists()) {
-        tilesDirectory = appDirPath() + QLatin1String("/../Tiles");
+        tilesDirectory = appDirPath() + QStringLiteral("/../Tiles");
         if (!QDir(tilesDirectory).exists())
-            tilesDirectory = appDirPath() + QLatin1String("/../../Tiles");
+            tilesDirectory = appDirPath() + QStringLiteral("/../../Tiles");
     }
     if (tilesDirectory.length())
         tilesDirectory = QDir::cleanPath(tilesDirectory);
     if (!QDir(tilesDirectory).exists())
         tilesDirectory.clear();
-    mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
+    mTilesDirectory = mSettings->value(QStringLiteral("TilesDirectory"),
                                        tilesDirectory).toString();
 
     // Use the same .tiles files as TileZed
-    mTilePropertiesFiles = settings.value(QLatin1String("TilePropertiesFiles")).toStringList();
+    mTilePropertiesFiles = settings.value(QStringLiteral("TilePropertiesFiles")).toStringList();
 
-    mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
-    mWorldMapXMLFile = mSettings->value(QLatin1String("WorldMapXMLFile")).toString();
+    mOpenFileDirectory = mSettings->value(QStringLiteral("OpenFileDirectory")).toString();
+    mWorldMapXMLFile = mSettings->value(QStringLiteral("WorldMapXMLFile")).toString();
 
     // Use the same directory as TileZed.
-    QString KEY_CONFIG_PATH = QLatin1String("ConfigDirectory");
+    QString KEY_CONFIG_PATH = QStringLiteral("ConfigDirectory");
     QString configPath = settings.value(KEY_CONFIG_PATH).toString();
     if (configPath.isEmpty())
-        configPath = QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
+        configPath = QDir::homePath() + QLatin1Char('/') + QStringLiteral(".TileZed");
     mConfigDirectory = configPath;
 
     // Use the same directory as TileZed.
-    mThumbnailsDirectory = settings.value(QLatin1String("Thumbnails/Directory")).toString();
+    mThumbnailsDirectory = settings.value(QStringLiteral("Thumbnails/Directory")).toString();
 }
 
 Preferences::~Preferences()
@@ -206,7 +207,7 @@ Preferences::~Preferences()
 
 QString Preferences::userPath() const
 {
-    QString userPath = QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
+    QString userPath = QDir::homePath() + QLatin1Char('/') + QStringLiteral(".TileZed");
     return userPath;
 }
 
@@ -230,7 +231,7 @@ QString Preferences::appConfigPath() const
 #ifdef Q_OS_WIN
     return appDirPath();
 #elif defined(Q_OS_MAC)
-    return appDirPath() + QLatin1String("/../Config");
+    return appDirPath() + QStringLiteral("/../Config");
 #elif defined(Q_OS_UNIX)
     return mShareDirPath + QStringLiteral("/config");
 #else
@@ -246,11 +247,11 @@ QString Preferences::appConfigPath(const QString &fileName) const
 QString Preferences::docsPath() const
 {
 #ifdef Q_OS_WIN
-    return appDirPath() + QLatin1String("/docs");
+    return appDirPath() + QStringLiteral("/docs");
 #elif defined(Q_OS_MAC)
-    return appDirPath() + QLatin1String("/../Docs");
+    return appDirPath() + QStringLiteral("/../Docs");
 #elif defined(Q_OS_UNIX)
-    return mShareDirPath + QLatin1String("/docs");
+    return mShareDirPath + QStringLiteral("/docs");
 #else
 #error "wtf system is this???"
 #endif
@@ -264,11 +265,11 @@ QString Preferences::docsPath(const QString &fileName) const
 QString Preferences::luaPath() const
 {
 #ifdef Q_OS_WIN
-    return appDirPath() + QLatin1String("/lua");
+    return appDirPath() + QStringLiteral("/lua");
 #elif defined(Q_OS_MAC)
-    return appDirPath() + QLatin1String("/../Lua");
+    return appDirPath() + QStringLiteral("/../Lua");
 #elif defined(Q_OS_UNIX)
-    return mShareDirPath + QLatin1String("/lua");
+    return mShareDirPath + QStringLiteral("/lua");
 #else
 #error "wtf system is this???"
 #endif
@@ -290,7 +291,7 @@ void Preferences::setSnapToGrid(bool snapToGrid)
         return;
 
     mSnapToGrid = snapToGrid;
-    mSettings->setValue(QLatin1String("Interface/SnapToGrid"), mSnapToGrid);
+    mSettings->setValue(QStringLiteral("Interface/SnapToGrid"), mSnapToGrid);
     emit snapToGridChanged(mSnapToGrid);
 }
 
@@ -300,7 +301,7 @@ void Preferences::setShowCellBorder(bool showCellBorder)
         return;
 
     mShowCellBorder = showCellBorder;
-    mSettings->setValue(QLatin1String("Interface/ShowCellBorder"), mShowCellBorder);
+    mSettings->setValue(QStringLiteral("Interface/ShowCellBorder"), mShowCellBorder);
     emit showCellBorderChanged(mShowCellBorder);
 }
 
@@ -310,7 +311,7 @@ void Preferences::setShowCoordinates(bool showCoords)
         return;
 
     mShowCoordinates = showCoords;
-    mSettings->setValue(QLatin1String("Interface/ShowCoordinates"), mShowCoordinates);
+    mSettings->setValue(QStringLiteral("Interface/ShowCoordinates"), mShowCoordinates);
     emit showCoordinatesChanged(mShowCoordinates);
 }
 
@@ -320,7 +321,7 @@ void Preferences::setShowWorldGrid(bool showGrid)
         return;
 
     mShowWorldGrid = showGrid;
-    mSettings->setValue(QLatin1String("Interface/ShowWorldGrid"), mShowWorldGrid);
+    mSettings->setValue(QStringLiteral("Interface/ShowWorldGrid"), mShowWorldGrid);
     emit showWorldGridChanged(mShowWorldGrid);
 }
 
@@ -330,7 +331,7 @@ void Preferences::setShowCellGrid(bool showGrid)
         return;
 
     mShowCellGrid = showGrid;
-    mSettings->setValue(QLatin1String("Interface/ShowCellGrid"), mShowCellGrid);
+    mSettings->setValue(QStringLiteral("Interface/ShowCellGrid"), mShowCellGrid);
     emit showCellGridChanged(mShowCellGrid);
 }
 
@@ -340,7 +341,7 @@ void Preferences::setGridColor(const QColor &gridColor)
         return;
 
     mGridColor = gridColor;
-    mSettings->setValue(QLatin1String("Interface/GridColor"), mGridColor.name());
+    mSettings->setValue(QStringLiteral("Interface/GridColor"), mGridColor.name());
     emit gridColorChanged(mGridColor);
 }
 
@@ -350,7 +351,7 @@ void Preferences::setUseOpenGL(bool useOpenGL)
         return;
 
     mUseOpenGL = useOpenGL;
-    mSettings->setValue(QLatin1String("Interface/OpenGL"), mUseOpenGL);
+    mSettings->setValue(QStringLiteral("Interface/OpenGL"), mUseOpenGL);
 
     emit useOpenGLChanged(mUseOpenGL);
 }
@@ -361,7 +362,7 @@ void Preferences::setLoadAllWorldThumbnails(bool thumbs)
         return;
 
     mLoadAllWorldThumbnails = thumbs;
-    mSettings->setValue(QLatin1String("Interface/LoadAllWorldThumbnails"), mLoadAllWorldThumbnails);
+    mSettings->setValue(QStringLiteral("Interface/LoadAllWorldThumbnails"), mLoadAllWorldThumbnails);
 
     emit loadAllWorldThumbnailsChanged(mLoadAllWorldThumbnails);
 }
@@ -372,7 +373,7 @@ void Preferences::setShowWorldThumbnails(bool thumbs)
         return;
 
     mShowWorldThumbnails = thumbs;
-    mSettings->setValue(QLatin1String("Interface/ShowWorldThumbnails"), mShowWorldThumbnails);
+    mSettings->setValue(QStringLiteral("Interface/ShowWorldThumbnails"), mShowWorldThumbnails);
 
     emit showWorldThumbnailsChanged(mShowWorldThumbnails);
 }
@@ -387,7 +388,7 @@ void Preferences::setOpenFileDirectory(const QString &path)
     if (mOpenFileDirectory == path)
         return;
     mOpenFileDirectory = path;
-    mSettings->setValue(QLatin1String("OpenFileDirectory"), mOpenFileDirectory);
+    mSettings->setValue(QStringLiteral("OpenFileDirectory"), mOpenFileDirectory);
 }
 
 QString Preferences::worldMapXMLFile() const
@@ -400,7 +401,7 @@ void Preferences::setWorldMapXMLFile(const QString &path)
     if (mWorldMapXMLFile == path)
         return;
     mWorldMapXMLFile = path;
-    mSettings->setValue(QLatin1String("WorldMapXMLFile"), mWorldMapXMLFile);
+    mSettings->setValue(QStringLiteral("WorldMapXMLFile"), mWorldMapXMLFile);
 }
 
 void Preferences::setShowAdjacentMaps(bool show)
@@ -409,7 +410,7 @@ void Preferences::setShowAdjacentMaps(bool show)
         return;
 
     mShowAdjacentMaps = show;
-    mSettings->setValue(QLatin1String("Interface/ShowAdjacentMaps"), mShowAdjacentMaps);
+    mSettings->setValue(QStringLiteral("Interface/ShowAdjacentMaps"), mShowAdjacentMaps);
 
     emit showAdjacentMapsChanged(mShowAdjacentMaps);
 }
@@ -420,7 +421,7 @@ void Preferences::setShowObjects(bool show)
         return;
 
     mShowObjects = show;
-    mSettings->setValue(QLatin1String("Interface/ShowObjects"), mShowObjects);
+    mSettings->setValue(QStringLiteral("Interface/ShowObjects"), mShowObjects);
 
     emit showObjectsChanged(mShowObjects);
 }
@@ -431,7 +432,7 @@ void Preferences::setShowObjectNames(bool show)
         return;
 
     mShowObjectNames = show;
-    mSettings->setValue(QLatin1String("Interface/ShowObjectNames"), mShowObjectNames);
+    mSettings->setValue(QStringLiteral("Interface/ShowObjectNames"), mShowObjectNames);
 
     emit showObjectNamesChanged(mShowObjectNames);
 }
@@ -442,7 +443,7 @@ void Preferences::setShowBMPs(bool show)
         return;
 
     mShowBMPs = show;
-    mSettings->setValue(QLatin1String("Interface/ShowBMPs"), mShowBMPs);
+    mSettings->setValue(QStringLiteral("Interface/ShowBMPs"), mShowBMPs);
 
     emit showBMPsChanged(mShowBMPs);
 }
@@ -453,7 +454,7 @@ void Preferences::setShowZombieSpawnImage(bool show)
         return;
 
     mShowZombieSpawnImage = show;
-    mSettings->setValue(QLatin1String("Interface/ShowZombieSpawnImage"), mShowZombieSpawnImage);
+    mSettings->setValue(QStringLiteral("Interface/ShowZombieSpawnImage"), mShowZombieSpawnImage);
 
     emit showZombieSpawnImageChanged(mShowZombieSpawnImage);
 }
@@ -467,7 +468,7 @@ void Preferences::setZombieSpawnImageOpacity(qreal opacity)
         return;
 
     mZombieSpawnImageOpacity = opacity;
-    mSettings->setValue(QLatin1String("Interface/ZombieSpawnImageOpacity"), mZombieSpawnImageOpacity);
+    mSettings->setValue(QStringLiteral("Interface/ZombieSpawnImageOpacity"), mZombieSpawnImageOpacity);
 
     emit zombieSpawnImageOpacityChanged(mZombieSpawnImageOpacity);
 }
@@ -478,7 +479,7 @@ void Preferences::setShowZonesInWorldView(bool show)
         return;
 
     mShowZonesInWorldView = show;
-    mSettings->setValue(QLatin1String("Interface/ShowZonesInWorldView"), mShowZonesInWorldView);
+    mSettings->setValue(QStringLiteral("Interface/ShowZonesInWorldView"), mShowZonesInWorldView);
 
     emit showZonesInWorldViewChanged(mShowZonesInWorldView);
 }
@@ -489,7 +490,7 @@ void Preferences::setShowMiniMap(bool show)
         return;
 
     mShowMiniMap = show;
-    mSettings->setValue(QLatin1String("Interface/ShowMiniMap"), mShowMiniMap);
+    mSettings->setValue(QStringLiteral("Interface/ShowMiniMap"), mShowMiniMap);
     emit showMiniMapChanged(mShowMiniMap);
 }
 
@@ -501,7 +502,7 @@ void Preferences::setMiniMapWidth(int width)
     if (mMiniMapWidth == width)
         return;
     mMiniMapWidth = width;
-    mSettings->setValue(QLatin1String("Interface/MiniMapWidth"), width);
+    mSettings->setValue(QStringLiteral("Interface/MiniMapWidth"), width);
     emit miniMapWidthChanged(mMiniMapWidth);
 }
 
@@ -511,7 +512,7 @@ void Preferences::setHighlightCurrentLevel(bool highlight)
         return;
 
     mHighlightCurrentLevel = highlight;
-    mSettings->setValue(QLatin1String("Interface/HighlightCurrentLevel"), mHighlightCurrentLevel);
+    mSettings->setValue(QStringLiteral("Interface/HighlightCurrentLevel"), mHighlightCurrentLevel);
     emit highlightCurrentLevelChanged(mHighlightCurrentLevel);
 }
 
@@ -520,9 +521,18 @@ void Preferences::setHighlightRoomUnderPointer(bool highlight)
     if (highlight == mHighlightRoomUnderPointer)
         return;
     mHighlightRoomUnderPointer = highlight;
-    mSettings->setValue(QLatin1String("Interface/HighlightRoomUnderPointer"),
+    mSettings->setValue(QStringLiteral("Interface/HighlightRoomUnderPointer"),
                         mHighlightRoomUnderPointer);
     emit highlightRoomUnderPointerChanged(mHighlightRoomUnderPointer);
+}
+
+void Preferences::setHighlightUnlitRooms(bool highlight)
+{
+    if (highlight == mHighlightUnlitRooms)
+        return;
+    mHighlightUnlitRooms = highlight;
+    mSettings->setValue(QStringLiteral("Interface/HighlightUnlitRooms"), mHighlightUnlitRooms);
+    emit highlightUnlitRoomsChanged(mHighlightUnlitRooms);
 }
 
 void Preferences::setShowLotFloorsOnly(bool show)
@@ -530,7 +540,7 @@ void Preferences::setShowLotFloorsOnly(bool show)
     if (mShowLotFloorsOnly == show)
         return;
     mShowLotFloorsOnly = show;
-    mSettings->setValue(QLatin1String("Interface/ShowLotFloorsOnly"), show);
+    mSettings->setValue(QStringLiteral("Interface/ShowLotFloorsOnly"), show);
     emit showLotFloorsOnlyChanged(mShowLotFloorsOnly);
 }
 
@@ -539,7 +549,7 @@ void Preferences::setShowOtherWorlds(bool show)
     if (show == mShowOtherWorlds)
         return;
     mShowOtherWorlds = show;
-    mSettings->setValue(QLatin1String("Interface/ShowOtherWorlds"),
+    mSettings->setValue(QStringLiteral("Interface/ShowOtherWorlds"),
                         mShowOtherWorlds);
     emit showOtherWorldsChanged(mShowOtherWorlds);
 }
@@ -549,11 +559,11 @@ void Preferences::setMapsDirectory(const QString &path)
     if (mMapsDirectory == path)
         return;
     mMapsDirectory = path;
-    mSettings->setValue(QLatin1String("MapsDirectory/Current"), path);
+    mSettings->setValue(QStringLiteral("MapsDirectory/Current"), path);
 
     // Put this up, otherwise the progress dialog shows and hides for each lot.
     // Since each open document has its own ZLotManager, this shows and hides for each document as well.
-//    ZProgressManager::instance()->begin(QLatin1String("Checking lots..."));
+//    ZProgressManager::instance()->begin(QStringLiteral("Checking lots..."));
 
     emit mapsDirectoryChanged();
 }
@@ -568,7 +578,7 @@ void Preferences::setTilesDirectory(const QString &path)
     if (mTilesDirectory == path)
         return;
     mTilesDirectory = path;
-    mSettings->setValue(QLatin1String("TilesDirectory"), path);
+    mSettings->setValue(QStringLiteral("TilesDirectory"), path);
     emit tilesDirectoryChanged();
 }
 
@@ -576,12 +586,12 @@ QString Preferences::tiles2xDirectory() const
 {
     if (mTilesDirectory.isEmpty())
         return QString();
-    return mTilesDirectory + QLatin1Char('/') + QLatin1String("2x");
+    return mTilesDirectory + QLatin1Char('/') + QStringLiteral("2x");
 }
 
 QString Preferences::texturesDirectory() const
 {
-    return QDir(mTilesDirectory).filePath(QLatin1String("Textures"));
+    return QDir(mTilesDirectory).filePath(QStringLiteral("Textures"));
 }
 
 void Preferences::setShowInvisibleTiles(bool show)
@@ -590,7 +600,7 @@ void Preferences::setShowInvisibleTiles(bool show)
         return;
 
     mShowInvisibleTiles = show;
-    mSettings->setValue(QLatin1String("Interface/ShowInvisibleTiles"), mShowInvisibleTiles);
+    mSettings->setValue(QStringLiteral("Interface/ShowInvisibleTiles"), mShowInvisibleTiles);
 
     emit showInvisibleTilesChanged(mShowInvisibleTiles);
 }
@@ -606,7 +616,7 @@ void Preferences::setTheme(const QString &theme)
 
 void Preferences::applyTheme() const
 {
-    mSettings->setValue(QLatin1String("Interface/Theme"), mTheme);
+    mSettings->setValue(QStringLiteral("Interface/Theme"), mTheme);
     if (mTheme == QStringLiteral("Default")) {
         qApp->setStyleSheet(QString());
         return;

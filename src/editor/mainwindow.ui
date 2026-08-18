@@ -329,6 +329,7 @@
     <addaction name="separator"/>
     <addaction name="actionHighlightCurrentLevel"/>
     <addaction name="actionHighlightRoomUnderPointer"/>
+    <addaction name="actionHighlightUnlitRooms"/>
     <addaction name="actionLevelAbove"/>
     <addaction name="actionLevelBelow"/>
     <addaction name="separator"/>
@@ -1113,6 +1114,20 @@
   <action name="actionCheckForHoles">
    <property name="text">
     <string>Check For Holes</string>
+   </property>
+  </action>
+  <action name="actionHighlightUnlitRooms">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Highlight Unlit Rooms</string>
+   </property>
+   <property name="toolTip">
+    <string>Highlight Unlit Rooms</string>
+   </property>
+   <property name="shortcut">
+    <string>L</string>
    </property>
   </action>
  </widget>

@@ -113,6 +113,7 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
     qDebug() << "CellSceneOverlays parsing tiledef...";
     Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher();
     tileDefWatcher->check();
+#ifdef ANY_LIGHTSWITCH
     QString lightswitch(QLatin1String("lightswitch"));
     for (Internal::TileDefWatcherFile *watcherFile : std::as_const(tileDefWatcher->mFiles)) {
         for (TileDefTileset *ts : watcherFile->mTileDefFile->tilesets()) {
@@ -125,10 +126,34 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
             }
         }
     }
+#else
+    // Hard-coded lightswitch tiles. The above code also detects lamps.
+    const int NORTH_SWITCH = 0;
+    const int WEST_SWITCH = 1;
+    const int EAST_SWITCH = 2;
+    const int SOUTH_SWITCH = 3;
+    for (Internal::TileDefWatcherFile *watcherFile : std::as_const(tileDefWatcher->mFiles)) {
+        for (TileDefTileset *ts : watcherFile->mTileDefFile->tilesets()) {
+            for (TileDefTile *tdt : std::as_const(ts->mTiles)) {
+                if (ts->mName == QStringLiteral("lighting_indoor_01")) {
+                    int id = tdt->id();
+                    if (id == NORTH_SWITCH || id == NORTH_SWITCH + 4 ||
+                        id == WEST_SWITCH || id == WEST_SWITCH + 4 ||
+                        id == EAST_SWITCH || id == EAST_SWITCH + 5 ||
+                        id == SOUTH_SWITCH || id == SOUTH_SWITCH + 3)
+                    {
+                        mTileDefTiles += tdt;
+                    }
+                }
+            }
+        }
+    }
+#endif
     qDebug() << "CellSceneOverlays parsing tiledef DONE";
 
-    if (!LightbulbsMgr::hasInstance())
+    if (!LightbulbsMgr::hasInstance()) {
         new LightbulbsMgr();
+    }
     connect(LightbulbsMgr::instancePtr(), &LightbulbsMgr::changed, this, &LightSwitchOverlays::update);
 }
 
@@ -143,6 +168,8 @@ void LightSwitchOverlays::update()
     qDeleteAll(mOverlays);
     mOverlays.clear();
 
+    mRoomsWithoutLightswitch.clear();
+
     QVector<const Cell*> cells(40);
     OrderedCellsTemporaries vars;
 
@@ -155,12 +182,13 @@ void LightSwitchOverlays::update()
 #endif
 
     QSet<Tile*> lightSwitchTiles;
-    foreach (Tileset *ts, mScene->mapComposite()->usedTilesets()) {
-        foreach (TileDefTile *tdt, mTileDefTiles) {
+    for (Tileset *ts : mScene->mapComposite()->usedTilesets()) {
+        for (TileDefTile *tdt : std::as_const(mTileDefTiles)) {
             int col = tdt->id() % tdt->mTileset->mColumns;
             int row = tdt->id() / tdt->mTileset->mColumns;
-            if ((tdt->mTileset->mName == ts->name()) && ts->tileAt(col + row * ts->columnCount()))
+            if ((tdt->mTileset->mName == ts->name()) && ts->tileAt(col + row * ts->columnCount())) {
                 lightSwitchTiles.insert(ts->tileAt(col + row * ts->columnCount()));
+            }
         }
     }
 
@@ -170,25 +198,32 @@ void LightSwitchOverlays::update()
     QSet<QString> ignoreBuildings(buildings.begin(), buildings.end());
 
     mMapBuildings = mScene->mMapBuildings;
-    foreach (MapBuildingsNS::Building *building, mMapBuildings->buildings()) {
+    for (MapBuildingsNS::Building *building : mMapBuildings->buildings()) {
         if (!building->region().boundingRect().intersects(QRect(0, 0, 300, 300)))
             continue;
-        foreach (MapBuildingsNS::Room *room, building->RoomList) {
+        MapBuildingsNS::Room *room0 = building->RoomList.isEmpty() ? nullptr : building->RoomList.first();
+        MapBuildingsNS::RoomRect *rr0 = room0 == nullptr ? nullptr : room0->rects.first();
+        if (rr0 == nullptr || ignoreBuildings.contains(rr0->buildingName)) {
+            continue;
+        }
+        for (MapBuildingsNS::Room *room : std::as_const(building->RoomList)) {
             if (ignoreRooms.contains(room->name)) continue;
             bool hasSwitch = false;
             CompositeLayerGroup *lg = mScene->mapComposite()->layerGroupForLevel(room->floor);
             if (!lg) continue;
             lg->prepareDrawingNoBmpBlender(mScene->renderer(), mScene->renderer()->boundingRect(building->region().boundingRect(), lg->level()));
             QRectF biggestRoomRect;
-            foreach (MapBuildingsNS::RoomRect *rect, room->rects) {
-                if (ignoreBuildings.contains(rect->buildingName)) continue; // FIXME: check this sooner
-                if (rect->w * rect->h > biggestRoomRect.width() * biggestRoomRect.height())
+            QString buildingName;
+            for (MapBuildingsNS::RoomRect *rect : std::as_const(room->rects)) {
+                if (rect->w * rect->h > biggestRoomRect.width() * biggestRoomRect.height()) {
                     biggestRoomRect = rect->bounds();
+                    buildingName = rect->buildingName;
+                }
                 for (int y = rect->y; y < rect->y + rect->h; y++) {
                     for (int x = rect->x; x < rect->x + rect->w; x++) {
                         cells.clear();
                         lg->orderedCellsAt2(QPoint(x, y), vars, cells);
-                        foreach (const Cell *cell, cells) {
+                        for (const Cell *cell : std::as_const(cells)) {
                             Tile *tile = cell->tile;
                             if (!tile) continue;
                             hasSwitch = lightSwitchTiles.contains(tile);
@@ -205,10 +240,12 @@ void LightSwitchOverlays::update()
                                                                      biggestRoomRect.center().x(),
                                                                      biggestRoomRect.center().y(),
                                                                      room->floor);
+                overlay->mBuildingName = buildingName;
                 overlay->mRoomRegion = room->region();
                 overlay->mRoomName = room->name;
                 mScene->addItem(overlay);
                 mOverlays += overlay;
+                mRoomsWithoutLightswitch.insert(room);
             }
         }
     }
@@ -231,6 +268,11 @@ void LightSwitchOverlays::removeOverlays()
 {
     qDeleteAll(mOverlays);
     mOverlays.clear();
+}
+
+bool LightSwitchOverlays::roomHasLightSwitch(MapBuildingsNS::Room *room)
+{
+    return !mRoomsWithoutLightswitch.contains(room);
 }
 
 /////

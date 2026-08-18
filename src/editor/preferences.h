@@ -59,6 +59,8 @@ public:
     bool highlightCurrentLevel() const;
     bool highlightRoomUnderPointer() const
     { return mHighlightRoomUnderPointer; }
+    bool highlightUnlitRooms() const
+    { return mHighlightUnlitRooms; }
     bool showLotFloorsOnly() const
     { return mShowLotFloorsOnly; }
     bool showOtherWorlds() const
@@ -138,6 +140,7 @@ signals:
     void tilesDirectoryChanged();
     void showAdjacentMapsChanged(bool show);
     void highlightRoomUnderPointerChanged(bool highlight);
+    void highlightUnlitRoomsChanged(bool show);
     void showLotFloorsOnlyChanged(bool show);
     void showOtherWorldsChanged(bool show);
     void showInvisibleTilesChanged(bool show);
@@ -159,6 +162,7 @@ public slots:
     void setShowZonesInWorldView(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void setHighlightRoomUnderPointer(bool highlight);
+    void setHighlightUnlitRooms(bool highlight);
     void setShowLotFloorsOnly(bool show);
     void setShowOtherWorlds(bool show);
     void setShowInvisibleTiles(bool show);
@@ -203,6 +207,7 @@ private:
     QString mWorldMapXMLFile;
     bool mShowAdjacentMaps;
     bool mHighlightRoomUnderPointer;
+    bool mHighlightUnlitRooms;
     bool mShowLotFloorsOnly = false;
     bool mShowOtherWorlds;
     QString mThumbnailsDirectory;

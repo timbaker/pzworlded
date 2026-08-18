@@ -692,6 +692,8 @@ void CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<OrderedCell
 void CompositeLayerGroup::prepareDrawingNoBmpBlender(const MapRenderer *renderer, const QRect &rect)
 {
     mPreparedSubMapLayers.resize(0);
+    mPreparedSubMapLayers2.resize(0);
+    mPreparedSubMapLayers3.resize(0);
     for (MapComposite *subMap : mOwner->subMaps()) {
         int levelOffset = subMap->levelOffset();
         CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
@@ -1255,13 +1257,27 @@ bool CompositeLayerGroup::roomHasLightSwitch(BuildingEditor::BuildingFloor *floo
 void CompositeLayerGroup::setUseImageBlack(int x, int y, bool value)
 {
     QRect bounds = this->bounds();
-    if (x < 0 || x >= bounds.width() || y < 0 || y >= bounds.height()) {
+    if (!bounds.contains(x, y)) {
         return;
     }
-    if (mUseImageBlack.size() != bounds.width() * bounds.height()) {
-        mUseImageBlack.fill(false, bounds.width() * bounds.height());
+    if (mUseImageBlackBounds != bounds) {
+        QBitArray grid;
+        grid.fill(false, bounds.width() * bounds.height());
+        if (!mUseImageBlackBounds.isEmpty()) {
+            QRect overlap = mUseImageBlackBounds & bounds;
+            for (int y = overlap.y(); y <= overlap.bottom(); y++) {
+                for (int x = overlap.x(); x <= overlap.right(); x++) {
+                    grid.setBit(x - bounds.x() + (y - bounds.y()) * bounds.width(), mUseImageBlack.testBit(x - mUseImageBlackBounds.x() + (y - mUseImageBlackBounds.y()) * mUseImageBlackBounds.width()));
+                }
+            }
+        }
+        mUseImageBlack = grid;
+        mUseImageBlackBounds = bounds;
     }
-    mUseImageBlack[x + y * bounds.width()] = value;
+    if (mUseImageBlackBounds.isEmpty()) {
+        return;
+    }
+    mUseImageBlack[x - bounds.x() + (y - bounds.y()) * bounds.width()] = value;
 }
 
 void CompositeLayerGroup::setUseImageBlack(const QRect &rect, bool value)
@@ -1442,14 +1458,10 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer) const
 
 bool CompositeLayerGroup::useImageBlack(int x, int y) const
 {
-    QRect bounds = this->bounds();
-    if (x < 0 || x >= bounds.width() || y < 0 || y > bounds.height()) {
+    if (!mUseImageBlackBounds.contains(x, y)) {
         return false;
     }
-    if (mUseImageBlack.size() != bounds.width() * bounds.height()) {
-        return false;
-    }
-    return mUseImageBlack[x + y * bounds.width()];
+    return mUseImageBlack[x - mUseImageBlackBounds.x() + (y - mUseImageBlackBounds.y()) * mUseImageBlackBounds.width()];
 }
 
 ///// ///// ///// ///// /////

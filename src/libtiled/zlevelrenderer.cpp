@@ -485,7 +485,7 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                             if (g_missing_tile)
                                 tile = g_missing_tile;
                         }
-                        QImage img = tile->image();
+                        QImage img = layerGroup->useImageBlack(columnItr.x(), columnItr.y()) ? tile->imageBlack() : tile->image();
                         const QPoint offset = tile->tileset()->tileOffset() + tile->offset();
 
                         qreal m11 = 1;      // Horizontal scaling factor

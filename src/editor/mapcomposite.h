@@ -341,7 +341,8 @@ private:
     QVector<ToolNoBlend> mToolNoBlends;
     QString mHighlightLayer;
     QVector<bool> mForceNonEmpty;
-    QVector<bool> mUseImageBlack;
+    QBitArray mUseImageBlack;
+    QRect mUseImageBlackBounds;
 #endif // BUILDINGED
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer0; // 0_Floor

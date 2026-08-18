@@ -23,6 +23,7 @@
 #include "BuildingEditor/roofhiding.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "objectgroup.h"
 
@@ -61,7 +62,7 @@ void MapBuildings::calculate(MapComposite *mc)
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
     QList<MapBuildingsNS::RoomRect*> overlapping;
-    for (MapBuildingsNS::RoomRectsForLevel* rr4L : mRoomRectsByLevel) {
+    for (MapBuildingsNS::RoomRectsForLevel* rr4L : std::as_const(mRoomRectsByLevel)) {
         const QList<MapBuildingsNS::RoomRect*>& rrList = rr4L->mRects;
         for (MapBuildingsNS::RoomRect *rr : rrList) {
             if (rr->room == nullptr) {
@@ -74,7 +75,7 @@ void MapBuildings::calculate(MapComposite *mc)
                 continue;
             overlapping.clear();
             rr4L->overlapping(rr->bounds().adjusted(-1, -1, 1, 1), overlapping);
-            for (MapBuildingsNS::RoomRect *comp : overlapping) {
+            for (MapBuildingsNS::RoomRect *comp : std::as_const(overlapping)) {
                 if (comp == rr)
                     continue;
                 if (comp->room == rr->room)
@@ -82,7 +83,7 @@ void MapBuildings::calculate(MapComposite *mc)
                 if (rr->inSameRoom(comp)) {
                     if (comp->room != nullptr) {
                         MapBuildingsNS::Room *room = comp->room;
-                        for (MapBuildingsNS::RoomRect *rr2 : room->rects) {
+                        for (MapBuildingsNS::RoomRect *rr2 : std::as_const(room->rects)) {
                             Q_ASSERT(rr2->room == room);
                             Q_ASSERT(!rr->room->rects.contains(rr2));
                             rr2->room = rr->room;
@@ -104,7 +105,7 @@ void MapBuildings::calculate(MapComposite *mc)
     elapsed.restart();
 
     mRoomLookup.clear();
-    for (MapBuildingsNS::Room* r : mRooms) {
+    for (MapBuildingsNS::Room* r : std::as_const(mRooms)) {
         mRoomLookup.addRoom(r);
     }
 
@@ -118,7 +119,7 @@ void MapBuildings::calculate(MapComposite *mc)
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
     QList<MapBuildingsNS::Room*> overlappingRooms;
-    for (MapBuildingsNS::Room *r : mRooms) {
+    for (MapBuildingsNS::Room *r : std::as_const(mRooms)) {
         if (r->building == nullptr) {
             r->building = new MapBuildingsNS::Building();
             mBuildings += r->building;
@@ -126,7 +127,7 @@ void MapBuildings::calculate(MapComposite *mc)
         }
         overlappingRooms.clear();
         mRoomLookup.overlapping(r->bounds().adjusted(-1, -1, 1, 1), overlappingRooms);
-        for (MapBuildingsNS::Room *comp : overlappingRooms) {
+        for (MapBuildingsNS::Room *comp : std::as_const(overlappingRooms)) {
             if (comp == r)
                 continue;
             if (r->building == comp->building)
@@ -138,7 +139,7 @@ void MapBuildings::calculate(MapComposite *mc)
             if (r->inSameBuilding(comp)) {
                 if (comp->building != nullptr) {
                     MapBuildingsNS::Building *b = comp->building;
-                    for (MapBuildingsNS::Room *r2 : b->RoomList) {
+                    for (MapBuildingsNS::Room *r2 : std::as_const(b->RoomList)) {
                         Q_ASSERT(r2->building == b);
                         Q_ASSERT(!r->building->RoomList.contains(r2));
                         r2->building = r->building;
@@ -182,12 +183,13 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
             continue;
         int ox = mc->originRecursive().x();
         int oy = mc->originRecursive().y();
+        const QString buildingName = QFileInfo(mc->mapInfo()->path()).fileName();
         int rootLevel = mc->levelRecursive();
         for (int level = mc->minLevel(); level <= mc->maxLevel(); level++) {
-            QString layerName = QString::fromLatin1("%1_RoomDefs").arg(level);
-            int index = mc->map()->indexOfLayer(layerName, Layer::ObjectGroupType);
+            MapLevel *mapLevel = mc->map()->mapLevelForZ(level);
+            int index = mapLevel->indexOfLayer(QStringLiteral("RoomDefs"), Layer::ObjectGroupType);
             if (index >= 0) {
-                const QList<MapObject*> mapObjects = mc->map()->layerAt(index)->asObjectGroup()->objects();
+                const QList<MapObject*> mapObjects = mapLevel->layerAt(index)->asObjectGroup()->objects();
                 for (MapObject *mapObject : mapObjects) {
                     if (BuildingEditor::RoofHiding::isEmptyOutside(mapObject->name()))
                         continue;
@@ -203,7 +205,7 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
                                 x + ox, y + oy,
                                 level + rootLevel,
                                 w, h);
-                    rr->buildingName = QFileInfo(mc->mapInfo()->path()).fileName();
+                    rr->buildingName = buildingName;
                     if (mRoomRectsByLevel[level + rootLevel] == nullptr) {
                         mRoomRectsByLevel[level + rootLevel] = new MapBuildingsNS::RoomRectsForLevel();
                     }
@@ -213,8 +215,8 @@ void MapBuildings::extractRoomRects(MapComposite *mapComposite)
         }
     }
 
-    for (MapBuildingsNS::RoomRectsForLevel* rr4L : mRoomRectsByLevel) {
-        for (MapBuildingsNS::RoomRect *rr : rr4L->mRects) {
+    for (MapBuildingsNS::RoomRectsForLevel* rr4L : std::as_const(mRoomRectsByLevel)) {
+        for (MapBuildingsNS::RoomRect *rr : std::as_const(rr4L->mRects)) {
             rr4L->addRect(rr);
         }
     }

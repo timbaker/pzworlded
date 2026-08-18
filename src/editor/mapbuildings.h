@@ -115,7 +115,7 @@ public:
     {
     }
 
-    bool inSameBuilding(Room *comp)
+    bool inSameBuilding(const Room *comp) const
     {
         for (RoomRect *rr : rects) {
             for (RoomRect *rr2 : comp->rects) {
@@ -126,7 +126,7 @@ public:
         return false;
     }
 
-    QRect bounds()
+    QRect bounds() const
     {
         QRect r;
         for (RoomRect *rr : rects) {
@@ -135,7 +135,7 @@ public:
         return r;
     }
 
-    QRegion region()
+    QRegion region() const
     {
         QRegion ret;
         for (RoomRect *rr : rects) {
@@ -144,7 +144,7 @@ public:
         return ret;
     }
 
-    bool contains(const QPoint& pos)
+    bool contains(const QPoint& pos) const
     {
         for (RoomRect *rr : rects) {
             if (rr->bounds().contains(pos)) {
@@ -167,11 +167,11 @@ public:
     {
     }
 
-    QRegion region()
+    QRegion region() const
     {
         QRegion ret;
         for (Room *room : RoomList) {
-            for (RoomRect *rr : room->rects)
+            for (RoomRect *rr : std::as_const(room->rects))
                 ret += rr->bounds().adjusted(0, 0, 1, 1);
         }
         return ret;

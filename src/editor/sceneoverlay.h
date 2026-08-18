@@ -22,10 +22,14 @@
 #include "tiledeffile.h"
 
 #include <QGraphicsItem>
+#include <QSet>
 
 class BaseGraphicsScene;
 class CellScene;
 class MapBuildings;
+namespace MapBuildingsNS {
+class Room;
+}
 
 class SceneOverlay : public QGraphicsItem
 {
@@ -49,6 +53,7 @@ public:
     qreal mX;
     qreal mY;
     int mZ;
+    QString mBuildingName;
     QRegion mRoomRegion;
     QString mRoomName;
     static QImage mImage;
@@ -61,6 +66,7 @@ public:
     LightSwitchOverlays(CellScene *scene);
     void updateCurrentLevelHighlight();
     void removeOverlays();
+    bool roomHasLightSwitch(MapBuildingsNS::Room *room);
 
 public slots:
     void update();
@@ -68,6 +74,7 @@ public slots:
 private:
     CellScene *mScene;
     QList<SceneOverlay*> mOverlays;
+    QSet<MapBuildingsNS::Room*> mRoomsWithoutLightswitch;
     MapBuildings *mMapBuildings;
     QList<TileDefTile*> mTileDefTiles;
 };
