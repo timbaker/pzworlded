@@ -972,43 +972,35 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
                                              mScene->renderer(),
                                              scenePos);
         QPoint tilePos(mScene->renderer()->pixelToTileCoordsInt(scenePos));
-        if (!subMap && mScene->mapComposite()->mapInfo()->bounds().contains(tilePos))
+        if (!subMap && mScene->mapComposite()->mapInfo()->bounds().contains(tilePos)) {
             subMap = mScene->mapComposite();
+        }
+        QMenu menu;
+        LightbulbStuff stuff;
+        addLightSwitchContextMenuActions(menu, scenePos, stuff);
+        QAction *openAction = nullptr;
         if (subMap) {
-            QMenu menu;
             QIcon tiledIcon(QLatin1String(":images/tiled-icon-16.png"));
-            QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
-            QAction *action = menu.exec(screenPos);
-            if (action == openAction) {
-                QUrl url = QUrl::fromLocalFile(subMap->mapInfo()->path());
-                QDesktopServices::openUrl(url);
-            }
+            openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
+        }
+        if (menu.isEmpty()) {
+            return;
+        }
+        QAction *action = menu.exec(screenPos);
+        if (action == nullptr) {
+            return;
+        }
+        handleLightSwitchContextMenuAction(action, stuff);
+        if (action == openAction) {
+            QUrl url = QUrl::fromLocalFile(subMap->mapInfo()->path());
+            QDesktopServices::openUrl(url);
         }
         return;
     }
 
     QMenu menu;
-    QIcon lightIcon(QLatin1String(":/images/idea.png"));
-    QAction *lightbulbRoomAction = nullptr;
-    QString roomName;
-    if (LightSwitchOverlay *overlay = topmostSwitchAt(scenePos)) {
-        roomName = overlay->mRoomName;
-    } else
-        roomName = mScene->roomNameAt(scenePos);
-    if (roomName.length()) {
-        if (LightbulbsMgr::instance().rooms().contains(roomName))
-            lightbulbRoomAction = menu.addAction(lightIcon,
-                                                 tr("Show lights in rooms called %1").arg(roomName));
-        else
-            lightbulbRoomAction = menu.addAction(lightIcon,
-                                                 tr("Hide lights in rooms called %1").arg(roomName));
-    }
-    QAction *lightbulbMapAction = nullptr;
-    QString mapName = QFileInfo(item->subMap()->mapInfo()->path()).fileName();
-    if (LightbulbsMgr::instance().maps().contains(mapName))
-        lightbulbMapAction = menu.addAction(lightIcon, tr("Show lights in %1").arg(mapName));
-    else
-        lightbulbMapAction = menu.addAction(lightIcon, tr("Hide lights in %1").arg(mapName));
+    LightbulbStuff stuff;
+    addLightSwitchContextMenuActions(menu, scenePos, stuff);
     QIcon removeIcon(QLatin1String(":images/16x16/edit-delete.png"));
     QAction *removeAction = menu.addAction(removeIcon, tr("Remove Lot"));
     menu.addSeparator();
@@ -1016,11 +1008,10 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
     QAction *openAction = menu.addAction(tiledIcon, tr("Open in TileZed"));
 
     QAction *action = menu.exec(screenPos);
-    if (action == nullptr) return;
-    if (action == lightbulbRoomAction)
-        LightbulbsMgr::instance().toggleRoom(roomName);
-    if (action == lightbulbMapAction)
-        LightbulbsMgr::instance().toggleMap(mapName);
+    if (action == nullptr) {
+        return;
+    }
+    handleLightSwitchContextMenuAction(action, stuff);
     if (action == removeAction) {
         int lotIndex = mScene->cell()->indexOf(item->lot());
         mScene->worldDocument()->removeCellLot(mScene->cell(), lotIndex);
@@ -1028,6 +1019,42 @@ void SubMapTool::showContextMenu(const QPointF &scenePos, const QPoint &screenPo
     if (action == openAction) {
         QUrl url = QUrl::fromLocalFile(item->subMap()->mapInfo()->path());
         QDesktopServices::openUrl(url);
+    }
+}
+
+void SubMapTool::addLightSwitchContextMenuActions(QMenu &menu, const QPointF &scenePos, LightbulbStuff &stuff)
+{
+    QIcon lightIcon(QLatin1String(":/images/idea.png"));
+    if (LightSwitchOverlay *overlay = topmostSwitchAt(scenePos)) {
+        stuff.buildingName = overlay->mBuildingName;
+        stuff.roomName = overlay->mRoomName;
+    } else {
+        stuff.buildingName = mScene->buildingNameAt(scenePos);
+        stuff.roomName = mScene->roomNameAt(scenePos);
+    }
+    if (!stuff.roomName.isEmpty()) {
+        if (LightbulbsMgr::instance().rooms().contains(stuff.roomName)) {
+            stuff.actionRoom = menu.addAction(lightIcon, tr("Show lights in rooms called %1").arg(stuff.roomName));
+        } else {
+            stuff.actionRoom = menu.addAction(lightIcon, tr("Hide lights in rooms called %1").arg(stuff.roomName));
+        }
+    }
+    if (!stuff.buildingName.isEmpty()) {
+        if (LightbulbsMgr::instance().maps().contains(stuff.buildingName)) {
+            stuff.actionMap = menu.addAction(lightIcon, tr("Show lights in %1").arg(stuff.buildingName));
+        } else {
+            stuff.actionMap = menu.addAction(lightIcon, tr("Hide lights in %1").arg(stuff.buildingName));
+        }
+    }
+}
+
+void SubMapTool::handleLightSwitchContextMenuAction(QAction *action, LightbulbStuff &stuff)
+{
+    if (action == stuff.actionRoom) {
+        LightbulbsMgr::instance().toggleRoom(stuff.roomName);
+    }
+    if (action == stuff.actionMap) {
+        LightbulbsMgr::instance().toggleMap(stuff.buildingName);
     }
 }
 

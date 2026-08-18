@@ -54,6 +54,8 @@ class WorldBMPItem;
 class WorldCellObject;
 */
 class WorldRoadItem;
+
+class QAction;
 class QGraphicsScene;
 class QGraphicsSceneMouseEvent;
 class QKeyEvent;
@@ -389,6 +391,15 @@ private:
     void cancelMoving();
 
     void showContextMenu(const QPointF &scenePos, const QPoint &screenPos);
+
+    struct LightbulbStuff {
+        QAction *actionRoom = nullptr;
+        QAction *actionMap = nullptr;
+        QString buildingName;
+        QString roomName;
+    };
+    void addLightSwitchContextMenuActions(QMenu &menu, const QPointF &scenePos, LightbulbStuff &stuff);
+    void handleLightSwitchContextMenuAction(QAction *action, LightbulbStuff &stuff);
 
 private:
     enum Mode {
