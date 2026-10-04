@@ -894,6 +894,8 @@ bool LotFilesWorker256::generateCell()
 {
     mStats.reset();
 
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
     CombinedCellMaps& combinedMaps = *mCombinedCellMaps;
     mWorldDoc = mManager->mWorldDoc;
 
@@ -932,7 +934,12 @@ bool LotFilesWorker256::generateCell()
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
             lg->prepareDrawing2();
         }
-        generateChunkData();
+        if (lotSettings.exportBinary) {
+            writeChunkDataBinary();
+        }
+        if (lotSettings.exportText) {
+            writeChunkDataText();
+        }
         clearRemovedBuildingsList();
         mStatus = Status::Finished;
         mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
@@ -1000,61 +1007,20 @@ bool LotFilesWorker256::generateCell()
 
     generateJumboTrees(combinedMaps);
 
-    generateHeaderAux(cell256X, cell256Y);
-
-    /////
-
-    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
-
-    QString fileName = tr("world_%1_%2.lotpack")
-            .arg(cell256X)
-            .arg(cell256Y);
-
-    QString lotsDirectory = lotSettings.exportDir;
-    QFile file(lotsDirectory + QLatin1Char('/') + fileName);
-    if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
-        mError = tr("Could not open file for writing.");
-        mStatus = Status::Error;
-        mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
-        return false;
-    }
-
-    QDataStream out(&file);
-    out.setByteOrder(QDataStream::LittleEndian);
-
-    out << quint8('L') << quint8('O') << quint8('T') << quint8('P');
-
-    out << qint32(VERSION_LATEST);
-
-    // C# 'long' is signed 64-bit integer
-    out << qint32(CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256);
-    for (int m = 0; m < CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256; m++) {
-        out << qint64(m);
-    }
-
-    QList<qint64> PositionMap;
-
-    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
-        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
-            PositionMap += file.pos();
-            int chunkX = cell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH + x * CHUNK_SIZE_256;
-            int chunkY = cell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT + y * CHUNK_SIZE_256;
-            if (generateChunk(out, chunkX, chunkY) == false) {
-                mStatus = Status::Error;
-                mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
-                return false;
-            }
+    if (lotSettings.exportBinary) {
+        writeHeaderBinary(cell256X, cell256Y);
+        if (!writeCellBinary(cell256X, cell256Y)) {
+            return false;
         }
+        writeChunkDataBinary();
     }
-
-    file.seek(4 + 4 + 4); // 'LOTS' + version + #chunks
-    for (int m = 0; m < CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256; m++) {
-        out << qint64(PositionMap[m]);
+    if (lotSettings.exportText) {
+        writeHeaderText(cell256X, cell256Y);
+        if (!writeCellText(cell256X, cell256Y)) {
+            return false;
+        }
+        writeChunkDataText();
     }
-
-    file.close();
-
-    generateChunkData();
 
     clearRemovedBuildingsList();
 
@@ -1349,7 +1315,7 @@ void LotFilesWorker256::createRoomsAndBuildings(CombinedCellMaps &combinedMaps)
     }
 }
 
-bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
+bool LotFilesWorker256::writeHeaderBinary(int cell256X, int cell256Y)
 {
     QString fileName = tr("%1_%2.lotheader")
             .arg(cell256X)
@@ -1474,9 +1440,64 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
     return true;
 }
 
-bool LotFilesWorker256::generateChunk(QDataStream &out, int chunkX, int chunkY)
+bool LotFilesWorker256::writeCellBinary(const int cell256X, const int cell256Y)
 {
+    CombinedCellMaps& combinedMaps = *mCombinedCellMaps;
 
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
+    QString fileName = tr("world_%1_%2.lotpack")
+                           .arg(cell256X)
+                           .arg(cell256Y);
+
+    QString lotsDirectory = lotSettings.exportDir;
+    QFile file(lotsDirectory + QLatin1Char('/') + fileName);
+    if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
+        mError = tr("Could not open file for writing.");
+        mStatus = Status::Error;
+        mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
+        return false;
+    }
+
+    QDataStream out(&file);
+    out.setByteOrder(QDataStream::LittleEndian);
+
+    out << quint8('L') << quint8('O') << quint8('T') << quint8('P');
+
+    out << qint32(VERSION_LATEST);
+
+    // C# 'long' is signed 64-bit integer
+    out << qint32(CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256);
+    for (int m = 0; m < CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256; m++) {
+        out << qint64(m);
+    }
+
+    QList<qint64> PositionMap;
+
+    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
+        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
+            PositionMap += file.pos();
+            int chunkX = cell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH + x * CHUNK_SIZE_256;
+            int chunkY = cell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT + y * CHUNK_SIZE_256;
+            if (writeChunkBinary(out, chunkX, chunkY) == false) {
+                mStatus = Status::Error;
+                mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
+                return false;
+            }
+        }
+    }
+
+    file.seek(4 + 4 + 4); // 'LOTS' + version + #chunks
+    for (int m = 0; m < CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256; m++) {
+        out << qint64(PositionMap[m]);
+    }
+
+    file.close();
+    return true;
+}
+
+bool LotFilesWorker256::writeChunkBinary(QDataStream &out, int chunkX, int chunkY)
+{
     int notdonecount = 0;
     for (int z = mMinLevel; z <= mMaxLevel; z++) {
         for (int x = 0; x < CHUNK_SIZE_256; x++) {
@@ -1507,6 +1528,235 @@ bool LotFilesWorker256::generateChunk(QDataStream &out, int chunkX, int chunkY)
         out << qint32(-1);
         out << qint32(notdonecount);
     }
+    return true;
+}
+
+bool LotFilesWorker256::writeHeaderText(int cell256X, int cell256Y)
+{
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
+    QString fileName = tr("%1_%2.lotheader.source").arg(cell256X).arg(cell256Y);
+
+    QFile file(lotSettings.exportDir + QLatin1Char('/') + fileName);
+    if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
+        mError = tr("Could not open file for writing.");
+        return false;
+    }
+
+    const QChar braceOpen(QLatin1Char('{'));
+    const QChar braceClose(QLatin1Char('}'));
+    const QChar eol(QLatin1Char('\n'));
+    const QString indent(QStringLiteral("    "));
+
+    QTextStream out(&file);
+    out << QStringLiteral("lotheader") << eol;
+    out << QStringLiteral("version = %1").arg(VERSION_LATEST) << eol;
+    out << QStringLiteral("chunkWidth = %1").arg(CHUNK_SIZE_256) << eol;
+    out << QStringLiteral("chunkHeight = %1").arg(CHUNK_SIZE_256) << eol;
+    out << QStringLiteral("minLevel = %1").arg(mMinLevel) << eol;
+    out << QStringLiteral("maxLevel = %1").arg(mMaxLevel) << eol;
+
+    QList<LotFile::Tile*> usedTiles;
+    for (LotFile::Tile *tile : std::as_const(TileMap)) {
+        if (tile->used) {
+            usedTiles += tile;
+            if (tile->name.startsWith(QLatin1String("jumbo_tree_01"))) {
+                int nnn = 0;
+                (void) nnn;
+            }
+        }
+    }
+    std::sort(usedTiles.begin(), usedTiles.end(), [](const LotFile::Tile *a, const LotFile::Tile *b) {
+        return QString::compare(a->name, b->name, Qt::CaseSensitive) < 0;
+    });
+    out << QStringLiteral("tiles = %1").arg(usedTiles.size()) << eol;
+    out << braceOpen << eol;
+    for (int i = 0; i < usedTiles.size(); i++) {
+        LotFile::Tile *tile = usedTiles[i];
+        out << indent << tile->name << eol;
+        tile->id = i;
+    }
+    out << braceClose << eol;
+
+    out << QStringLiteral("rooms = %1").arg(roomList.size()) << eol;
+    out << braceOpen << eol;
+    int roomIndex = 0;
+    for (LotFile::Room *room : std::as_const(roomList)) {
+        out << indent << QStringLiteral("room %1").arg(roomIndex) << eol;
+        out << indent << braceOpen << eol;
+        out << indent << indent << QStringLiteral("name = %1").arg(room->name) << eol;
+        out << indent << indent << QStringLiteral("level = %1").arg(room->floor) << eol;
+
+        out << indent << indent << QStringLiteral("rects = %1").arg(room->rects.size()) << eol;
+        out << indent << indent << braceOpen << eol;
+        for (LotFile::RoomRect *rr : std::as_const(room->rects)) {
+            out << indent << indent << indent << QStringLiteral("%1,%2,%3,%4").arg(rr->x).arg(rr->y).arg(rr->w).arg(rr->h) << eol;
+        }
+        out << indent << indent << braceClose << eol;
+
+        out << indent << indent << QStringLiteral("objects = %1").arg(room->objects.size()) << eol;
+        if (!room->objects.isEmpty()) {
+            out << indent << indent << braceOpen << eol;
+            for (const LotFile::RoomObject &object : std::as_const(room->objects)) {
+                out << indent << indent << indent << QStringLiteral("%1,%2,%3").arg(object.metaEnum).arg(object.x).arg(object.y) << eol;
+            }
+            out << indent << indent << braceClose << eol;
+        }
+        out << indent << braceClose << eol;
+        roomIndex++;
+    }
+    out << braceClose << eol;
+
+    out << QStringLiteral("buildings = %1").arg(buildingList.size()) << eol;
+    out << braceOpen << eol;
+    int buildingIndex = 0;
+    for (LotFile::Building *building : std::as_const(buildingList)) {
+        out << indent << QStringLiteral("building %1").arg(buildingIndex) << eol;
+        out << indent << braceOpen << eol;
+        out << indent << indent << QStringLiteral("rooms = %1").arg(building->RoomList.size()) << eol;
+        out << indent << indent << braceOpen << eol;
+        for (LotFile::Room *room : std::as_const(building->RoomList)) {
+            out << indent << indent << indent << QString::number(room->ID) << eol;
+        }
+        out << indent << indent << braceClose << eol;
+        out << indent << braceClose << eol;
+        buildingIndex++;
+    }
+    out << braceClose << eol;
+
+    // Set the zombie intensity on each square using the spawn image.
+    const int MAX_300x300_CELLS = 3;
+    quint8 ZombieIntensity[MAX_300x300_CELLS * CELL_WIDTH][MAX_300x300_CELLS * CELL_HEIGHT];
+    const QImage& ZombieSpawnMap = mManager->ZombieSpawnMap;
+    QRect zombieSpawnMapBounds(lotSettings.worldOrigin.x() * CHUNKS_PER_CELL, lotSettings.worldOrigin.y() * CHUNKS_PER_CELL, ZombieSpawnMap.width(), ZombieSpawnMap.height());
+    QRect combinedMapBounds(mCombinedCellMaps->mMinCell300X * CHUNKS_PER_CELL, mCombinedCellMaps->mMinCell300Y * CHUNKS_PER_CELL, mCombinedCellMaps->mCellsWidth * CHUNKS_PER_CELL, mCombinedCellMaps->mCellsHeight * CHUNKS_PER_CELL);
+    QRect bounds = zombieSpawnMapBounds & combinedMapBounds;
+    for (int chunkY = bounds.top(); chunkY <= bounds.bottom(); chunkY++) {
+        for (int chunkX = bounds.left(); chunkX <= bounds.right(); chunkX++) {
+            QRgb pixel = ZombieSpawnMap.pixel(chunkX - zombieSpawnMapBounds.left(), chunkY - zombieSpawnMapBounds.top());
+            quint8 chunkIntensity = qRed(pixel);
+            for (int squareY = 0; squareY < CHUNK_HEIGHT; squareY++) {
+                for (int squareX = 0; squareX < CHUNK_WIDTH; squareX++) {
+                    int gx = (chunkX - combinedMapBounds.left()) * CHUNK_WIDTH + squareX;
+                    int gy = (chunkY - combinedMapBounds.top()) * CHUNK_HEIGHT + squareY;
+                    ZombieIntensity[gx][gy] = chunkIntensity;
+                }
+            }
+        }
+    }
+
+    zombieSpawnMapBounds = QRect(lotSettings.worldOrigin.x() * CELL_WIDTH, lotSettings.worldOrigin.y() * CELL_HEIGHT, ZombieSpawnMap.width() * CHUNK_WIDTH, ZombieSpawnMap.height() * CHUNK_HEIGHT);
+    combinedMapBounds = QRect(mCombinedCellMaps->mMinCell300X * CELL_WIDTH, mCombinedCellMaps->mMinCell300Y * CELL_HEIGHT, mCombinedCellMaps->mCellsWidth * CELL_WIDTH, mCombinedCellMaps->mCellsHeight * CELL_HEIGHT);
+    QRect combinedMapBounds256(cell256X * CELL_SIZE_256, cell256Y * CELL_SIZE_256, CELL_SIZE_256, CELL_SIZE_256);
+    QRect validSquares = zombieSpawnMapBounds & combinedMapBounds256;
+    QPoint p1 = combinedMapBounds256.topLeft();
+    out << QStringLiteral("zombieDensity = %1").arg(CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256) << eol;
+    out << braceOpen << eol;
+    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
+        out << QStringLiteral("   ");
+        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
+            QRect chunkRect(p1.x() + x * CHUNK_SIZE_256, p1.y() + y * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
+            chunkRect &= validSquares;
+            if (chunkRect.isEmpty()) {
+                out << QStringLiteral("%1").arg(quint8(0), -4, 10);
+                continue;
+            }
+            int chunkIntensity = 0;
+            for (int y3 = chunkRect.top(); y3 <= chunkRect.bottom(); y3++) {
+                for (int x3 = chunkRect.left(); x3 <= chunkRect.right(); x3++) {
+                    chunkIntensity += ZombieIntensity[x3 - combinedMapBounds.left()][y3 - combinedMapBounds.top()];
+                }
+            }
+            float alpha = chunkIntensity / float(chunkRect.width() * chunkRect.height() * 255);
+            out << QStringLiteral("%1").arg(quint8(alpha * 255), -4);
+        }
+        out << eol;
+    }
+    out << braceClose << eol;
+
+    file.close();
+
+    return true;
+}
+
+bool LotFilesWorker256::writeCellText(const int cell256X, const int cell256Y)
+{
+    CombinedCellMaps& combinedMaps = *mCombinedCellMaps;
+
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
+    QString fileName = tr("world_%1_%2.lotpack.source").arg(cell256X).arg(cell256Y);
+
+    QString lotsDirectory = lotSettings.exportDir;
+    QFile file(lotsDirectory + QLatin1Char('/') + fileName);
+    if (!file.open(QIODevice::WriteOnly /*| QIODevice::Text*/)) {
+        mError = tr("Could not open file for writing.");
+        mStatus = Status::Error;
+        mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
+        return false;
+    }
+
+    const QChar eol(QLatin1Char('\n'));
+    const QString indent(QStringLiteral("    "));
+
+    QTextStream out(&file);
+    out << QStringLiteral("lotpack") << eol;
+    out << QStringLiteral("version = %1").arg(VERSION_LATEST) << eol;
+    out << QStringLiteral("chunks = %1").arg(CHUNKS_PER_CELL_256 * CHUNKS_PER_CELL_256) << eol;
+    out << QStringLiteral("chunkWidth = %1").arg(CHUNK_SIZE_256) << eol;
+    out << QStringLiteral("chunkHeight = %1").arg(CHUNK_SIZE_256) << eol;
+    out << QStringLiteral("minLevel = %1").arg(mMinLevel) << eol;
+    out << QStringLiteral("maxLevel = %1").arg(mMaxLevel) << eol;
+
+    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
+        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
+            int chunkX = cell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH + x * CHUNK_SIZE_256;
+            int chunkY = cell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT + y * CHUNK_SIZE_256;
+            if (writeChunkText(out, x, y, chunkX, chunkY) == false) {
+                mStatus = Status::Error;
+                mCombinedCellMaps->moveToThread(mCombinedCellMaps->mMapComposite, qApp->thread());
+                return false;
+            }
+        }
+    }
+
+    file.close();
+    return true;
+}
+
+bool LotFilesWorker256::writeChunkText(QTextStream &out, int cellChunkX, int cellChunkY, int chunkX, int chunkY)
+{
+    const QChar braceOpen(QLatin1Char('{'));
+    const QChar braceClose(QLatin1Char('}'));
+    const QChar eol(QLatin1Char('\n'));
+    const QString indent(QStringLiteral("    "));
+
+    out << QStringLiteral("chunk %1").arg(cellChunkX * CHUNKS_PER_CELL_256 + cellChunkY) << eol;
+    out << braceOpen << eol;
+    for (int z = mMinLevel; z <= mMaxLevel; z++) {
+        for (int x = 0; x < CHUNK_SIZE_256; x++) {
+            for (int y = 0; y < CHUNK_SIZE_256; y++) {
+                int gx = chunkX + x;
+                int gy = chunkY + y;
+                const QList<LotFile::Entry*> &entries = mGridData[gx][gy][z - MIN_WORLD_LEVEL].Entries;
+                if (entries.count() == 0) {
+                    continue;
+                }
+                out << indent << QStringLiteral("%1,%2,%3 = %4 : ").arg(z).arg(x).arg(y).arg(getRoomID(gx, gy, z));
+                for (int i = 0; i < entries.size(); i++) {
+                    const LotFile::Entry *entry = entries[i];
+                    Q_ASSERT(TileMap[entry->gid]);
+                    Q_ASSERT(TileMap[entry->gid]->id != -1);
+                    out << TileMap[entry->gid]->name;
+                    if (i < entries.size() - 1) {
+                        out << QStringLiteral(", ");
+                    }
+                }
+                out << eol;
+            }
+        }
+    }
+    out << braceClose << eol;
     return true;
 }
 
@@ -1806,7 +2056,7 @@ void LotFilesWorker256::generateJumboTrees(CombinedCellMaps& combinedMaps)
     }
 }
 
-void LotFilesWorker256::generateChunkData()
+void LotFilesWorker256::writeChunkDataBinary()
 {
     mRoomRectLookup.clear(0, 0, CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256, CHUNK_SIZE_256);
     for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
@@ -1824,6 +2074,26 @@ void LotFilesWorker256::generateChunkData()
     const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
     Navigate::ChunkDataFile256 cdf;
     cdf.fromMap(*mCombinedCellMaps, mCombinedCellMaps->mMapComposite, mRoomRectLookup, lotSettings);
+}
+
+void LotFilesWorker256::writeChunkDataText()
+{
+    mRoomRectLookup.clear(0, 0, CHUNKS_PER_CELL_256, CHUNKS_PER_CELL_256, CHUNK_SIZE_256);
+    for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
+        mRoomRectLookup.add(rr, rr->bounds());
+    }
+    for (LotFile::Building *building : std::as_const(mRemovedBuildingList)) {
+        for (LotFile::Room *room : std::as_const(building->RoomList)) {
+            for (LotFile::RoomRect *rr : std::as_const(room->rects)) {
+                if (rr->floor == 0) {
+                    mRoomRectLookup.add(rr, rr->bounds());
+                }
+            }
+        }
+    }
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+    Navigate::ChunkDataFile256 cdf;
+    cdf.fromMapText(*mCombinedCellMaps, mCombinedCellMaps->mMapComposite, mRoomRectLookup, lotSettings);
 }
 
 void LotFilesWorker256::clearRemovedBuildingsList()

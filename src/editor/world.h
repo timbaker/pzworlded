@@ -124,6 +124,8 @@ public:
     QString tileDefFolder;
     QPoint worldOrigin;
     int numberOfThreads = 1;
+    bool exportBinary = true;
+    bool exportText = false;
 
     bool operator == (const GenerateLotsSettings &other)
     {
@@ -131,7 +133,9 @@ public:
                 zombieSpawnMap == other.zombieSpawnMap &&
                 tileDefFolder == other.tileDefFolder &&
                 worldOrigin == other.worldOrigin &&
-                numberOfThreads == other.numberOfThreads;
+                numberOfThreads == other.numberOfThreads &&
+                exportBinary == other.exportBinary &&
+                exportText == other.exportText;
     }
 
     bool operator != (const GenerateLotsSettings &other)

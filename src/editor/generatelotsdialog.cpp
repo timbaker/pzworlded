@@ -72,6 +72,9 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->numThreadsSlider->setMaximum(10);
     ui->numThreadsSlider->setValue(settings.numberOfThreads);
 
+    ui->exportBinary->setChecked(settings.exportBinary);
+    ui->exportText->setChecked(settings.exportText);
+
     connect(ui->buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked,
             this, &GenerateLotsDialog::apply);
 }
@@ -117,7 +120,7 @@ void GenerateLotsDialog::spawnBrowse()
     formatString += tr(";;All files (*.*)");
 
     QString initialDir = QFileInfo(mWorldDoc->fileName()).absolutePath();
-    if (QFileInfo(mZombieSpawnMap).exists())
+    if (QFileInfo::exists(mZombieSpawnMap))
         initialDir = QFileInfo(mZombieSpawnMap).absolutePath();
 
     QString f = QFileDialog::getOpenFileName(this, tr("Choose the Zombie Spawn Map image"),
@@ -151,9 +154,11 @@ void GenerateLotsDialog::accept()
     settings.tileDefFolder = mTileDefFolder;
     settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
     settings.numberOfThreads = ui->numThreadsSlider->value();
-    if (settings != mWorldDoc->world()->getGenerateLotsSettings())
+    settings.exportBinary = ui->exportBinary->isChecked();
+    settings.exportText = ui->exportText->isChecked();
+    if (settings != mWorldDoc->world()->getGenerateLotsSettings()) {
         mWorldDoc->changeGenerateLotsSettings(settings);
-
+    }
     QSettings qSettings;
     qSettings.setValue(KEY_EXPORT_DIRECTORIES, comboboxStringList(ui->exportEdit));
     qSettings.setValue(KEY_SPAWNMAP_DIRECTORIES, comboboxStringList(ui->spawnEdit));
@@ -173,9 +178,11 @@ void GenerateLotsDialog::apply()
     settings.tileDefFolder = mTileDefFolder;
     settings.worldOrigin = QPoint(ui->xOrigin->value(), ui->yOrigin->value());
     settings.numberOfThreads = ui->numThreadsSlider->value();
-    if (settings != mWorldDoc->world()->getGenerateLotsSettings())
+    settings.exportBinary = ui->exportBinary->isChecked();
+    settings.exportText = ui->exportText->isChecked();
+    if (settings != mWorldDoc->world()->getGenerateLotsSettings()) {
         mWorldDoc->changeGenerateLotsSettings(settings);
-
+    }
     QSettings qSettings;
     qSettings.setValue(KEY_EXPORT_DIRECTORIES, comboboxStringList(ui->exportEdit));
     qSettings.setValue(KEY_SPAWNMAP_DIRECTORIES, comboboxStringList(ui->spawnEdit));
@@ -217,7 +224,7 @@ bool GenerateLotsDialog::validate()
     }
     QDir dir2(mTileDefFolder);
     if (mTileDefFolder.isEmpty() || !dir2.exists() ||
-            !QFileInfo(mTileDefFolder + QLatin1String("/newtiledefinitions.tiles")).exists()) {
+            !QFileInfo::exists(mTileDefFolder + QLatin1String("/newtiledefinitions.tiles"))) {
         QMessageBox::warning(this, tr("It's no good, Jim!"),
                              tr("Please choose the directory containing newtiledefinitions.tiles."));
         return false;

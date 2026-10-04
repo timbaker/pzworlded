@@ -296,7 +296,7 @@ struct TileLocation
         tileIndex(tileIndex),
         x(uint16_t(x)),
         y(uint16_t(y)),
-        z(uint8_t(x))
+        z(uint8_t(z))
     {
 
     }

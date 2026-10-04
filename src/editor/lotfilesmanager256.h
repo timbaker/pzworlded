@@ -22,6 +22,7 @@
 #include "threads.h"
 #include "worldcell.h"
 
+#include <QTextStream>
 #include <QTimer>
 
 #define CELL_SIZE_256 256
@@ -78,12 +79,17 @@ public:
     void work() override;
     bool generateHeader(CombinedCellMaps &combinedMaps, MapComposite *mapComposite);
     void createRoomsAndBuildings(CombinedCellMaps& combinedMaps);
-    bool generateHeaderAux(int cell256X, int cell256Y);
-    bool generateChunk(QDataStream &out, int chunkX, int chunkY);
+    bool writeHeaderBinary(int cell256X, int cell256Y);
+    bool writeCellBinary(const int cell256X, const int cell256Y);
+    bool writeChunkBinary(QDataStream &out, int chunkX, int chunkY);
+    bool writeHeaderText(int cell256X, int cell256Y);
+    bool writeCellText(const int cell256X, const int cell256Y);
+    bool writeChunkText(QTextStream &out, int cellChunkX, int cellChunkY, int worldChunkX, int worldChunkY);
     void generateBuildingObjects(int mapWidth, int mapHeight);
     void generateBuildingObjects(int mapWidth, int mapHeight, LotFile::Room *room, LotFile::RoomRect *rr);
     void generateJumboTrees(CombinedCellMaps &combinedMaps);
-    void generateChunkData();
+    void writeChunkDataBinary();
+    void writeChunkDataText();
     void clearRemovedBuildingsList();
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
     int getRoomID(int x, int y, int z);

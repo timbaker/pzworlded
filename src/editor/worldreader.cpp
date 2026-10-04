@@ -638,8 +638,13 @@ private:
                 count = std::min(count, 10);
                 settings.numberOfThreads = std::max(count, 1);
                 xml.skipCurrentElement();
-            } else
+            } else if (xml.name() == QStringLiteral("output")) {
+                settings.exportBinary = xml.attributes().value(QStringLiteral("binary")).toString() == QStringLiteral("true");
+                settings.exportText = xml.attributes().value(QStringLiteral("text")).toString() == QStringLiteral("true");
+                xml.skipCurrentElement();
+            } else {
                 readUnknownElement();
+            }
         }
 
         mWorld->setGenerateLotsSettings(settings);

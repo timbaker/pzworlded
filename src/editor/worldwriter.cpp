@@ -435,6 +435,10 @@ public:
         w.writeStartElement(QLatin1String("numberOfThreads"));
         w.writeAttribute(QLatin1String("count"), QString::number(settings.numberOfThreads));
         w.writeEndElement();
+        w.writeStartElement(QLatin1String("output"));
+        writeBoolean(w, QStringLiteral("binary"), settings.exportBinary);
+        writeBoolean(w, QStringLiteral("text"), settings.exportText);
+        w.writeEndElement();
         w.writeEndElement(); // </GenerateLots>
     }
 
@@ -476,6 +480,11 @@ public:
         w.writeStartElement(QLatin1String("otherworld"));
         w.writeAttribute(QLatin1String("path"), relativeFileName(path));
         w.writeEndElement();
+    }
+
+    void writeBoolean(QXmlStreamWriter &w, const QString &name, bool value)
+    {
+        w.writeAttribute(name, value ? QStringLiteral("true") : QStringLiteral("false"));
     }
 
     void writePoint(QXmlStreamWriter &w, const QString &name, const QPoint &p)
