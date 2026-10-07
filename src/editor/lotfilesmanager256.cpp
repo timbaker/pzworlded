@@ -1176,14 +1176,15 @@ void LotFilesWorker256::createRoomsAndBuildings(CombinedCellMaps &combinedMaps)
     if (boundsOfAllRooms.isEmpty()) {
         return;
     }
-    boundsOfAllRooms.translate(mCombinedCellMaps->mMinCell300X * CELL_WIDTH, mCombinedCellMaps->mMinCell300Y * CELL_HEIGHT);
+    // Room rects are relative to the 256x256 cell being exported.  Translate bounds into world coordinates.
+    boundsOfAllRooms.translate(mCombinedCellMaps->mCell256X * CELL_SIZE_256, mCombinedCellMaps->mCell256Y * CELL_SIZE_256);
 
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
     const int minCell300X = std::floor(boundsOfAllRooms.x() / (double) CELL_WIDTH);
     const int minCell300Y = std::floor(boundsOfAllRooms.y() / (double) CELL_HEIGHT);
-    const int maxCell300X = std::floor((boundsOfAllRooms.right() + 1) / CELL_WIDTH);
-    const int maxCell300Y = std::floor((boundsOfAllRooms.bottom() + 1) / CELL_HEIGHT);
+    const int maxCell300X = std::floor((boundsOfAllRooms.right() + 1) / (double) CELL_WIDTH);
+    const int maxCell300Y = std::floor((boundsOfAllRooms.bottom() + 1) / (double) CELL_HEIGHT);
     const int cellsWidth = maxCell300X - minCell300X + 1;
     const int cellsHeight = maxCell300Y - minCell300Y + 1;
     QPoint relativeToCell256(-(combinedMaps.mCell256X * CELL_SIZE_256 - minCell300X * CELL_WIDTH),

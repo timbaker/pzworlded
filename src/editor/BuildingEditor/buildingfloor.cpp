@@ -342,6 +342,9 @@ static void ReplaceRoofSlope(RoofObject *ro, const QRect &r,
                              RoofObject::RoofTile tile)
 {
     if (r.isEmpty()) return;
+    if (tile == RoofObject::TileCount) {
+        return;
+    }
     int offset = ro->getOffset(tile);
     QPoint tileOffset = ro->slopeTiles()->offset(offset);
     QRect bounds(0, 0, squares.size(), squares[0].size());
