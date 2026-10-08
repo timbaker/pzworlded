@@ -42,14 +42,20 @@ LotPackSearch::LotPackSearch(QWidget *parent)
 {
     ui->setupUi(this);
 
+    ui->tileList->setColumnCount(2);
+    ui->tileList->setHeaderLabels(QStringList() << tr("Tile name") << tr("# Found"));
+    ui->tileList->setRootIsDecorated(false);
+
     connect(ui->buttonAddTile, &QPushButton::clicked, this, &LotPackSearch::addTile);
     connect(ui->buttonRemoveTile, &QPushButton::clicked, this, &LotPackSearch::removeTile);
     connect(ui->buttonClearTiles, &QPushButton::clicked, this, &LotPackSearch::clearTiles);
+    connect(ui->buttonAddMissingTile, &QPushButton::clicked, this, &LotPackSearch::addMissingTile);
+    connect(ui->editMissingTile, &QLineEdit::textChanged, this, &LotPackSearch::synchUI);
     connect(ui->buttonSearch, &QPushButton::clicked, this, &LotPackSearch::search);
     connect(ui->buttonOpenCell, &QPushButton::clicked, this, &LotPackSearch::openCell);
     connect(ui->buttonClose, &QPushButton::clicked, this, &QMainWindow::close);
 
-    connect(ui->tileList, &QListWidget::currentItemChanged, this, &LotPackSearch::synchUI);
+    connect(ui->tileList, &QTreeWidget::currentItemChanged, this, &LotPackSearch::synchUI);
     connect(ui->resultList, &QListWidget::currentRowChanged, this, &LotPackSearch::currentResultChanged);
 
     synchUI();
@@ -60,15 +66,20 @@ LotPackSearch::~LotPackSearch()
     delete ui;
 }
 
-bool LotPackSearch::isTileAddedAlready(const QString& tileName) const
+int LotPackSearch::indexOf(const QString &tileName) const
 {
-    for (int i = 0; i < ui->tileList->count(); i++) {
-        QListWidgetItem *item = ui->tileList->item(i);
-        if (item->text() == tileName) {
-            return true;
+    for (int i = 0; i < ui->tileList->topLevelItemCount(); i++) {
+        QTreeWidgetItem *item = ui->tileList->topLevelItem(i);
+        if (item->text(0) == tileName) {
+            return i;
         }
     }
-    return false;
+    return -1;
+}
+
+bool LotPackSearch::isTileAddedAlready(const QString& tileName) const
+{
+    return indexOf(tileName) != -1;
 }
 
 bool LotPackSearch::containsAny(const QStringList &haystack, const QStringList &needles, QSet<QString> &contains)
@@ -142,6 +153,7 @@ void LotPackSearch::searchCell(int cellX, int cellY, LotHeader *lotHeader, const
                                     QString usedTileName = lotHeader->tilesUsed[usedTileIndex];
                                     if (tilesToFind.contains(usedTileName)) {
                                         addResult(usedTileName, cellX, cellY, chunkX * isoConstants.SQUARES_PER_CHUNK + x, chunkY * isoConstants.SQUARES_PER_CHUNK + y, z);
+                                        incrementCount(usedTileName);
                                     }
                                 }
                             }
@@ -166,11 +178,39 @@ void LotPackSearch::addResult(const QString &tileName, int cellX, int cellY, int
     ui->resultList->addItem(s);
 }
 
+void LotPackSearch::clearCounts()
+{
+    mCounts.clear();
+    QString zero = QString::number(0);
+    for (int i = 0; i < ui->tileList->topLevelItemCount(); i++) {
+        QTreeWidgetItem *item = ui->tileList->topLevelItem(i);
+        item->setText(1, zero);
+        mCounts.insert(item->text(0), 0);
+    }
+}
+
+void LotPackSearch::incrementCount(const QString &tileName)
+{
+    int index = indexOf(tileName);
+    if (index == -1) {
+        return;
+    }
+    mCounts[tileName] += 1;
+    ui->tileList->topLevelItem(index)->setText(1, QString::number(mCounts[tileName]));
+}
+
+bool LotPackSearch::isMissingTileValid()
+{
+    return BuildingEditor::BuildingTilesMgr::legalTileName(ui->editMissingTile->text().trimmed());
+}
+
 void LotPackSearch::synchUI()
 {
+    ui->buttonAddTile->setEnabled(true);
     ui->buttonRemoveTile->setEnabled(ui->tileList->currentItem() != nullptr);
-    ui->buttonClearTiles->setEnabled(ui->tileList->count() > 0);
-    ui->buttonSearch->setEnabled(ui->tileList->count() > 0);
+    ui->buttonClearTiles->setEnabled(ui->tileList->topLevelItemCount() > 0);
+    ui->buttonAddMissingTile->setEnabled(isMissingTileValid());
+    ui->buttonSearch->setEnabled(ui->tileList->topLevelItemCount() > 0);
     ui->buttonOpenCell->setEnabled(ui->resultList->currentItem() != nullptr);
 }
 
@@ -189,18 +229,40 @@ void LotPackSearch::addTile()
         if (isTileAddedAlready(tileName)) {
             continue;
         }
-        ui->tileList->addItem(tileName);
+        QTreeWidgetItem *item = new QTreeWidgetItem();
+        item->setText(0, tileName);
+        item->setText(1, QString::number(0));
+        ui->tileList->addTopLevelItem(item);
     }
+    synchUI();
+}
+
+void LotPackSearch::addMissingTile()
+{
+    if (!isMissingTileValid()) {
+        return;
+    }
+    QString tileName = ui->editMissingTile->text().trimmed();
+    if (isTileAddedAlready(tileName)) {
+        return;
+    }
+    QTreeWidgetItem *item = new QTreeWidgetItem();
+    item->setText(0, tileName);
+    item->setText(1, QString::number(0));
+    ui->tileList->addTopLevelItem(item);
     synchUI();
 }
 
 void LotPackSearch::removeTile()
 {
-    int row = ui->tileList->currentRow();
+    if (ui->tileList->currentItem() == nullptr) {
+        return;
+    }
+    int row = ui->tileList->currentIndex().row();
     if (row == -1) {
         return;
     }
-    delete ui->tileList->takeItem(row);
+    delete ui->tileList->takeTopLevelItem(row);
     synchUI();
 }
 
@@ -212,12 +274,19 @@ void LotPackSearch::clearTiles()
 
 void LotPackSearch::search()
 {
+    clearCounts();
     ui->resultList->clear();
     mResults.clear();
 
+    ui->buttonAddTile->setEnabled(false);
+    ui->buttonRemoveTile->setEnabled(false);
+    ui->buttonClearTiles->setEnabled(false);
+    ui->buttonAddMissingTile->setEnabled(false);
+    ui->buttonSearch->setEnabled(false);
+
     QStringList tilesToFind;
-    for (int i = 0; i < ui->tileList->count(); i++) {
-        tilesToFind += ui->tileList->item(i)->text();
+    for (int i = 0; i < ui->tileList->topLevelItemCount(); i++) {
+        tilesToFind += ui->tileList->topLevelItem(i)->text(0);
     }
 
     IsoMetaGrid *metaGrid = mLotPackWindow->world()->MetaGrid;
@@ -235,6 +304,8 @@ void LotPackSearch::search()
             }
         }
     }
+
+    synchUI();
 }
 
 void LotPackSearch::openCell()

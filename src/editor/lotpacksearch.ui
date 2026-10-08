@@ -15,15 +15,15 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="2" column="0">
+    <item row="3" column="0">
      <widget class="Line" name="line">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
      </widget>
     </item>
-    <item row="0" column="0">
-     <widget class="QListWidget" name="tileList"/>
+    <item row="4" column="0">
+     <widget class="QListWidget" name="resultList"/>
     </item>
     <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
@@ -76,7 +76,7 @@
       </item>
      </layout>
     </item>
-    <item row="4" column="0">
+    <item row="5" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
        <spacer name="horizontalSpacer_4">
@@ -127,8 +127,32 @@
       </item>
      </layout>
     </item>
-    <item row="3" column="0">
-     <widget class="QListWidget" name="resultList"/>
+    <item row="2" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QPushButton" name="buttonAddMissingTile">
+        <property name="text">
+         <string>Add Missing Tile</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="editMissingTile">
+        <property name="placeholderText">
+         <string>missing tile name</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="0">
+     <widget class="QTreeWidget" name="tileList">
+      <column>
+       <property name="text">
+        <string notr="true">1</string>
+       </property>
+      </column>
+     </widget>
     </item>
    </layout>
   </widget>

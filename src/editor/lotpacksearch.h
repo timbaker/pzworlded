@@ -19,6 +19,7 @@
 #define LOTPACKSEARCH_H
 
 #include <QMainWindow>
+#include <QMap>
 
 namespace Ui {
 class LotPackSearch;
@@ -51,13 +52,18 @@ private:
         int z;
     };
 
+    int indexOf(const QString &tileName) const;
     bool isTileAddedAlready(const QString &tileName) const;
     bool containsAny(const QStringList &haystack, const QStringList &needles, QSet<QString> &contains);
     void searchCell(int cellX, int cellY, LotHeader *lotHeader, const QSet<QString> &tilesToFind);
     void addResult(const QString &tileName, int cellX, int cellY, int x, int y, int z);
+    void clearCounts();
+    void incrementCount(const QString &tileName);
+    bool isMissingTileValid();
 
 private slots:
     void addTile();
+    void addMissingTile();
     void removeTile();
     void clearTiles();
     void search();
@@ -69,6 +75,7 @@ private:
     Ui::LotPackSearch *ui;
     LotPackWindow *mLotPackWindow;
     QList<SearchResult> mResults;
+    QMap<QString,int> mCounts;
 };
 
 #endif // LOTPACKSEARCH_H
