@@ -93,7 +93,11 @@ static bool tryCreateAtlas(Tileset *tileset, const QImage &image, int size)
         int width = extents[2] - extents[0];
         int height = extents[3] - extents[1];
 //        qDebug() << fileName << image.width() << image.height() << "->" << width << height;
-        QImage image4(width, height, image.format());
+        QImage::Format format = image.format();
+        if (format == QImage::Format::Format_Indexed8) {
+            format = QImage::Format::Format_RGBA8888;
+        }
+        QImage image4(width, height, format);
         image4.fill(Qt::transparent);
         QPainter painter(&image4);
         for (auto it = ids.cbegin(); it != ids.cend(); it++) {
