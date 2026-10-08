@@ -767,6 +767,7 @@ bool LotFilesManager256::overwriteSpawnMap256(int cell256X, int cell256Y)
         maxLevel = IsoLot::readInt(in);
     }
     Q_UNUSED(minLevel)
+    Q_UNUSED(maxLevel)
 
     int numRooms = IsoLot::readInt(in);
 

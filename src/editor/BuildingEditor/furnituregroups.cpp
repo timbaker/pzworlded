@@ -21,7 +21,6 @@
 #include "buildingfurniturefile.h"
 #include "buildingtiles.h"
 #include "buildingfloor.h"
-#include "simplefile.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -331,6 +330,16 @@ FurnitureTile::FurnitureTile(FurnitureTiles *ftiles, FurnitureOrientation orient
     mTiles(1, 0),
     mGrime(true)
 {
+
+}
+
+FurnitureTile *FurnitureTile::createCopy(FurnitureTiles *ftiles)
+{
+    FurnitureTile *copy = new FurnitureTile(ftiles, orient());
+    copy->mSize = size();
+    copy->mTiles = tiles();
+    copy->setAllowGrime(allowGrime());
+    return copy;
 }
 
 void FurnitureTile::clear()
@@ -483,6 +492,19 @@ FurnitureTiles::~FurnitureTiles()
     qDeleteAll(mTiles);
 }
 
+FurnitureTiles *FurnitureTiles::createCopy(FurnitureGroup *group) const
+{
+    FurnitureTiles *copy = new FurnitureTiles(hasCorners());
+    copy->setGroup(group);
+    for (FurnitureTile *ftile : tiles()) {
+        FurnitureTile *ftileCopy = ftile->createCopy(copy);
+        copy->setTile(ftileCopy);
+    }
+    copy->setLayer(layer());
+    // copy->mLayerNames = layerNames();
+    return copy;
+}
+
 bool FurnitureTiles::isEmpty() const
 {
     for (int i = 0; i < mTiles.size(); i++)
@@ -560,6 +582,26 @@ void FurnitureTiles::initNames()
 }
 
 /////
+
+FurnitureGroup *FurnitureGroup::createCopy() const
+{
+    FurnitureGroup *copy = new FurnitureGroup();
+    copy->mLabel = mLabel;
+    for (const FurnitureTiles *ftiles : mTiles) {
+        copy->mTiles += ftiles->createCopy(copy);
+    }
+    return copy;
+}
+
+int FurnitureGroup::indexOf(const FurnitureTiles *ftiles) const
+{
+    return mTiles.indexOf(const_cast<FurnitureTiles*>(ftiles));
+}
+
+FurnitureTiles *FurnitureGroup::tiles(int index)
+{
+    return index >= 0 && index < mTiles.size() ? mTiles.at(index) : nullptr;
+}
 
 FurnitureTiles *FurnitureGroup::findMatch(FurnitureTiles *ftiles) const
 {

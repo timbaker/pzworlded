@@ -1488,8 +1488,8 @@ void RoofObject::setDefaultCaps()
     case Slope30N: mCappedS = false; break;
     case Slope30E: mCappedW = false; break;
     case Slope30S: mCappedN = false; break;
-    case Peak30WE: mCappedW = mCappedE = false; break;
-    case Peak30NS: mCappedN = mCappedS = false; break;
+    case Peak30WE: mCappedN = mCappedS = false; break;
+    case Peak30NS: mCappedW = mCappedE = false; break;
     case Peak30Quad:
         mCappedW = mCappedN = mCappedE = mCappedS = false;
         break;

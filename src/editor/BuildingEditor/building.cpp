@@ -120,8 +120,9 @@ int Building::categoryEnum(int n)
     return BuildingTemplate::categoryEnum(n);
 }
 
-void Building::resize(const QSize &newSize)
+void Building::resize(const QPoint &offset, const QSize &newSize)
 {
+    Q_UNUSED(offset)
     mWidth = newSize.width();
     mHeight = newSize.height();
 }

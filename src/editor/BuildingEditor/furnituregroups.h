@@ -51,6 +51,8 @@ public:
 
     FurnitureTile(FurnitureTiles *ftiles, FurnitureOrientation orient);
 
+    FurnitureTile *createCopy(FurnitureTiles *ftiles);
+
     FurnitureTiles *owner() const
     { return mOwner; }
 
@@ -136,6 +138,8 @@ public:
     FurnitureTiles(bool corners);
     ~FurnitureTiles();
 
+    FurnitureTiles *createCopy(FurnitureGroup *group) const;
+
     void setGroup(FurnitureGroup *group)
     { mGroup = group; }
 
@@ -144,11 +148,14 @@ public:
 
     bool isEmpty() const;
 
+    void setHasCorners(bool hasCorners)
+    { mCorners = hasCorners; }
+
     bool hasCorners() const
     { return mCorners; }
 
     void toggleCorners()
-    { mCorners = !mCorners; }
+    { setHasCorners(!hasCorners()); }
 
     void setTile(FurnitureTile *ftile);
     FurnitureTile *tile(FurnitureTile::FurnitureOrientation orient) const;
@@ -194,7 +201,11 @@ private:
 class FurnitureGroup
 {
 public:
+    FurnitureGroup *createCopy() const;
+    int indexOf(const FurnitureTiles *ftiles) const;
+    FurnitureTiles *tiles(int index);
     FurnitureTiles *findMatch(FurnitureTiles *ftiles) const;
+
     QString mLabel;
     QList<FurnitureTiles*> mTiles;
 };

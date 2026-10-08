@@ -179,7 +179,7 @@ public:
     void setRoofTopTile(BuildingTileEntry *entry)
     { mTiles[RoofTop] = entry; }
 
-    void resize(const QSize &newSize);
+    void resize(const QPoint& offset, const QSize &newSize);
     void rotate(bool right);
     void flip(bool horizontal);
 
