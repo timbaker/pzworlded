@@ -1,5 +1,5 @@
-mkdir ../../linuxdeploy
-cd ../../linuxdeploy
+mkdir ../../linuxdeploy-worlded
+cd ../../linuxdeploy-worlded
 
 # 1. Force the inclusion of the Wayland platform libraries
 export EXTRA_PLATFORM_PLUGINS="libqwayland.so"
